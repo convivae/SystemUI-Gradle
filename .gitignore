@@ -1,0 +1,80 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.#*
+.swp
+.swo
+
+# Windows / 跨系统冗余
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Android 构建产物 & 缓存
+build/
+app/build/
+out/
+bin/
+gen/
+obj/
+intermediates/
+
+# SystemUI 特定模块
+systemui/**/build/
+systemui/**/out/
+systemui/**/gen/
+systemui/**/obj/
+systemui/**/intermediates/
+
+# Gradle 相关
+.gradle/
+build/
+
+local.properties
+
+# IDE 配置
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.code-workspace
+.history/
+.tern-project
+.devcontainer/
+
+# cursor
+.cursor/
+
+# windsurf
+.windsurf/
+
+# gsd
+.planning/
+
+# 临时文件与日志
+captures
+*.log
+*.tmp
+*.bak
+.env
+.env.local
+*.patch
+*.diff
+*.orig
+.repo/
+.ccache/
+.kotlin/
