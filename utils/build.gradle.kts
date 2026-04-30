@@ -21,6 +21,6 @@ sourceSets {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 }

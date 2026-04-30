@@ -26,7 +26,7 @@ sourceSets {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
     implementation("androidx.annotation:annotation:1.8.2")
 
     // Auto-service for annotation processor
