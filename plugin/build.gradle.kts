@@ -1,0 +1,57 @@
+plugins {
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.kapt")
+}
+
+val aospDir: String by project
+
+android {
+    namespace = "com.android.systemui.plugin"
+    compileSdk = 37
+
+    defaultConfig {
+        minSdk = 34
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs = listOf("-Xjvm-default=all")
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs(
+                "$aospDir/frameworks/base/packages/SystemUI/plugin/src",
+                "$aospDir/frameworks/base/packages/SystemUI/plugin/bcsmartspace/src"
+            )
+            exclude("**/PluginProtectorStub.kt")
+        }
+    }
+
+    buildFeatures {
+        aidl = true
+    }
+}
+
+dependencies {
+    implementation(project(":plugin-core"))
+    implementation(project(":common"))
+    implementation(project(":log"))
+
+    implementation("androidx.annotation:annotation:1.8.2")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.compose.ui:ui:1.7.0")
+    implementation("androidx.compose.runtime:runtime:1.7.0")
+
+    // Prebuilt AOSP libs
+    implementation(files("$rootDir/libs/PlatformAnimationLib.jar"))
+    implementation(files("$rootDir/libs/SystemUICommon.jar"))
+    implementation(files("$rootDir/libs/SystemUILogLib.jar"))
+    implementation(files("$rootDir/libs/PluginCoreLib.jar"))
+}
