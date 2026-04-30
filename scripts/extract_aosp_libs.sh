@@ -10,8 +10,8 @@ if [[ ! -f "$PROJECT_DIR/local.properties" ]]; then
     exit 1
 fi
 
-AOSP_DIR=$(grep "^aosp.dir=" "$PROJECT_DIR/local.properties" | cut -d= -f2-)
-AOSP_OUT_DIR=$(grep "^aosp.out.dir=" "$PROJECT_DIR/local.properties" | cut -d= -f2-)
+AOSP_DIR=$(grep "^aospDir=" "$PROJECT_DIR/local.properties" | cut -d= -f2-)
+AOSP_OUT_DIR=$(grep "^aospOutDir=" "$PROJECT_DIR/local.properties" | cut -d= -f2-)
 
 if [[ -z "$AOSP_DIR" || -z "$AOSP_OUT_DIR" ]]; then
     echo "ERROR: aosp.dir and aosp.out.dir must be set in local.properties"
