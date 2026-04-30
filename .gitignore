@@ -78,3 +78,8 @@ captures
 .repo/
 .ccache/
 .kotlin/
+
+# Gradle project additions
+**/build/
+libs/
+!gradle/wrapper/gradle-wrapper.jar
