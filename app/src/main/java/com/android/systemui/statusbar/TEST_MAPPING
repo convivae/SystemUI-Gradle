@@ -1,0 +1,12 @@
+{
+  "presubmit": [
+    {
+      "name": "CtsNotificationTestCases_notification"
+    }
+  ],
+  "postsubmit": [
+    {
+      "name": "CtsNotificationTestCases"
+    }
+  ]
+}

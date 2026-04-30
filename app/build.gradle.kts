@@ -1,12 +1,7 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")
     id("com.google.protobuf")
 }
-
-val aospDir: String by project
-val systemuiDir = "$aospDir/frameworks/base/packages/SystemUI"
 
 android {
     namespace = "com.android.systemui"
@@ -31,31 +26,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
-    sourceSets {
-        main {
-            manifest.srcFile("$systemuiDir/AndroidManifest.xml")
-            java.srcDirs(
-                "$systemuiDir/src",
-                "$systemuiDir/src-release",
-                "$systemuiDir/compose/features/src",
-                "$systemuiDir/compose/facade/enabled/src"
-            )
-            res.srcDirs(
-                "$systemuiDir/res",
-                "$systemuiDir/res-keyguard",
-                "$systemuiDir/res-product"
-            )
-            aidl.srcDirs("$systemuiDir/src")
-            proto.srcDirs("$systemuiDir/src")
-        }
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
@@ -67,9 +39,9 @@ android {
         release {
             isMinifyEnabled = true
             proguardFiles(
-                file("$systemuiDir/proguard.flags"),
-                file("$systemuiDir/proguard_common.flags"),
-                file("$systemuiDir/proguard_kotlin.flags")
+                file("proguard.flags"),
+                file("proguard_common.flags"),
+                file("proguard_kotlin.flags")
             )
         }
         debug {
@@ -84,7 +56,16 @@ android {
     }
 
     lint {
-        baseline = file("$systemuiDir/lint-baseline.xml")
+        baseline = file("lint-baseline.xml")
+    }
+}
+
+afterEvaluate {
+    extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
+        sourceSets["main"].manifest.srcFile("src/main/AndroidManifest.xml")
+        sourceSets["main"].java.srcDirs("src/main/java", "src/main/java/compose")
+        sourceSets["main"].res.srcDirs("src/main/res")
+        sourceSets["main"].aidl.srcDirs("src/main/java")
     }
 }
 
@@ -122,7 +103,7 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    annotationProcessor("androidx.room:room-compiler:2.6.1")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.media3:media3-common:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")
@@ -145,7 +126,7 @@ dependencies {
 
     // Dagger
     implementation("com.google.dagger:dagger:2.51.1")
-    kapt("com.google.dagger:dagger-compiler:2.51.1")
+    annotationProcessor("com.google.dagger:dagger-compiler:2.51.1")
     implementation("javax.inject:javax.inject:1")
     implementation("javax.annotation:javax.annotation-api:1.3.2")
 
@@ -192,8 +173,4 @@ protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:3.25.3"
     }
-}
-
-kapt {
-    correctErrorTypes = true
 }

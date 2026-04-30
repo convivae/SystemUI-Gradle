@@ -1,10 +1,6 @@
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")
 }
-
-val aospDir: String by project
 
 android {
     namespace = "com.android.systemui.plugin"
@@ -15,27 +11,24 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs = listOf("-Xjvm-default=all")
-    }
-
-    sourceSets {
-        main {
-            java.srcDirs(
-                "$aospDir/frameworks/base/packages/SystemUI/plugin/src",
-                "$aospDir/frameworks/base/packages/SystemUI/plugin/bcsmartspace/src"
-            )
-            exclude("**/PluginProtectorStub.kt")
+    kotlin {
+        compilerOptions {
+            freeCompilerArgs.add("-Xjvm-default=all")
         }
     }
 
     buildFeatures {
         aidl = true
+    }
+}
+
+afterEvaluate {
+    extensions.configure<com.android.build.api.dsl.LibraryExtension> {
+        sourceSets["main"].java.srcDirs("src")
     }
 }
 

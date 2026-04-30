@@ -1,10 +1,6 @@
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")
 }
-
-val aospDir: String by project
 
 android {
     namespace = "com.android.systemui.shared"
@@ -15,31 +11,26 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs = listOf("-Xjvm-default=all")
-    }
-
-    sourceSets {
-        main {
-            java.srcDirs(
-                "$aospDir/frameworks/base/packages/SystemUI/shared/src"
-            )
-            res.srcDirs(
-                "$aospDir/frameworks/base/packages/SystemUI/shared/res"
-            )
-            aidl.srcDirs(
-                "$aospDir/frameworks/base/packages/SystemUI/shared/src"
-            )
+    kotlin {
+        compilerOptions {
+            freeCompilerArgs.add("-Xjvm-default=all")
         }
     }
 
     buildFeatures {
         aidl = true
+    }
+}
+
+afterEvaluate {
+    extensions.configure<com.android.build.api.dsl.LibraryExtension> {
+        sourceSets["main"].java.srcDirs("src")
+        sourceSets["main"].res.srcDirs("res")
+        sourceSets["main"].aidl.srcDirs("src")
     }
 }
 
@@ -62,7 +53,7 @@ dependencies {
 
     // Dagger
     implementation("com.google.dagger:dagger:2.51.1")
-    kapt("com.google.dagger:dagger-compiler:2.51.1")
+    annotationProcessor("com.google.dagger:dagger-compiler:2.51.1")
     implementation("javax.inject:javax.inject:1")
 
     // Prebuilt AOSP libs

@@ -1,9 +1,6 @@
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
 }
-
-val aospDir: String by project
 
 android {
     namespace = "com.android.systemui.animation"
@@ -14,24 +11,21 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs = listOf("-Xjvm-default=all")
-    }
-
-    sourceSets {
-        main {
-            java.srcDirs(
-                "$aospDir/frameworks/base/packages/SystemUI/animation/src"
-            )
-            res.srcDirs(
-                "$aospDir/frameworks/base/packages/SystemUI/animation/res"
-            )
+    kotlin {
+        compilerOptions {
+            freeCompilerArgs.add("-Xjvm-default=all")
         }
+    }
+}
+
+afterEvaluate {
+    extensions.configure<com.android.build.api.dsl.LibraryExtension> {
+        sourceSets["main"].java.srcDirs("src")
+        sourceSets["main"].res.srcDirs("res")
     }
 }
 
