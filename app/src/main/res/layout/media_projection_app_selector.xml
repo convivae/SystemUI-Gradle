@@ -20,9 +20,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="center"
-    androidprv:maxCollapsedHeight="10000dp"
-    androidprv:maxCollapsedHeightSmall="56dp"
-    androidprv:maxWidth="@*android:dimen/chooser_width"
+    android:maxCollapsedHeight="10000dp"
+    android:maxCollapsedHeightSmall="56dp"
+    android:maxWidth="@*android:dimen/chooser_width"
     android:id="@*android:id/contentPanel">
     <!-- maxCollapsedHeight above is huge, to make sure the layout is always expanded. -->
 
@@ -31,7 +31,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        androidprv:layout_alwaysShow="true"
+        android:layout_alwaysShow="true"
         android:gravity="center"
         android:elevation="0dp"
         android:background="@*android:drawable/bottomsheet_background">

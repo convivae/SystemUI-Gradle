@@ -65,7 +65,7 @@
             android:layout_width="match_parent"
             android:layout_height="4dp"
             android:layout_gravity="center_vertical|center_horizontal"
-            android:background="?androidprv:attr/colorSurfaceVariant"/>
+            android:background="?android:attr/colorSurfaceVariant"/>
 
         <ProgressBar
             android:id="@+id/wifi_searching_progress"

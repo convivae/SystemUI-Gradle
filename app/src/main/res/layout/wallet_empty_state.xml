@@ -36,7 +36,7 @@
             android:layout_height="28dp"
             android:layout_gravity="center"
             android:layout_marginBottom="8dp"
-            android:tint="?androidprv:attr/colorAccentPrimary"
+            android:tint="?android:attr/colorAccentPrimary"
             android:contentDescription="@null"
             android:scaleType="fitCenter"/>
         <TextView

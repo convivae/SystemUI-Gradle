@@ -21,6 +21,6 @@
         android:height="@dimen/magnification_setting_button_done_height"/>
     <corners android:radius="@dimen/magnification_setting_button_done_corner_radius"/>
     <stroke
-        android:color="?androidprv:attr/colorAccent"
+        android:color="?android:attr/colorAccent"
         android:width="1dp" />
  </shape>

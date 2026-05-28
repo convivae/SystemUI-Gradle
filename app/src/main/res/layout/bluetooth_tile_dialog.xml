@@ -63,7 +63,7 @@
         app:layout_constraintStart_toStartOf="@id/bluetooth_tile_dialog_progress_animation"
         app:layout_constraintTop_toTopOf="@id/bluetooth_tile_dialog_progress_animation"
         app:layout_constraintBottom_toBottomOf="@id/bluetooth_tile_dialog_progress_animation"
-        android:background="?androidprv:attr/colorSurfaceVariant" />
+        android:background="?android:attr/colorSurfaceVariant" />
 
     <ProgressBar
         android:id="@+id/bluetooth_tile_dialog_progress_animation"

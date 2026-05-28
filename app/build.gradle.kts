@@ -4,7 +4,9 @@ plugins {
 }
 
 android {
-    namespace = "com.android.systemui"
+    // JD MOD: Use com.android.systemui.res as namespace so R class matches AOSP imports
+    // In AOSP, SystemUI-res module generates R under com.android.systemui.res
+    namespace = "com.android.systemui.res"
     // JD MOD: Use custom SDK platform with merged android.jar (SDK + framework.jar)
     // This provides access to hidden platform APIs without modifying the standard SDK
     compileSdkPreview = "SysUISdk"
@@ -73,7 +75,8 @@ afterEvaluate {
     extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
         sourceSets["main"].manifest.srcFile("src/main/AndroidManifest.xml")
         sourceSets["main"].java.srcDirs("src/main/java", "src/main/java/compose")
-        sourceSets["main"].res.srcDirs("src/main/res")
+        // JD MOD: Include res-keyguard for bouncer/keyguard resources
+        sourceSets["main"].res.srcDirs("src/main/res", "src/main/res-keyguard")
         sourceSets["main"].aidl.srcDirs("src/main/java")
     }
 }

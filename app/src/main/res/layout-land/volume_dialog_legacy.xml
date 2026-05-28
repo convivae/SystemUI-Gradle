@@ -106,7 +106,7 @@
                         android:scaleType="centerInside"
                         android:soundEffectsEnabled="false"
                         android:src="@drawable/horizontal_ellipsis"
-                        android:tint="?androidprv:attr/colorAccent" />
+                        android:tint="?android:attr/colorAccent" />
                 </FrameLayout>
             </LinearLayout>
 

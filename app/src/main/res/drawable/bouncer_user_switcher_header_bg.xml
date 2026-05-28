@@ -21,7 +21,7 @@
             android:paddingEnd="0dp">
     <item>
         <shape android:shape="rectangle">
-          <solid android:color="?androidprv:attr/colorSurfaceHighlight" />
+          <solid android:color="?android:attr/colorSurfaceHighlight" />
             <corners android:radius="32dp" />
         </shape>
     </item>

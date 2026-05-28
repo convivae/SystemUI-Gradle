@@ -143,7 +143,7 @@
                   android:autoSizeMaxTextSize="@dimen/clipboard_overlay_max_font"
                   android:textColor="?attr/overlayButtonTextColor"
                   android:textColorLink="?attr/overlayButtonTextColor"
-                  android:background="?androidprv:attr/colorAccentSecondary"
+                  android:background="?android:attr/colorAccentSecondary"
                   android:layout_width="@dimen/clipboard_preview_size"
                   android:layout_height="@dimen/clipboard_preview_size"/>
         <ImageView
@@ -161,7 +161,7 @@
             android:gravity="center"
             android:textSize="14sp"
             android:textColor="?attr/overlayButtonTextColor"
-            android:background="?androidprv:attr/colorAccentSecondary"
+            android:background="?android:attr/colorAccentSecondary"
             android:layout_width="@dimen/clipboard_preview_size"
             android:layout_height="@dimen/clipboard_preview_size"/>
     </FrameLayout>
@@ -222,8 +222,8 @@
             android:layout_height="match_parent"
             android:layout_margin="@dimen/overlay_dismiss_button_margin"
             android:background="@drawable/circular_background"
-            android:backgroundTint="?androidprv:attr/materialColorPrimaryFixedDim"
-            android:tint="?androidprv:attr/materialColorOnPrimaryFixed"
+            android:backgroundTint="?attr/colorPrimaryFixedDim"
+            android:tint="?attr/colorOnPrimaryFixed"
             android:padding="4dp"
             android:src="@drawable/ic_close"/>
     </FrameLayout>

@@ -17,6 +17,6 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:androidprv="http://schemas.android.com/apk/prv/res/android">
     <item android:state_selected="true"
-          android:color="?androidprv:attr/textColorPrimaryInverse"  />
-    <item android:color="?androidprv:attr/textColorPrimary" />
+          android:color="?android:attr/textColorPrimaryInverse"  />
+    <item android:color="?android:attr/textColorPrimary" />
 </selector>

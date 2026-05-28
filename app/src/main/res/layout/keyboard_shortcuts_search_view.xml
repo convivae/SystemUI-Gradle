@@ -52,14 +52,14 @@
             android:drawableStart="@drawable/ic_shortcutlist_search"
             android:drawablePadding="15dp"
             android:singleLine="true"
-            android:textColor="?androidprv:attr/materialColorOnSurfaceVariant"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:inputType="text"
             android:textDirection="locale"
             android:textAlignment="viewStart"
             android:hint="@string/keyboard_shortcut_search_list_hint"
             android:textAppearance="@android:style/TextAppearance.Material"
             android:textSize="16sp"
-            android:textColorHint="?androidprv:attr/materialColorOutline" />
+            android:textColorHint="?attr/colorOutline" />
 
         <ImageButton
             android:id="@+id/keyboard_shortcuts_search_cancel"

@@ -42,7 +42,7 @@
         android:layoutDirection="ltr"
         android:orientation="vertical"
         android:maxWidth = "@dimen/biometric_auth_pattern_view_max_size"
-        androidprv:layoutDescription="@xml/keyguard_pattern_scene">
+        android:layoutDescription="@xml/keyguard_pattern_scene">
 
         <!-- Guideline need to align pattern right of centre,
         when on small screen landscape layout -->
@@ -51,7 +51,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            androidprv:layout_constraintGuide_percent="0.5" />
+            android:layout_constraintGuide_percent="0.5" />
 
         <LinearLayout
             android:id="@+id/keyguard_bouncer_message_container"
@@ -61,7 +61,7 @@
             android:clipToPadding="false"
             android:layoutDirection="ltr"
             android:orientation="vertical"
-            androidprv:layout_constraintTop_toTopOf="parent">
+            android:layout_constraintTop_toTopOf="parent">
 
             <include layout="@layout/keyguard_bouncer_message_area" />
 
@@ -79,7 +79,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            androidprv:layout_constraintGuide_percent="0" />
+            android:layout_constraintGuide_percent="0" />
 
         <com.android.internal.widget.LockPatternView
             android:id="@+id/lockPatternView"
@@ -87,13 +87,13 @@
             android:layout_height="0dp"
             android:layout_marginBottom="8dp"
             android:focusable="false"
-            androidprv:layout_constraintVertical_bias="1.0"
-            androidprv:layout_constraintDimensionRatio="1.0"
-            androidprv:layout_constraintStart_toStartOf="parent"
-            androidprv:layout_constraintBottom_toTopOf="@+id/keyguard_selector_fade_container"
-            androidprv:layout_constraintEnd_toEndOf="parent"
-            androidprv:layout_constraintVertical_chainStyle="packed"
-            androidprv:layout_constraintTop_toBottomOf="@id/pattern_top_guideline"/>
+            android:layout_constraintVertical_bias="1.0"
+            android:layout_constraintDimensionRatio="1.0"
+            android:layout_constraintStart_toStartOf="parent"
+            android:layout_constraintBottom_toTopOf="@+id/keyguard_selector_fade_container"
+            android:layout_constraintEnd_toEndOf="parent"
+            android:layout_constraintVertical_chainStyle="packed"
+            android:layout_constraintTop_toBottomOf="@id/pattern_top_guideline"/>
 
         <include
             android:id="@+id/keyguard_selector_fade_container"
@@ -103,8 +103,8 @@
             android:layout_marginBottom="@dimen/keyguard_eca_bottom_margin"
             android:layout_marginTop="@dimen/keyguard_eca_top_margin"
             android:orientation="vertical"
-            androidprv:layout_constraintBottom_toBottomOf="parent"
-            androidprv:layout_constraintTop_toBottomOf="@+id/lockPatternView" />
+            android:layout_constraintBottom_toBottomOf="parent"
+            android:layout_constraintTop_toBottomOf="@+id/lockPatternView" />
 
     </androidx.constraintlayout.motion.widget.MotionLayout>
 

@@ -40,7 +40,7 @@
 
         <Constraint
             android:id="@+id/pin_pad_top_guideline"
-            androidprv:layout_constraintGuide_percent=
+            android:layout_constraintGuide_percent=
                 "@dimen/motion_layout_half_fold_bouncer_height_ratio"/>
 
         <Constraint
@@ -50,8 +50,8 @@
             android:layout_marginBottom="0dp"
             android:layout_marginTop="@dimen/keyguard_eca_top_margin"
             android:orientation="vertical"
-            androidprv:layout_constraintBottom_toBottomOf="parent"
-            androidprv:layout_constraintTop_toBottomOf="@+id/flow1"/>
+            android:layout_constraintBottom_toBottomOf="parent"
+            android:layout_constraintTop_toBottomOf="@+id/flow1"/>
 
     </ConstraintSet>
 
@@ -61,33 +61,33 @@
             android:id="@+id/keyguard_bouncer_message_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            androidprv:layout_constraintEnd_toStartOf="@+id/pin_pad_center_guideline"
-            androidprv:layout_constraintStart_toStartOf="parent"
-            androidprv:layout_constraintTop_toTopOf="parent" />
+            android:layout_constraintEnd_toStartOf="@+id/pin_pad_center_guideline"
+            android:layout_constraintStart_toStartOf="parent"
+            android:layout_constraintTop_toTopOf="parent" />
         <Constraint
             android:id="@+id/row0"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            androidprv:layout_constraintEnd_toStartOf="@+id/pin_pad_center_guideline"
-            androidprv:layout_constraintStart_toStartOf="parent"
-            androidprv:layout_constraintTop_toBottomOf="@+id/keyguard_bouncer_message_container" />
+            android:layout_constraintEnd_toStartOf="@+id/pin_pad_center_guideline"
+            android:layout_constraintStart_toStartOf="parent"
+            android:layout_constraintTop_toBottomOf="@+id/keyguard_bouncer_message_container" />
         <Constraint
             android:id="@+id/flow1"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            androidprv:layout_constraintBottom_toBottomOf="parent"
-            androidprv:layout_constraintEnd_toEndOf="parent"
-            androidprv:layout_constraintStart_toStartOf="@+id/pin_pad_center_guideline"
-            androidprv:layout_constraintTop_toTopOf="parent"
+            android:layout_constraintBottom_toBottomOf="parent"
+            android:layout_constraintEnd_toEndOf="parent"
+            android:layout_constraintStart_toStartOf="@+id/pin_pad_center_guideline"
+            android:layout_constraintTop_toTopOf="parent"
             android:layout_marginBottom="0dp"
-            androidprv:flow_verticalBias="0.5" />
+            android:flow_verticalBias="0.5" />
         <Constraint
             android:id="@+id/keyguard_selector_fade_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            androidprv:layout_constraintBottom_toBottomOf="parent"
-            androidprv:layout_constraintEnd_toStartOf="@+id/pin_pad_center_guideline"
-            androidprv:layout_constraintStart_toStartOf="parent"
+            android:layout_constraintBottom_toBottomOf="parent"
+            android:layout_constraintEnd_toStartOf="@+id/pin_pad_center_guideline"
+            android:layout_constraintStart_toStartOf="parent"
             android:layout_marginBottom="@dimen/keyguard_eca_bottom_margin"
             android:layout_marginTop="@dimen/keyguard_eca_top_margin" />
 

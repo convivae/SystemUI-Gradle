@@ -70,7 +70,7 @@
         android:minHeight="48dp"
         android:paddingHorizontal="@dimen/user_switcher_fullscreen_button_padding"
         android:textSize="@dimen/user_switcher_fullscreen_button_text_size"
-        android:textColor="?androidprv:attr/colorAccentPrimary"
+        android:textColor="?android:attr/colorAccentPrimary"
         android:text="@string/cancel" />
 
     <Space
@@ -87,7 +87,7 @@
         android:gravity="center"
         android:paddingHorizontal="@dimen/user_switcher_fullscreen_button_padding"
         android:text="@string/add"
-        android:textColor="?androidprv:attr/colorAccentPrimary"
+        android:textColor="?android:attr/colorAccentPrimary"
         android:textSize="@dimen/user_switcher_fullscreen_button_text_size"
         android:visibility="gone"
         android:minHeight="48dp" />

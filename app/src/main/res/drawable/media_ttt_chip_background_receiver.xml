@@ -22,5 +22,5 @@
         android:height="@dimen/media_ttt_icon_size_receiver"
         android:width="@dimen/media_ttt_icon_size_receiver"
         />
-    <solid android:color="?androidprv:attr/colorAccentPrimary" />
+    <solid android:color="?android:attr/colorAccentPrimary" />
 </shape>

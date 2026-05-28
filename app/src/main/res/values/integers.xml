@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (C) 2021 The Android Open Source Project
+  ~ Copyright (C) 2018 The Android Open Source Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -12,22 +12,40 @@
   ~ distributed under the License is distributed on an "AS IS" BASIS,
   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~ limitations under the License
   -->
 <resources>
-    <!-- This needs to be specified in an integer, rather than a style, as it can change in response
-         to device config changes, and we need to be able to change it without re-inflation.
+    <integer name="biometric_dialog_text_gravity">8388611</integer> <!-- gravity start -->
+    <integer name="biometric_prompt_content_list_item_max_lines_if_two_column">3</integer>
 
-         0x50 = bottom, 0x01 = center_horizontal -->
-    <integer name="keyguard_host_view_gravity">0x51</integer>
+    <integer name="qs_security_footer_maxLines">2</integer>
 
-    <!-- Gravity for the keyguard when it is in one-handed mode. This is ignored unless
-         can_use_one_handed_bouncer is true, _and_ the one handed bouncer is enabled in the device
-         config (com.android.internal.R.bool.config_enableOneHandedKeyguard)
+    <integer name="magnification_default_scale">2</integer>
 
-         0x50 = bottom, 0x01 = center_horizontal -->
-    <integer name="keyguard_host_view_one_handed_gravity">0x51</integer>
+    <integer name="dock_enter_exit_duration">250</integer>
 
-     <!-- Invisibility to use for the date & weather view when it is disabled by a clock -->
-    <integer name="keyguard_date_weather_view_invisibility">4</integer>
+    <!-- The position of the volume dialog on the screen.
+         See com.android.systemui.volume.VolumeDialogImpl.
+         Value 21 corresponds to RIGHT|CENTER_VERTICAL. -->
+    <integer name="volume_dialog_gravity">21</integer>
+
+    <!-- The time it takes for the over scroll release animation to complete, in milli seconds.  -->
+    <integer name="lockscreen_shade_over_scroll_release_duration">0</integer>
+
+    <!-- Values for transition of QS Headers -->
+    <integer name="fade_out_complete_frame">14</integer>
+    <integer name="fade_in_start_frame">58</integer>
+    <!-- Percentage of displacement for items in QQS to guarantee matching with bottom of clock at
+         fade_out_complete_frame -->
+    <dimen name="percent_displacement_at_fade_out" format="float">0.1066</dimen>
+
+    <integer name="shade_carrier_max_em">7</integer>
+
+    <!-- Maximum number of notification icons shown on the Always on Display
+        (excluding overflow dot) -->
+    <integer name="max_notif_icons_on_aod">3</integer>
+    <!-- Maximum number of notification icons shown on the lockscreen (excluding overflow dot) -->
+    <integer name="max_notif_icons_on_lockscreen">3</integer>
+    <!-- Maximum number of notification icons shown in the status bar (excluding overflow dot) -->
+    <integer name="max_notif_static_icons">4</integer>
 </resources>

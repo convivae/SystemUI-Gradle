@@ -17,8 +17,8 @@
         android:paddingHorizontal="16dp"
         android:background="@drawable/overlay_button_background"
         android:text="@string/clipboard_edit_text_done"
-        android:backgroundTint="?androidprv:attr/materialColorPrimary"
-        android:textColor="?androidprv:attr/materialColorOnPrimary"
+        android:backgroundTint="?attr/colorPrimary"
+        android:textColor="?attr/colorOnPrimary"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

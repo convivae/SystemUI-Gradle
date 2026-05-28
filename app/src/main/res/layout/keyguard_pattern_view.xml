@@ -27,7 +27,7 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    androidprv:layout_maxWidth="@dimen/biometric_auth_pattern_view_max_size"
+    android:layout_maxWidth="@dimen/biometric_auth_pattern_view_max_size"
     android:layout_gravity="center_horizontal|bottom"
     android:clipChildren="false"
     android:clipToPadding="false">
@@ -51,7 +51,7 @@
             android:id="@+id/pattern_top_guideline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            androidprv:layout_constraintGuide_percent="0"
+            android:layout_constraintGuide_percent="0"
             android:orientation="horizontal" />
 
         <com.android.internal.widget.LockPatternView
@@ -59,12 +59,12 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:focusable="false"
-            androidprv:layout_constraintTop_toBottomOf="@id/pattern_top_guideline"
-            androidprv:layout_constraintBottom_toBottomOf="parent"
-            androidprv:layout_constraintLeft_toLeftOf="parent"
-            androidprv:layout_constraintRight_toRightOf="parent"
-            androidprv:layout_constraintDimensionRatio="1.0"
-            androidprv:layout_constraintVertical_bias="1.0"
+            android:layout_constraintTop_toBottomOf="@id/pattern_top_guideline"
+            android:layout_constraintBottom_toBottomOf="parent"
+            android:layout_constraintLeft_toLeftOf="parent"
+            android:layout_constraintRight_toRightOf="parent"
+            android:layout_constraintDimensionRatio="1.0"
+            android:layout_constraintVertical_bias="1.0"
             />
     </androidx.constraintlayout.widget.ConstraintLayout>
 

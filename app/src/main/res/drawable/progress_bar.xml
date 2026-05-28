@@ -26,7 +26,7 @@
             android:layout_height="match_parent"
             android:shape="rectangle">
             <corners android:radius="30dp" />
-            <solid android:color="?androidprv:attr/materialColorSurfaceContainerHighest" />
+            <solid android:color="?attr/colorSurfaceContainerHighest" />
         </shape>
     </item>
     <item
@@ -38,7 +38,7 @@
                 android:layout_height="match_parent"
                 android:shape="rectangle">
                 <corners android:radius="30dp" />
-                <solid android:color="?androidprv:attr/textColorPrimary" />
+                <solid android:color="?android:attr/textColorPrimary" />
             </shape>
         </clip>
     </item>

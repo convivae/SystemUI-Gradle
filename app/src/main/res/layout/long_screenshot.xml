@@ -32,8 +32,8 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="@dimen/long_screenshot_action_bar_top_margin"
         android:background="@drawable/overlay_button_background"
-        android:backgroundTint="?androidprv:attr/materialColorPrimary"
-        android:textColor="?androidprv:attr/materialColorOnPrimary"
+        android:backgroundTint="?attr/colorPrimary"
+        android:textColor="?attr/colorOnPrimary"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/preview" />
@@ -47,8 +47,8 @@
         android:layout_marginStart="6dp"
         android:layout_marginTop="@dimen/long_screenshot_action_bar_top_margin"
         android:background="@drawable/overlay_button_outline"
-        android:backgroundTint="?androidprv:attr/materialColorPrimary"
-        android:textColor="?androidprv:attr/materialColorOnSurface"
+        android:backgroundTint="?attr/colorPrimary"
+        android:textColor="?attr/colorOnSurface"
         app:layout_constraintStart_toEndOf="@id/save"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/preview"
@@ -57,7 +57,7 @@
     <ImageButton
         android:id="@+id/share"
         style="@android:style/Widget.Material.Button.Borderless"
-        android:tint="?androidprv:attr/materialColorOnSurface"
+        android:tint="?attr/colorOnSurface"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginEnd="8dp"
@@ -114,10 +114,10 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:handleThickness="@dimen/screenshot_crop_handle_thickness"
-        app:handleColor="?androidprv:attr/materialColorSecondary"
-        app:scrimColor="?androidprv:attr/materialColorSurfaceContainer"
+        app:handleColor="?attr/colorSecondary"
+        app:scrimColor="?attr/colorSurfaceContainer"
         app:scrimAlpha="128"
-        app:containerBackgroundColor="?androidprv:attr/materialColorSurfaceContainer"
+        app:containerBackgroundColor="?attr/colorSurfaceContainer"
         tools:background="?android:colorBackground"
         tools:minHeight="100dp"
         tools:minWidth="100dp" />
@@ -131,11 +131,11 @@
         app:layout_constraintTop_toTopOf="@id/preview"
         app:layout_constraintLeft_toLeftOf="parent"
         app:handleThickness="@dimen/screenshot_crop_handle_thickness"
-        app:handleColor="?androidprv:attr/materialColorSecondary"
-        app:scrimColor="?androidprv:attr/materialColorSurfaceContainer"
+        app:handleColor="?attr/colorSecondary"
+        app:scrimColor="?attr/colorSurfaceContainer"
         app:scrimAlpha="128"
         app:borderThickness="4dp"
-        app:borderColor="?androidprv:attr/materialColorSurfaceBright" />
+        app:borderColor="?attr/colorSurfaceBright" />
 
     <ImageButton
         android:id="@+id/edit"
@@ -147,7 +147,7 @@
         android:background="@drawable/screenshot_edit_background"
         android:src="@drawable/ic_screenshot_edit"
         android:contentDescription="@string/screenshot_edit_label"
-        android:tint="?androidprv:attr/materialColorOnSecondaryFixed"
+        android:tint="?attr/colorOnSecondaryFixed"
         android:padding="16dp"
         android:scaleType="fitCenter"
         app:layout_constraintBottom_toBottomOf="parent"
