@@ -17,7 +17,7 @@
 package com.android.systemui.keyguard.ui.viewmodel
 
 import android.content.Context
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor
 import com.android.systemui.keyguard.shared.model.ClockSizeSetting
 import com.android.systemui.plugins.clocks.ClockPreviewConfig

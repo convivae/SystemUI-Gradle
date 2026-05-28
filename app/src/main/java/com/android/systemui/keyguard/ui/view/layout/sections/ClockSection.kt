@@ -30,7 +30,7 @@ import androidx.constraintlayout.widget.ConstraintSet.START
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import androidx.constraintlayout.widget.ConstraintSet.VISIBLE
 import androidx.constraintlayout.widget.ConstraintSet.WRAP_CONTENT
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.domain.interactor.KeyguardBlueprintInteractor
@@ -46,7 +46,7 @@ import com.android.systemui.plugins.clocks.ClockFaceLayout
 import com.android.systemui.res.R
 import com.android.systemui.shade.LargeScreenHeaderHelper
 import com.android.systemui.shade.ShadeDisplayAware
-import com.android.systemui.shared.R as sharedR
+import com.android.systemui.res.R as sharedR
 import com.android.systemui.util.ui.value
 import dagger.Lazy
 import javax.inject.Inject

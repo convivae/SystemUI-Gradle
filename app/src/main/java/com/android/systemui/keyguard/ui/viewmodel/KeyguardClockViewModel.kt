@@ -21,7 +21,7 @@ import android.content.res.Resources
 import androidx.annotation.VisibleForTesting
 import androidx.constraintlayout.helper.widget.Layer
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main

@@ -34,7 +34,7 @@ import androidx.core.view.contains
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.scene.SceneScope
 import com.android.compose.modifiers.padding
-import com.android.systemui.customization.R
+import com.android.systemui.res.R
 import com.android.systemui.keyguard.ui.composable.blueprint.ClockElementKeys.largeClockElementKey
 import com.android.systemui.keyguard.ui.composable.blueprint.ClockElementKeys.smallClockElementKey
 import com.android.systemui.keyguard.ui.composable.blueprint.ClockScenes.largeClockScene

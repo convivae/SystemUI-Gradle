@@ -23,7 +23,7 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.keyguard.KeyguardBottomAreaRefactor
 import com.android.systemui.keyguard.shared.model.KeyguardBlueprint
 import com.android.systemui.keyguard.ui.view.layout.blueprints.transitions.BaseBlueprintTransition
@@ -33,7 +33,7 @@ import com.android.systemui.keyguard.ui.viewmodel.KeyguardBlueprintViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.shared.R as sharedR
+import com.android.systemui.res.R as sharedR
 import com.android.systemui.util.kotlin.pairwise
 
 object KeyguardBlueprintViewBinder {

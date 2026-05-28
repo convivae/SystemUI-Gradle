@@ -30,7 +30,7 @@ import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.res.R
-import com.android.systemui.shared.R as sharedR
+import com.android.systemui.res.R as sharedR
 import kotlinx.coroutines.DisposableHandle
 
 object KeyguardSmartspaceViewBinder {

@@ -59,7 +59,7 @@ import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.communal.ui.binder.CommunalTutorialIndicatorViewBinder
 import com.android.systemui.communal.ui.viewmodel.CommunalTutorialIndicatorViewModel
 import com.android.systemui.coroutines.newTracingContext
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main

@@ -33,7 +33,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.android.compose.animation.scene.ElementKey
 import com.android.compose.animation.scene.SceneScope
 import com.android.compose.modifiers.padding
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.keyguard.ui.composable.blueprint.WeatherClockElementKeys
 import com.android.systemui.keyguard.ui.composable.modifier.burnInAware
 import com.android.systemui.keyguard.ui.viewmodel.AodBurnInViewModel

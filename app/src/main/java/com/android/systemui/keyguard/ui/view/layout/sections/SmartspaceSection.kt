@@ -23,7 +23,7 @@ import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.KeyguardUnlockAnimationController
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
@@ -35,7 +35,7 @@ import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
 import com.android.systemui.res.R as R
 import com.android.systemui.shade.ShadeDisplayAware
-import com.android.systemui.shared.R as sharedR
+import com.android.systemui.res.R as sharedR
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
 import dagger.Lazy
 import javax.inject.Inject

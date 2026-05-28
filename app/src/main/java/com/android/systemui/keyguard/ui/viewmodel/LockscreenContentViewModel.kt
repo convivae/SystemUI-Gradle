@@ -20,7 +20,7 @@ import android.content.res.Resources
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.internal.annotations.VisibleForTesting
 import com.android.systemui.biometrics.AuthController
-import com.android.systemui.customization.R as customR
+import com.android.systemui.res.R as customR
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardBlueprintInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor
