@@ -21,4 +21,7 @@ sourceSets {
 dependencies {
     implementation(project(":utils"))
     implementation(files("$rootDir/libs/tracinglib-platform.jar"))
+
+    // Kotlin coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 }

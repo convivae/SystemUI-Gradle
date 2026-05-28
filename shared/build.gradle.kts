@@ -4,7 +4,8 @@ plugins {
 
 android {
     namespace = "com.android.systemui.shared"
-    compileSdk = 37
+    // JD MOD: Use custom SDK platform with merged android.jar
+    compileSdkPreview = "SysUISdk"
 
     defaultConfig {
         minSdk = 34
@@ -29,6 +30,7 @@ android {
 afterEvaluate {
     extensions.configure<com.android.build.api.dsl.LibraryExtension> {
         sourceSets["main"].java.srcDirs("src")
+        sourceSets["main"].kotlin.srcDirs("src")
         sourceSets["main"].res.srcDirs("res")
         sourceSets["main"].aidl.srcDirs("src")
     }
@@ -36,7 +38,8 @@ afterEvaluate {
 
 dependencies {
     implementation(project(":plugin"))
-    implementation(project(":unfold"))
+    // JD MOD: Using prebuilt SystemUIUnfoldLib.jar instead of unfold module
+    // implementation(project(":unfold"))
     implementation(project(":animation"))
     implementation(project(":common"))
 
@@ -63,6 +66,7 @@ dependencies {
     implementation(files("$rootDir/libs/SystemUIPluginLib.jar"))
     implementation(files("$rootDir/libs/SystemUIUnfoldLib.jar"))
     implementation(files("$rootDir/libs/WindowManager-Shell-shared.jar"))
+    implementation(files("$rootDir/libs/WindowManager-Shell.jar"))
     implementation(files("$rootDir/libs/tracinglib-platform.jar"))
     implementation(files("$rootDir/libs/com_android_systemui_shared_flags_lib.jar"))
     implementation(files("$rootDir/libs/msdl.jar"))

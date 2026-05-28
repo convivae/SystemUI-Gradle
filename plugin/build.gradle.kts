@@ -4,7 +4,8 @@ plugins {
 
 android {
     namespace = "com.android.systemui.plugin"
-    compileSdk = 37
+    // JD MOD: Use custom SDK platform with merged android.jar
+    compileSdkPreview = "SysUISdk"
 
     defaultConfig {
         minSdk = 34
@@ -24,11 +25,14 @@ android {
     buildFeatures {
         aidl = true
     }
-}
 
-afterEvaluate {
-    extensions.configure<com.android.build.api.dsl.LibraryExtension> {
-        sourceSets["main"].java.srcDirs("src")
+    // JD MOD: Configure source directories for AGP 9.x
+    // Use sourceSets directly in android block
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("src")
+            kotlin.srcDirs("src")
+        }
     }
 }
 

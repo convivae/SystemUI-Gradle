@@ -5,7 +5,9 @@ plugins {
 
 android {
     namespace = "com.android.systemui"
-    compileSdk = 37
+    // JD MOD: Use custom SDK platform with merged android.jar (SDK + framework.jar)
+    // This provides access to hidden platform APIs without modifying the standard SDK
+    compileSdkPreview = "SysUISdk"
 
     defaultConfig {
         applicationId = "com.android.systemui"
@@ -58,6 +60,13 @@ android {
     lint {
         baseline = file("lint-baseline.xml")
     }
+
+    // JD MOD: Handle AOSP product-specific resources
+    // AOSP uses product="default", product="tv", product="tablet" etc.
+    // We only want the "default" product variant
+    aaptOptions {
+        additionalParameters("--product", "default")
+    }
 }
 
 afterEvaluate {
@@ -70,13 +79,21 @@ afterEvaluate {
 }
 
 dependencies {
-    // Internal modules
-    implementation(project(":shared"))
-    implementation(project(":customization"))
-    implementation(project(":animation"))
+    // Internal modules (compiled from source)
     implementation(project(":common"))
     implementation(project(":log"))
     implementation(project(":utils"))
+    implementation(project(":plugin-core"))
+
+    // JD MOD: Using prebuilt JARs for complex modules
+    // These modules have Dagger-generated code and complex interdependencies
+    implementation(files("$rootDir/libs/SystemUICommon.jar"))
+    implementation(files("$rootDir/libs/SystemUILogLib.jar"))
+    implementation(files("$rootDir/libs/PluginCoreLib.jar"))
+    implementation(files("$rootDir/libs/SystemUIPluginLib.jar"))
+    implementation(files("$rootDir/libs/SystemUIUnfoldLib.jar"))
+    implementation(files("$rootDir/libs/PlatformAnimationLib.jar"))
+    implementation(files("$rootDir/libs/BiometricsSharedLib.jar"))
 
     // AndroidX - Core
     implementation("androidx.core:core-ktx:1.13.1")
@@ -91,9 +108,10 @@ dependencies {
     implementation("androidx.palette:palette:1.0.0")
     implementation("androidx.legacy:legacy-preference-v14:1.0.0")
     implementation("androidx.leanback:leanback:1.2.0")
-    implementation("androidx.slice:slice-core:1.1.0")
-    implementation("androidx.slice:slice-view:1.1.0")
-    implementation("androidx.slice:slice-builders:1.1.0")
+    // JD MOD: Using local JARs for slice libraries
+    implementation(files("$rootDir/libs/slice-core.jar"))
+    implementation(files("$rootDir/libs/slice-view.jar"))
+    implementation(files("$rootDir/libs/slice-builders.jar"))
     implementation("androidx.arch.core:core-runtime:2.2.0")
     implementation("androidx.lifecycle:lifecycle-common-java8:2.8.4")
     implementation("androidx.lifecycle:lifecycle-extensions:2.2.0")
@@ -130,15 +148,15 @@ dependencies {
     implementation("javax.inject:javax.inject:1")
     implementation("javax.annotation:javax.annotation-api:1.3.2")
 
-    // Lottie
-    implementation("com.airbnb.android:lottie:6.4.2")
-    implementation("com.airbnb.android:lottie-compose:6.4.2")
+    // Lottie - JD MOD: Using local JARs from AOSP build
+    implementation(files("$rootDir/libs/lottie.jar"))
+    implementation(files("$rootDir/libs/lottie-compose.jar"))
 
     // Protobuf
     implementation("com.google.protobuf:protobuf-javalite:3.25.3")
 
-    // Prebuilt AOSP libs (compileOnly — framework APIs)
-    compileOnly(files("$rootDir/libs/framework.jar"))
+    // JD MOD: framework.jar is now merged into custom SDK android.jar
+    // No longer needed as compileOnly dependency
 
     // Prebuilt AOSP libs (implementation)
     implementation(files("$rootDir/libs/SystemUI-proto.jar"))

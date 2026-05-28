@@ -4,7 +4,8 @@ plugins {
 
 android {
     namespace = "com.android.systemui.animation"
-    compileSdk = 37
+    // JD MOD: Use custom SDK platform with merged android.jar
+    compileSdkPreview = "SysUISdk"
 
     defaultConfig {
         minSdk = 34

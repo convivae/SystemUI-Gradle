@@ -4,7 +4,8 @@ plugins {
 
 android {
     namespace = "com.android.systemui.unfold"
-    compileSdk = 37
+    // JD MOD: Use custom SDK platform with merged android.jar
+    compileSdkPreview = "SysUISdk"
 
     defaultConfig {
         minSdk = 34
@@ -29,6 +30,7 @@ android {
 afterEvaluate {
     extensions.configure<com.android.build.api.dsl.LibraryExtension> {
         sourceSets["main"].java.srcDirs("src")
+        sourceSets["main"].kotlin.srcDirs("src")
         sourceSets["main"].aidl.srcDirs("src")
     }
 }

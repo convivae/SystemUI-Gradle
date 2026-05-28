@@ -18,13 +18,10 @@ rootProject.name = "SystemUI-Gradle"
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
+// JD MOD: Only include modules that we compile from source
+// Complex modules (shared, unfold, customization, animation, plugin) use prebuilt JARs
 include(":app")
-include(":shared")
-include(":plugin")
 include(":plugin-core")
-include(":unfold")
-include(":customization")
-include(":animation")
 include(":common")
 include(":utils")
 include(":log")
