@@ -4,6 +4,16 @@
 **Status:** Draft (awaiting user approval)
 **Author:** Cursor Agent
 **Supersedes:** `2026-04-30-systemui-gradle-conversion-design.md`
+**Technical reference:** `/home/conv/myspace/CarSystemUIGradle` — key commit `c0ae96b`
+
+> **Important:** `CarSystemUIGradle` is a third-party (JD) project and is used
+> **only as a technical reference** — i.e. we look at how it solves Gradle
+> migration problems. We do **not** inherit its codebase conventions:
+> - No `// JD MOD:` style code annotations — we use plain `// SYSOPS:` or
+>   project-neutral comments.
+> - No JD-specific app names (`JDCarSystemUI`), keystores, or namespace
+>   suffixes (`com.android.systemui.car`).
+> - No dependency on JD-only AARs (`car-ui-lib`, `car-uxr-client-lib`, …).
 
 ## 1. Background and Motivation
 
@@ -277,3 +287,144 @@ later), as agreed with the user.
 ## 10. Open Questions
 
 None — the brainstorming Q&A answered all design-defining questions.
+
+## 11. Migration Log Discipline
+
+This project inherits a long-running, multi-task Gradle migration. To keep
+the work reviewable and to avoid losing solutions to problems we have
+already solved, we maintain `docs/GRADLE_MIGRATION_LOG.md` as a living
+document. Every non-trivial problem we hit during the build MUST be
+recorded there before the task is marked done.
+
+### 11.1 When to write an entry
+
+Write an entry when **any** of the following happens during a task:
+
+- The build fails and we change source / config / dependency to fix it.
+- A hidden API or AOSP-specific class is referenced and we have to teach
+  Gradle where to find it (or accept the limitation).
+- A resource is missing, renamed, or duplicated and we patch it.
+- A `// SYSOPS:` annotation is added to source code (see 11.4).
+- A prebuilt AAR/JAR is added to `libs/` (record source path).
+- A new module, source set, or build flag is introduced.
+- AGP / Gradle / Kotlin version behaviour bites us.
+
+**Do not** write entries for routine stuff like "added a new file" or
+"updated a dependency version".
+
+### 11.2 Required structure per entry
+
+Each entry follows a fixed schema so entries are easy to scan:
+
+```markdown
+## 问题 N：<short title>
+
+### 问题描述
+<error message, command, or symptom, verbatim where possible>
+
+### 问题分析
+<root cause — what is actually happening?>
+
+### 解决方案
+<the change we made — file paths + diff/commands, not vague>
+
+### 修改文件
+- <path> — <one-line reason>
+
+### 制品来源（如适用）
+| 文件 | 来源 | 说明 |
+|------|------|------|
+| X.jar | /home/conv/myspace/aosp/out/soong/.../X.jar | purpose |
+
+### 状态
+✅ 已解决 / ⚠️ 部分解决 / ❌ 未解决
+```
+
+The Chinese headers (`问题描述`, `问题分析`, `解决方案`, `修改文件`, `制品来源`,
+`状态`) are kept because the project predates this spec and the existing
+log uses them. **Do not change the schema** — append entries only.
+
+### 11.3 Numbering
+
+Numbering is global across the whole log (`问题一`, `问题二`, …). Before
+adding a new entry, `grep -c '^## 问题' docs/GRADLE_MIGRATION_LOG.md` and
+use the next integer.
+
+### 11.4 Source code annotation convention
+
+When we patch AOSP-copied source to make it compile under Gradle, the
+patch is marked with a short comment **immediately above** the change:
+
+```kotlin
+// SYSOPS: <one-line reason>
+```
+
+Rules:
+
+- Use `// SYSOPS:` (project-neutral). **Never** use `// JD MOD:` —
+  that belongs to the third-party reference project.
+- One line only; longer explanation goes into the migration log.
+- Place the comment at the **smallest enclosing scope** that still makes
+  sense (line above a class, a method, or a single statement).
+- For Kotlin use `//`, for Java use `//`, for XML/manifest use
+  `<!-- SYSOPS: ... -->`.
+- The comment must be in English (matches the rest of the project).
+
+Examples:
+
+```java
+// SYSOPS: private Dagger modules must be internal under Gradle/Kapt
+@Module
+internal abstract class InternalCoordinatorsModule { ... }
+```
+
+```xml
+<!-- SYSOPS: renamed manifest package for BP compilation -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.android.systemui">
+```
+
+### 11.5 Commit hygiene
+
+- Each task commit MUST include the migration log entry if one was
+  produced.
+- Commit messages in this repo follow the pattern:
+  `<area>: <imperative summary>` (e.g. `build: pin AGP 9.2.0`,
+  `docs(migration): add 问题十八`). See `git log --oneline` for
+  precedent.
+- Large binary additions (`libs/*.jar`) go in their **own commit** with
+  the `vendor:` prefix and reference the migration log entry in the
+  body (e.g. `vendor: add WindowManager-Shell.aar — see 问题二十六`).
+
+### 11.6 What we do not record
+
+- Trivial typo fixes.
+- Dependency version bumps that just work.
+- Routine file moves/refactors.
+- Anything whose explanation would be longer than the fix itself.
+
+### 11.7 Examples from the reference project (informational only)
+
+The reference project `CarSystemUIGradle/docs/GRADLE_MIGRATION.md` has 35
+entries documenting its migration. We use the **same schema** (problem →
+analysis → solution → files changed → status) but a different prefix
+(`SYSOPS:` instead of `JD MOD:`) and a different starting count (we
+inherit the existing 6 categories of unresolved issues from the v1
+attempt and continue numbering from where they leave off).
+
+Categories of issues that are **expected to recur** in this project,
+based on what the reference ran into:
+
+1. Missing source directories in `sourceSets`.
+2. Missing JAR/AAR dependencies (resolved via `tools/extract_prebuilts.sh`).
+3. Kotlin Dagger visibility (`private` → `internal`).
+4. `nonTransitiveRClass` and resource ID mismatches.
+5. Hidden API references requiring `framework.jar` on classpath.
+6. BP vs Gradle package-name collision
+   (`--rename-manifest-package` trick).
+7. Custom SDK Platform (`SysUISdk`) for framework-private resource IDs.
+8. Lifecycle / WindowManager-Shell / WifiTrackerLib runtime crashes.
+9. AOSP-only AARs not on Maven Central.
+10. Platform signing for system-app install.
+
+The migration log captures our version of each.
