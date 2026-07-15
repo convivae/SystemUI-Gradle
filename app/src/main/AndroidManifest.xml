@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- SYSOPS: stub manifest for v1 skeleton. Real SystemUI services / receivers
+         will be added in feature-port tasks. -->
+    <application
+        android:name=".SystemUIApplication"
+        android:allowBackup="false">
+
+        <service
+            android:name=".SystemUIService"
+            android:exported="false" />
+    </application>
+</manifest>
