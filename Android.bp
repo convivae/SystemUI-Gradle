@@ -1,0 +1,120 @@
+//
+// Copyright (C) 2026 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+// SYSOPS: Prebuilt JAR imports for modules not yet ported to Gradle source.
+// See docs/GRADLE_MIGRATION_LOG.md 问题五 (jar naming).
+java_import {
+    name: "SystemUISharedLib",
+    jars: ["libs/prebuilts/SystemUISharedLib.jar"],
+    sdk_version: "core_platform",
+}
+
+java_import {
+    name: "SystemUICustomizationLib",
+    jars: ["libs/prebuilts/SystemUICustomizationLib.jar"],
+    sdk_version: "core_platform",
+}
+
+java_import {
+    name: "SystemUIPluginLib",
+    jars: ["libs/prebuilts/SystemUIPluginLib.jar"],
+    sdk_version: "core_platform",
+}
+
+java_import {
+    name: "PlatformAnimationLib",
+    jars: ["libs/prebuilts/PlatformAnimationLib.jar"],
+    sdk_version: "core_platform",
+}
+
+android_library {
+    name: "SystemUI-core",
+    srcs: [
+        "SystemUI-core/src/main/java/**/*.java",
+        "SystemUI-core/src/main/java/**/*.kt",
+    ],
+    manifest: "SystemUI-core/src/main/AndroidManifest.xml",
+    resource_dirs: ["SystemUI-core/src/main/res"],
+    static_libs: [
+        "androidx.core_core-ktx",
+        "androidx.annotation_annotation",
+    ],
+}
+
+android_library {
+    name: "SystemUI-plugin-core",
+    srcs: [
+        "SystemUI-plugin-core/src/main/java/**/*.java",
+        "SystemUI-plugin-core/src/main/java/**/*.kt",
+    ],
+    manifest: "SystemUI-plugin-core/src/main/AndroidManifest.xml",
+    resource_dirs: ["SystemUI-plugin-core/src/main/res"],
+}
+
+android_library {
+    name: "SystemUI-shared",
+    static_libs: ["SystemUISharedLib"],
+    manifest: "SystemUI-shared/src/main/AndroidManifest.xml",
+}
+
+android_library {
+    name: "SystemUI-animation",
+    static_libs: ["PlatformAnimationLib"],
+    manifest: "SystemUI-animation/src/main/AndroidManifest.xml",
+}
+
+android_library {
+    name: "SystemUI-customization",
+    static_libs: ["SystemUICustomizationLib"],
+    manifest: "SystemUI-customization/src/main/AndroidManifest.xml",
+}
+
+android_library {
+    name: "SystemUI-plugin",
+    static_libs: ["SystemUIPluginLib"],
+    manifest: "SystemUI-plugin/src/main/AndroidManifest.xml",
+}
+
+android_app {
+    name: "SystemUI",
+
+    srcs: [
+        "app/src/main/java/**/*.java",
+        "app/src/main/java/**/*.kt",
+    ],
+
+    manifest: "app/src/main/AndroidManifest.xml",
+
+    resource_dirs: [
+        "app/src/main/res",
+    ],
+
+    static_libs: [
+        "SystemUI-core",
+        "SystemUI-shared",
+        "SystemUI-animation",
+        "SystemUI-customization",
+        "SystemUI-plugin",
+        "SystemUI-plugin-core",
+    ],
+
+    platform_apis: true,
+    privileged: true,
+    certificate: "platform",
+
+    // SYSOPS: Required for BP ↔ Gradle namespace compatibility.
+    // See v2 spec §6.3.
+    aaptflags: [
+        "--rename-manifest-package", "com.android.systemui",
+    ],
+
+    // SYSOPS: deferred to follow-up task (platform signing keystore).
+    // debug builds in Gradle use AGP auto-generated key.
+}
