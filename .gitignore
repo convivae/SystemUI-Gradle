@@ -18,19 +18,11 @@ desktop.ini
 
 # Android 构建产物 & 缓存
 build/
-app/build/
 out/
 bin/
 gen/
 obj/
 intermediates/
-
-# SystemUI 特定模块
-systemui/**/build/
-systemui/**/out/
-systemui/**/gen/
-systemui/**/obj/
-systemui/**/intermediates/
 
 # Gradle 相关
 .gradle/
