@@ -112,3 +112,61 @@ Task 1 创建 7 个空目录 + 每个一个 `.gitkeep`，让 `./gradlew help`
 
 ### 修改文件
 - 7 个 module 目录（每个含 `.gitkeep`）
+
+---
+
+## 问题五：AOSP JAR 产物命名与 plan 不符
+
+### 问题描述
+plan Task 5/6 假设 AOSP 产物 jar 名为：
+`SystemUI-{shared,animation,customization,plugin}.jar`，
+实际 AOSP 编译产物为：
+
+| Plan 假设 | 实际 AOSP 路径 |
+|-----------|--------------|
+| `SystemUI-shared.jar` | `SystemUISharedLib.jar` |
+| `SystemUI-animation.jar` | `PlatformAnimationLib.jar` |
+| `SystemUI-customization.jar` | `SystemUICustomizationLib.jar` |
+| `SystemUI-plugin.jar` | `SystemUIPluginLib.jar` |
+
+### 问题分析
+plan 复制了 CarSystemUIGradle 的命名，但 CarSystemUIGradle 是 JD 定制版，
+AOSP 原版命名是 `{ModuleName}Lib.jar`。必须用实际 AOSP 名称，
+否则 `compileOnly(files("libs/prebuilts/SystemUI-*.jar"))` 会指向不存在的文件。
+
+### 解决方案
+`tools/extract_prebuilts.sh` 和 Task 6 的 `compileOnly` 路径都改用实际名称：
+
+```bash
+# extract_prebuilts.sh 用 copy_jar("SystemUISharedLib") 等
+# build.gradle.kts 用 compileOnly(files("libs/prebuilts/SystemUISharedLib.jar")) 等
+```
+
+### 修改文件
+- `tools/extract_prebuilts.sh`（Task 5 实现时）
+- 4 个 `SystemUI-*/build.gradle.kts` 的 `compileOnly` 路径
+
+---
+
+## 问题六：prebuilt-jar module 相对路径错误
+
+### 问题描述
+4 个 prebuilt-jar module 的 `compileOnly(files("libs/prebuilts/X.jar"))`
+用了 module 内相对路径，AGP 从 module 目录解析，找不到文件：
+
+```
+File/directory does not exist: /home/conv/myspace/SystemUI-Gradle/SystemUI-plugin/libs/prebuilts/...
+```
+
+### 问题分析
+相对路径 `libs/` 从每个 module 的 `${moduleDir}/libs/` 开始找，
+而不是从根项目 `${project.rootDir}/libs/` 开始。
+
+### 解决方案
+改用 `${rootProject.projectDir}/libs/prebuilts/X.jar`。
+
+### 修改文件
+- `SystemUI-shared/build.gradle.kts`
+- `SystemUI-animation/build.gradle.kts`
+- `SystemUI-customization/build.gradle.kts`
+- `SystemUI-plugin/build.gradle.kts`
