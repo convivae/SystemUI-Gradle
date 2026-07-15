@@ -170,3 +170,35 @@ File/directory does not exist: /home/conv/myspace/SystemUI-Gradle/SystemUI-plugi
 - `SystemUI-animation/build.gradle.kts`
 - `SystemUI-customization/build.gradle.kts`
 - `SystemUI-plugin/build.gradle.kts`
+
+---
+
+## 问题七：v1 骨架交付（问题三补完）
+
+### 问题描述
+v2 spec §9 deliverable 已完成：所有 9 个 Task 执行完毕，骨架交付。
+
+### 完成情况
+| Task | 文件 | 状态 |
+|------|------|------|
+| 1 | root Gradle config + 7 placeholder dirs | ✅ `0632789` |
+| 2 | framework.jar 提取 | ✅ `2704f80` |
+| 3+4 | :SystemUI-core, :SystemUI-plugin-core | ✅ `5f87314` |
+| 5+6 | 4 prebuilt JARs + extract script + 4 library modules | ✅ `e1a2710` |
+| 7 | :app skeleton (SystemUIService stub + APK 12MB) | ✅ `a9ffb46` |
+| 8 | Android.bp + CleanSpec.mk | ✅ `ebd5c2e` |
+| 9 | 本条目 + 末尾 push | ✅ |
+
+### 制品汇总
+| 文件 | 说明 |
+|------|------|
+| `libs/framework.jar` | 19MB AOSP framework stub |
+| `libs/prebuilts/*.jar` | 58MB AOSP 模块 jar (4个) |
+| `app/build/outputs/apk/debug/app-debug.apk` | 12MB stub APK (com.android.systemui) |
+| `Android.bp` | AOSP 双编译入口 |
+| `tools/extract_prebuilts.sh` | JAR 提取脚本 |
+
+### 未解决问题（后续 Task）
+- 平台签名 keystore（暂用 debug key，后续从 AOSP 提取 platform.pk8）
+- 真实 `SystemUIService` / Dagger graph 移植
+- `tools/sync_aosp_sources.sh`（按需从 aosp/ 拷贝源码）
