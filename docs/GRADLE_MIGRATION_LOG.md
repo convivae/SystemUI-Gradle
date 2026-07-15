@@ -55,3 +55,60 @@ agent 误读为"保留 app/"，用户实际意图是"连 app/ 一起全删"。
 
 ### 修改文件
 - `app/`（整目录）
+
+---
+
+## 问题三：v1 骨架交付
+
+### 问题描述
+v2 spec §9 要求交付双编译骨架；本任务执行 §9 全部步骤。执行中暴露两个
+配置层问题：
+
+1. 现有 `.gitignore` 第 84 行 `libs/` 与 v2 spec §7 "libraries committed"
+   矛盾——会让 framework.jar 和 4 个 prebuilt JAR 被忽略。
+2. plan 里 `build.gradle.kts` 的 `emptySet()` 不能让 Kotlin 类型推导，
+   需显式 `emptySet<File>()`。
+
+### 问题分析
+1. v1 离线策略阶段把 `libs/` 当成"全部第三方依赖临时缓存"，需要忽略；
+   v2 改为"自包含 + commit 到仓库"，需要保留 jar/aar 但忽略 maven 子树
+   （参考项目也用 `libs/maven/`）。
+2. plan 写成 verbatim 参考项目 CarSystemUIGradle 的写法，而该项目用的是
+   `JavaCompile` 在 Groovy build.gradle 里能隐式推断；切到 Kotlin DSL
+   后必须给 `emptySet()` 提供类型参数。
+
+### 解决方案
+1. `.gitignore` 末尾改为：
+   ```
+   !libs/
+   libs/maven/
+   !libs/**/*.jar
+   !libs/**/*.aar
+   ```
+2. `build.gradle.kts` 第 15 行 `emptySet()` → `emptySet<File>()`。
+
+### 修改文件
+- `.gitignore`
+- `build.gradle.kts`
+
+（详细模块拆分见 `docs/superpowers/plans/2026-07-16-systemui-v2-dual-build-skeleton.md`。）
+
+---
+
+## 问题四：Task 1 需要占位目录
+
+### 问题描述
+`settings.gradle.kts` 写了 7 个 `include(":...")`，但执行 Task 1 时
+7 个 module 目录都还不存在，`./gradlew help` 直接失败。
+
+### 问题分析
+plan 的 Step 6 预料到了这个失败，但明确"Task 1 still DONE"。这是
+不完全忠实于 §6 "expected: PASS" 的描述。把目录创建挪到 Task 1
+内部才合理。
+
+### 解决方案
+Task 1 创建 7 个空目录 + 每个一个 `.gitkeep`，让 `./gradlew help`
+和 `./gradlew projects` 都 PASS。
+
+### 修改文件
+- 7 个 module 目录（每个含 `.gitkeep`）

@@ -81,5 +81,8 @@ captures
 
 # Gradle project additions
 **/build/
-libs/
+!libs/
+libs/maven/
+!libs/**/*.jar
+!libs/**/*.aar
 !gradle/wrapper/gradle-wrapper.jar
