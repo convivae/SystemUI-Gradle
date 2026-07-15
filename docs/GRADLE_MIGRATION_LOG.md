@@ -73,6 +73,39 @@ rm -f docs/superpowers/plans/2026-04-30-systemui-gradle-conversion.md
    脚本（如果还没有 SysUISdk）。
 4. Task 3: 编写最小 `:app` 模块，跑通 `./gradlew :app:assembleDebug`。
 
+## 问题 2：清除 app/ 残留（误读清理范围修正）
+
+### 问题描述
+问题 1 的清理 commit（`6fd8846`）**错误地保留了 `app/`**。原因：
+在澄清多选问卷里，选项 id `c1-keep-all` 的 label 写的是 `全删（重新拷）`，
+id 名称与 label 含义相反，导致 agent 误读为"仅删其他、保留 app/"。
+用户实际意图是 *连同 app/ 一起全删，从 AOSP 重新拷贝一份作为骨架起点*。
+
+### 问题分析
+- `app/` 仍含 v1 阶段（约 6,400 文件 / 65MB）从 AOSP 拷贝但
+  尚未清理的 SystemUI 业务源码 + gradle 构建中间产物
+  (`app/build/`) + 上一轮 untracked 的 `app/src/main/res-keyguard/`。
+- 这些不是 v2 骨架应当拥有内容。v2 的设计是把 app/ 当成
+  从零开始的容器，先跑通空系统，再按模块迭代填充。
+
+### 解决方案
+直接 `rm -rf app/`（用户已二次确认选 `app-all-delete`）。
+后续 v2 骨架会重新从 AOSP 拷贝，但仅拷贝当前迭代需要的源码；
+res-keyguard 是否包含进 keyguard 模块由 Task 决策时按需处理。
+
+### 修改文件
+- 删除 `app/` 整目录（含 `src/`、`build/`、`res-keyguard/` 子目录与所有
+  6,487 个文件）。
+
+### 状态
+✅ 已解决，仓库现在只剩 ~10 个根目录条目（除 .git 隐藏目录外）。
+
+### 改进
+- 澄清问卷时，**id 与 label 含义必须一致**；若已观察到不一致，
+  应追问而不是按字面理解。
+- spec §11 迁移日志应 **在每个清理步骤前** 写好条目，与 commit
+  一起提交，而非事后补记。
+
 ---
 
 ## 附录 A：v1 历史（已废弃，仅供参考）
