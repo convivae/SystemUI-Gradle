@@ -14,10 +14,20 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    signingConfigs {
+        create("release") {
+            storeFile = file("../keystore/platform.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
     buildTypes {
         debug {
-            // SYSOPS: debug build uses AGP auto-generated debug key.
-            // Platform signing (platform.pk8 + x509.pem) deferred to follow-up task.
+            // SYSOPS: platform-signed so the APK is installable as a system app.
+            // See v2 spec §11.7 risk #10. To regenerate keystore, run
+            // tools/install_keystore.sh.
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
