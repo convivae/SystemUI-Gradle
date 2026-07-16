@@ -61,21 +61,28 @@ Each milestone ends with `./gradlew :app:assembleDebug` green. **No
 milestone is merged unless its target file is on a device / emulator and
 `am startservice -n com.android.systemui/.SystemUIService` succeeds.**
 
-### Milestone 1: Add `WindowManager-Shell` prebuilt module
-**Goal:** `:SystemUI-wm-shell` library module wraps `WindowManager-Shell.jar`.
+**Reference project finding** (CarSystemUIGradle/app/build.gradle.kts):
+WMShell jar is wired directly into `:app` via `compileOnly(files(...))` —
+no separate `:SystemUI-wm-shell` module. Dagger code generation uses
+`kotlin-kapt` plugin + `kapt(libs.dagger.compiler)`. We follow the
+reference pattern; M1 simplifies to "copy the jar into libs/ and add a
+single `compileOnly` line in app/build.gradle.kts".
+
+### Milestone 1: Add `WindowManager-Shell` prebuilt jar
+**Goal:** `:app` resolves `com.android.wm.shell.*` at compile time.
 
 **Files:**
-- `tools/extract_prebuilts.sh`: add `copy_jar WindowManager-Shell`
-- `libs/prebuilts/WindowManager-Shell.jar` (commit)
-- `SystemUI-wm-shell/build.gradle.kts` (new module)
-- `SystemUI-wm-shell/src/main/AndroidManifest.xml`
-- `settings.gradle.kts`: `include(":SystemUI-wm-shell")`
-- `Android.bp`: `java_import` for WindowManager-Shell
+- `libs/WindowManager-Shell.jar` (commit, ~5MB)
+- `app/build.gradle.kts`: add `compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))`
+- `Android.bp`: add `java_import` for WindowManager-Shell in addition to
+  the existing 4 imports
 
-**Risk:** WMShell has Kotlin code → module needs `org.jetbrains.kotlin.android`
-plugin. Verify Kotlin 2.3.21 against AOSP Kotlin 1.x APIs used in WMShell.
+**Risk:** WMShell is Kotlin-only. AGP Kotlin compiler must accept Kotlin
+sources inside the jar — usually fine since `compileOnly` only consumes
+the byte-code, not the source.
 
-**Acceptance:** `:SystemUI-wm-shell:assembleDebug` PASS.
+**Acceptance:** `./gradlew :app:compileDebugJavaWithJavac` compiles even
+when a `.java` file imports `com.android.wm.shell.dagger.WMComponent`.
 
 ### Milestone 2: Port `CoreStartable` interface + minimal `SystemUIService`
 **Goal:** Real `SystemUIService` running with empty `CoreStartable` set.
@@ -102,15 +109,16 @@ Dagger factories, expose `SysUIComponent.Builder`.
 
 **Files:**
 - `app/src/main/java/com/android/systemui/dagger/` (24 files)
-- `app/build.gradle.kts`: add `kapt`/`ksp` plugin for Dagger code generation
-- Add Dagger 2.51 to version catalog (we have `dagger = 2.51.1` already)
+- `app/build.gradle.kts`: add `kotlin-kapt` plugin + `kapt(libs.dagger.compiler)`
+  (per CarSystemUIGradle reference)
 
-**Strategy:** Use Dagger annotation processing. KSP > kapt for Kotlin
-files in `dagger/`. Generate `DaggerReferenceGlobalRootComponent.java` and
+**Strategy:** Use `kotlin-kapt` annotation processing (matching reference
+project). Generate `DaggerReferenceGlobalRootComponent.java` and
 `DaggerReferenceSysUIComponent.java` at compile time.
 
 **Risk:** AOSP `dagger/` uses `dagger.android` + `dagger.spi`. We need to
-add the right artifacts to version catalog.
+add the right artifacts to version catalog. Reference project uses only
+`libs.dagger` + `libs.dagger.compiler` — we should follow that.
 
 **Acceptance:** `:app:compileDebugJavaWithJavac` produces Dagger-generated
 factories; `DaggerReferenceGlobalRootComponent` is reachable in `:app` test.

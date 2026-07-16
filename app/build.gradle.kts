@@ -39,6 +39,8 @@ dependencies {
     implementation(project(":SystemUI-customization"))
     implementation(project(":SystemUI-plugin"))
     implementation(project(":SystemUI-plugin-core"))
+    compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
     implementation(libs.androidx.core)
     implementation(libs.androidx.annotation)
     implementation(libs.material)

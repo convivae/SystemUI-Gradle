@@ -11,6 +11,12 @@ package {
 // SYSOPS: Prebuilt JAR imports for modules not yet ported to Gradle source.
 // See docs/GRADLE_MIGRATION_LOG.md 问题五 (jar naming).
 java_import {
+    name: "WindowManager-Shell",
+    jars: ["libs/WindowManager-Shell.jar"],
+    sdk_version: "core_platform",
+}
+
+java_import {
     name: "SystemUISharedLib",
     jars: ["libs/prebuilts/SystemUISharedLib.jar"],
     sdk_version: "core_platform",
@@ -103,6 +109,7 @@ android_app {
         "SystemUI-customization",
         "SystemUI-plugin",
         "SystemUI-plugin-core",
+        "WindowManager-Shell",
     ],
 
     platform_apis: true,

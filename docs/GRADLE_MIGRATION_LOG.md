@@ -270,3 +270,41 @@ Probe 结果：
 
 ### 修改文件
 - `docs/superpowers/plans/2026-07-16-port-systemui-service.md`（新增 158 行）
+
+---
+
+## 问题十：M1 WindowManager-Shell prebuilt
+
+### 问题描述
+Port 计划 M1：把 AOSP `WindowManager-Shell.jar` 引入 build，作为
+`com.android.wm.shell.*` 包来源。
+
+### 问题分析
+- AOSP `frameworks/base/libs/WindowManager/Shell/` 有 498 java/kt 源
+- out/ 已 compile 出 `WindowManager-Shell.jar` (turbine-combined)
+- 路径：`aosp/out/soong/.intermediates/frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/turbine-combined/`
+- **关键发现**：该 jar **41MB / 20155 class**，参考项目 CarSystemUIGradle
+  用的 8.7MB jar 是 AOSP 较旧版本人工精简产物（4924 class），我们不裁剪。
+- 集成方式按参考项目：`compileOnly(files(...))` 直接放进 `app/build.gradle.kts`，
+  不做独立 `:SystemUI-wm-shell` module（避免重复 manifest / R class）。
+- AOSP 同名 `SystemUIInitializer` / `SystemUIService` 都 import
+  `com.android.wm.shell.dagger.WMComponent` — 引入是后续 M2-M4 的前置。
+
+### 解决方案
+1. `cp` AOSP `WindowManager-Shell.jar` (41MB) 到 `libs/WindowManager-Shell.jar`。
+2. `app/build.gradle.kts` 加 `compileOnly(files(...WindowManager-Shell.jar))`。
+3. `Android.bp` 加 `java_import` + `static_libs`。
+
+### 修改文件
+- `libs/WindowManager-Shell.jar` (41MB 二进制)
+- `app/build.gradle.kts` (compileOnly line)
+- `Android.bp` (java_import + static_libs)
+
+### 验证
+临时 `WMShellSmoke.java` 包含 `import com.android.wm.shell.dagger.WMComponent`
++ `import com.android.wm.shell.sysui.ShellInterface` → `:app:compileDebugJavaWithJavac`
+BUILD SUCCESSFUL。临时文件已删除。
+
+### Plan 修订
+M1 描述已根据参考项目发现更新（不再做独立 module，直接 `compileOnly`）。
+Q2 (Dagger codegen) 答案 = kapt，按参考项目 `kotlin-kapt` 插件 + `kapt(libs.dagger.compiler)`。
