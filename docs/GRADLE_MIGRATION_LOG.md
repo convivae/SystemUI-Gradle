@@ -245,3 +245,28 @@ keytool 把 alias 转小写）。
 - `apksigner verify --print-certs` 显示 DN：
   `EMAILADDRESS=android@android.com, CN=Android, ...`
 - SHA-256: `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8`
+
+---
+
+## 问题九：Port SystemUIService plan 编写
+
+### 问题描述
+用户要求"Port 真实 SystemUIService：从 AOSP 拷源码 + Dagger graph"。
+但 AOSP `src/` 共 4183 文件，SystemUIService 本身 140 LoC 但依赖几百个
+`@Inject` 绑定。直接全量拷贝不现实。
+
+### 问题分析
+Probe 结果：
+- Dagger 根文件 24 个，可控
+- `SystemUIApplication` 501 LoC 含 `WMComponent` 注入，依赖 WMShell
+- `WindowManager-Shell.jar` 已存在于 AOSP out（498 文件源，但我们用 prebuilt）
+- `Dependency.java` 是 legacy static bridge（~2500 LoC），全量重构波及整个 SystemUI
+
+### 解决方案
+写 `docs/superpowers/plans/2026-07-16-port-systemui-service.md`
+（6 个 milestone 设计文档），不直接 port。每个 milestone 末尾
+`./gradlew :app:assembleDebug` 必须绿，向用户提出 4 个 open questions
+决定后续执行。
+
+### 修改文件
+- `docs/superpowers/plans/2026-07-16-port-systemui-service.md`（新增 158 行）
