@@ -1,0 +1,12 @@
+{
+  "presubmit": [
+    {
+      "name": "CtsTileServiceTestCases"
+    }
+  ],
+ "postsubmit": [
+    {
+      "name": "QuickSettingsDeviceResetTests"
+    }
+  ]
+}

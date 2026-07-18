@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- SYSOPS: stub manifest for v1 skeleton. Real SystemUI services / receivers
-         will be added in feature-port tasks. -->
+    <!-- M2: SystemUIService is the real process entry point; Dagger graph wiring is M4. -->
     <application
         android:name=".SystemUIApplication"
         android:allowBackup="false">

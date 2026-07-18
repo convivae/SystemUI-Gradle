@@ -1,11 +1,28 @@
 [versions]
 agp = "9.2.0"
-kotlin = "2.3.21"
+kotlin = "1.9.22"
 androidxCore = "1.13.1"
 androidxAnnotation = "1.8.0"
 material = "1.12.0"
 kotlinxCoroutines = "1.8.1"
 dagger = "2.51.1"
+guava = "32.1.3-android"
+lottie = "6.1.0"
+constraintlayout = "2.1.4"
+androidxLifecycle = "2.7.0"
+androidxFragment = "1.6.2"
+androidxPreference = "1.2.1"
+androidxLeanback = "1.0.0"
+androidxSlice = "1.0.0"
+androidxMedia = "1.7.0"
+androidxConcurrent = "1.1.0"
+androidxExifinterface = "1.3.7"
+androidxCardview = "1.0.0"
+androidxRecyclerView = "1.3.2"
+androidxViewPager2 = "1.0.0"
+androidxDynamicanimation = "1.0.0"
+androidxConstraintlayoutCore = "1.0.4"
+androidxPalette = "1.0.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -13,8 +30,49 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 
 [libraries]
+# AndroidX Core
 androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version = "1.6.1" }
+androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "androidxCardview" }
+androidx-concurrent-futures = { module = "androidx.concurrent:concurrent-futures", version.ref = "androidxConcurrent" }
+androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
+androidx-constraintlayout-core = { module = "androidx.constraintlayout:constraintlayout-core", version.ref = "androidxConstraintlayoutCore" }
+androidx-dynamicanimation = { module = "androidx.dynamicanimation:dynamicanimation", version.ref = "androidxDynamicanimation" }
+androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidxExifinterface" }
+androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "androidxFragment" }
+androidx-leanback = { module = "androidx.leanback:leanback", version.ref = "androidxLeanback" }
+androidx-leanback-preference = { module = "androidx.leanback:leanback-preference", version.ref = "androidxLeanback" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidxLifecycle" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
+androidx-mediarouter = { module = "androidx.mediarouter:mediarouter", version.ref = "androidxMedia" }
+androidx-palette = { module = "androidx.palette:palette", version.ref = "androidxPalette" }
+androidx-preference = { module = "androidx.preference:preference", version.ref = "androidxPreference" }
+androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "androidxRecyclerView" }
+androidx-slice-builders = { module = "androidx.slice:slice-builders", version.ref = "androidxSlice" }
+androidx-slice-core = { module = "androidx.slice:slice-core", version.ref = "androidxSlice" }
+androidx-slice-view = { module = "androidx.slice:slice-view", version.ref = "androidxSlice" }
+androidx-viewpager2 = { module = "androidx.viewpager2:viewpager2", version.ref = "androidxViewPager2" }
+
+# Material
 material = { module = "com.google.android.material:material", version.ref = "material" }
+
+# Kotlin
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+
+# Dagger
 dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
+dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }
+
+# Third-party
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
+
+# Local Maven AARs (SystemUI modules)
+systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "1.0.0" }
+systemui-iconloader = { group = "com.android.systemui", name = "iconloader", version = "1.0.0" }
+systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "1.0.0" }
+systemui-wifitrackerlib = { group = "com.android.systemui", name = "WifiTrackerLib", version = "1.0.0" }

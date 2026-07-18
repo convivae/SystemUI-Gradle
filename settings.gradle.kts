@@ -6,12 +6,18 @@ pluginManagement {
     }
 }
 
+plugins {
+    id("com.android.application") version "9.2.0" apply false
+    id("com.android.library") version "9.2.0" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.22" apply false
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        // Local prebuilt AARs / JARs (e.g. SystemUI-shared.jar) referenced via flatDir or libs/ tree
+        maven { url = uri("${rootProject.projectDir}/libs/maven") }
     }
 }
 
