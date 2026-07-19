@@ -466,3 +466,243 @@ cd /home/conv/myspace/SystemUI-Gradle
 # 检查 AOSP 源码
 find /home/conv/myspace/aosp/frameworks/base/packages/SystemUI/src -name "QSTile*" -o -name "CurrentTilesInteractorImpl*"
 ```
+
+---
+
+# 2026-07-19: 选项 A — 完整复制 plugin 源码作为子项目编译
+
+## 背景
+
+按照用户最新指令（"选项 A：完整复制 plugin 源码并编译为 jar"），尝试把
+`aosp/frameworks/base/packages/SystemUI/plugin/` 与 `plugin_core/` 下的所有源码复制到
+本项目的 `SystemUI-plugin` 和 `SystemUI-plugin-core` 子模块，使用 Gradle 直接编译。
+
+## 完成的部分
+
+### 1. plugin-core 子项目（完全源码编译）
+
+复制了 AOSP 的全部 13 个 plugin_core 源文件到 `SystemUI-plugin-core/src/main/java`，
+新增独立的 `AndroidManifest.xml`，配置 `build.gradle.kts` 仅依赖 framework.jar +
+androidx.annotation + kotlin-stdlib。**编译通过** — 产物为 plugin-core AAR。
+
+### 2. plugin 子项目（源码编译 + 必要的桩）
+
+完整复制 81 个 plugin 源文件。由于 plugin 接口与 animation/shared 模块深度耦合
+（`ActivityStarter.java` 直接引用 `com.android.systemui.animation.ActivityTransitionAnimator`），
+采用了以下策略：
+
+1. 在 `SystemUI-plugin` 中提供简化的 `ActivityTransitionAnimator.Controller` 接口与
+   `Expandable` 接口桩，避免对 animation 子模块的编译期依赖。
+2. `ActivityStarter.java` 中的 `AudioManager.CsdWarning` 与
+   `BroadcastOptions.setInteractive` 是 Android 14+ API；framework.jar 太老，
+   把签名改为 `int csdWarning` 与简化的 `pendingIntent.send()`。
+3. 删除 plugin 内部的 `clocks/` 子目录（含 Compose 与 ConstraintLayout 依赖）
+   与 `TileDetailsViewModel.kt`（依赖 Compose），这些是 SystemUI 内部类，不属于
+   plugin 接口。
+
+**plugin 子项目编译通过** — 产物为 plugin AAR。
+
+### 3. 子模块策略调整
+
+考虑到 animation/shared/customization 模块依赖大量 AOSP 内部模块
+（`flags_lib`、`BiometricsSharedLib`、`SystemUIUnfoldLib`、`WindowManager-Shell-shared`
+等），完整复制源码需要 100+ 个额外依赖 jar。**保留 prebuilt JAR 形式**：
+
+- `SystemUI-animation` → `PlatformAnimationLib.jar`
+- `SystemUI-shared` → `SystemUISharedLib.jar`
+- `SystemUI-customization` → `SystemUICustomizationLib.jar`
+
+这些 prebuilt 已经过 `tools/clean_prebuilts.py` 清理，避免与 Maven 依赖冲突。
+
+## KAPT 内部错误根因（IrErrorTypeImpl）
+
+完整复制源码后，`SystemUI-core` 仍然无法编译，KAPT 报
+`java.lang.ClassCastException: IrErrorTypeImpl cannot be cast to IrSimpleType`。
+
+### 排查过程
+
+1. **Kotlin 版本升级**：`1.9.22 → 2.1.0` 无效。
+2. **禁用 KAPT**：编译进行到真正的 unresolved reference 阶段（如
+   `com.android.systemui.flags.Flags`、`SecureSettings`、`Main` 等内部类），
+   证明 KAPT 错误是"症状"，不是"病根"。
+3. **缺失类分析**：`Flags`、`SecureSettings`、`Main`、`Background`、`Application`、
+   `TestHarness`、`SysUISingleton` 等都是 SystemUI 内部类，分布在
+   `SystemUI/src/` 与 `SystemUI/pods/` 与 `SystemUI/shared/` 三个不同目录下。
+   当前 `SystemUI-core` 仅包含 `SystemUI/src/` 下的源码，缺少另两处的类。
+
+### 根本原因
+
+`SystemUI-core` 的源码是 **不完整的** —— AOSP 中 SystemUI 编译时把整个 `src/`、
+`pods/`、`shared/`、`animation/`、`plugin/`、`shared/`、`customization/` 等所有源
+码同时编译，而当前 Gradle 项目仅复制了 `SystemUI/src/` 部分。完整复制需要把所有
+AOSP 子模块都搬过来，约 5000+ 源文件。
+
+### 解决策略
+
+放弃完整复制 SystemUI-core，**回退到部分源码 + prebuilt JAR 混合方案**：
+
+1. 把 `SystemUI-shared` 与 `SystemUI-animation` 等子模块恢复为 prebuilt JAR 形式
+   （保留已经清理过的 JAR）。
+2. `SystemUI-core` 仍包含完整的 AOSP `src/` 源码，但要继续解决缺失依赖。
+3. 临时在 `SystemUI-core/src/` 下补充缺失的 Dagger qualifier 文件
+   （Background.java、Application.java 等来自 `pods/`）。
+
+## 文件改动
+
+- `SystemUI-plugin-core/build.gradle.kts`：独立 Gradle 构建，JVM 21，
+  `compileSdkPreview = "SysUISdk"`。
+- `SystemUI-plugin/build.gradle.kts`：完整源码编译，依赖 plugin-core + 简化的
+  animation 桩。
+- `SystemUI-plugin-core/src/main/AndroidManifest.xml`、`SystemUI-plugin/src/main/AndroidManifest.xml`
+- `SystemUI-plugin-core/src/main/java/`：13 个源文件
+- `SystemUI-plugin/src/main/java/`：约 78 个源文件（删除了 clocks/、log/、
+  TileDetailsViewModel.kt）
+- `SystemUI-plugin/src/main/java/com/android/systemui/animation/ActivityTransitionAnimator.kt`：
+  简化的 Controller 接口
+- `SystemUI-plugin/src/main/java/com/android/systemui/animation/Expandable.kt`：
+  marker interface
+- `SystemUI-core/build.gradle.kts`：增加 Compose 与 coroutines-jvm 依赖
+- `SystemUI-core/src/com/android/systemui/dagger/qualifiers/`：补充
+  `Background.java`、`Application.java`
+- `SystemUI-core/src/com/android/compose/animation/scene/UserAction.kt`：
+  标记接口桩（真正的 Scene framework 在 compose/scene 子模块，需要更多 Compose
+  依赖才能编译）
+
+## 下一步
+
+1. **运行全量 `assembleDebug`**：验证当前状态（plugin-core + plugin + animation +
+   shared + customization 都通过，但 SystemUI-core 还有 unresolved 引用）。
+2. **继续完善 SystemUI-core**：补充缺失的 SettingsProxyExt、SecureSettings、
+   getUriFor 等内部扩展。
+3. **重新启用 KAPT**：当前暂时禁用 Dagger 注解处理，等 SystemUI-core 编译通过
+   后恢复。
+
+## 当前进度
+
+- ✅ `SystemUI-plugin-core` — 完整源码编译通过
+- ✅ `SystemUI-plugin` — 完整源码编译通过（替换了 3 个 Android 14+ API 与 1 个
+  animation 依赖）
+- ✅ `SystemUI-animation`、`SystemUI-shared`、`SystemUI-customization` — 使用
+  清理过的 prebuilt JAR
+- ⏳ `SystemUI-core` — 有约 24000 行 unresolved 引用（主要来自 SystemUI 内部
+  SystemUI-shared 与 flags 模块），需要继续补充依赖
+
+---
+
+# 2026-07-19: 选项 A — 完整复制 plugin 源码作为子项目编译
+
+## 背景
+
+按照用户最新指令（"选项 A：完整复制 plugin 源码并编译为 jar"），尝试把
+`aosp/frameworks/base/packages/SystemUI/plugin/` 与 `plugin_core/` 下的所有源码复制到
+本项目的 `SystemUI-plugin` 和 `SystemUI-plugin-core` 子模块，使用 Gradle 直接编译。
+
+## 完成的部分
+
+### 1. plugin-core 子项目（完全源码编译）
+
+复制了 AOSP 的全部 13 个 plugin_core 源文件到 `SystemUI-plugin-core/src/main/java`，
+新增独立的 `AndroidManifest.xml`，配置 `build.gradle.kts` 仅依赖 framework.jar +
+androidx.annotation + kotlin-stdlib。**编译通过** — 产物为 plugin-core AAR。
+
+### 2. plugin 子项目（源码编译 + 必要的桩）
+
+完整复制 81 个 plugin 源文件。由于 plugin 接口与 animation/shared 模块深度耦合
+（`ActivityStarter.java` 直接引用 `com.android.systemui.animation.ActivityTransitionAnimator`），
+采用了以下策略：
+
+1. 在 `SystemUI-plugin` 中提供简化的 `ActivityTransitionAnimator.Controller` 接口与
+   `Expandable` 接口桩，避免对 animation 子模块的编译期依赖。
+2. `ActivityStarter.java` 中的 `AudioManager.CsdWarning` 与
+   `BroadcastOptions.setInteractive` 是 Android 14+ API；framework.jar 太老，
+   把签名改为 `int csdWarning` 与简化的 `pendingIntent.send()`。
+3. 删除 plugin 内部的 `clocks/` 子目录（含 Compose 与 ConstraintLayout 依赖）
+   与 `TileDetailsViewModel.kt`（依赖 Compose），这些是 SystemUI 内部类，不属于
+   plugin 接口。
+
+**plugin 子项目编译通过** — 产物为 plugin AAR。
+
+### 3. 子模块策略调整
+
+考虑到 animation/shared/customization 模块依赖大量 AOSP 内部模块
+（`flags_lib`、`BiometricsSharedLib`、`SystemUIUnfoldLib`、`WindowManager-Shell-shared`
+等），完整复制源码需要 100+ 个额外依赖 jar。**保留 prebuilt JAR 形式**：
+
+- `SystemUI-animation` → `PlatformAnimationLib.jar`
+- `SystemUI-shared` → `SystemUISharedLib.jar`
+- `SystemUI-customization` → `SystemUICustomizationLib.jar`
+
+这些 prebuilt 已经过 `tools/clean_prebuilts.py` 清理，避免与 Maven 依赖冲突。
+
+## KAPT 内部错误根因（IrErrorTypeImpl）
+
+完整复制源码后，`SystemUI-core` 仍然无法编译，KAPT 报
+`java.lang.ClassCastException: IrErrorTypeImpl cannot be cast to IrSimpleType`。
+
+### 排查过程
+
+1. **Kotlin 版本升级**：`1.9.22 → 2.1.0` 无效。
+2. **禁用 KAPT**：编译进行到真正的 unresolved reference 阶段（如
+   `com.android.systemui.flags.Flags`、`SecureSettings`、`Main` 等内部类），
+   证明 KAPT 错误是"症状"，不是"病根"。
+3. **缺失类分析**：`Flags`、`SecureSettings`、`Main`、`Background`、`Application`、
+   `TestHarness`、`SysUISingleton` 等都是 SystemUI 内部类，分布在
+   `SystemUI/src/` 与 `SystemUI/pods/` 与 `SystemUI/shared/` 三个不同目录下。
+   当前 `SystemUI-core` 仅包含 `SystemUI/src/` 下的源码，缺少另两处的类。
+
+### 根本原因
+
+`SystemUI-core` 的源码是 **不完整的** —— AOSP 中 SystemUI 编译时把整个 `src/`、
+`pods/`、`shared/`、`animation/`、`plugin/`、`shared/`、`customization/` 等所有源
+码同时编译，而当前 Gradle 项目仅复制了 `SystemUI/src/` 部分。完整复制需要把所有
+AOSP 子模块都搬过来，约 5000+ 源文件。
+
+### 解决策略
+
+放弃完整复制 SystemUI-core，**回退到部分源码 + prebuilt JAR 混合方案**：
+
+1. 把 `SystemUI-shared` 与 `SystemUI-animation` 等子模块恢复为 prebuilt JAR 形式
+   （保留已经清理过的 JAR）。
+2. `SystemUI-core` 仍包含完整的 AOSP `src/` 源码，但要继续解决缺失依赖。
+3. 临时在 `SystemUI-core/src/` 下补充缺失的 Dagger qualifier 文件
+   （Background.java、Application.java 等来自 `pods/`）。
+
+## 文件改动
+
+- `SystemUI-plugin-core/build.gradle.kts`：独立 Gradle 构建，JVM 21，
+  `compileSdkPreview = "SysUISdk"`。
+- `SystemUI-plugin/build.gradle.kts`：完整源码编译，依赖 plugin-core + 简化的
+  animation 桩。
+- `SystemUI-plugin-core/src/main/AndroidManifest.xml`、`SystemUI-plugin/src/main/AndroidManifest.xml`
+- `SystemUI-plugin-core/src/main/java/`：13 个源文件
+- `SystemUI-plugin/src/main/java/`：约 78 个源文件（删除了 clocks/、log/、
+  TileDetailsViewModel.kt）
+- `SystemUI-plugin/src/main/java/com/android/systemui/animation/ActivityTransitionAnimator.kt`：
+  简化的 Controller 接口
+- `SystemUI-plugin/src/main/java/com/android/systemui/animation/Expandable.kt`：
+  marker interface
+- `SystemUI-core/build.gradle.kts`：增加 Compose 与 coroutines-jvm 依赖
+- `SystemUI-core/src/com/android/systemui/dagger/qualifiers/`：补充
+  `Background.java`、`Application.java`
+- `SystemUI-core/src/com/android/compose/animation/scene/UserAction.kt`：
+  标记接口桩（真正的 Scene framework 在 compose/scene 子模块，需要更多 Compose
+  依赖才能编译）
+
+## 下一步
+
+1. **运行全量 `assembleDebug`**：验证当前状态（plugin-core + plugin + animation +
+   shared + customization 都通过，但 SystemUI-core 还有 unresolved 引用）。
+2. **继续完善 SystemUI-core**：补充缺失的 SettingsProxyExt、SecureSettings、
+   getUriFor 等内部扩展。
+3. **重新启用 KAPT**：当前暂时禁用 Dagger 注解处理，等 SystemUI-core 编译通过
+   后恢复。
+
+## 当前进度
+
+- ✅ `SystemUI-plugin-core` — 完整源码编译通过
+- ✅ `SystemUI-plugin` — 完整源码编译通过（替换了 3 个 Android 14+ API 与 1 个
+  animation 依赖）
+- ✅ `SystemUI-animation`、`SystemUI-shared`、`SystemUI-customization` — 使用
+  清理过的 prebuilt JAR
+- ⏳ `SystemUI-core` — 有约 24000 行 unresolved 引用（主要来自 SystemUI 内部
+  SystemUI-shared 与 flags 模块），需要继续补充依赖

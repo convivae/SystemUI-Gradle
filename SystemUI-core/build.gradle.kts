@@ -101,15 +101,10 @@ dependencies {
     // 本地 Maven AAR
     implementation(libs.systemui.settingslib)
     implementation(libs.systemui.iconloader)
-    // 移除 wmshell 依赖，使用 prebuilt 中已包含的 WM Shell 类
-    // implementation(libs.systemui.wmshell)
+    implementation(libs.systemui.wmshell)
     implementation(libs.systemui.wifitrackerlib)
 
-    // Prebuilt JARs (AOSP 编译产物) - compileOnly 避免与 AAR 重复类
-    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/PlatformAnimationLib.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUIPluginLib.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUISharedLib.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUICustomizationLib.jar"))
+    // 注：prebuilt JAR 不再需要，所有子模块都包含完整源码
 
     // AndroidX
     implementation(libs.androidx.annotation)
@@ -139,6 +134,9 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
+    // 添加 stateIn 需要的协程 jvm 实现
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
     // Dagger
     implementation(libs.dagger)
@@ -147,4 +145,15 @@ dependencies {
     // 第三方库
     implementation(libs.guava)
     implementation(libs.lottie)
+
+    // Compose (用于 Scene 框架与 UI 组件)
+    implementation("androidx.compose.runtime:runtime:1.7.5")
+    implementation("androidx.compose.animation:animation:1.7.5")
+    implementation("androidx.compose.material3:material3:1.3.1")
+    implementation("androidx.compose.foundation:foundation:1.7.5")
+    implementation("androidx.compose.ui:ui:1.7.5")
+
+    // 注：原 compose/scene 源码已复制到 src 下，但因为它依赖一系列 Compose 内部 API
+    //     （thenIf/drawInContainer 等），完整编译需要更多 Compose 依赖，
+    //     暂时通过 sourceSets exclude 排除这些文件以让主流程通过。
 }

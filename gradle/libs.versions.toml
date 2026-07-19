@@ -1,6 +1,6 @@
 [versions]
 agp = "9.2.0"
-kotlin = "1.9.22"
+kotlin = "2.1.0"
 androidxCore = "1.13.1"
 androidxAnnotation = "1.8.0"
 material = "1.12.0"
