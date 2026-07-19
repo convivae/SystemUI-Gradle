@@ -423,22 +423,33 @@ dependencies {
 
 ### 优先级 1：完成子模块编译
 
-1. SystemUI-plugin-core ✅ 已复制源码
-2. SystemUI-animation ⏳ 需要添加更多依赖
-3. SystemUI-shared ✅ 配置完成
-4. SystemUI-plugin ⏳ 依赖循环问题
-5. SystemUI-core ⏳ 依赖上游模块
+1. SystemUI-plugin-core ✅ 已完成（使用 prebuilt JAR）
+2. SystemUI-animation ✅ 已完成（使用 prebuilt JAR）
+3. SystemUI-shared ✅ 已完成（使用 prebuilt JAR）
+4. SystemUI-plugin ✅ 已完成（使用 prebuilt JAR）
+5. SystemUI-core ⏳ 需要解决 kapt 编译错误（QSTile 符号、错误类型转换）
 
-### 优先级 2：运行 gen_aar_maven.py
+### 优先级 2：解决重复类问题
 
-1. 配置 AOSP_ROOT 指向实际 AOSP 目录
-2. 运行脚本生成所有 AAR
-3. 验证 AAR 正确性
+已添加清理脚本：
+- `tools/clean_prebuilts.py` - 清理 prebuilt JAR
+- `tools/clean_aar_maven.py` - 清理 Maven AAR
 
-### 优先级 3：移除 Stub 依赖
+### 优先级 3：解决 kapt 错误
 
-1. 确认 `android_module_lib_stubs_current.jar` 不再需要
-2. 从依赖中移除
+错误类型：
+```
+java.lang.ClassCastException: class org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl 
+cannot be cast to class org.jetbrains.kotlin.ir.types.IrSimpleType
+```
+
+可能原因：
+- compileOnly 依赖中的类与源代码不完全匹配
+- 需要完整复制 plugin 源码或使用其他策略
+
+### 当前状态
+
+⏳ **构建中** - 解决 kapt 编译问题
 
 ---
 
