@@ -45,7 +45,6 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
     implementation(libs.androidx.core)
     implementation(libs.androidx.annotation)
-    implementation(libs.material)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.dagger)
 }

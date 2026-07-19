@@ -56,7 +56,7 @@ androidx-slice-view = { module = "androidx.slice:slice-view", version.ref = "and
 androidx-viewpager2 = { module = "androidx.viewpager2:viewpager2", version.ref = "androidxViewPager2" }
 
 # Material
-material = { module = "com.google.android.material:material", version.ref = "material" }
+# material = { module = "com.google.android.material:material", version.ref = "material" }
 
 # Kotlin
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }

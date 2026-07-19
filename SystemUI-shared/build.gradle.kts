@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -10,23 +9,12 @@ android {
         minSdk = 35
     }
     
-    sourceSets {
-        getByName("main") {
-            java.srcDirs("src")
-            manifest.srcFile("src/AndroidManifest.xml")
-        }
-    }
-    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    
-    kotlin {
-        jvmToolchain(21)
-    }
 }
 
+// 注：SystemUISharedLib 内容在 :SystemUI-core 直接使用 compileOnly
 dependencies {
-    compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
 }

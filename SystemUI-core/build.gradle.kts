@@ -101,8 +101,15 @@ dependencies {
     // 本地 Maven AAR
     implementation(libs.systemui.settingslib)
     implementation(libs.systemui.iconloader)
-    implementation(libs.systemui.wmshell)
+    // 移除 wmshell 依赖，使用 prebuilt 中已包含的 WM Shell 类
+    // implementation(libs.systemui.wmshell)
     implementation(libs.systemui.wifitrackerlib)
+
+    // Prebuilt JARs (AOSP 编译产物) - compileOnly 避免与 AAR 重复类
+    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/PlatformAnimationLib.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUIPluginLib.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUISharedLib.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUICustomizationLib.jar"))
 
     // AndroidX
     implementation(libs.androidx.annotation)
