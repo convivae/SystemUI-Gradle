@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -8,8 +9,24 @@ android {
     defaultConfig {
         minSdk = 35
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+    
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("src/main")
+            manifest.srcFile("src/main/AndroidManifest.xml")
+        }
     }
+    
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+    
+    kotlin {
+        jvmToolchain(21)
+    }
+}
+
+dependencies {
+    compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
 }

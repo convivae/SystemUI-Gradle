@@ -353,54 +353,81 @@ e: java.lang.IllegalStateException: Value class underlying type is not a simple 
 
 ### 根本原因
 
-当前项目的 `SystemUI-core/src` 只有部分源码（约 4183 个文件），缺少关键模块如 `qs/`、`statusbar/` 等。
+当前项目的 `SystemUI-core/src` 只有部分源码，缺少关键模块如 `qs/`、`statusbar/` 等。
 
-### AOSP SystemUI 源码规模
+### 解决方案
+
+#### 已完成：复制 plugin 模块源码
+
+```bash
+# SystemUI-plugin 需要 plugin_core 和 animation 模块
+cp -r /path/to/aosp/.../plugin/src/* SystemUI-plugin/src/main/
+cp -r /path/to/aosp/.../plugin_core/src/* SystemUI-plugin-core/src/main/
+cp -r /path/to/aosp/.../animation/src/* SystemUI-animation/src/
+```
+
+#### 进行中：解决循环依赖问题
+
+需要确保依赖关系正确：
+- SystemUI-plugin-core: 基础插件框架
+- SystemUI-animation: 动画相关
+- SystemUI-shared: 共享代码
+- SystemUI-plugin: 插件接口
+- SystemUI-core: 核心代码
+
+### 当前状态
+
+⏳ **进行中** - 正在解决子模块依赖问题
+
+---
+
+## 问题十：模块依赖缺失
+
+### 错误信息
 
 ```
-/home/conv/myspace/aosp/frameworks/base/packages/SystemUI/src/
-├── com/android/systemui/
-│   ├── qs/                    # QSTile 类所在
-│   ├── statusbar/
-│   ├── notifications/
-│   ├── keyguard/
-│   ├── shade/
-│   └── ... (共 107 个功能模块)
-│   └── 共 4071 个源文件
+error: package com.android.systemui.plugins.annotations does not exist
+error: package com.android.systemui.animation does not exist
 ```
 
 ### 解决方案
 
-#### 方案 A：完整复制 AOSP SystemUI 源码（推荐）
+在 `SystemUI-plugin/build.gradle.kts` 添加依赖：
 
-```bash
-# 复制完整源码
-rsync -av --exclude='.git' \
-    /home/conv/myspace/aosp/frameworks/base/packages/SystemUI/src/ \
-    /home/conv/myspace/SystemUI-Gradle/SystemUI-core/src/
+```kotlin
+dependencies {
+    implementation(project(":SystemUI-plugin-core"))
+    implementation(project(":SystemUI-animation"))
+    implementation(project(":SystemUI-shared"))
+    // ...
+}
 ```
 
-#### 方案 B：选择性复制缺失模块
+在 `SystemUI-animation/build.gradle.kts` 添加依赖：
 
-只复制当前项目缺少的模块。
-
-#### 方案 C：将依赖模块作为子项目
-
-将 AOSP 中的相关模块（如 `SettingsLib`、`iconloader` 等）复制为独立 Gradle 子项目。
+```kotlin
+dependencies {
+    compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
+    implementation(libs.androidx.annotation)
+    implementation(libs.androidx.core.ktx)
+}
+```
 
 ### 当前状态
 
-⏳ **待处理** - 需要复制完整源码
+⏳ **进行中** - 需要持续修复依赖
 
 ---
 
 ## 下一步计划
 
-### 优先级 1：解决 QSTile 符号问题
+### 优先级 1：完成子模块编译
 
-1. 检查当前 `SystemUI-core/src` 目录结构
-2. 从 AOSP 完整复制 SystemUI 源码
-3. 重新编译验证
+1. SystemUI-plugin-core ✅ 已复制源码
+2. SystemUI-animation ⏳ 需要添加更多依赖
+3. SystemUI-shared ✅ 配置完成
+4. SystemUI-plugin ⏳ 依赖循环问题
+5. SystemUI-core ⏳ 依赖上游模块
 
 ### 优先级 2：运行 gen_aar_maven.py
 
@@ -413,12 +440,6 @@ rsync -av --exclude='.git' \
 1. 确认 `android_module_lib_stubs_current.jar` 不再需要
 2. 从依赖中移除
 
-### 优先级 4：完善文档
-
-1. 更新 README.md
-2. 记录构建步骤
-3. 添加故障排除指南
-
 ---
 
 ## 验证命令
@@ -429,7 +450,7 @@ find /home/conv/myspace/SystemUI-Gradle/SystemUI-core/src -name "*.kt" -o -name 
 
 # 尝试编译
 cd /home/conv/myspace/SystemUI-Gradle
-./gradlew :SystemUI-core:assembleDebug
+./gradlew assembleDebug
 
 # 检查 AOSP 源码
 find /home/conv/myspace/aosp/frameworks/base/packages/SystemUI/src -name "QSTile*" -o -name "CurrentTilesInteractorImpl*"

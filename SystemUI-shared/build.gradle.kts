@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -8,13 +9,24 @@ android {
     defaultConfig {
         minSdk = 35
     }
+    
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("src")
+            manifest.srcFile("src/AndroidManifest.xml")
+        }
+    }
+    
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+    
+    kotlin {
+        jvmToolchain(21)
     }
 }
 
 dependencies {
-    // SYSOPS: AOSP produces SystemUISharedLib.jar. See 问题五.
-    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUISharedLib.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
 }
