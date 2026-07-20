@@ -12,6 +12,10 @@ object Flags {
     @JvmField val communalHub = false
     @JvmField val statusBarCallChipNotificationIcon = false
     @JvmField val sceneContainer = false
+    @JvmField val msdlFeedback = false
+    @JvmField val communalSceneKtfRefactor = false
+    @JvmField val screenshareNotificationHiding = false
+    @JvmField val quickaffordance = false
 
     // Generic getter
     @JvmStatic fun getFlag(name: String): Boolean = false

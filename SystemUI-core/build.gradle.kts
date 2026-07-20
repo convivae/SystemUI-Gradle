@@ -132,6 +132,7 @@ dependencies {
     implementation(libs.androidx.leanback)
     implementation(libs.androidx.leanback.preference)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.service)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.mediarouter)
     implementation(libs.androidx.palette)
@@ -155,6 +156,9 @@ dependencies {
     implementation(libs.guava)
     implementation(libs.lottie)
 
+    // Media3 (for media controls)
+    implementation(libs.androidx.media3.common)
+    implementation(libs.androidx.media3.session)
     // Compose (用于 Scene 框架与 UI 组件)
     implementation("androidx.compose.runtime:runtime:1.7.5")
     implementation("androidx.compose.animation:animation:1.7.5")
