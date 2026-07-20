@@ -40,7 +40,7 @@ import android.widget.TextView
 import com.android.settingslib.Utils
 import com.android.systemui.biometrics.Utils.ellipsize
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.res.R
+import com.android.systemui.R
 import kotlin.math.ceil
 
 private const val TAG = "BiometricCustomizedViewBinder"

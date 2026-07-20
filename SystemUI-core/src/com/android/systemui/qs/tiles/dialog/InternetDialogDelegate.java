@@ -70,7 +70,7 @@ import com.android.systemui.accessibility.floatingmenu.AnnotationLinkSpan;
 import com.android.systemui.animation.DialogTransitionAnimator;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 import com.android.systemui.statusbar.policy.KeyguardStateController;

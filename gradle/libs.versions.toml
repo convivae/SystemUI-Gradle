@@ -76,3 +76,4 @@ systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", v
 systemui-iconloader = { group = "com.android.systemui", name = "iconloader", version = "1.0.0" }
 systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "1.0.0" }
 systemui-wifitrackerlib = { group = "com.android.systemui", name = "WifiTrackerLib", version = "1.0.0" }
+systemui-sharedlib = { group = "com.android.systemui", name = "SystemUISharedLib", version = "1.0.0" }

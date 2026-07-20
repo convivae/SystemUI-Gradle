@@ -29,7 +29,7 @@ import com.android.systemui.qs.external.TileData
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.tileimpl.QSTileImpl.DrawableIcon
 import com.android.systemui.qs.tileimpl.QSTileImpl.ResourceIcon
-import com.android.systemui.res.R
+import com.android.systemui.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

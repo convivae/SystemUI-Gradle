@@ -15,7 +15,7 @@ import com.android.systemui.biometrics.plugins.AuthContextPlugins
 import com.android.systemui.biometrics.ui.binder.CredentialViewBinder
 import com.android.systemui.biometrics.ui.binder.Spaghetti
 import com.android.systemui.biometrics.ui.viewmodel.CredentialViewModel
-import com.android.systemui.res.R
+import com.android.systemui.R
 
 /** PIN or password credential view for BiometricPrompt. */
 class CredentialPasswordView(context: Context, attrs: AttributeSet?) :

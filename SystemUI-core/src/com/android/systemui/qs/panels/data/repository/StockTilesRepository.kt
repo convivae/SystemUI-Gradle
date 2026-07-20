@@ -20,7 +20,7 @@ import android.content.res.Resources
 import com.android.server.display.feature.flags.Flags
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.qs.pipeline.shared.TileSpec
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 

@@ -23,7 +23,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryFaceAuthInteractor
-import com.android.systemui.res.R
+import com.android.systemui.R
 import javax.inject.Inject
 
 /**

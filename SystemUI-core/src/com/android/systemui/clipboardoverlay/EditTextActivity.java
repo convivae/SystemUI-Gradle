@@ -37,7 +37,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 /**
  * Lightweight activity for editing text clipboard contents

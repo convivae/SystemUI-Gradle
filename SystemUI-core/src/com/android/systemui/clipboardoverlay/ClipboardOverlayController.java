@@ -66,7 +66,7 @@ import com.android.systemui.broadcast.BroadcastSender;
 import com.android.systemui.clipboardoverlay.dagger.ClipboardOverlayModule.OverlayWindowContext;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.flags.FeatureFlags;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.screenshot.TimeoutHandler;
 
 import java.util.Optional;

@@ -62,7 +62,7 @@ import com.android.systemui.plugins.clocks.ClockTickRate
 import com.android.systemui.plugins.clocks.WeatherData
 import com.android.systemui.plugins.clocks.ZenData
 import com.android.systemui.plugins.clocks.ZenData.ZenMode
-import com.android.systemui.res.R as SysuiR
+import com.android.systemui.R as SysuiR
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.shared.regionsampling.RegionSampler

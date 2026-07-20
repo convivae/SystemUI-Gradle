@@ -30,7 +30,7 @@ import com.android.systemui.keyguard.data.repository.BiometricSettingsRepository
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.log.SideFpsLogger
-import com.android.systemui.res.R
+import com.android.systemui.R
 import java.util.Optional
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi

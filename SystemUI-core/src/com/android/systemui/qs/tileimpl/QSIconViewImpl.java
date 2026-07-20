@@ -42,7 +42,7 @@ import com.android.settingslib.Utils;
 import com.android.systemui.plugins.qs.QSIconView;
 import com.android.systemui.plugins.qs.QSTile;
 import com.android.systemui.plugins.qs.QSTile.State;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 import java.util.Objects;
 

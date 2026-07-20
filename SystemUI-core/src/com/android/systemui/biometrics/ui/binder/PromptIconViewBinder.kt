@@ -27,7 +27,7 @@ import com.android.systemui.biometrics.ui.viewmodel.PromptIconViewModel
 import com.android.systemui.biometrics.ui.viewmodel.PromptIconViewModel.AuthType
 import com.android.systemui.biometrics.ui.viewmodel.PromptViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.util.kotlin.Quad
 import com.android.systemui.util.kotlin.Utils.Companion.toQuint
 import com.android.systemui.util.kotlin.sample

@@ -22,7 +22,7 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.android.settingslib.Utils;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 import java.util.ArrayList;
 

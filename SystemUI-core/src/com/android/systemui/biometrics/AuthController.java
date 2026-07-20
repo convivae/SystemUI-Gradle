@@ -624,7 +624,7 @@ public class AuthController implements
             int xFpLocation = mCachedDisplayInfo.getNaturalWidth() / 2;
             try {
                 xFpLocation = mContext.getResources().getDimensionPixelSize(
-                        com.android.systemui.res.R.dimen
+                        com.android.systemui.R.dimen
                                 .physical_fingerprint_sensor_center_screen_location_x);
             } catch (Resources.NotFoundException e) {
             }
@@ -632,7 +632,7 @@ public class AuthController implements
             return new Point(
                     (int) (xFpLocation * mScaleFactor),
                     (int) (mContext.getResources().getDimensionPixelSize(
-                            com.android.systemui.res.R.dimen
+                            com.android.systemui.R.dimen
                                     .physical_fingerprint_sensor_center_screen_location_y)
                             * mScaleFactor)
             );

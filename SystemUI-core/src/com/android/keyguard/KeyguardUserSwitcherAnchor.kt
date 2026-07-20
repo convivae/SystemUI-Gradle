@@ -20,7 +20,7 @@ import android.util.AttributeSet
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.LinearLayout
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
-import com.android.systemui.res.R
+import com.android.systemui.R
 
 /**
  * Custom View for the multi-user switcher pull-down menu anchor

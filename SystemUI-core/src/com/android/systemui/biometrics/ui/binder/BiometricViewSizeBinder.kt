@@ -47,7 +47,7 @@ import com.android.systemui.biometrics.ui.viewmodel.isMedium
 import com.android.systemui.biometrics.ui.viewmodel.isSmall
 import com.android.systemui.biometrics.ui.viewmodel.isTop
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.res.R
+import com.android.systemui.R
 import kotlin.math.abs
 import kotlinx.coroutines.flow.combine
 import com.android.app.tracing.coroutines.launchTraced as launch

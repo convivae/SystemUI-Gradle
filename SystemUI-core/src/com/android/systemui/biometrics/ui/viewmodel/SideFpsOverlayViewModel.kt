@@ -36,7 +36,7 @@ import com.android.systemui.biometrics.shared.model.DisplayRotation
 import com.android.systemui.biometrics.shared.model.LottieCallback
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.domain.interactor.DeviceEntrySideFpsOverlayInteractor
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.util.kotlin.sample
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi

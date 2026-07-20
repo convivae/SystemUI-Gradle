@@ -59,7 +59,7 @@ import com.android.systemui.qs.dagger.QSScope;
 import com.android.systemui.qs.dagger.QSThemedContext;
 import com.android.systemui.qs.external.CustomTile;
 import com.android.systemui.qs.tileimpl.QSTileViewImpl;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 import java.util.ArrayList;
 import java.util.List;

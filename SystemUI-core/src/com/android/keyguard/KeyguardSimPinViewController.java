@@ -46,7 +46,7 @@ import com.android.keyguard.domain.interactor.KeyguardKeyboardInteractor;
 import com.android.systemui.bouncer.ui.helper.BouncerHapticPlayer;
 import com.android.systemui.classifier.FalsingCollector;
 import com.android.systemui.flags.FeatureFlags;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor;
 
 public class KeyguardSimPinViewController
@@ -171,7 +171,7 @@ public class KeyguardSimPinViewController
             mView.resetPasswordText(true /* animate */, true /* announce */);
             getKeyguardSecurityCallback().userActivity();
             mMessageAreaController.setMessage(
-                    com.android.systemui.res.R.string.kg_invalid_sim_pin_hint);
+                    com.android.systemui.R.string.kg_invalid_sim_pin_hint);
             return;
         }
 

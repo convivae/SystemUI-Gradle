@@ -35,7 +35,7 @@ import androidx.constraintlayout.widget.ConstraintSet;
 import com.android.systemui.fragments.FragmentHostManager.FragmentListener;
 import com.android.systemui.keyguard.MigrateClocksToBlueprint;
 import com.android.systemui.plugins.qs.QS;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.statusbar.notification.AboveShelfObserver;
 
 import java.util.ArrayList;

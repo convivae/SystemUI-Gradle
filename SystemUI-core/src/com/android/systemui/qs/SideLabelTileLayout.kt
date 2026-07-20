@@ -20,7 +20,7 @@ import android.content.Context
 import android.util.AttributeSet
 import com.android.systemui.flags.Flags
 import com.android.systemui.flags.RefactorFlag
-import com.android.systemui.res.R
+import com.android.systemui.R
 
 open class SideLabelTileLayout(
     context: Context,

@@ -42,7 +42,7 @@ import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.ReduceBrightColorsController;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.res.R.drawable;
+import com.android.systemui.R.drawable;
 
 import javax.inject.Inject;
 import javax.inject.Named;

@@ -32,7 +32,7 @@ import android.view.WindowManager;
 import com.android.app.viewcapture.ViewCapture;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
 import com.android.systemui.clipboardoverlay.ClipboardOverlayView;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.settings.DisplayTracker;
 
 import dagger.Lazy;

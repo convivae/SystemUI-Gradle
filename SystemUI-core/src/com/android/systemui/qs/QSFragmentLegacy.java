@@ -32,7 +32,7 @@ import com.android.systemui.plugins.qs.QS;
 import com.android.systemui.plugins.qs.QSContainerController;
 import com.android.systemui.qs.dagger.QSFragmentComponent;
 import com.android.systemui.qs.flags.QSComposeFragment;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.settings.brightness.MirrorController;
 import com.android.systemui.util.LifecycleFragment;
 

@@ -43,7 +43,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.InfiniteGridViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.ui.ElementKeys.toElementKey
-import com.android.systemui.res.R
+import com.android.systemui.R
 import javax.inject.Inject
 
 @SysUISingleton

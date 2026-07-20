@@ -34,7 +34,7 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.Tile
 import com.android.systemui.qs.panels.ui.viewmodel.BounceableTileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.QuickQuickSettingsViewModel
 import com.android.systemui.qs.shared.ui.ElementKeys.toElementKey
-import com.android.systemui.res.R
+import com.android.systemui.R
 
 @Composable
 fun SceneScope.QuickQuickSettings(

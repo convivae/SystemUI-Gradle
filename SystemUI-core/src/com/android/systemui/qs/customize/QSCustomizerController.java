@@ -41,7 +41,7 @@ import com.android.systemui.plugins.qs.QSTile;
 import com.android.systemui.qs.QSEditEvent;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.dagger.QSScope;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.statusbar.phone.LightBarController;

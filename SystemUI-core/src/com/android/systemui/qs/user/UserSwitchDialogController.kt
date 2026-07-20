@@ -25,7 +25,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.internal.logging.UiEventLogger
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.animation.DialogCuj
 import com.android.systemui.animation.DialogTransitionAnimator
 import com.android.systemui.animation.Expandable

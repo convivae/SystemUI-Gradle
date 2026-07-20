@@ -89,7 +89,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.ui.compose.borderOnFocus
-import com.android.systemui.res.R
+import com.android.systemui.R
 import java.util.function.Supplier
 import kotlinx.coroutines.CoroutineScope
 

@@ -27,7 +27,7 @@ import com.android.compose.PlatformTextButton
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dialog.ui.composable.AlertDialogContent
 import com.android.systemui.qs.panels.domain.interactor.EditTilesResetInteractor
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.statusbar.phone.ComponentSystemUIDialog
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import com.android.systemui.statusbar.phone.SystemUIDialogFactory

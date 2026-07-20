@@ -3,7 +3,7 @@ package com.android.systemui.shade
 import android.content.Context
 import android.view.DisplayCutout
 import com.android.systemui.battery.BatteryMeterView
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.statusbar.data.repository.StatusBarContentInsetsProviderStore
 import javax.inject.Inject
 

@@ -41,7 +41,7 @@ import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.lifecycle.setSnapshotBinding
 import com.android.systemui.lifecycle.viewModel
 import com.android.systemui.qs.ui.adapter.QSSceneAdapter
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.scene.shared.model.SceneContainerConfig
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator
 import com.android.systemui.scene.ui.composable.Overlay

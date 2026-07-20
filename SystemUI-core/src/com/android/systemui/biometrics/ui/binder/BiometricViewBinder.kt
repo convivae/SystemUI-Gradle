@@ -55,7 +55,7 @@ import com.android.systemui.biometrics.ui.viewmodel.PromptSize
 import com.android.systemui.biometrics.ui.viewmodel.PromptViewModel
 import com.android.systemui.common.ui.view.onTouchListener
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.google.android.msdl.domain.MSDLPlayer
 import kotlinx.coroutines.CoroutineScope

@@ -53,7 +53,7 @@ import com.android.systemui.biometrics.shared.model.PromptKind
 import com.android.systemui.biometrics.shared.model.UdfpsOverlayParams
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.shared.model.AcquiredFingerprintAuthenticationStatus
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.util.kotlin.combine
 import com.google.android.msdl.data.model.MSDLToken
 import com.google.android.msdl.domain.InteractionProperties

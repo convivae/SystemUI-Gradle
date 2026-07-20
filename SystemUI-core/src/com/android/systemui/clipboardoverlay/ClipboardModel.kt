@@ -25,7 +25,7 @@ import android.util.Log
 import android.util.Size
 import android.view.textclassifier.TextLinks
 import com.android.systemui.Flags.clipboardUseDescriptionMimetype
-import com.android.systemui.res.R
+import com.android.systemui.R
 import java.io.IOException
 
 data class ClipboardModel(

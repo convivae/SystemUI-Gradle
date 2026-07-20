@@ -39,7 +39,7 @@ import androidx.annotation.Nullable;
 
 import com.android.settingslib.Utils;
 import com.android.systemui.bouncer.ui.helper.BouncerHapticPlayer;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 /**
  * Viewgroup for the bouncer numpad button, specifically for digits.

@@ -27,7 +27,7 @@ import com.android.systemui.plugins.qs.QSTileView
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.tileimpl.QSTileImpl.ResourceIcon
 import com.android.systemui.qs.tileimpl.QSTileViewImpl
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 
 /** Dialog to present to the user to ask for authorization to add a [TileService]. */

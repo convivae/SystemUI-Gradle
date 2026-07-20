@@ -38,7 +38,7 @@ import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.qs.PseudoGridView;
 import com.android.systemui.qs.QSUserSwitcherEvent;
 import com.android.systemui.qs.user.UserSwitchDialogController;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 import com.android.systemui.statusbar.policy.BaseUserSwitcherAdapter;

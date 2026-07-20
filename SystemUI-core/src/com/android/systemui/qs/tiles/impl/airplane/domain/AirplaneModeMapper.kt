@@ -23,7 +23,7 @@ import com.android.systemui.qs.tiles.base.interactor.QSTileDataToStateMapper
 import com.android.systemui.qs.tiles.impl.airplane.domain.model.AirplaneModeTileModel
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 

@@ -39,7 +39,7 @@ import com.android.systemui.plugins.qs.QS
 import com.android.systemui.plugins.qs.QSContainerController
 import com.android.systemui.recents.OverviewProxyService
 import com.android.systemui.recents.OverviewProxyService.OverviewProxyListener
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.shared.system.QuickStepContract
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController

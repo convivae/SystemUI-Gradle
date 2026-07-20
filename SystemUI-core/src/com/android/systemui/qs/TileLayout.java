@@ -22,7 +22,7 @@ import com.android.systemui.qs.QSPanel.QSTileLayout;
 import com.android.systemui.qs.QSPanelControllerBase.TileRecord;
 import com.android.systemui.qs.tileimpl.HeightOverrideable;
 import com.android.systemui.qs.tileimpl.QSTileViewImplKt;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 import java.util.ArrayList;
 

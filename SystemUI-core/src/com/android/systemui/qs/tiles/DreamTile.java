@@ -52,7 +52,7 @@ import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.UserSettingObserver;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.util.settings.SecureSettings;
 

@@ -28,7 +28,7 @@ import androidx.core.widget.NestedScrollView;
 
 import com.android.systemui.qs.touch.OverScroll;
 import com.android.systemui.qs.touch.SwipeDetector;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 /**
  * Quick setting scroll view containing the brightness slider and the QS tiles.

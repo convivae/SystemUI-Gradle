@@ -46,7 +46,7 @@ import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.pipeline.domain.interactor.PanelInteractor;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.screenrecord.RecordingController;
 import com.android.systemui.screenrecord.data.model.ScreenRecordModel;
 import com.android.systemui.settings.UserContextProvider;

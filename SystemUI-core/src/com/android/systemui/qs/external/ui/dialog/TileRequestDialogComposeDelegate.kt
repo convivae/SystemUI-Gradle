@@ -38,7 +38,7 @@ import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.external.TileData
 import com.android.systemui.qs.external.ui.viewmodel.TileRequestDialogViewModel
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.LargeStaticTile
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import com.android.systemui.statusbar.phone.SystemUIDialogFactory
 import com.android.systemui.statusbar.phone.create

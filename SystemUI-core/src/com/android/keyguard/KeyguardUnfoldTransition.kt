@@ -22,7 +22,7 @@ import com.android.systemui.customization.R as customR
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.ui.view.KeyguardRootView
 import com.android.systemui.plugins.statusbar.StatusBarStateController
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.shared.R as sharedR
 import com.android.systemui.shade.NotificationShadeWindowView
 import com.android.systemui.shade.ShadeDisplayAware

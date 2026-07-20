@@ -12,7 +12,7 @@ import com.android.systemui.qs.QSPanel
 import com.android.systemui.qs.QuickQSPanel
 import com.android.systemui.qs.QuickStatusBarHeader
 import com.android.systemui.qs.customize.QSCustomizer
-import com.android.systemui.res.R
+import com.android.systemui.R
 import dagger.Module
 import dagger.Provides
 

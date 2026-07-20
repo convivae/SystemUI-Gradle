@@ -28,7 +28,7 @@ import androidx.annotation.CallSuper;
 import androidx.annotation.Nullable;
 
 import com.android.internal.jank.InteractionJankMonitor;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 /**
  * A Base class for all Keyguard password/pattern/pin related inputs.

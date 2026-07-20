@@ -27,7 +27,7 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.qs.tiles.base.interactor.DataUpdateTrigger
 import com.android.systemui.qs.tiles.base.interactor.QSTileDataInteractor
 import com.android.systemui.qs.tiles.impl.internet.domain.model.InternetTileModel
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.pipeline.airplane.data.repository.AirplaneModeRepository
 import com.android.systemui.statusbar.pipeline.ethernet.domain.EthernetInteractor

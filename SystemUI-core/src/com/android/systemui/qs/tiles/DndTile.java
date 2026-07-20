@@ -60,7 +60,7 @@ import com.android.systemui.qs.UserSettingObserver;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.qs.tiles.dialog.QSZenModeDialogMetricsLogger;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 import com.android.systemui.statusbar.policy.ZenModeController;
 import com.android.systemui.util.settings.SecureSettings;

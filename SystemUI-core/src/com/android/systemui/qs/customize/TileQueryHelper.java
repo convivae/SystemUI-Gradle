@@ -41,7 +41,7 @@ import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.dagger.QSScope;
 import com.android.systemui.qs.external.CustomTile;
 import com.android.systemui.qs.tileimpl.QSTileImpl.DrawableIcon;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shade.ShadeDisplayAware;
 

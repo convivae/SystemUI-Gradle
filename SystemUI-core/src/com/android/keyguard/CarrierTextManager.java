@@ -44,7 +44,7 @@ import com.android.settingslib.WirelessUtils;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.statusbar.pipeline.satellite.ui.viewmodel.DeviceBasedSatelliteViewModel;
 import com.android.systemui.statusbar.pipeline.wifi.data.repository.WifiRepository;
 import com.android.systemui.telephony.TelephonyListenerManager;

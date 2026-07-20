@@ -75,7 +75,7 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.longPressLabel
 import com.android.systemui.qs.panels.ui.viewmodel.AccessibilityUiState
 import com.android.systemui.qs.ui.compose.borderOnFocus
-import com.android.systemui.res.R
+import com.android.systemui.R
 
 private const val TEST_TAG_TOGGLE = "qs_tile_toggle_target"
 

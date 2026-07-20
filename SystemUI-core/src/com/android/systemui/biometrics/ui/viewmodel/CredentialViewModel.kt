@@ -11,7 +11,7 @@ import com.android.systemui.biometrics.domain.interactor.PromptCredentialInterac
 import com.android.systemui.biometrics.domain.model.BiometricPromptRequest
 import com.android.systemui.biometrics.shared.model.BiometricUserInfo
 import com.android.systemui.dagger.qualifiers.Application
-import com.android.systemui.res.R
+import com.android.systemui.R
 import javax.inject.Inject
 import kotlin.reflect.KClass
 import kotlinx.coroutines.flow.Flow

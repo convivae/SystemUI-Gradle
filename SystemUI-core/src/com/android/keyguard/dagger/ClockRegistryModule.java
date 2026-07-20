@@ -29,7 +29,7 @@ import com.android.systemui.flags.Flags;
 import com.android.systemui.keyguard.MigrateClocksToBlueprint;
 import com.android.systemui.plugins.PluginManager;
 import com.android.systemui.plugins.clocks.ClockMessageBuffers;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.shared.clocks.ClockRegistry;
 import com.android.systemui.shared.clocks.DefaultClockProvider;

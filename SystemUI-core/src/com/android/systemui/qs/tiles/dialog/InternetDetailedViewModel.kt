@@ -23,7 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.systemui.plugins.qs.TileDetailsViewModel
-import com.android.systemui.res.R
+import com.android.systemui.R
 
 class InternetDetailsViewModel(
     onLongClick: () -> Unit,

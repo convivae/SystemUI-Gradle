@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.EditModeButtonViewModel
 import com.android.systemui.qs.ui.compose.borderOnFocus
-import com.android.systemui.res.R
+import com.android.systemui.R
 
 @Composable
 fun EditModeButton(

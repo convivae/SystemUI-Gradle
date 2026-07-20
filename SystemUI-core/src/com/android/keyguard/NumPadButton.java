@@ -31,7 +31,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.Nullable;
 
 import com.android.settingslib.Utils;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 /**
  * Similar to the {@link NumPadKey}, but displays an image.

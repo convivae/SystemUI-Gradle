@@ -49,7 +49,7 @@ import com.android.systemui.log.core.LogLevel;
 import com.android.systemui.log.dagger.KeyguardClockLog;
 import com.android.systemui.plugins.clocks.ClockController;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.shared.clocks.ClockRegistry;
 import com.android.systemui.shared.regionsampling.RegionSampler;
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController;
@@ -573,7 +573,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
         if (!MigrateClocksToBlueprint.isEnabled()) {
             NotificationIconContainer nic = (NotificationIconContainer)
                     mView.findViewById(
-                            com.android.systemui.res.R.id.left_aligned_notification_icon_container);
+                            com.android.systemui.R.id.left_aligned_notification_icon_container);
             if (mAodIconsBindHandle != null) {
                 mAodIconsBindHandle.dispose();
             }

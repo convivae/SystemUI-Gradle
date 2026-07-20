@@ -23,7 +23,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.TextView;
 
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 /**
  * Replaces fancy colons with regular colons. Only works on TextViews.

@@ -35,7 +35,7 @@ import com.android.systemui.flags.FeatureFlags
 import com.android.systemui.keyguard.ui.view.KeyguardRootView
 import com.android.systemui.privacy.OngoingPrivacyChip
 import com.android.systemui.qs.ui.adapter.QSSceneAdapter
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.SceneContainerConfig
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator

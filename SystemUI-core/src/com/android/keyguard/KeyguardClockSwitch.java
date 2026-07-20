@@ -26,7 +26,7 @@ import com.android.systemui.keyguard.MigrateClocksToBlueprint;
 import com.android.systemui.log.LogBuffer;
 import com.android.systemui.log.core.LogLevel;
 import com.android.systemui.plugins.clocks.ClockController;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.shared.clocks.DefaultClockController;
 
 import java.io.PrintWriter;

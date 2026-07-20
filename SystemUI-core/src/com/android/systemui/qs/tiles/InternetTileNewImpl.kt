@@ -38,7 +38,7 @@ import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.tiles.dialog.InternetDetailsViewModel
 import com.android.systemui.qs.tiles.dialog.InternetDialogManager
 import com.android.systemui.qs.tiles.dialog.WifiStateWorker
-import com.android.systemui.res.R
+import com.android.systemui.R
 import com.android.systemui.statusbar.connectivity.AccessPointController
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.InternetTileBinder
 import com.android.systemui.statusbar.pipeline.shared.ui.model.InternetTileModel

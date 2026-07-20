@@ -22,7 +22,7 @@ import android.provider.Settings;
 import androidx.annotation.NonNull;
 
 import com.android.systemui.plugins.qs.QSTile;
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 
 import java.util.ArrayList;
 import java.util.Arrays;
