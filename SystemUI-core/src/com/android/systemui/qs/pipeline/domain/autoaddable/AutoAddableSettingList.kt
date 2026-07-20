@@ -16,9 +16,10 @@
 
 package com.android.systemui.qs.pipeline.domain.autoaddable
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.util.Log
-import com.android.systemui.R
 import com.android.systemui.qs.pipeline.domain.model.AutoAddable
 import com.android.systemui.qs.pipeline.shared.TileSpec
 

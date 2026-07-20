@@ -16,11 +16,12 @@
 
 package com.android.systemui.qs.tiles.impl.saver.domain
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.DialogInterface
 import android.content.SharedPreferences
 import android.os.Bundle
-import com.android.internal.R
 import com.android.systemui.coroutines.newTracingContext
 import com.android.systemui.qs.tiles.impl.saver.domain.interactor.DataSaverTileUserActionInteractor
 import com.android.systemui.statusbar.phone.SystemUIDialog

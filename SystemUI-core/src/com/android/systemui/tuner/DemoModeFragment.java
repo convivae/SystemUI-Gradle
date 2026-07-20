@@ -15,6 +15,8 @@
  */
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;

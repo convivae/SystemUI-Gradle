@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenrecord
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.hardware.display.DisplayManager

@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.view.KeyEvent
 import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.input.key.KeyEventType

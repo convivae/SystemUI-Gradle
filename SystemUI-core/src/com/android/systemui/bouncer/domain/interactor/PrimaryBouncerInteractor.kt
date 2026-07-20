@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.ColorStateList
 import android.os.Handler

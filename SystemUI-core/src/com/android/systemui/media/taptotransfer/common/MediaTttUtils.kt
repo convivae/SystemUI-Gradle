@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.taptotransfer.common
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable

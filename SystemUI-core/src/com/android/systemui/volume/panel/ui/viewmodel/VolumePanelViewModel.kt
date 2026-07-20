@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.panel.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.IntentFilter
 import android.content.res.Resources

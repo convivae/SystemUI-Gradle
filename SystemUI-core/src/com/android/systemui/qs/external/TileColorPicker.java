@@ -15,6 +15,8 @@
  */
 package com.android.systemui.qs.external;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.service.quicksettings.Tile;

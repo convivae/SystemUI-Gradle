@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.util.TypedValue
 import android.view.View

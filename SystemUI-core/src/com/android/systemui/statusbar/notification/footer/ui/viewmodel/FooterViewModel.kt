@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.footer.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Intent
 import android.provider.Settings
 import com.android.internal.jank.InteractionJankMonitor

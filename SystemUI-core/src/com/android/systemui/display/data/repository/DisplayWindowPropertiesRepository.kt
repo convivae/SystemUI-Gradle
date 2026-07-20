@@ -16,6 +16,8 @@
 
 package com.android.systemui.display.data.repository
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.view.Display

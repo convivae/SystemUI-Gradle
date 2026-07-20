@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.hardware.fingerprint.FingerprintManager
 import android.util.Log
@@ -26,7 +28,6 @@ import com.android.systemui.common.coroutine.ChannelExt.trySendWithFailureLoggin
 import com.android.systemui.common.coroutine.ConflatedCallbackFlow
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
-import com.android.systemui.R
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor
 import javax.inject.Inject
 import kotlin.math.max

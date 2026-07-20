@@ -1,5 +1,7 @@
 package com.android.systemui.keyguard.ui.view.layout.sections
 
+import com.android.systemui.R
+
 import android.view.View
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout

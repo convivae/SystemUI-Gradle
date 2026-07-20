@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar.views.buttons;
 
+import com.android.systemui.R
+
 import android.animation.ObjectAnimator;
 import android.content.res.Resources;
 import android.graphics.Canvas;

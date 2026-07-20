@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification;
 
+import com.android.systemui.R
+
 import android.util.FloatProperty;
 import android.util.Property;
 import android.view.View;

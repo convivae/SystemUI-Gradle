@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.ui
 
+import com.android.systemui.R
+
 import android.annotation.ColorRes
 import android.annotation.MainThread
 import android.content.ComponentName

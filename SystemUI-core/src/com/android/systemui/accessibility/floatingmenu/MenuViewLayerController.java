@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
+import com.android.systemui.R
+
 import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_EXCLUDE_FROM_SCREEN_MAGNIFICATION;
 
 import android.content.Context;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.charging;
 
+import com.android.systemui.R
+
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;

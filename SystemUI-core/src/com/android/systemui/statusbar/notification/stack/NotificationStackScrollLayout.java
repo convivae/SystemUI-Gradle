@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
+import com.android.systemui.R
+
 import static android.os.Trace.TRACE_TAG_APP;
 import static android.view.MotionEvent.ACTION_CANCEL;
 import static android.view.MotionEvent.ACTION_UP;

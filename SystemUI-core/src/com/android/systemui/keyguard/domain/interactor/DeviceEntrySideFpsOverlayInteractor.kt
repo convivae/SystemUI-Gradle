@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.util.Log
 import com.android.keyguard.KeyguardUpdateMonitor

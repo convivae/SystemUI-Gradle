@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static android.hardware.SensorPrivacyManager.Sources.QS_TILE;
 
 import android.content.Intent;

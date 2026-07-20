@@ -1,5 +1,7 @@
 package com.android.systemui.biometrics.ui.binder
 
+import com.android.systemui.R
+
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -18,7 +20,6 @@ import com.android.systemui.biometrics.ui.CredentialView
 import com.android.systemui.biometrics.ui.viewmodel.CredentialViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.AuthContextPlugin
-import com.android.systemui.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay

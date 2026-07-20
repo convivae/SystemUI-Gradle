@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.mobile.ui.binder
 
+import com.android.systemui.R
+
 import android.annotation.ColorInt
 import android.content.res.ColorStateList
 import android.view.View

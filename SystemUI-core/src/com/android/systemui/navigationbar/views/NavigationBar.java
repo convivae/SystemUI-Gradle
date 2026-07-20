@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar.views;
 
+import com.android.systemui.R
+
 import static android.app.ActivityManager.LOCK_TASK_MODE_PINNED;
 import static android.app.StatusBarManager.NAVIGATION_HINT_BACK_ALT;
 import static android.app.StatusBarManager.NAVIGATION_HINT_IME_SWITCHER_SHOWN;

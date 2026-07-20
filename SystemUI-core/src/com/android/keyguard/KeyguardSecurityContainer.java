@@ -15,6 +15,8 @@
  */
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.KEYGUARD_DIALOG_FAILED_ATTEMPTS_ALMOST_ERASING_PROFILE;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.KEYGUARD_DIALOG_FAILED_ATTEMPTS_ERASING_PROFILE;
 import static android.view.WindowInsets.Type.ime;

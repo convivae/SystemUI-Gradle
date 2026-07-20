@@ -16,8 +16,9 @@
 
 package com.android.systemui.qs.shared.model
 
-import com.android.systemui.common.shared.model.Text
 import com.android.systemui.R
+
+import com.android.systemui.common.shared.model.Text
 
 /** Categories for tiles. This can be used to sort tiles in edit mode. */
 enum class TileCategory(val label: Text) {

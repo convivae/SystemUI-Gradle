@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade;
 
+import com.android.systemui.R
+
 import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 

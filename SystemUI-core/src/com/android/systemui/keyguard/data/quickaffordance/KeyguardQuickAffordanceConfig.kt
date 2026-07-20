@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.data.quickaffordance
 
+import com.android.systemui.R
+
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewbinder
 
+import com.android.systemui.R
+
 import android.view.LayoutInflater
 import android.view.View
 import androidx.lifecycle.lifecycleScope

@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.view
 
+import com.android.systemui.R
+
 import android.graphics.Outline
 import android.util.MathUtils
 import android.view.GestureDetector

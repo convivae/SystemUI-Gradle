@@ -1,5 +1,7 @@
 package com.android.systemui.statusbar.notification
 
+import com.android.systemui.R
+
 import android.util.FloatProperty
 import android.view.View
 import androidx.annotation.FloatRange

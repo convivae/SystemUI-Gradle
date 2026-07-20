@@ -1,5 +1,7 @@
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.provider.Settings;

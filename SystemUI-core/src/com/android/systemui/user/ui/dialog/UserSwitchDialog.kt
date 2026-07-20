@@ -1,5 +1,7 @@
 package com.android.systemui.user.ui.dialog
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings

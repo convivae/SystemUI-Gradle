@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
+import com.android.systemui.R
+
 import static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK;
 
 import android.annotation.ColorInt;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.shared.data.repository
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager

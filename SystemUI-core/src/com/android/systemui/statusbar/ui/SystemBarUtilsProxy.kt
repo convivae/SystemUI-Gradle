@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.ui
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.internal.policy.SystemBarUtils
 import com.android.systemui.dagger.qualifiers.Application

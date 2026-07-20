@@ -16,6 +16,8 @@
 
 package com.android.systemui.inputdevice.tutorial.ui.composable
 
+import com.android.systemui.R
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.connectivity
 
+import com.android.systemui.R
+
 import android.os.UserManager
 import com.android.systemui.bluetooth.qsdialog.dagger.AudioSharingModule
 import com.android.systemui.flags.FeatureFlags

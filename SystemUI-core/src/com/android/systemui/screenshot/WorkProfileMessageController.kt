@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot
 
+import com.android.systemui.R
+
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager

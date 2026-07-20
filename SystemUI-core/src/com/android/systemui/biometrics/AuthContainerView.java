@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics;
 
+import com.android.systemui.R
+
 import static android.hardware.biometrics.BiometricAuthenticator.TYPE_FACE;
 import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
 

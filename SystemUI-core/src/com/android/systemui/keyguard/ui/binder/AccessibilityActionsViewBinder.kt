@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.binder
 
+import com.android.systemui.R
+
 import android.os.Bundle
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo

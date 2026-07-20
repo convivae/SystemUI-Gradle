@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.data.repository
 
+import com.android.systemui.R
+
 import android.app.admin.DevicePolicyManager
 import android.app.admin.DevicePolicyManager.ACTION_DEVICE_POLICY_MANAGER_STATE_CHANGED
 import android.content.Context

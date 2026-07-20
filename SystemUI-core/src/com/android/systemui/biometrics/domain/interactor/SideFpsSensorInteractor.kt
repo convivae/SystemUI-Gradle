@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.hardware.biometrics.SensorLocationInternal
 import android.view.WindowManager
@@ -30,7 +32,6 @@ import com.android.systemui.keyguard.data.repository.BiometricSettingsRepository
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.log.SideFpsLogger
-import com.android.systemui.R
 import java.util.Optional
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import android.app.Dialog;
 import android.content.Intent;
 import android.media.projection.StopReason;

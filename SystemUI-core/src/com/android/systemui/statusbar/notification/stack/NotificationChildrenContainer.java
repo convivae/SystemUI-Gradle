@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
+import com.android.systemui.R
+
 import static android.app.Flags.notificationsRedesignTemplates;
 
 import android.app.Notification;

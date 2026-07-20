@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
+import com.android.systemui.R
+
 import static android.service.notification.NotificationStats.DISMISSAL_SHADE;
 import static android.service.notification.NotificationStats.DISMISS_SENTIMENT_NEUTRAL;
 

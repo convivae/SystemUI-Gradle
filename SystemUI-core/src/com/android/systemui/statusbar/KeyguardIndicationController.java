@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import static android.adaptiveauth.Flags.enableAdaptiveAuth;
 import static android.app.admin.DevicePolicyManager.DEVICE_OWNER_TYPE_FINANCED;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.KEYGUARD_MANAGEMENT_DISCLOSURE;

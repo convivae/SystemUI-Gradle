@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.data.repository
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.provider.Settings.Global.ONE_HANDED_KEYGUARD_SIDE
 import com.android.systemui.authentication.shared.model.BouncerInputSide

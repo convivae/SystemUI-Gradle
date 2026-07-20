@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification;
 
+import com.android.systemui.R
+
 import static android.app.WindowConfiguration.WINDOWING_MODE_FREEFORM;
 import static android.app.WindowConfiguration.WINDOWING_MODE_FULLSCREEN;
 import static android.app.WindowConfiguration.WINDOWING_MODE_MULTI_WINDOW;

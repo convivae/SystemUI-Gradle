@@ -16,6 +16,8 @@
 
 package com.android.systemui.emergency
 
+import com.android.systemui.R
+
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager

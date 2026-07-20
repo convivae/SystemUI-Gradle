@@ -14,6 +14,8 @@
 
 package com.android.systemui.qs;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.DISABLE2_QUICK_SETTINGS;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 

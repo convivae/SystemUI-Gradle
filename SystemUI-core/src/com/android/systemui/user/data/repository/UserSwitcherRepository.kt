@@ -16,6 +16,8 @@
 
 package com.android.systemui.user.data.repository
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.os.Handler

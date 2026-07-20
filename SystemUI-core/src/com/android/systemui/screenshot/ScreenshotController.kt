@@ -15,6 +15,8 @@
  */
 package com.android.systemui.screenshot
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.content.BroadcastReceiver
 import android.content.Context

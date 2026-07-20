@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.notification.stack
 
+import com.android.systemui.R
+
 import android.animation.AnimatorListenerAdapter
 import android.content.Context
 import android.content.res.Configuration

@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.dialog.ui.binder
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.graphics.Rect
 import android.graphics.Region

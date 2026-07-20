@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.util.Log
 import android.view.View.GONE

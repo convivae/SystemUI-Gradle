@@ -1,5 +1,7 @@
 package com.android.systemui.assist;
 
+import com.android.systemui.R
+
 import static com.android.systemui.DejankUtils.whitelistIpcs;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_ASSIST_GESTURE_CONSTRAINED;
 

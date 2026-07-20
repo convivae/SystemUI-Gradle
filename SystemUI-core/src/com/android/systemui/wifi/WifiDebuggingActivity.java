@@ -16,6 +16,8 @@
 
 package com.android.systemui.wifi;
 
+import com.android.systemui.R
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;

@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View

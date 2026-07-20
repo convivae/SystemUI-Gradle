@@ -15,6 +15,8 @@
  */
 package com.android.systemui.navigationbar.gestural;
 
+import com.android.systemui.R
+
 import static android.content.pm.ActivityInfo.CONFIG_FONT_SCALE;
 import static android.view.InputDevice.SOURCE_MOUSE;
 import static android.view.InputDevice.SOURCE_TOUCHPAD;

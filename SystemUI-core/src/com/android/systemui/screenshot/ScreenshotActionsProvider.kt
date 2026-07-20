@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot
 
+import com.android.systemui.R
+
 import android.app.assist.AssistContent
 import android.content.Context
 import android.net.Uri

@@ -16,6 +16,8 @@
 
 package com.android.systemui.assist.ui;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.graphics.Matrix;
 import android.graphics.Path;

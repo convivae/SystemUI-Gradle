@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import static android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES;
 import static android.view.WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG;
 

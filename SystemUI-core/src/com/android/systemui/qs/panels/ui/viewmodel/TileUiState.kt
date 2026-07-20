@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.panels.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.service.quicksettings.Tile
@@ -26,7 +28,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.state.ToggleableState
 import com.android.systemui.plugins.qs.QSTile
 import com.android.systemui.qs.tileimpl.SubtitleArrayMapping
-import com.android.systemui.R
 import java.util.function.Supplier
 
 @Immutable

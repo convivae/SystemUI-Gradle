@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.domain.interactor
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.app.ActivityOptions
 import android.app.ActivityTaskManager
@@ -23,7 +25,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.UserHandle
 import android.telecom.TelecomManager
-import com.android.internal.R
 import com.android.internal.logging.MetricsLogger
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent
 import com.android.internal.util.EmergencyAffordanceManager

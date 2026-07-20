@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.animation
 
+import com.android.systemui.R
+
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.animation.ValueAnimator.AnimatorUpdateListener
@@ -24,7 +26,6 @@ import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.graphics.drawable.RippleDrawable
-import com.android.internal.R
 import com.android.internal.annotations.VisibleForTesting
 import com.android.settingslib.Utils
 import com.android.systemui.media.controls.ui.view.MediaViewHolder

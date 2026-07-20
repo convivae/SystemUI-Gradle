@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics;
 
+import com.android.systemui.R
+
 import android.annotation.Nullable;
 import android.annotation.SuppressLint;
 import android.app.Dialog;

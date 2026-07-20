@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics;
 
+import com.android.systemui.R
+
 import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
 import android.annotation.IntDef;

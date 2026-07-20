@@ -15,6 +15,8 @@
  */
 package com.android.systemui.people;
 
+import com.android.systemui.R
+
 import static android.app.Notification.CATEGORY_MISSED_CALL;
 import static android.app.people.ConversationStatus.ACTIVITY_ANNIVERSARY;
 import static android.app.people.ConversationStatus.ACTIVITY_AUDIO;

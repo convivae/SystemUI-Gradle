@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.QS_WORK_PROFILE_LABEL;
 
 import android.app.admin.DevicePolicyManager;

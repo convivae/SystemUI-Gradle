@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.sharetoapp.ui.view
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.os.Bundle
 import com.android.systemui.statusbar.chips.mediaprojection.ui.view.EndMediaProjectionDialogHelper

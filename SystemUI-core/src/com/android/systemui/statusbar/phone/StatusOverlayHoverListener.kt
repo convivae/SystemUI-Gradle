@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone
 
+import com.android.systemui.R
+
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Color

@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.ui.view
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.drawable.AnimatedStateListDrawable
 import android.graphics.drawable.AnimatedVectorDrawable

@@ -17,6 +17,8 @@
 
 package com.android.systemui.statusbar.notification.stack.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton

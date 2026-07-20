@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot
 
+import com.android.systemui.R
+
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ComponentName

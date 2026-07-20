@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.satellite.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.dagger.SysUISingleton

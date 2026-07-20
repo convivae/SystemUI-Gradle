@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone.ui;
 
+import com.android.systemui.R
+
 import android.widget.LinearLayout;
 
 import com.android.internal.statusbar.StatusBarIcon;

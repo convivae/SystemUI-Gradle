@@ -16,6 +16,8 @@
 
 package com.android.systemui.logcat;
 
+import com.android.systemui.R
+
 import android.annotation.StyleRes;
 import android.app.Activity;
 import android.app.AlertDialog;

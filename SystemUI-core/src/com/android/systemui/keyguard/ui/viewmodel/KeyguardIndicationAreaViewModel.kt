@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
+import com.android.systemui.R
+
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.communal.domain.interactor.CommunalSceneInteractor
 import com.android.systemui.dagger.qualifiers.Background

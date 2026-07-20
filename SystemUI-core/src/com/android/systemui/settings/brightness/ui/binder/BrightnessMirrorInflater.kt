@@ -16,6 +16,8 @@
 
 package com.android.systemui.settings.brightness.ui.binder
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View

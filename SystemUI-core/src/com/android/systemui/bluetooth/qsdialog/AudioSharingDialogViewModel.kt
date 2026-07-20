@@ -16,6 +16,8 @@
 
 package com.android.systemui.bluetooth.qsdialog
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.settingslib.bluetooth.CachedBluetoothDevice
 import com.android.settingslib.bluetooth.LocalBluetoothManager

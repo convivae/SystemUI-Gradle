@@ -16,6 +16,8 @@
 
 package com.android.systemui.ambient.statusbar.ui;
 
+import com.android.systemui.R
+
 import android.annotation.IntDef;
 import android.annotation.Nullable;
 import android.content.Context;

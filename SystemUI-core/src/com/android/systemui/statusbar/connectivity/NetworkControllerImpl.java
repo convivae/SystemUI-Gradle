@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.connectivity;
 
+import com.android.systemui.R
+
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;

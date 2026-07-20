@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.taptotransfer.sender
 
+import com.android.systemui.R
+
 import android.app.StatusBarManager
 import android.content.Context
 import android.util.Log

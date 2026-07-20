@@ -15,6 +15,8 @@
  */
 package com.android.systemui.mediaprojection.appselector
 
+import com.android.systemui.R
+
 import android.app.ActivityOptions
 import android.app.ActivityOptions.LaunchCookie
 import android.content.Intent

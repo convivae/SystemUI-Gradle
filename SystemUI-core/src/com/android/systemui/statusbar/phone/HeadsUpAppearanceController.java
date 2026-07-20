@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.systemui.statusbar.phone.fragment.dagger.HomeStatusBarModule.OPERATOR_NAME_FRAME_VIEW;
 
 import android.graphics.Rect;

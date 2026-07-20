@@ -14,6 +14,8 @@
 
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import static com.android.systemui.navigationbar.views.NavigationBarInflaterView.KEY;
 import static com.android.systemui.navigationbar.views.NavigationBarInflaterView.KEY_CODE_END;
 import static com.android.systemui.navigationbar.views.NavigationBarInflaterView.KEY_CODE_START;

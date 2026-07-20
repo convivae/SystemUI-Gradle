@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.lockscreen
 
+import com.android.systemui.R
+
 import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.app.smartspace.SmartspaceConfig

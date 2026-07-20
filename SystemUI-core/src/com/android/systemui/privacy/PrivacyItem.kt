@@ -14,6 +14,8 @@
 
 package com.android.systemui.privacy
 
+import com.android.systemui.R
+
 import android.content.Context
 
 typealias Privacy = PrivacyType

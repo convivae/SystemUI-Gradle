@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade.carrier;
 
+import com.android.systemui.R
+
 import static android.telephony.SubscriptionManager.INVALID_SIM_SLOT_INDEX;
 import static android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES;
 

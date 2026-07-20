@@ -16,6 +16,8 @@
  */
 package com.android.systemui.user.ui.dialog
 
+import com.android.systemui.R
+
 import android.annotation.UserIdInt
 import android.content.Context
 import android.content.DialogInterface

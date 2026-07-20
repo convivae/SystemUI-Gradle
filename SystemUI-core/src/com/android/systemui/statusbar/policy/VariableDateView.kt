@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.text.StaticLayout
 import android.util.AttributeSet

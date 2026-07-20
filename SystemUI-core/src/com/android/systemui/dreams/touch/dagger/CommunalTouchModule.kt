@@ -15,6 +15,8 @@
  */
 package com.android.systemui.dreams.touch.dagger
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import com.android.systemui.dagger.qualifiers.Main
 import dagger.Module

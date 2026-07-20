@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot
 
+import com.android.systemui.R
+
 import android.net.Uri
 import android.os.UserManager
 import android.util.Log

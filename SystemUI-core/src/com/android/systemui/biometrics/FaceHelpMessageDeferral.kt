@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.os.SystemClock.elapsedRealtime
 import com.android.keyguard.logging.BiometricMessageDeferralLogger
@@ -27,7 +29,6 @@ import com.android.systemui.deviceentry.shared.model.HelpFaceAuthenticationStatu
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.dagger.BiometricLog
-import com.android.systemui.R
 import com.android.systemui.util.time.SystemClock
 import dagger.Lazy
 import java.io.PrintWriter

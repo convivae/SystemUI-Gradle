@@ -16,6 +16,8 @@
 
 package com.android.systemui.clipboardoverlay;
 
+import com.android.systemui.R
+
 import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 
 import static com.android.systemui.Flags.showClipboardIndication;

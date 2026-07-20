@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.KeyEvent.META_META_ON
 import com.android.systemui.Flags.keyboardShortcutHelperShortcutCustomizer

@@ -16,6 +16,8 @@
 
 package com.android.systemui.dreams.dagger;
 
+import com.android.systemui.R
+
 import android.content.res.Resources;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;

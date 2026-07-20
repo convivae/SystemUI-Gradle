@@ -15,6 +15,8 @@
  */
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;

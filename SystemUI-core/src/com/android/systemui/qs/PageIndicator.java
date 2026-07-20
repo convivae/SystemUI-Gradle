@@ -1,5 +1,7 @@
 package com.android.systemui.qs;
 
+import com.android.systemui.R
+
 import static com.android.systemui.qs.PageIndicator.PageScrollActionListener.LEFT;
 import static com.android.systemui.qs.PageIndicator.PageScrollActionListener.RIGHT;
 

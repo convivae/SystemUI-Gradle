@@ -16,6 +16,8 @@
 
 package com.android.systemui.development.ui.compose
 
+import com.android.systemui.R
+
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Spacer

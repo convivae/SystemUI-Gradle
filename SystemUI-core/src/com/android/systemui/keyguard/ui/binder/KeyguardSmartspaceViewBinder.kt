@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.ui.binder
 
+import com.android.systemui.R
+
 import android.view.View
 import androidx.constraintlayout.helper.widget.Layer
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -29,7 +31,6 @@ import com.android.systemui.keyguard.ui.view.layout.blueprints.transitions.Intra
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.R
 import kotlinx.coroutines.DisposableHandle
 
 object KeyguardSmartspaceViewBinder {

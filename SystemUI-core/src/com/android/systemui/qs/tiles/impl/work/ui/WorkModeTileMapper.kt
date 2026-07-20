@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles.impl.work.ui
 
+import com.android.systemui.R
+
 import android.app.admin.DevicePolicyManager
 import android.app.admin.DevicePolicyResources.Strings.SystemUi.QS_WORK_PROFILE_LABEL
 import android.content.res.Resources
@@ -25,7 +27,6 @@ import com.android.systemui.qs.tiles.base.interactor.QSTileDataToStateMapper
 import com.android.systemui.qs.tiles.impl.work.domain.model.WorkModeTileModel
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
-import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 

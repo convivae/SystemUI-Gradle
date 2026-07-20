@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade;
 
+import com.android.systemui.R
+
 import static com.android.systemui.keyguard.shared.model.KeyguardState.DREAMING;
 import static com.android.systemui.keyguard.shared.model.KeyguardState.LOCKSCREEN;
 import static com.android.systemui.statusbar.StatusBarState.KEYGUARD;

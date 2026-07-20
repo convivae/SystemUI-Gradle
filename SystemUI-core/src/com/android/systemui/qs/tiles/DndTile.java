@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static android.provider.Settings.Global.ZEN_MODE_ALARMS;
 import static android.provider.Settings.Global.ZEN_MODE_OFF;
 

@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.ui
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Intent

@@ -16,6 +16,8 @@
 
 package com.android.systemui.inputdevice.tutorial.ui.composable
 
+import com.android.systemui.R
+
 import androidx.annotation.RawRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition

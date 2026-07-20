@@ -15,6 +15,8 @@
  */
 package com.android.systemui.clipboardoverlay
 
+import com.android.systemui.R
+
 import android.content.ClipData
 import android.content.ClipDescription.EXTRA_IS_SENSITIVE
 import android.content.Context
@@ -25,7 +27,6 @@ import android.util.Log
 import android.util.Size
 import android.view.textclassifier.TextLinks
 import com.android.systemui.Flags.clipboardUseDescriptionMimetype
-import com.android.systemui.R
 import java.io.IOException
 
 data class ClipboardModel(

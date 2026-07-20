@@ -15,6 +15,8 @@
  */
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.systemui.Flags.statusBarSignalPolicyRefactor;
 
 import android.annotation.NonNull;

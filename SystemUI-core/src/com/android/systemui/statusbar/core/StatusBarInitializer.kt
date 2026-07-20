@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.core
 
+import com.android.systemui.R
+
 import android.app.Fragment
 import android.view.ViewGroup
 import androidx.annotation.VisibleForTesting

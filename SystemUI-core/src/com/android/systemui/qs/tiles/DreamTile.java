@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;

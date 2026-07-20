@@ -17,6 +17,8 @@
 
 package com.android.systemui.shade;
 
+import com.android.systemui.R
+
 import static android.view.WindowInsets.Type.ime;
 
 import static com.android.systemui.classifier.Classifier.QS_COLLAPSE;

@@ -16,6 +16,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import android.annotation.StyleRes;
 import android.content.res.TypedArray;
 import android.util.TypedValue;

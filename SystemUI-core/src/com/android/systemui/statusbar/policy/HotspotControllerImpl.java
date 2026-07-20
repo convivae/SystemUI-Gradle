@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy;
 
+import com.android.systemui.R
+
 import static android.net.TetheringManager.TETHERING_WIFI;
 
 import android.content.Context;

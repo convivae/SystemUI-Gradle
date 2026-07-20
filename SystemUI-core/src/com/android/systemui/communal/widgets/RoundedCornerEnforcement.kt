@@ -16,6 +16,8 @@
 
 package com.android.systemui.communal.widgets
 
+import com.android.systemui.R
+
 import android.annotation.IdRes
 import android.annotation.Nullable
 import android.content.Context

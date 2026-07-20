@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static com.android.internal.logging.nano.MetricsProto.MetricsEvent.FIELD_QS_MODE;
 
 import android.content.Intent;

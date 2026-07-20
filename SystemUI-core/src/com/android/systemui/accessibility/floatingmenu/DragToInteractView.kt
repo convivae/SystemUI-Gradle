@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility.floatingmenu
 
+import com.android.systemui.R
+
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Color

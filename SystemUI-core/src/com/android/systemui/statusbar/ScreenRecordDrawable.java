@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.res.Resources;

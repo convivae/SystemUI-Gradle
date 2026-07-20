@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.data.source
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.hardware.input.InputManager
 import android.hardware.input.KeyGlyphMap

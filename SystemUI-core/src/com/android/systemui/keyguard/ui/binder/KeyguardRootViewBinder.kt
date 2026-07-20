@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.ui.binder
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.annotation.DrawableRes
@@ -52,7 +54,6 @@ import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.common.ui.view.onApplyWindowInsets
 import com.android.systemui.common.ui.view.onLayoutChanged
 import com.android.systemui.common.ui.view.onTouchListener
-import com.android.systemui.R
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryHapticsInteractor
 import com.android.systemui.keyguard.KeyguardBottomAreaRefactor
 import com.android.systemui.keyguard.KeyguardViewMediator

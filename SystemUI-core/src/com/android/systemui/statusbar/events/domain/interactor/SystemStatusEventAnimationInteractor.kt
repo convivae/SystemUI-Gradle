@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.events.domain.interactor
 
+import com.android.systemui.R
+
 import android.view.View
 import androidx.core.animation.Animator
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.res.Resources;
 import android.database.DataSetObserver;

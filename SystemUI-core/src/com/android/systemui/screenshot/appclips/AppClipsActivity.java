@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.appclips;
 
+import com.android.systemui.R
+
 import static android.app.ActivityTaskManager.INVALID_TASK_ID;
 
 import static com.android.systemui.screenshot.appclips.AppClipsEvent.SCREENSHOT_FOR_NOTE_ACCEPTED;

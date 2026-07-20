@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.dagger
 
+import com.android.systemui.R
+
 import android.annotation.StringRes
 import android.provider.Settings
 import com.android.systemui.dagger.SysUISingleton

@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.dialog;
 
+import com.android.systemui.R
+
 import static android.view.WindowInsets.Type.navigationBars;
 import static android.view.WindowInsets.Type.statusBars;
 

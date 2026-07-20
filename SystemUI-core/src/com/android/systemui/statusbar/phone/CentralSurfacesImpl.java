@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.DISABLE_HOME;
 import static android.app.StatusBarManager.WINDOW_STATE_HIDDEN;
 import static android.app.StatusBarManager.WINDOW_STATE_SHOWING;

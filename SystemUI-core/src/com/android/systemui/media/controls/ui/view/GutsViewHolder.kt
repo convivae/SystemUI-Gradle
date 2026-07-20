@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.view
 
+import com.android.systemui.R
+
 import android.content.res.ColorStateList
 import android.util.Log
 import android.view.View

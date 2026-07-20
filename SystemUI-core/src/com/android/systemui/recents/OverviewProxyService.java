@@ -16,6 +16,8 @@
 
 package com.android.systemui.recents;
 
+import com.android.systemui.R
+
 import static android.app.Flags.keyguardPrivateNotifications;
 import static android.content.Intent.ACTION_PACKAGE_ADDED;
 import static android.content.Intent.EXTRA_CHANGED_COMPONENT_NAME_LIST;

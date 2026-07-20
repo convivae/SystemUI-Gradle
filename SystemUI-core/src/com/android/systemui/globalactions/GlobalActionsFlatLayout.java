@@ -16,6 +16,8 @@
 
 package com.android.systemui.globalactions;
 
+import com.android.systemui.R
+
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_LANDSCAPE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_NONE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_SEASCAPE;

@@ -14,6 +14,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import android.annotation.Nullable;
 import android.content.Context;
 import android.content.pm.ActivityInfo;

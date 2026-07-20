@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility;
 
+import com.android.systemui.R
+
 import static com.android.systemui.accessibility.WindowMagnificationSettings.MagnificationSize;
 
 import android.annotation.NonNull;

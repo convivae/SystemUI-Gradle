@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.dialog
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.content.Context
 import android.graphics.PixelFormat

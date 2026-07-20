@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static com.android.systemui.flags.Flags.LOCKSCREEN_ENABLE_LANDSCAPE;
 
 import android.view.View;

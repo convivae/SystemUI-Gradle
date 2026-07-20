@@ -16,6 +16,8 @@
 
 package com.android.systemui.recordissue
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context

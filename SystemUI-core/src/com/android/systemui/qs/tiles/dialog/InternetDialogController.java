@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles.dialog;
 
+import com.android.systemui.R
+
 import static android.telephony.SubscriptionManager.PROFILE_CLASS_PROVISIONING;
 
 import static com.android.settingslib.mobile.MobileMappings.getIconKey;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.decor
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.Resources
 import android.view.DisplayCutout

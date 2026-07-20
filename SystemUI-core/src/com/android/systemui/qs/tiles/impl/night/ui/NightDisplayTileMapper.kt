@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles.impl.night.ui
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.service.quicksettings.Tile
 import android.text.TextUtils
@@ -28,7 +30,6 @@ import com.android.systemui.qs.tiles.base.logging.QSTileLogger
 import com.android.systemui.qs.tiles.impl.night.domain.model.NightDisplayTileModel
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
-import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import java.time.DateTimeException
 import java.time.LocalTime

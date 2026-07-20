@@ -15,6 +15,8 @@
  */
 package com.android.systemui.globalactions;
 
+import com.android.systemui.R
+
 import android.annotation.NonNull;
 import android.app.Dialog;
 import android.content.Context;

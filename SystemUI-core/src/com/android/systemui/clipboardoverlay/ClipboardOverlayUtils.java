@@ -16,6 +16,8 @@
 
 package com.android.systemui.clipboardoverlay;
 
+import com.android.systemui.R
+
 import android.app.RemoteAction;
 import android.content.ClipData;
 import android.content.ClipDescription;

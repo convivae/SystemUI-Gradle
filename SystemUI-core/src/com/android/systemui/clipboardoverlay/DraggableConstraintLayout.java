@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot;
 
+import com.android.systemui.R
+
 import static com.android.systemui.screenshot.LogConfig.DEBUG_ANIM;
 import static com.android.systemui.screenshot.LogConfig.DEBUG_DISMISS;
 

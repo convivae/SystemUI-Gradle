@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.dialog;
 
+import com.android.systemui.R
+
 import static android.media.RouteListingPreference.ACTION_TRANSFER_MEDIA;
 import static android.media.RouteListingPreference.EXTRA_ROUTE_ID;
 import static android.provider.Settings.ACTION_BLUETOOTH_SETTINGS;

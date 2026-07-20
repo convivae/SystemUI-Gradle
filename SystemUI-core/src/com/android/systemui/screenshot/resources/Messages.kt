@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.resources
 
+import com.android.systemui.R
+
 import android.content.Context
 import androidx.annotation.OpenForTesting
 import com.android.systemui.dagger.SysUISingleton

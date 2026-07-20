@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.dialog.sliders.ui
 
+import com.android.systemui.R
+
 import android.view.View
 import com.android.systemui.haptics.slider.HapticSlider
 import com.android.systemui.haptics.slider.HapticSliderPlugin

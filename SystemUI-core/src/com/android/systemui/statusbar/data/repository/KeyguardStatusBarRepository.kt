@@ -16,8 +16,9 @@
 
 package com.android.systemui.statusbar.data.repository
 
+import com.android.systemui.R
+
 import android.content.Context
-import com.android.internal.R
 import com.android.systemui.common.coroutine.ConflatedCallbackFlow
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.statusbar.policy.ConfigurationController

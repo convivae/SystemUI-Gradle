@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;

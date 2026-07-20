@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.data.source
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.Resources
 import android.view.KeyEvent.KEYCODE_D

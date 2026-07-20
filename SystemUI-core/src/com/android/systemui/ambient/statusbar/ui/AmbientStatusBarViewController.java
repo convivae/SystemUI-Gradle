@@ -16,6 +16,8 @@
 
 package com.android.systemui.ambient.statusbar.ui;
 
+import com.android.systemui.R
+
 import static com.android.systemui.util.kotlin.JavaAdapterKt.collectFlow;
 
 import android.app.AlarmManager;

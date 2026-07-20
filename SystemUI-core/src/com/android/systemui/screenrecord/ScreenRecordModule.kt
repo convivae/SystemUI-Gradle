@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenrecord
 
+import com.android.systemui.R
+
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.LogBufferFactory

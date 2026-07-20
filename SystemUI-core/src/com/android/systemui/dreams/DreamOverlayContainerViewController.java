@@ -16,6 +16,8 @@
 
 package com.android.systemui.dreams;
 
+import com.android.systemui.R
+
 import static android.service.dreams.Flags.dreamHandlesBeingObscured;
 
 import static com.android.keyguard.BouncerPanelExpansionCalculator.aboutToShowBouncerProgress;

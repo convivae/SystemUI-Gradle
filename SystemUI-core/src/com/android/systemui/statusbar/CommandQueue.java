@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.DISABLE2_NONE;
 import static android.app.StatusBarManager.DISABLE_NONE;
 import static android.inputmethodservice.InputMethodService.BACK_DISPOSITION_DEFAULT;

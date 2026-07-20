@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.dialog.sliders.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.media.AudioManager
 import androidx.annotation.DrawableRes
 import com.android.settingslib.notification.domain.interactor.NotificationsSoundPolicyInteractor

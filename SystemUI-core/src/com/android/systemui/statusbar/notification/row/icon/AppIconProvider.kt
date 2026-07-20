@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row.icon
 
+import com.android.systemui.R
+
 import android.annotation.WorkerThread
 import android.app.ActivityManager
 import android.app.Flags
@@ -26,7 +28,6 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.UserHandle
 import android.util.Log
-import com.android.internal.R
 import com.android.launcher3.icons.BaseIconFactory
 import com.android.launcher3.icons.BaseIconFactory.IconOptions
 import com.android.launcher3.util.UserIconInfo

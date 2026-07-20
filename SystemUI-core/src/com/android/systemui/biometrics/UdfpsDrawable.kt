@@ -15,6 +15,8 @@
  */
 package com.android.systemui.biometrics
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.ColorFilter
 import android.graphics.Paint
@@ -24,7 +26,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.PathShape
 import android.util.PathParser
-import com.android.systemui.R
 
 private const val DEFAULT_STROKE_WIDTH = 3f
 

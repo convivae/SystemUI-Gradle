@@ -15,6 +15,8 @@
  */
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;

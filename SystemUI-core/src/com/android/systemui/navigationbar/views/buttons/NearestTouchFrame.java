@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar.views.buttons;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;

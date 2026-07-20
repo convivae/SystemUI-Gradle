@@ -16,6 +16,8 @@
 
 package com.android.systemui.brightness.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue

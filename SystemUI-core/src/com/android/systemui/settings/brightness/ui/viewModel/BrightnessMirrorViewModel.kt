@@ -16,6 +16,8 @@
 
 package com.android.systemui.settings.brightness.ui.viewModel
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.util.Log
 import android.view.View

@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static android.hardware.SensorPrivacyManager.Sensors.CAMERA;
 
 import static com.android.systemui.statusbar.policy.RotationLockControllerImpl.hasSufficientPermission;

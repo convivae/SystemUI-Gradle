@@ -16,6 +16,8 @@
 
 package com.android.systemui.authentication.shared.model
 
+import com.android.systemui.R
+
 import androidx.annotation.StringRes
 
 /**

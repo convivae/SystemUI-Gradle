@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade;
 
+import com.android.systemui.R
+
 import static android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;
 
 import static com.android.systemui.statusbar.NotificationRemoteInputManager.ENABLE_REMOTE_INPUT;

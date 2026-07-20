@@ -15,6 +15,8 @@
  */
 package com.android.systemui.user
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.drawable.ShapeDrawable

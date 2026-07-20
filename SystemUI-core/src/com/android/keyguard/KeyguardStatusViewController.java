@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static androidx.constraintlayout.widget.ConstraintSet.END;
 import static androidx.constraintlayout.widget.ConstraintSet.PARENT_ID;
 

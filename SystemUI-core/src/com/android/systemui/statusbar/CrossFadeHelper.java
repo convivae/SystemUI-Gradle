@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import android.animation.Animator;
 import android.view.View;
 import android.view.ViewPropertyAnimator;

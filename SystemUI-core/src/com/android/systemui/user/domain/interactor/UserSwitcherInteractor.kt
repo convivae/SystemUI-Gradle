@@ -17,6 +17,8 @@
 
 package com.android.systemui.user.domain.interactor
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.annotation.UserIdInt
 import android.app.ActivityManager

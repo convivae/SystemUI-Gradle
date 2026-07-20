@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles.impl.uimodenight.domain
 
+import com.android.systemui.R
+
 import android.app.UiModeManager
 import android.content.res.Resources
 import android.content.res.Resources.Theme
@@ -25,7 +27,6 @@ import com.android.systemui.qs.tiles.base.interactor.QSTileDataToStateMapper
 import com.android.systemui.qs.tiles.impl.uimodenight.domain.model.UiModeNightTileModel
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
-import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

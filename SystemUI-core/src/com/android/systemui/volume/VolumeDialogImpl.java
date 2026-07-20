@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume;
 
+import com.android.systemui.R
+
 import static android.app.ActivityManager.LOCK_TASK_MODE_NONE;
 import static android.media.AudioManager.RINGER_MODE_NORMAL;
 import static android.media.AudioManager.RINGER_MODE_SILENT;

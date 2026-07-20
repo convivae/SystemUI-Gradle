@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import android.app.UiModeManager;
 import android.content.Intent;
 import android.content.res.Configuration;

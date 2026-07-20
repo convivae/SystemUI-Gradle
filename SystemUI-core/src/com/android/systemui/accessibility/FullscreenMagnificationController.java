@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility;
 
+import com.android.systemui.R
+
 import static android.view.WindowManager.LayoutParams;
 
 import android.animation.Animator;

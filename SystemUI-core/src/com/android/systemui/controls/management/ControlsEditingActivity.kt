@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.management
 
+import com.android.systemui.R
+
 import android.app.Activity
 import android.app.ActivityOptions
 import android.content.ComponentName

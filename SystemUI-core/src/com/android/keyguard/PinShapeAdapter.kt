@@ -16,8 +16,9 @@
 
 package com.android.keyguard
 
-import android.content.Context
 import com.android.systemui.R
+
+import android.content.Context
 import kotlin.random.Random
 
 class PinShapeAdapter {

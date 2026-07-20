@@ -16,6 +16,8 @@
 
 package com.android.systemui.settings.brightness;
 
+import com.android.systemui.R
+
 import static com.android.systemui.Flags.brightnessSliderFocusState;
 
 import android.content.Context;

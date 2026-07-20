@@ -17,6 +17,8 @@
 
 package com.android.systemui.user.legacyhelper.data
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.pm.UserInfo
 import android.graphics.Bitmap

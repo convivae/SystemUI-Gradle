@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper;
 
+import com.android.systemui.R
+
 import android.app.Notification;
 import android.content.Context;
 import android.graphics.drawable.AnimatedImageDrawable;

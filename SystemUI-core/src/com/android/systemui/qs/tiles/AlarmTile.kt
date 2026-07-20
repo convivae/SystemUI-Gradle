@@ -1,5 +1,7 @@
 package com.android.systemui.qs.tiles
 
+import com.android.systemui.R
+
 import android.app.AlarmManager
 import android.app.AlarmManager.AlarmClockInfo
 import android.content.Intent
@@ -24,7 +26,6 @@ import com.android.systemui.qs.QSHost
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.logging.QSLogger
 import com.android.systemui.qs.tileimpl.QSTileImpl
-import com.android.systemui.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.statusbar.policy.NextAlarmController
 import java.util.Locale

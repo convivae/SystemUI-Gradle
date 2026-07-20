@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume;
 
+import com.android.systemui.R
+
 import android.bluetooth.BluetoothDevice;
 import android.content.ContentResolver;
 import android.content.Context;

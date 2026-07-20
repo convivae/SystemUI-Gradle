@@ -16,6 +16,8 @@
 
 package com.android.systemui.recordissue
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.app.AlertDialog.BUTTON_POSITIVE
 import android.content.Context

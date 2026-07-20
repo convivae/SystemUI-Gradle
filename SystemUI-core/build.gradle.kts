@@ -102,7 +102,8 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/framework-statsd.jar"))
     compileOnly(files("${rootProject.projectDir}/libs/android.car.jar"))
     compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
-    // 注意：已移除 android_module_lib_stubs_current.jar（用户要求不使用 stub）
+    // 添加 android_module_lib_stubs_current.jar 提供缺失的 framework stub
+    compileOnly(files("${rootProject.projectDir}/libs/android_module_lib_stubs_current.jar"))
 
     // 本地 JAR
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))

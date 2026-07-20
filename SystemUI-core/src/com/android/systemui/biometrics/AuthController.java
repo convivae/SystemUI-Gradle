@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics;
 
+import com.android.systemui.R
+
 import static android.hardware.biometrics.BiometricAuthenticator.TYPE_FACE;
 import static android.hardware.biometrics.BiometricAuthenticator.TYPE_FINGERPRINT;
 import static android.hardware.fingerprint.FingerprintSensorProperties.TYPE_REAR;

@@ -17,6 +17,8 @@
 
 package com.android.systemui.user.legacyhelper.ui
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.util.Log
 import androidx.annotation.DrawableRes

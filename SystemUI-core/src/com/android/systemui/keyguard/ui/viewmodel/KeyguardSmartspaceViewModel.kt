@@ -16,8 +16,9 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
-import android.content.Context
 import com.android.systemui.R
+
+import android.content.Context
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.domain.interactor.KeyguardSmartspaceInteractor

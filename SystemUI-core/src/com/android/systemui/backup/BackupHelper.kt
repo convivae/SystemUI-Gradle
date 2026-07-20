@@ -16,6 +16,8 @@
 
 package com.android.systemui.backup
 
+import com.android.systemui.R
+
 import android.app.backup.BackupAgentHelper
 import android.app.backup.BackupDataInputStream
 import android.app.backup.BackupDataOutput

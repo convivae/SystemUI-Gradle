@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;
 
 import android.content.Intent;

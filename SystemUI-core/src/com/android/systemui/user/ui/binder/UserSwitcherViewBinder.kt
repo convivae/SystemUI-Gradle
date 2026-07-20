@@ -17,6 +17,8 @@
 
 package com.android.systemui.user.ui.binder
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.Gravity
 import android.view.LayoutInflater

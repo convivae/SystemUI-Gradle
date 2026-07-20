@@ -16,6 +16,8 @@
 
 package com.android.systemui.deviceentry.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.hardware.biometrics.BiometricFaceConstants
 import com.android.systemui.biometrics.FaceHelpMessageDebouncer

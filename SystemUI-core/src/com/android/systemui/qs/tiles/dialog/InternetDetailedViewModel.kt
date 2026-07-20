@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles.dialog
 
+import com.android.systemui.R
+
 import android.view.LayoutInflater
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.systemui.plugins.qs.TileDetailsViewModel
-import com.android.systemui.R
 
 class InternetDetailsViewModel(
     onLongClick: () -> Unit,

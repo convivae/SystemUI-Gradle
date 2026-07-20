@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.connectivity;
 
+import com.android.systemui.R
+
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.wifi.WifiManager.TrafficStateCallback.DATA_ACTIVITY_IN;

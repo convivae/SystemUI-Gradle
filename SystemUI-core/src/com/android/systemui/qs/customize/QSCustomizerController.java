@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.customize;
 
+import com.android.systemui.R
+
 import static com.android.systemui.qs.customize.QSCustomizer.EXTRA_QS_CUSTOMIZING;
 import static com.android.systemui.qs.customize.QSCustomizer.MENU_RESET;
 

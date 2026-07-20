@@ -16,6 +16,8 @@
 
 package com.android.systemui.toast;
 
+import com.android.systemui.R
+
 import static android.content.pm.ApplicationInfo.FLAG_SYSTEM;
 import static android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP;
 

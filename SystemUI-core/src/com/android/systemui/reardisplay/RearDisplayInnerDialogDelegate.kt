@@ -16,6 +16,8 @@
 
 package com.android.systemui.reardisplay
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.os.Bundle
 import android.view.View

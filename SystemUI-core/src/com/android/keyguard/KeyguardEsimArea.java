@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;

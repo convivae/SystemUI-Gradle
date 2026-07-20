@@ -16,6 +16,8 @@
 
 package com.android.systemui.power;
 
+import com.android.systemui.R
+
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 
 import static com.android.settingslib.fuelgauge.BatterySaverLogging.SAVER_ENABLED_CONFIRMATION;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.docking.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.Surface
 import android.view.WindowManager

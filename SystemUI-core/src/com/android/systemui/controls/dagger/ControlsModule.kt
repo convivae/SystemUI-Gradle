@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.dagger
 
+import com.android.systemui.R
+
 import android.app.Activity
 import android.content.pm.PackageManager
 import com.android.systemui.controls.ControlsMetricsLogger

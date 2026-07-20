@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tileimpl
 
+import com.android.systemui.R
+
 import android.animation.ArgbEvaluator
 import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator
@@ -70,7 +72,6 @@ import com.android.systemui.plugins.qs.QSTile.AdapterState
 import com.android.systemui.plugins.qs.QSTileView
 import com.android.systemui.qs.logging.QSLogger
 import com.android.systemui.qs.tileimpl.QSIconViewImpl.QS_ANIM_LENGTH
-import com.android.systemui.R
 import java.util.Objects
 
 private const val TAG = "QSTileViewImpl"

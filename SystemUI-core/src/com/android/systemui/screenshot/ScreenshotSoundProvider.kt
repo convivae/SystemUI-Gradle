@@ -16,12 +16,13 @@
 
 package com.android.systemui.screenshot
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioSystem
 import android.media.MediaPlayer
 import android.net.Uri
-import com.android.internal.R
 import com.android.systemui.dagger.SysUISingleton
 import java.io.File
 import javax.inject.Inject

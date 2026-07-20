@@ -16,6 +16,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;

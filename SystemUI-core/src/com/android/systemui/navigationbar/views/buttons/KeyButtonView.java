@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar.views.buttons;
 
+import com.android.systemui.R
+
 import static android.view.Display.INVALID_DISPLAY;
 import static android.view.KeyEvent.KEYCODE_UNKNOWN;
 import static android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.ui
 
+import com.android.systemui.R
+
 import android.app.Activity
 import android.app.ActivityOptions
 import android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS

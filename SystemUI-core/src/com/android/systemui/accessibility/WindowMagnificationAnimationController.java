@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility;
 
+import com.android.systemui.R
+
 import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.annotation.IntDef;

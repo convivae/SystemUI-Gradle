@@ -16,6 +16,8 @@
 
 package com.android.systemui.bluetooth.qsdialog
 
+import com.android.systemui.R
+
 import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.media.AudioManager

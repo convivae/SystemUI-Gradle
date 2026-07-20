@@ -16,6 +16,8 @@
 
 package com.android.systemui.touchpad.tutorial.ui.composable
 
+import com.android.systemui.R
+
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable

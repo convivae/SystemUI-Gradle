@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.icon.ui.viewbinder
 
+import com.android.systemui.R
+
 import com.android.app.tracing.traceSection
 import com.android.internal.util.ContrastColorUtil
 import com.android.systemui.statusbar.StatusBarIconView

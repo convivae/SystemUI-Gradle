@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 import static android.app.WindowConfiguration.ACTIVITY_TYPE_ASSISTANT;
 import static android.app.WindowConfiguration.ACTIVITY_TYPE_STANDARD;

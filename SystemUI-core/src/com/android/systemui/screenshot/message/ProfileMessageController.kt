@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.message
 
+import com.android.systemui.R
+
 import android.os.UserHandle
 import android.view.View
 import android.view.ViewGroup

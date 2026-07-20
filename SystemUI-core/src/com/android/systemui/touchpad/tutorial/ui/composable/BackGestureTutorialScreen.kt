@@ -16,6 +16,8 @@
 
 package com.android.systemui.touchpad.tutorial.ui.composable
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable

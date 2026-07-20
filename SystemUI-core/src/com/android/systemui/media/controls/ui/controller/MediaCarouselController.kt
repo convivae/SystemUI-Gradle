@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.controller
 
+import com.android.systemui.R
+
 import android.annotation.WorkerThread
 import android.app.PendingIntent
 import android.content.Context

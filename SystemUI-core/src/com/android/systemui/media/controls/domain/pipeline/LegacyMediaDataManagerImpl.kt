@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
+import com.android.systemui.R
+
 import android.annotation.MainThread
 import android.annotation.SuppressLint
 import android.app.Notification

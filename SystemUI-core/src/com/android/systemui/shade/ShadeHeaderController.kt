@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.annotation.IdRes
@@ -48,7 +50,6 @@ import com.android.systemui.dump.DumpManager
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.qs.ChipVisibilityListener
 import com.android.systemui.qs.HeaderPrivacyIconsController
-import com.android.systemui.R
 import com.android.systemui.shade.ShadeHeaderController.Companion.HEADER_TRANSITION_ID
 import com.android.systemui.shade.ShadeHeaderController.Companion.LARGE_SCREEN_HEADER_CONSTRAINT
 import com.android.systemui.shade.ShadeHeaderController.Companion.LARGE_SCREEN_HEADER_TRANSITION_ID

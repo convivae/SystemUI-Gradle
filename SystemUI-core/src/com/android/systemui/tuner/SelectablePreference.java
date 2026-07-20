@@ -14,6 +14,8 @@
 
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.util.TypedValue;

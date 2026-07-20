@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone.fragment
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.view.View
 import androidx.core.animation.Animator

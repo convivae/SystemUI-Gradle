@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel
 
+import com.android.systemui.R
+
 import com.android.settingslib.AccessibilityContentDescriptions
 import com.android.systemui.Flags.statusBarStaticInoutIndicators
 import com.android.systemui.common.shared.model.ContentDescription

@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume;
 
+import com.android.systemui.R
+
 import static android.media.AudioManager.RINGER_MODE_NORMAL;
 
 import android.app.ActivityManager;

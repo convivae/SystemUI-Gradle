@@ -16,6 +16,8 @@
 
 package com.android.systemui.mediaprojection.permission;
 
+import com.android.systemui.R
+
 import static android.Manifest.permission.LOG_COMPAT_CHANGE;
 import static android.Manifest.permission.READ_COMPAT_CHANGE_CONFIG;
 import static android.media.projection.IMediaProjectionManager.EXTRA_PACKAGE_REUSING_GRANTED_CONSENT;

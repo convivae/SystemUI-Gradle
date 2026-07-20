@@ -17,6 +17,8 @@
 
 package com.android.systemui.biometrics.data.repository
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Point
 import android.hardware.camera2.CameraManager
@@ -40,7 +42,6 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.shared.model.DevicePosture
-import com.android.systemui.R
 import java.util.concurrent.Executor
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher

@@ -16,6 +16,8 @@
 
 package com.android.systemui.recordissue
 
+import com.android.systemui.R
+
 import android.os.Bundle
 import android.view.Gravity
 import android.view.WindowManager

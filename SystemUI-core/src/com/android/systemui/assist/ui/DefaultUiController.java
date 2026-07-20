@@ -16,6 +16,8 @@
 
 package com.android.systemui.assist.ui;
 
+import com.android.systemui.R
+
 import static com.android.systemui.assist.AssistManager.DISMISS_REASON_INVOCATION_CANCELLED;
 import static com.android.systemui.assist.AssistManager.INVOCATION_TYPE_GESTURE;
 

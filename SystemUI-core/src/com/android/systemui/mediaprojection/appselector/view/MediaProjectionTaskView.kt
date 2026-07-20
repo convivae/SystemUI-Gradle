@@ -16,6 +16,8 @@
 
 package com.android.systemui.mediaprojection.appselector.view
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.BitmapShader
 import android.graphics.Canvas

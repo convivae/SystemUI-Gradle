@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 import static android.provider.Settings.Secure.LOCK_SCREEN_LOCK_AFTER_TIMEOUT;
 import static android.provider.Settings.System.LOCKSCREEN_SOUNDS_ENABLED;

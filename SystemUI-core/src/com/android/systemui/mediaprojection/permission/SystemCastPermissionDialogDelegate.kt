@@ -15,6 +15,8 @@
  */
 package com.android.systemui.mediaprojection.permission
 
+import com.android.systemui.R
+
 import android.app.AlertDialog
 import android.content.Context
 import android.media.projection.MediaProjectionConfig

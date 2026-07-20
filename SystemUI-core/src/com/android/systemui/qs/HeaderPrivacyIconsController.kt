@@ -1,5 +1,7 @@
 package com.android.systemui.qs
 
+import com.android.systemui.R
+
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,7 +11,6 @@ import android.permission.PermissionManager
 import android.safetycenter.SafetyCenterManager
 import android.view.View
 import androidx.annotation.WorkerThread
-import com.android.internal.R
 import com.android.internal.logging.UiEventLogger
 import com.android.systemui.animation.ActivityTransitionAnimator
 import com.android.systemui.appops.AppOpsController

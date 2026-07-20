@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.Resources
 import android.view.LayoutInflater
@@ -32,7 +34,6 @@ import com.android.systemui.common.ui.data.repository.ConfigurationRepositoryImp
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractorImpl
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.R
 import com.android.systemui.scene.ui.view.WindowRootView
 import com.android.systemui.shade.data.repository.MutableShadeDisplaysRepository
 import com.android.systemui.shade.data.repository.ShadeDisplaysRepository

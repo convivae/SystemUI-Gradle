@@ -17,6 +17,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import static com.android.internal.jank.InteractionJankMonitor.CUJ_NOTIFICATION_SHADE_ROW_EXPAND;
 
 import android.content.Context;

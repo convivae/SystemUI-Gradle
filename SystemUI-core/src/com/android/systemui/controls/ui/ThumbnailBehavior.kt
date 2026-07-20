@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.ui
 
+import com.android.systemui.R
+
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.drawable.ClipDrawable

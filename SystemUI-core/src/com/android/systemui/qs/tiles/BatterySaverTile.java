@@ -15,6 +15,8 @@
  */
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.communal.data.db
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.os.Process
 import android.util.Log

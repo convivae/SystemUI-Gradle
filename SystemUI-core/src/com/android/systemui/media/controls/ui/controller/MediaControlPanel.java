@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.controller;
 
+import com.android.systemui.R
+
 import static android.provider.Settings.ACTION_MEDIA_CONTROLS_SETTINGS;
 
 import static com.android.settingslib.flags.Flags.legacyLeAudioSharing;

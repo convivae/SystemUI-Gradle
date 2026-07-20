@@ -16,6 +16,8 @@
 
 package com.android.systemui.deviceentry.data.repository
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.os.Build
 import android.os.PowerManager

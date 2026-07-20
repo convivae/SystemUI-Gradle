@@ -16,6 +16,8 @@
 
 package com.android.systemui.wallet.ui;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Rect;

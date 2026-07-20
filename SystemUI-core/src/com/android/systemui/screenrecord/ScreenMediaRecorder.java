@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenrecord;
 
+import com.android.systemui.R
+
 import static android.content.Context.MEDIA_PROJECTION_SERVICE;
 
 import static com.android.systemui.screenrecord.ScreenRecordingAudioSource.INTERNAL;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.gesture
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.InputEvent
 import android.view.MotionEvent

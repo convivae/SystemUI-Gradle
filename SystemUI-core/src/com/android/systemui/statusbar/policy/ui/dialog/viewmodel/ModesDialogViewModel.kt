@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy.ui.dialog.viewmodel
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent

@@ -16,6 +16,8 @@
 
 package com.android.systemui.people;
 
+import com.android.systemui.R
+
 import static com.android.systemui.people.NotificationHelper.getContactUri;
 import static com.android.systemui.people.NotificationHelper.getMessagingStyleMessages;
 import static com.android.systemui.people.NotificationHelper.getSenderIfGroupConversation;

@@ -18,6 +18,8 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.util.Log
 import android.util.MathUtils
 import com.android.app.animation.Interpolators

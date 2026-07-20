@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
+import com.android.systemui.R
+
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;

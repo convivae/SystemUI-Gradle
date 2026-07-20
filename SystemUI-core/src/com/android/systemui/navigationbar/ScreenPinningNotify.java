@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.os.SystemClock;
 import android.util.Slog;

@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 

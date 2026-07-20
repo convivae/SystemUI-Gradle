@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.pipeline.data.repository
 
+import com.android.systemui.R
+
 import android.annotation.UserIdInt
 import android.content.res.Resources
 import android.util.SparseArray
@@ -23,7 +25,6 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.qs.pipeline.data.model.RestoreData
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.pipeline.shared.logging.QSPipelineLogger
-import com.android.systemui.R
 import com.android.systemui.retail.data.repository.RetailModeRepository
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject

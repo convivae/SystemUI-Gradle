@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable

@@ -1,5 +1,7 @@
 package com.android.systemui.navigationbar.gestural
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.util.TypedValue
 import androidx.core.animation.Interpolator

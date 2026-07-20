@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.connectivity;
 
+import com.android.systemui.R
+
 import static com.android.settingslib.flags.Flags.newStatusBarIcons;
 
 import com.android.settingslib.AccessibilityContentDescriptions;

@@ -16,6 +16,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import android.animation.Animator;
 import android.annotation.SuppressLint;
 import android.app.ActivityThread;

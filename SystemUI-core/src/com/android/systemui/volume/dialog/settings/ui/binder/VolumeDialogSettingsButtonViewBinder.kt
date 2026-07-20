@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.dialog.settings.ui.binder
 
+import com.android.systemui.R
+
 import android.view.View
 import com.android.systemui.lifecycle.WindowLifecycleState
 import com.android.systemui.lifecycle.repeatWhenAttached

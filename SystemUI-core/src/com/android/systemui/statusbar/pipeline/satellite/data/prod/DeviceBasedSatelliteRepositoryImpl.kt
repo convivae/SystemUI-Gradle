@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.satellite.data.prod
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.os.OutcomeReceiver
 import android.telephony.TelephonyCallback

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row;
 
+import com.android.systemui.R
+
 import static android.app.Flags.notificationsRedesignTemplates;
 import static android.app.Notification.Action.SEMANTIC_ACTION_MARK_CONVERSATION_AS_PRIORITY;
 import static android.service.notification.NotificationListenerService.REASON_CANCEL;

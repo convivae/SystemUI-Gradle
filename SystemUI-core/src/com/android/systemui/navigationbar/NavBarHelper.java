@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.WINDOW_NAVIGATION_BAR;
 import static android.app.StatusBarManager.WindowVisibleState;
 import static android.provider.Settings.Secure.ACCESSIBILITY_BUTTON_MODE_FLOATING_MENU;

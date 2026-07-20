@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.systemui.doze.util.BurnInHelperKt.getBurnInOffset;
 import static com.android.systemui.doze.util.BurnInHelperKt.getBurnInScale;
 import static com.android.systemui.statusbar.notification.NotificationUtils.interpolate;

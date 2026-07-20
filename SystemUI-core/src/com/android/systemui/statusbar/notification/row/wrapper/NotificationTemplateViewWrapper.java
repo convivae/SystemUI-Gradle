@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper;
 
+import com.android.systemui.R
+
 import static android.view.View.VISIBLE;
 
 import static com.android.systemui.statusbar.notification.row.ExpandableNotificationRow.DEFAULT_HEADER_VISIBLE_AMOUNT;

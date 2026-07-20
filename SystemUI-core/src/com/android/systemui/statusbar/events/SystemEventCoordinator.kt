@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.events
 
+import com.android.systemui.R
+
 import android.annotation.IntRange
 import android.content.Context
 import android.provider.DeviceConfig

@@ -16,6 +16,8 @@
 
 package com.android.systemui.touchpad.tutorial.ui.view
 
+import com.android.systemui.R
+
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity

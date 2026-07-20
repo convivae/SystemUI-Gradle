@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.footer.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.util.Log
 import android.view.ContextThemeWrapper
@@ -36,7 +38,6 @@ import com.android.systemui.qs.dagger.QSFlagsModule.PM_LITE_ENABLED
 import com.android.systemui.qs.footer.data.model.UserSwitcherStatusModel
 import com.android.systemui.qs.footer.domain.interactor.FooterActionsInteractor
 import com.android.systemui.qs.footer.domain.model.SecurityButtonConfig
-import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.shared.flag.DualShade
 import com.android.systemui.util.icuMessageFormat

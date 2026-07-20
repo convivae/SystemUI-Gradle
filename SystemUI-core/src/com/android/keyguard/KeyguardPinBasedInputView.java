@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_ADAPTIVE_AUTH_REQUEST;
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_DEVICE_ADMIN;
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_NONE;

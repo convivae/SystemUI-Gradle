@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.ui
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator

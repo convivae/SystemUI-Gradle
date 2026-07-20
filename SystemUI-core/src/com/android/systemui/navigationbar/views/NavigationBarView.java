@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar.views;
 
+import com.android.systemui.R
+
 import static android.inputmethodservice.InputMethodService.canImeRenderGesturalNavButtons;
 import static android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_GESTURAL;
 

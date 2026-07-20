@@ -15,6 +15,8 @@
  */
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static com.android.settingslib.Utils.getColorAttrDefaultColor;
 import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BACKGROUND;
 import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BACKGROUND_PRESSED;

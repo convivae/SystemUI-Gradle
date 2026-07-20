@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static com.android.systemui.accessibility.hearingaid.HearingDevicesUiEventLogger.LAUNCH_SOURCE_QS_TILE;
 
 import android.content.Intent;

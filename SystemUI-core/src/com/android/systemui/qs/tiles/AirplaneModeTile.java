@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static com.android.settingslib.satellite.SatelliteDialogUtils.TYPE_IS_AIRPLANE_MODE;
 
 import android.content.BroadcastReceiver;

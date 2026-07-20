@@ -16,6 +16,8 @@
 
 package com.android.systemui.wallet.ui;
 
+import com.android.systemui.R
+
 import static com.android.systemui.wallet.util.WalletCardUtilsKt.getPaymentCards;
 
 import android.app.PendingIntent;

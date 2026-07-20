@@ -16,10 +16,11 @@
 
 package com.android.systemui.shade
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.ViewGroup
 import com.android.systemui.plugins.statusbar.StatusBarStateController
-import com.android.systemui.R
 import com.android.systemui.shared.animation.UnfoldConstantTranslateAnimator
 import com.android.systemui.shared.animation.UnfoldConstantTranslateAnimator.Direction.END
 import com.android.systemui.shared.animation.UnfoldConstantTranslateAnimator.Direction.START

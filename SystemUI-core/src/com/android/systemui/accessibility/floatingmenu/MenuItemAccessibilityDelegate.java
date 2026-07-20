@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
+import com.android.systemui.R
+
 import static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.ACTION_ACCESSIBILITY_FOCUS;
 import static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.ACTION_CLEAR_ACCESSIBILITY_FOCUS;
 

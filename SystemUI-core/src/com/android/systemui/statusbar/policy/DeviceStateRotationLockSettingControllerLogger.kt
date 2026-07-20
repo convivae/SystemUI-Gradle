@@ -16,11 +16,12 @@
 
 package com.android.systemui.statusbar.policy
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.provider.Settings.Secure.DEVICE_STATE_ROTATION_LOCK_IGNORED
 import android.provider.Settings.Secure.DEVICE_STATE_ROTATION_LOCK_LOCKED
 import android.provider.Settings.Secure.DEVICE_STATE_ROTATION_LOCK_UNLOCKED
-import com.android.internal.R
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.LogLevel.VERBOSE
 import com.android.systemui.log.dagger.DeviceStateAutoRotationLog

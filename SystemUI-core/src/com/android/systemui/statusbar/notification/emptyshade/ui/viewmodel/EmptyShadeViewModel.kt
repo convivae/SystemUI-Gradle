@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.emptyshade.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.icu.text.MessageFormat
 import com.android.systemui.dagger.qualifiers.Background

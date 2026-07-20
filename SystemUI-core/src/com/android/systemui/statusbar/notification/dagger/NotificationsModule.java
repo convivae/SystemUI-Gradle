@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.dagger;
 
+import com.android.systemui.R
+
 import android.app.NotificationManager;
 import android.content.Context;
 import android.os.Handler;

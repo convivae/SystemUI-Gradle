@@ -16,6 +16,8 @@
 
 package com.android.systemui.util.sensors;
 
+import com.android.systemui.R
+
 import android.content.res.Resources;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;

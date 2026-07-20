@@ -16,6 +16,8 @@
 
 package com.android.systemui.util.leak;
 
+import com.android.systemui.R
+
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 

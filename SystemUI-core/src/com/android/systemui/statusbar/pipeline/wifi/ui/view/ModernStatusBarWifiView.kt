@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.wifi.ui.view
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet

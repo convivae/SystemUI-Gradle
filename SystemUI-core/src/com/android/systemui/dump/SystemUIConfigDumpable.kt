@@ -16,6 +16,8 @@
 
 package com.android.systemui.dump
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.systemui.CoreStartable
 import com.android.systemui.Dumpable

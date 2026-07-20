@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
+import com.android.systemui.R
+
 import android.annotation.WorkerThread
 import android.app.ActivityOptions
 import android.app.BroadcastOptions

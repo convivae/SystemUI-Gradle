@@ -16,6 +16,8 @@
 
 package com.android.systemui.telephony.ui.activity
 
+import com.android.systemui.R
+
 import android.app.ActivityOptions
 import android.content.DialogInterface
 import android.content.Intent

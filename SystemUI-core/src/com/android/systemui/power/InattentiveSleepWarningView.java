@@ -16,6 +16,8 @@
 
 package com.android.systemui.power;
 
+import com.android.systemui.R
+
 import static com.android.systemui.Flags.enableViewCaptureTracing;
 
 import android.animation.Animator;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs
 
+import com.android.systemui.R
+
 import android.app.IActivityManager
 import android.app.IForegroundServiceObserver
 import android.app.job.IUserVisibleJobObserver
@@ -64,7 +66,6 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
-import com.android.systemui.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.system.SysUiStatsLog

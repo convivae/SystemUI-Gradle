@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume;
 
+import com.android.systemui.R
+
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 
 import android.annotation.StringRes;

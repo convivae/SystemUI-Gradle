@@ -16,6 +16,8 @@
 
 package com.android.systemui.bluetooth.qsdialog
 
+import com.android.systemui.R
+
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle

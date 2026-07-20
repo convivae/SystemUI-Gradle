@@ -15,6 +15,8 @@
  */
 package com.android.systemui.qs;
 
+import com.android.systemui.R
+
 import static android.app.admin.DevicePolicyManager.DEVICE_OWNER_TYPE_FINANCED;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.QS_DIALOG_MANAGEMENT;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.QS_DIALOG_MANAGEMENT_CA_CERT;

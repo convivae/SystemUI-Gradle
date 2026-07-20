@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.external.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.app.IUriGrantsManager
 import android.content.Context
 import androidx.compose.runtime.derivedStateOf
@@ -29,7 +31,6 @@ import com.android.systemui.qs.external.TileData
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.tileimpl.QSTileImpl.DrawableIcon
 import com.android.systemui.qs.tileimpl.QSTileImpl.ResourceIcon
-import com.android.systemui.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

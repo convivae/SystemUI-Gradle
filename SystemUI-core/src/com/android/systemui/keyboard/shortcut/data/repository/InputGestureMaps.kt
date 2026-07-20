@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.data.repository
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.hardware.input.KeyGestureEvent.KEY_GESTURE_TYPE_ALL_APPS
 import android.hardware.input.KeyGestureEvent.KEY_GESTURE_TYPE_BACK

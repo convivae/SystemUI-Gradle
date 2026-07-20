@@ -16,6 +16,8 @@
 
 package com.android.systemui.wallet.ui;
 
+import com.android.systemui.R
+
 import android.view.View;
 import android.widget.ImageView;
 

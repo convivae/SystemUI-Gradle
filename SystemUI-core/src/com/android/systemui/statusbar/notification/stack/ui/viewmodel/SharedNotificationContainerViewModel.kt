@@ -19,6 +19,8 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.android.app.tracing.coroutines.flow.flowName

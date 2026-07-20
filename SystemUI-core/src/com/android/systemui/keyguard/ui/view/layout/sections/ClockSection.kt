@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.View
 import androidx.constraintlayout.widget.Barrier
@@ -30,7 +32,6 @@ import androidx.constraintlayout.widget.ConstraintSet.START
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import androidx.constraintlayout.widget.ConstraintSet.VISIBLE
 import androidx.constraintlayout.widget.ConstraintSet.WRAP_CONTENT
-import com.android.systemui.R
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.domain.interactor.KeyguardBlueprintInteractor
@@ -45,7 +46,6 @@ import com.android.systemui.plugins.clocks.ClockController
 import com.android.systemui.plugins.clocks.ClockFaceLayout
 import com.android.systemui.shade.LargeScreenHeaderHelper
 import com.android.systemui.shade.ShadeDisplayAware
-import com.android.systemui.R
 import com.android.systemui.util.ui.value
 import dagger.Lazy
 import javax.inject.Inject

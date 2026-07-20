@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy
 
+import com.android.systemui.R
+
 import android.app.NotificationManager
 import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.qualifiers.Application

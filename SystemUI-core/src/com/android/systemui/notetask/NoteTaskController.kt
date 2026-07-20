@@ -18,6 +18,8 @@
 
 package com.android.systemui.notetask
 
+import com.android.systemui.R
+
 import android.app.ActivityManager
 import android.app.KeyguardManager
 import android.app.admin.DevicePolicyManager

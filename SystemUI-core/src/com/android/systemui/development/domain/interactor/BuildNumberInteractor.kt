@@ -16,12 +16,13 @@
 
 package com.android.systemui.development.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.res.Resources
 import android.os.Build
 import android.os.UserHandle
-import com.android.internal.R as InternalR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
@@ -62,7 +63,7 @@ constructor(
     private val buildText =
         BuildNumber(
             resources.getString(
-                InternalR.string.bugreport_status,
+                R.string.bugreport_status,
                 Build.VERSION.RELEASE_OR_CODENAME,
                 Build.ID,
             )

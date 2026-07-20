@@ -16,6 +16,8 @@
 
 package com.android.systemui.usb;
 
+import com.android.systemui.R
+
 import android.app.Activity;
 import android.content.Intent;
 import android.hardware.usb.ParcelableUsbPort;

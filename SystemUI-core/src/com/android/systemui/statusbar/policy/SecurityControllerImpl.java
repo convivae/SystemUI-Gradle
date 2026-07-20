@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.policy;
 
+import com.android.systemui.R
+
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 

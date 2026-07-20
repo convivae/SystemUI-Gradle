@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
+import com.android.systemui.R
+
 import android.app.StatusBarManager
 import android.graphics.Point
 import android.util.Log

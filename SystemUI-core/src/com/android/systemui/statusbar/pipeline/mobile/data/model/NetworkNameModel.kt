@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.mobile.data.model
 
+import com.android.systemui.R
+
 import android.content.Intent
 import android.telephony.TelephonyManager.EXTRA_DATA_SPN
 import android.telephony.TelephonyManager.EXTRA_PLMN

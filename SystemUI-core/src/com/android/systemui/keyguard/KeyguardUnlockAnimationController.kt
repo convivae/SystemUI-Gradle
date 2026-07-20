@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -38,7 +40,6 @@ import android.view.WindowManager
 import androidx.annotation.VisibleForTesting
 import androidx.core.math.MathUtils
 import com.android.app.animation.Interpolators
-import com.android.internal.R
 import com.android.keyguard.KeyguardClockSwitchController
 import com.android.keyguard.KeyguardViewController
 import com.android.systemui.Flags.fasterUnlockTransition

@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
+import com.android.systemui.R
+
 import static android.view.WindowInsets.Type.ime;
 
 import static androidx.core.view.WindowInsetsCompat.Type;

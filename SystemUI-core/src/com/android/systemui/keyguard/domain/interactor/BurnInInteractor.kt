@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import androidx.annotation.DimenRes
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor

@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar;
 
+import com.android.systemui.R
+
 import static com.android.systemui.navigationbar.gestural.EdgeBackGestureHandler.DEBUG_MISSING_GESTURE_TAG;
 import static com.android.systemui.shared.recents.utilities.Utilities.isLargeScreen;
 import static com.android.wm.shell.Flags.enableTaskbarNavbarUnification;

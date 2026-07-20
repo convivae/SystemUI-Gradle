@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row
 
+import com.android.systemui.R
+
 import android.app.Flags
 import android.app.Notification
 import android.app.Notification.MessagingStyle
@@ -25,7 +27,6 @@ import android.graphics.drawable.Icon
 import android.util.Log
 import android.view.LayoutInflater
 import com.android.app.tracing.traceSection
-import com.android.internal.R
 import com.android.internal.widget.MessagingMessage
 import com.android.internal.widget.PeopleHelper
 import com.android.systemui.statusbar.notification.collection.NotificationEntry

@@ -17,6 +17,8 @@
 
 package com.android.systemui.controls.ui
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface

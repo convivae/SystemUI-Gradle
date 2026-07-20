@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.wifi.ui.binder
 
+import com.android.systemui.R
+
 import android.content.res.ColorStateList
 import android.view.View
 import android.view.ViewGroup

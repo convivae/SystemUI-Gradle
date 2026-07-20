@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.panels.ui.compose
 
+import com.android.systemui.R
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -34,7 +36,6 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.Tile
 import com.android.systemui.qs.panels.ui.viewmodel.BounceableTileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.QuickQuickSettingsViewModel
 import com.android.systemui.qs.shared.ui.ElementKeys.toElementKey
-import com.android.systemui.R
 
 @Composable
 fun SceneScope.QuickQuickSettings(

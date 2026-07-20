@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.screenrecord.ui.view
 
+import com.android.systemui.R
+
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Bundle

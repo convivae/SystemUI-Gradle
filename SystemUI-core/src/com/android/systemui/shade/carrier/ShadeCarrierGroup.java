@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade.carrier;
 
+import com.android.systemui.R
+
 import android.annotation.StyleRes;
 import android.content.Context;
 import android.util.AttributeSet;

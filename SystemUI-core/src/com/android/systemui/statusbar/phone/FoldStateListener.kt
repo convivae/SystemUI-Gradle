@@ -15,13 +15,14 @@
  */
 package com.android.systemui.statusbar.phone
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.hardware.devicestate.DeviceState
 import android.hardware.devicestate.DeviceState.PROPERTY_FOLDABLE_DISPLAY_CONFIGURATION_OUTER_PRIMARY
 import android.hardware.devicestate.DeviceState.PROPERTY_POWER_CONFIGURATION_TRIGGER_SLEEP
 import android.hardware.devicestate.DeviceStateManager.DeviceStateCallback
 import android.hardware.devicestate.feature.flags.Flags as DeviceStateManagerFlags
-import com.android.internal.R
 
 /**
  * Listens for fold state changes and reports the new folded state together with other properties

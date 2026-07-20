@@ -16,6 +16,8 @@
 
 package com.android.systemui.communal.util
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Color
 import com.android.settingslib.Utils

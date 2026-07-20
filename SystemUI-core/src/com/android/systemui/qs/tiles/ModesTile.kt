@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles
 
+import com.android.systemui.R
+
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
@@ -47,7 +49,6 @@ import com.android.systemui.qs.tiles.impl.modes.domain.model.ModesTileModel
 import com.android.systemui.qs.tiles.impl.modes.ui.ModesTileMapper
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfigProvider
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
-import com.android.systemui.R
 import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 

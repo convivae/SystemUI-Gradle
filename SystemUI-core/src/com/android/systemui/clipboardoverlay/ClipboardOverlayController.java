@@ -16,6 +16,8 @@
 
 package com.android.systemui.clipboardoverlay;
 
+import com.android.systemui.R
+
 import static android.content.Intent.ACTION_CLOSE_SYSTEM_DIALOGS;
 
 import static com.android.internal.config.sysui.SystemUiDeviceConfigFlags.CLIPBOARD_OVERLAY_SHOW_ACTIONS;

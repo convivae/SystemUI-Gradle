@@ -16,6 +16,8 @@
 
 package com.android.systemui.doze;
 
+import com.android.systemui.R
+
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;

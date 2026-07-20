@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.ui.binder
 
+import com.android.systemui.R
+
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Matrix

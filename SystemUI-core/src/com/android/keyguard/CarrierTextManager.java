@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static com.android.systemui.Flags.simPinUseSlotId;
 import static com.android.keyguard.logging.CarrierTextManagerLogger.REASON_ACTIVE_DATA_SUB_CHANGED;
 import static com.android.keyguard.logging.CarrierTextManagerLogger.REASON_ON_TELEPHONY_CAPABLE;

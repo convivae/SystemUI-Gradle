@@ -16,6 +16,8 @@
 
 package com.android.systemui.clipboardoverlay;
 
+import com.android.systemui.R
+
 import static java.util.Objects.requireNonNull;
 
 import android.app.Activity;

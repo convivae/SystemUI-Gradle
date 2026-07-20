@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification;
 
+import com.android.systemui.R
+
 import static android.service.notification.NotificationListenerService.Ranking;
 
 import static com.android.internal.config.sysui.SystemUiDeviceConfigFlags.ENABLE_NAS_FEEDBACK;

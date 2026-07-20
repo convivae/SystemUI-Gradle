@@ -16,6 +16,8 @@
 
 package com.android.systemui.communal.ui.view.layout.sections
 
+import com.android.systemui.R
+
 import android.util.SizeF
 import android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
 import android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS

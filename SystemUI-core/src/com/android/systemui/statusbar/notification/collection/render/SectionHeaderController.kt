@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.collection.render
 
+import com.android.systemui.R
+
 import android.annotation.StringRes
 import android.content.Intent
 import android.view.LayoutInflater

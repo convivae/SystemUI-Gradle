@@ -16,6 +16,8 @@
 
 package com.android.systemui.classifier;
 
+import com.android.systemui.R
+
 import android.content.res.Resources;
 import android.hardware.devicestate.DeviceStateManager;
 import android.view.ViewConfiguration;

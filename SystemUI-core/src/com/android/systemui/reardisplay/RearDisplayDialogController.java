@@ -16,6 +16,8 @@
 
 package com.android.systemui.reardisplay;
 
+import com.android.systemui.R
+
 import static android.hardware.devicestate.DeviceState.PROPERTY_FOLDABLE_DISPLAY_CONFIGURATION_OUTER_PRIMARY;
 
 import android.annotation.NonNull;

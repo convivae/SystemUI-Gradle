@@ -16,8 +16,9 @@
 
 package com.android.systemui.bouncer.data.repository
 
+import com.android.systemui.R
+
 import android.content.res.Resources
-import com.android.internal.R
 import com.android.systemui.common.ui.GlobalConfig
 import com.android.systemui.common.ui.data.repository.ConfigurationRepository
 import com.android.systemui.dagger.SysUISingleton

@@ -17,6 +17,8 @@
 
 package com.android.systemui.communal.ui.view.layout.sections
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.graphics.Typeface
 import android.graphics.Typeface.NORMAL

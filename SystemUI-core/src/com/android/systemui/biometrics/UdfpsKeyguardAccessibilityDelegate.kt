@@ -16,11 +16,12 @@
 
 package com.android.systemui.biometrics
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.os.Bundle
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
-import com.android.systemui.R
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager

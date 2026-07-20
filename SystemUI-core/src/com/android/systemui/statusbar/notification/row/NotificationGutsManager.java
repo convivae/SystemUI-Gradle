@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.notification.row;
 
+import com.android.systemui.R
+
 import static android.app.AppOpsManager.OP_CAMERA;
 import static android.app.AppOpsManager.OP_RECORD_AUDIO;
 import static android.app.AppOpsManager.OP_SYSTEM_ALERT_WINDOW;

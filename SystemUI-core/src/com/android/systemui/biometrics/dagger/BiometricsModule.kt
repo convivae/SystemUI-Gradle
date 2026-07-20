@@ -16,9 +16,10 @@
 
 package com.android.systemui.biometrics.dagger
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.Resources
-import com.android.internal.R
 import com.android.launcher3.icons.IconProvider
 import com.android.systemui.CoreStartable
 import com.android.systemui.biometrics.AuthController

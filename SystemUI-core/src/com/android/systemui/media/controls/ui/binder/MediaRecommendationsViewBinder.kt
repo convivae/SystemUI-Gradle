@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.binder
 
+import com.android.systemui.R
+
 import android.app.WallpaperColors
 import android.content.Context
 import android.content.res.ColorStateList

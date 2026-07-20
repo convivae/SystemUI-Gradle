@@ -16,6 +16,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;

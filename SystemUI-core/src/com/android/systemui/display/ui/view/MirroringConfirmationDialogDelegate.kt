@@ -15,6 +15,8 @@
  */
 package com.android.systemui.display.ui.view
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.content.Context
 import android.content.res.Configuration

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row;
 
+import com.android.systemui.R
+
 import static android.app.Notification.EXTRA_BUILDER_APPLICATION_INFO;
 import static android.app.NotificationManager.BUBBLE_PREFERENCE_ALL;
 import static android.app.NotificationManager.BUBBLE_PREFERENCE_NONE;

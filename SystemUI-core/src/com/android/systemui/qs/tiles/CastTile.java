@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static android.media.MediaRouter.ROUTE_TYPE_REMOTE_DISPLAY;
 
 import static com.android.systemui.flags.Flags.SIGNAL_CALLBACK_DEPRECATION;

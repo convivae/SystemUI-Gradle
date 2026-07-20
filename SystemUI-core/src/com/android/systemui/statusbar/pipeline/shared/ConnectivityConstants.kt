@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.shared
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.telephony.TelephonyManager
 import com.android.systemui.Dumpable

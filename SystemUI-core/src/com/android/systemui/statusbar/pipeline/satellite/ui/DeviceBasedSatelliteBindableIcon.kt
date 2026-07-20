@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.satellite.ui
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.internal.telephony.flags.Flags.oemEnabledSatelliteFlag
 import com.android.systemui.dagger.SysUISingleton

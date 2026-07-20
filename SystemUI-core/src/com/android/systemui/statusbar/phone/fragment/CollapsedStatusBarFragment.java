@@ -14,6 +14,8 @@
 
 package com.android.systemui.statusbar.phone.fragment;
 
+import com.android.systemui.R
+
 import static com.android.systemui.statusbar.phone.fragment.StatusBarVisibilityModel.createHiddenModel;
 
 import android.annotation.Nullable;

@@ -14,6 +14,8 @@
 
 package com.android.systemui.privacy
 
+import com.android.systemui.R
+
 import android.content.Context
 
 class PrivacyChipBuilder(private val context: Context, itemsList: List<PrivacyItem>) {

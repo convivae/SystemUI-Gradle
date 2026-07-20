@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.media.AudioManager
 import android.media.AudioManager.STREAM_ALARM

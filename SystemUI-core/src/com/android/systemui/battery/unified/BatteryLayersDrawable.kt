@@ -16,6 +16,8 @@
 
 package com.android.systemui.battery.unified
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Matrix

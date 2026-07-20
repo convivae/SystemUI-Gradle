@@ -14,6 +14,8 @@
 
 package com.android.systemui.qs.customize;
 
+import com.android.systemui.R
+
 import static com.android.systemui.Flags.gsfQuickSettings;
 
 import android.content.ComponentName;

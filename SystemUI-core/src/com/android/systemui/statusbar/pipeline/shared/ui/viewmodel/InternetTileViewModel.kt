@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.shared.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.text.Html
 import com.android.systemui.common.shared.model.ContentDescription

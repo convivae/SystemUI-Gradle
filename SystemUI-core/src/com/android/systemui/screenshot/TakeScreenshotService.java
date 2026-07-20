@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot;
 
+import com.android.systemui.R
+
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.SCREENSHOT_BLOCKED_BY_ADMIN;
 import static android.content.Intent.ACTION_CLOSE_SYSTEM_DIALOGS;
 

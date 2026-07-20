@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.controller
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.AnimatorInflater
 import android.animation.AnimatorSet

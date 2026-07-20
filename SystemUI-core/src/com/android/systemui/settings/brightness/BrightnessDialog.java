@@ -16,6 +16,8 @@
 
 package com.android.systemui.settings.brightness;
 
+import com.android.systemui.R
+
 import static android.content.Intent.EXTRA_BRIGHTNESS_DIALOG_IS_FULL_WIDTH;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;

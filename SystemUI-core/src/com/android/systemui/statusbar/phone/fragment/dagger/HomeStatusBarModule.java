@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone.fragment.dagger;
 
+import com.android.systemui.R
+
 import android.view.View;
 import android.view.ViewStub;
 

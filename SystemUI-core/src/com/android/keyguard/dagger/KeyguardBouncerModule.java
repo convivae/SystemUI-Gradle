@@ -16,6 +16,8 @@
 
 package com.android.keyguard.dagger;
 
+import com.android.systemui.R
+
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 

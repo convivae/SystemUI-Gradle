@@ -16,10 +16,11 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
-import com.android.internal.R
 import com.android.internal.widget.CachingIconView
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow
 

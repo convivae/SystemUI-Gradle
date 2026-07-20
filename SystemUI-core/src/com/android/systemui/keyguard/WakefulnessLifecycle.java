@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard;
 
+import com.android.systemui.R
+
 import android.annotation.IntDef;
 import android.app.IWallpaperManager;
 import android.content.Context;

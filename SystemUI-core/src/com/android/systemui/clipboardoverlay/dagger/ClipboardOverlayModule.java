@@ -16,6 +16,8 @@
 
 package com.android.systemui.clipboardoverlay.dagger;
 
+import com.android.systemui.R
+
 import static android.view.WindowManager.LayoutParams.TYPE_SCREENSHOT;
 
 import static com.android.systemui.Flags.enableViewCaptureTracing;

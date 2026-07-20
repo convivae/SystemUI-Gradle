@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.screenrecord.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.app.ActivityManager
 import android.content.Context
 import androidx.annotation.DrawableRes

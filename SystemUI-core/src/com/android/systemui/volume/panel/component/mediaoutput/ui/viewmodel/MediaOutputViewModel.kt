@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.panel.component.mediaoutput.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Color as GraphicsColor
 import com.android.internal.logging.UiEventLogger

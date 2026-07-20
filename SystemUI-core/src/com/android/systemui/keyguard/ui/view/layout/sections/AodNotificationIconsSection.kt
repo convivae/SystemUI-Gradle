@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.View
 import android.view.View.GONE
@@ -29,7 +31,6 @@ import androidx.constraintlayout.widget.ConstraintSet.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintSet.START
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import com.android.systemui.common.ui.ConfigurationState
-import com.android.systemui.R
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardRootViewModel

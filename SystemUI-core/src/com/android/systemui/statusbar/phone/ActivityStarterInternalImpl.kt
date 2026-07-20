@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone
 
+import com.android.systemui.R
+
 import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.app.ActivityTaskManager

@@ -16,6 +16,8 @@
 
 package com.android.systemui.assist.ui;
 
+import com.android.systemui.R
+
 import android.animation.ArgbEvaluator;
 import android.annotation.ColorInt;
 import android.annotation.Nullable;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row;
 
+import com.android.systemui.R
+
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;
 
 import android.animation.Animator;

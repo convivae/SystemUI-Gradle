@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.gesture
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Rect
 import android.graphics.Region
@@ -33,7 +35,6 @@ import android.view.MotionEvent.AXIS_GESTURE_SWIPE_FINGER_COUNT
 import android.view.MotionEvent.CLASSIFICATION_MULTI_FINGER_SWIPE
 import android.view.ViewRootImpl.CLIENT_TRANSIENT
 import android.widget.OverScroller
-import com.android.internal.R
 import com.android.systemui.CoreStartable
 import java.io.PrintWriter
 import javax.inject.Inject

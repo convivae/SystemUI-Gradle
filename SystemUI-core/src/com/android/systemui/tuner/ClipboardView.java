@@ -14,6 +14,8 @@
 
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ClipboardManager.OnPrimaryClipChangedListener;

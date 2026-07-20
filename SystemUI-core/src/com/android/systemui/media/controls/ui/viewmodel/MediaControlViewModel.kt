@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.session.MediaController

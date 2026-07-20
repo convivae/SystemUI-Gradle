@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs;
 
+import com.android.systemui.R
+
 import static com.android.systemui.media.dagger.MediaModule.QUICK_QS_PANEL;
 import static com.android.systemui.qs.dagger.QSScopeModule.QS_USING_COLLAPSED_LANDSCAPE_MEDIA;
 import static com.android.systemui.qs.dagger.QSScopeModule.QS_USING_MEDIA_PLAYER;

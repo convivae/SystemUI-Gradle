@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Point
 import android.graphics.Rect
@@ -28,7 +30,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import com.android.systemui.biometrics.AuthController
-import com.android.systemui.R
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.flags.FeatureFlags
 import com.android.systemui.flags.Flags

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row
 
+import com.android.systemui.R
+
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.app.NotificationChannel

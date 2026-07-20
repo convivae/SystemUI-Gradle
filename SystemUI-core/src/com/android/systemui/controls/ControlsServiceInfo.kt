@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls
 
+import com.android.systemui.R
+
 import android.Manifest
 import android.content.ComponentName
 import android.content.Context

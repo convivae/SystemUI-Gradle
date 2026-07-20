@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot;
 
+import com.android.systemui.R
+
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.WindowManager.LayoutParams.TYPE_SCREENSHOT;
 

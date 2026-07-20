@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.shared.model
 
+import com.android.systemui.R
+
 import android.content.Context
 import javax.inject.Inject
 

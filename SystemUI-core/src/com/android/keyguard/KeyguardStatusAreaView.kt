@@ -1,10 +1,11 @@
 package com.android.keyguard
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.util.AttributeSet
 import android.util.FloatProperty
 import android.widget.LinearLayout
-import com.android.systemui.R
 import com.android.systemui.statusbar.notification.AnimatableProperty
 
 class KeyguardStatusAreaView(

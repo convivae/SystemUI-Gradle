@@ -16,6 +16,8 @@
 
 package com.android.systemui.settings.brightness;
 
+import com.android.systemui.R
+
 import android.annotation.StringRes;
 import android.content.Context;
 import android.content.Intent;

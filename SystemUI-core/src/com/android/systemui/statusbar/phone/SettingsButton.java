@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import android.animation.Animator;
 import android.animation.Animator.AnimatorListener;
 import android.animation.ObjectAnimator;

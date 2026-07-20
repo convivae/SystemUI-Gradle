@@ -16,6 +16,8 @@
 
 package com.android.systemui.temporarydisplay.chipbar
 
+import com.android.systemui.R
+
 import android.os.VibrationEffect
 import android.view.View
 import androidx.annotation.AttrRes

@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.panels.ui.compose.infinitegrid
 
+import com.android.systemui.R
+
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.graphics.drawable.Drawable
@@ -75,7 +77,6 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.longPressLabel
 import com.android.systemui.qs.panels.ui.viewmodel.AccessibilityUiState
 import com.android.systemui.qs.ui.compose.borderOnFocus
-import com.android.systemui.R
 
 private const val TEST_TAG_TOGGLE = "qs_tile_toggle_target"
 

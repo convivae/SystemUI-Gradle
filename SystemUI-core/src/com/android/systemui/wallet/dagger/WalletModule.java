@@ -16,6 +16,8 @@
 
 package com.android.systemui.wallet.dagger;
 
+import com.android.systemui.R
+
 import android.app.Activity;
 import android.app.Service;
 import android.content.Context;

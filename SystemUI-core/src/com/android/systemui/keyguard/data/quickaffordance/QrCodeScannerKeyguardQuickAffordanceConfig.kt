@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.data.quickaffordance
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.systemui.animation.Expandable
 import com.android.systemui.common.coroutine.ChannelExt.trySendWithFailureLogging

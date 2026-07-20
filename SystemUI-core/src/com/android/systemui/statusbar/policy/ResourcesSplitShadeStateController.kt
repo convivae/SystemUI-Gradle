@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.policy
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import javax.inject.Inject
 

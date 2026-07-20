@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
+import com.android.systemui.R
+
 import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
 import android.content.Context

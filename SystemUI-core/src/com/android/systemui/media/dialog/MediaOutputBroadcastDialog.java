@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.dialog;
 
+import com.android.systemui.R
+
 import static com.android.settingslib.flags.Flags.legacyLeAudioSharing;
 
 import android.app.AlertDialog;

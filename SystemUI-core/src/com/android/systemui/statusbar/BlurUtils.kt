@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar
 
+import com.android.systemui.R
+
 import android.app.ActivityManager
 import android.content.res.Resources
 import android.os.SystemProperties

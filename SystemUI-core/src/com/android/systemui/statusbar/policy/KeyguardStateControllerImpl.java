@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy;
 
+import com.android.systemui.R
+
 import static android.hardware.biometrics.BiometricSourceType.FACE;
 
 import static com.android.systemui.flags.Flags.LOCKSCREEN_ENABLE_LANDSCAPE;

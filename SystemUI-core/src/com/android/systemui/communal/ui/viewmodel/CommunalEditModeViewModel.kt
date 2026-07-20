@@ -16,6 +16,8 @@
 
 package com.android.systemui.communal.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewmodel
 
+import com.android.systemui.R
+
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable

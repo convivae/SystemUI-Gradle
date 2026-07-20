@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.taptotransfer.receiver
 
+import com.android.systemui.R
+
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint

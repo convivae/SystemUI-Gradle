@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 
 import android.annotation.IntDef;

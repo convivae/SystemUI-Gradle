@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.ui.composable
 
+import com.android.systemui.R
+
 import android.graphics.drawable.Icon
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState

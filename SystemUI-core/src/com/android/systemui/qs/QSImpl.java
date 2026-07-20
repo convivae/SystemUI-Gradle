@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.DISABLE2_QUICK_SETTINGS;
 
 import static com.android.systemui.media.dagger.MediaModule.QS_PANEL;

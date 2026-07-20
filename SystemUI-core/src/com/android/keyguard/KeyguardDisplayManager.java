@@ -15,6 +15,8 @@
  */
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static com.android.systemui.util.kotlin.JavaAdapterKt.collectFlow;
 
 import android.annotation.NonNull;

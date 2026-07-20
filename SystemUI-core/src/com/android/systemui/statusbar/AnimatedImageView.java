@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.drawable.AnimationDrawable;

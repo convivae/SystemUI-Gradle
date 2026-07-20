@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -29,7 +31,6 @@ import com.android.systemui.lifecycle.ExclusiveActivatable
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.privacy.OngoingPrivacyChip
 import com.android.systemui.privacy.PrivacyItem
-import com.android.systemui.R
 import com.android.systemui.scene.shared.model.TransitionKeys.SlightlyFasterShadeCollapse
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.domain.interactor.PrivacyChipInteractor

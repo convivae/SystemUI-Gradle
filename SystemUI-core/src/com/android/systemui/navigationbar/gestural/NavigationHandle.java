@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar.gestural;
 
+import com.android.systemui.R
+
 import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
 import android.annotation.ColorInt;

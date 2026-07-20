@@ -16,6 +16,8 @@
 
 package com.android.systemui.power;
 
+import com.android.systemui.R
+
 import static com.android.systemui.util.ConvenienceExtensionsKt.toKotlinLazy;
 
 import android.content.BroadcastReceiver;

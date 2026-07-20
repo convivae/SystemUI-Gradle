@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.util
 
+import com.android.systemui.R
+
 import android.app.ActivityManager
 import android.content.res.Resources
 import java.io.File

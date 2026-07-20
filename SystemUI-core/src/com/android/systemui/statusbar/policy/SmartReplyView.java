@@ -1,5 +1,7 @@
 package com.android.systemui.statusbar.policy;
 
+import com.android.systemui.R
+
 import static java.lang.Float.NaN;
 
 import android.annotation.ColorInt;

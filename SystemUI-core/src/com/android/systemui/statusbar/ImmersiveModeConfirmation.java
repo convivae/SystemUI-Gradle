@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import static android.app.ActivityManager.LOCK_TASK_MODE_LOCKED;
 import static android.app.ActivityManager.LOCK_TASK_MODE_NONE;
 import static android.app.StatusBarManager.DISABLE_BACK;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar;
 
+import com.android.systemui.R
+
 import static android.content.Intent.ACTION_OVERLAY_CHANGED;
 
 import android.content.BroadcastReceiver;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.qrcodescanner.controller;
 
+import com.android.systemui.R
+
 import static android.provider.Settings.Secure.LOCK_SCREEN_SHOW_QR_CODE_SCANNER;
 
 import android.annotation.IntDef;

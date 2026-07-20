@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.connectivity;
 
+import com.android.systemui.R
+
 import static android.telephony.TelephonyManager.UNKNOWN_CARRIER_ID;
 
 import android.content.Context;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.management
 
+import com.android.systemui.R
+
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.ComponentName

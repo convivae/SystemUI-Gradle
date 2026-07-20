@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.shared.model
 
+import com.android.systemui.R
+
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Password
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Pattern

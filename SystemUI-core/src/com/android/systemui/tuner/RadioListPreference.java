@@ -14,6 +14,8 @@
 
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.DialogFragment;

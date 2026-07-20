@@ -16,6 +16,8 @@
 
 package com.android.systemui.settings.brightness;
 
+import com.android.systemui.R
+
 import static com.android.settingslib.display.BrightnessUtils.GAMMA_SPACE_MAX;
 import static com.android.settingslib.display.BrightnessUtils.convertGammaToLinearFloat;
 import static com.android.settingslib.display.BrightnessUtils.convertLinearToGammaFloat;

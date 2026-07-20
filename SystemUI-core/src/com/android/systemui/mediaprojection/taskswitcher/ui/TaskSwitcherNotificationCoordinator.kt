@@ -16,6 +16,8 @@
 
 package com.android.systemui.mediaprojection.taskswitcher.ui
 
+import com.android.systemui.R
+
 import android.app.ActivityManager.RunningTaskInfo
 import android.app.Notification
 import android.app.NotificationManager

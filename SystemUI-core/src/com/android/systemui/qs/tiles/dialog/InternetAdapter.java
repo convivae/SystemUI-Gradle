@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles.dialog;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;

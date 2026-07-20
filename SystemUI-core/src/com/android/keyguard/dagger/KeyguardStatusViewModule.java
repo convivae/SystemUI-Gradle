@@ -16,6 +16,8 @@
 
 package com.android.keyguard.dagger;
 
+import com.android.systemui.R
+
 import com.android.keyguard.KeyguardClockSwitch;
 import com.android.keyguard.KeyguardSliceView;
 import com.android.keyguard.KeyguardStatusView;

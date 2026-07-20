@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar;
 
+import com.android.systemui.R
+
 import static com.android.systemui.Flags.enableViewCaptureTracing;
 import static com.android.systemui.util.ConvenienceExtensionsKt.toKotlinLazy;
 

@@ -16,6 +16,8 @@
 
 package com.android.systemui.education.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.view.accessibility.AccessibilityManager
 import com.android.systemui.contextualeducation.GestureType.ALL_APPS

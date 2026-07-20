@@ -16,6 +16,8 @@
 
 package com.android.systemui.doze;
 
+import com.android.systemui.R
+
 import static android.os.PowerManager.GO_TO_SLEEP_REASON_TIMEOUT;
 
 import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_GOING_TO_SLEEP;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.net;
 
+import com.android.systemui.R
+
 import static android.net.NetworkPolicyManager.EXTRA_NETWORK_TEMPLATE;
 import static android.net.NetworkTemplate.MATCH_MOBILE;
 

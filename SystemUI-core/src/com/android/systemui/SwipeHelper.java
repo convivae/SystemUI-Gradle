@@ -16,6 +16,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import static androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_X;
 import static androidx.dynamicanimation.animation.FloatPropertyCompat.createFloatPropertyCompat;
 

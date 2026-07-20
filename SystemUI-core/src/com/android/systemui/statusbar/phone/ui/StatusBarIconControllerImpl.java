@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone.ui;
 
+import com.android.systemui.R
+
 import static com.android.systemui.statusbar.phone.ui.StatusBarIconList.Slot;
 
 import static com.google.common.base.Preconditions.checkArgument;

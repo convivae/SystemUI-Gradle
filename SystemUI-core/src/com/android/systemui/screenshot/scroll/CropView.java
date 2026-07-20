@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.scroll;
 
+import com.android.systemui.R
+
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;

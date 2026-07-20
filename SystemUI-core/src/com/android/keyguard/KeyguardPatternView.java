@@ -15,6 +15,8 @@
  */
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 

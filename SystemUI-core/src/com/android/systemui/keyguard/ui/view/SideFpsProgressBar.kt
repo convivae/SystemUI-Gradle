@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.view
 
+import com.android.systemui.R
+
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.view.Gravity

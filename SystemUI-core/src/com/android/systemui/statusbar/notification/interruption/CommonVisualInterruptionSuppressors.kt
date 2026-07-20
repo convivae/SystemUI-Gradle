@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.interruption
 
+import com.android.systemui.R
+
 import android.Manifest.permission.RECEIVE_EMERGENCY_BROADCAST
 import android.app.Notification
 import android.app.Notification.BubbleMetadata

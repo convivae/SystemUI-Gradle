@@ -17,6 +17,8 @@
 
 package com.android.systemui.util.service.dagger;
 
+import com.android.systemui.R
+
 import android.content.res.Resources;
 
 import com.android.systemui.dagger.qualifiers.Main;

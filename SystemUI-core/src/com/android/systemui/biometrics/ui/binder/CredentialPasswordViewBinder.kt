@@ -1,5 +1,7 @@
 package com.android.systemui.biometrics.ui.binder
 
+import com.android.systemui.R
+
 import android.os.UserHandle
 import android.view.KeyEvent
 import android.view.View
@@ -17,7 +19,6 @@ import com.android.systemui.biometrics.ui.CredentialView
 import com.android.systemui.biometrics.ui.IPinPad
 import com.android.systemui.biometrics.ui.viewmodel.CredentialViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.R
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull

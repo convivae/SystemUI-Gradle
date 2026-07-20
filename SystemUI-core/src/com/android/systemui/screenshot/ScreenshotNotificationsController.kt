@@ -15,6 +15,8 @@
  */
 package com.android.systemui.screenshot
 
+import com.android.systemui.R
+
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -22,7 +24,6 @@ import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.os.UserHandle
 import android.view.Display
-import com.android.internal.R
 import com.android.internal.messages.nano.SystemMessageProto
 import com.android.systemui.SystemUIApplication
 import com.android.systemui.util.NotificationChannels

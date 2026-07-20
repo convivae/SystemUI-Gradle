@@ -15,6 +15,8 @@
  */
 package com.android.systemui.unfold.domain.interactor
 
+import com.android.systemui.R
+
 import android.view.View
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton

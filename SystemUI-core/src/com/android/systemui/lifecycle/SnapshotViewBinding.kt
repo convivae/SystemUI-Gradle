@@ -16,6 +16,8 @@
 
 package com.android.systemui.lifecycle
 
+import com.android.systemui.R
+
 import android.os.Handler
 import android.os.Looper
 import android.view.Choreographer

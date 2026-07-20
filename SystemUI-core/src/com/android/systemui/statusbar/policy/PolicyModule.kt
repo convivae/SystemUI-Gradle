@@ -14,6 +14,8 @@
 
 package com.android.systemui.statusbar.policy
 
+import com.android.systemui.R
+
 import android.hardware.SensorPrivacyManager.Sensors.CAMERA
 import android.hardware.SensorPrivacyManager.Sensors.MICROPHONE
 import android.os.UserManager.DISALLOW_CAMERA_TOGGLE

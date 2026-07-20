@@ -16,6 +16,8 @@
 
 package com.android.systemui.people.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID
 import android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID
 import android.content.Context

@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
 
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;

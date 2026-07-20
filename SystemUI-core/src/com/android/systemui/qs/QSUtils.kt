@@ -1,5 +1,7 @@
 package com.android.systemui.qs
 
+import com.android.systemui.R
+
 import android.content.Context
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.LifecycleOwner

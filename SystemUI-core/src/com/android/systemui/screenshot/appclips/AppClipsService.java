@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.appclips;
 
+import com.android.systemui.R
+
 import static android.content.Intent.CAPTURE_CONTENT_FOR_NOTE_BLOCKED_BY_ADMIN;
 import static android.content.Intent.CAPTURE_CONTENT_FOR_NOTE_FAILED;
 import static android.content.Intent.CAPTURE_CONTENT_FOR_NOTE_SUCCESS;

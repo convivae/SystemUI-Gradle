@@ -16,6 +16,8 @@
 
 package com.android.systemui.bluetooth.qsdialog
 
+import com.android.systemui.R
+
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView

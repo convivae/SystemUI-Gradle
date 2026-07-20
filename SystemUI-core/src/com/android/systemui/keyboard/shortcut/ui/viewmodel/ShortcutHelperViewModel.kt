@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.pm.PackageManager.NameNotFoundException

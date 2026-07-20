@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.graphics.Rect;
 import android.graphics.drawable.Icon;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.util;
 
+import com.android.systemui.R
+
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.Resources.Theme;

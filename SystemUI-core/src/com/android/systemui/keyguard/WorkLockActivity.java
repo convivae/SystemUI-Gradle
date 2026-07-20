@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard;
 
+import com.android.systemui.R
+
 import static android.app.ActivityManager.TaskDescription;
 
 import android.annotation.UserIdInt;

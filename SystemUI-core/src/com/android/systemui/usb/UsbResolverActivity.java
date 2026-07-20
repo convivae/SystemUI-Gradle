@@ -16,6 +16,8 @@
 
 package com.android.systemui.usb;
 
+import com.android.systemui.R
+
 import static com.android.internal.app.IntentForwarderActivity.FORWARD_INTENT_TO_MANAGED_PROFILE;
 
 import android.content.ActivityNotFoundException;

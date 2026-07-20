@@ -16,6 +16,8 @@
 
 package com.android.systemui.dreams.ui.viewmodel
 
+import com.android.systemui.R
+
 import com.android.keyguard.KeyguardUpdateMonitor
 import com.android.systemui.Flags.glanceableHubAllowKeyguardWhenDreaming
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor

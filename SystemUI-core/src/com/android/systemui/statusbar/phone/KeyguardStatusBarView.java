@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.systemui.ScreenDecorations.DisplayCutoutView.boundsFromDirection;
 import static com.android.systemui.util.Utils.getStatusBarHeaderHeightKeyguard;
 

@@ -14,6 +14,8 @@
 
 package com.android.systemui.tuner;
 
+import com.android.systemui.R
+
 import static com.android.systemui.tuner.LockscreenFragment.LOCKSCREEN_LEFT_BUTTON;
 
 import android.content.Context;

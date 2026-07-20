@@ -14,6 +14,8 @@
 
 package com.android.systemui.qs;
 
+import com.android.systemui.R
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.res.Resources;

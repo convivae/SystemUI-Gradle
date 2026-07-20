@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static android.provider.Settings.Secure.NFC_PAYMENT_DEFAULT_COMPONENT;
 import static android.graphics.drawable.Icon.TYPE_URI;
 import static android.graphics.drawable.Icon.TYPE_URI_ADAPTIVE_BITMAP;

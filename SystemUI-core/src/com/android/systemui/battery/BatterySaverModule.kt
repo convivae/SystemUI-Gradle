@@ -1,5 +1,7 @@
 package com.android.systemui.battery
 
+import com.android.systemui.R
+
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.model.TileCategory

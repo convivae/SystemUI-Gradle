@@ -14,6 +14,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.settingslib.flags.Flags.newStatusBarIcons;
 import static com.android.systemui.plugins.DarkIconDispatcher.getTint;
 

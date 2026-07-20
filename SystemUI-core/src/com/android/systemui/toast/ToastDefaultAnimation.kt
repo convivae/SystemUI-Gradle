@@ -16,6 +16,8 @@
 
 package com.android.systemui.toast
 
+import com.android.systemui.R
+
 import android.animation.ObjectAnimator
 import android.view.View
 import android.view.animation.LinearInterpolator

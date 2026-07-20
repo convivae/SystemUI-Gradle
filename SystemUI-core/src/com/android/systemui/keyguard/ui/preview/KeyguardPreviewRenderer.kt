@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.preview
 
+import com.android.systemui.R
+
 import android.app.WallpaperColors
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -59,7 +61,6 @@ import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.communal.ui.binder.CommunalTutorialIndicatorViewBinder
 import com.android.systemui.communal.ui.viewmodel.CommunalTutorialIndicatorViewModel
 import com.android.systemui.coroutines.newTracingContext
-import com.android.systemui.R
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main

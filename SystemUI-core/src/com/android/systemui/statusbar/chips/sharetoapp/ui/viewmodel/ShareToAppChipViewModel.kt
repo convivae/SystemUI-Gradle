@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.sharetoapp.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import androidx.annotation.DrawableRes
 import com.android.internal.jank.Cuj

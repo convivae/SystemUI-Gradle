@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.shared.model
 
+import com.android.systemui.R
+
 import android.app.PendingIntent
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon

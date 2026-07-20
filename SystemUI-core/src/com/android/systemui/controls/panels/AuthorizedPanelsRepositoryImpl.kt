@@ -17,6 +17,8 @@
 
 package com.android.systemui.controls.panels
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.UserHandle

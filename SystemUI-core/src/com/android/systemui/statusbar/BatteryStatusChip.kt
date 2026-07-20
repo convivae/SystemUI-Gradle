@@ -14,6 +14,8 @@
 
 package com.android.systemui.statusbar
 
+import com.android.systemui.R
+
 import android.annotation.IntRange
 import android.annotation.SuppressLint
 import android.content.Context

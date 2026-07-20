@@ -17,6 +17,8 @@
 
 package com.android.systemui.communal.widgets
 
+import com.android.systemui.R
+
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.res.Resources

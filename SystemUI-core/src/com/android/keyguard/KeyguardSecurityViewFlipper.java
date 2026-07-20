@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.res.TypedArray;

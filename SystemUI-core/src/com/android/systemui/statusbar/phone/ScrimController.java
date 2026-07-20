@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.systemui.keyguard.shared.model.KeyguardState.ALTERNATE_BOUNCER;
 import static com.android.systemui.keyguard.shared.model.KeyguardState.GLANCEABLE_HUB;
 import static com.android.systemui.keyguard.shared.model.KeyguardState.GONE;

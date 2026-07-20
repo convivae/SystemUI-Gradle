@@ -16,6 +16,8 @@
 
 package com.android.systemui.notetask.quickaffordance
 
+import com.android.systemui.R
+
 import android.app.role.OnRoleHoldersChangedListener
 import android.app.role.RoleManager
 import android.content.Context

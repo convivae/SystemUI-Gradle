@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.systemui.statusbar.phone.HeadsUpAppearanceController.CONTENT_FADE_DELAY;
 import static com.android.systemui.statusbar.phone.HeadsUpAppearanceController.CONTENT_FADE_DURATION;
 

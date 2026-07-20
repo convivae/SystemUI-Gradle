@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.icon
 
+import com.android.systemui.R
+
 import android.app.Notification
 import android.app.Notification.MessagingStyle
 import android.app.Person

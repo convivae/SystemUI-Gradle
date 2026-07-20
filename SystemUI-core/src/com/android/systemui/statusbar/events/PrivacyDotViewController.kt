@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.events
 
+import com.android.systemui.R
+
 import android.annotation.UiThread
 import android.graphics.Point
 import android.graphics.Rect

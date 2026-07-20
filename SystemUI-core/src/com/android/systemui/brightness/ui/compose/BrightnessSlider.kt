@@ -16,6 +16,8 @@
 
 package com.android.systemui.brightness.ui.compose
 
+import com.android.systemui.R
+
 import android.view.MotionEvent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable

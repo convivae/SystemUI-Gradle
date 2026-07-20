@@ -16,14 +16,13 @@
 
 package com.android.keyguard
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.View
-import com.android.systemui.R
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.ui.view.KeyguardRootView
 import com.android.systemui.plugins.statusbar.StatusBarStateController
-import com.android.systemui.R
-import com.android.systemui.R
 import com.android.systemui.shade.NotificationShadeWindowView
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.animation.UnfoldConstantTranslateAnimator

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
+import com.android.systemui.R
+
 import static com.android.systemui.statusbar.notification.NotificationUtils.logKey;
 
 import android.annotation.NonNull;

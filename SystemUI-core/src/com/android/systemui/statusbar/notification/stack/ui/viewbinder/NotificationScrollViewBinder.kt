@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewbinder
 
+import com.android.systemui.R
+
 import android.util.Log
 import com.android.app.tracing.coroutines.flow.collectTraced
 import com.android.app.tracing.coroutines.launchTraced as launch

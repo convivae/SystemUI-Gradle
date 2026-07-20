@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.ui.model
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.ColorStateList
 import androidx.annotation.ColorInt

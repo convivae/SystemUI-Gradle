@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.shared.ui.view
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color

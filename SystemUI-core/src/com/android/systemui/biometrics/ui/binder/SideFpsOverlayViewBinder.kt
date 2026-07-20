@@ -17,6 +17,8 @@
 
 package com.android.systemui.biometrics.ui.binder
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -44,7 +46,6 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.domain.interactor.DeviceEntrySideFpsOverlayInteractor
 import com.android.systemui.keyguard.ui.viewmodel.SideFpsProgressBarViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.R
 import com.android.systemui.util.kotlin.sample
 import dagger.Lazy
 import javax.inject.Inject

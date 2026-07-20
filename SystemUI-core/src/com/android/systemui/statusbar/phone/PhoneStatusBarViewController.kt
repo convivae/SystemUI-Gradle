@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.phone
 
+import com.android.systemui.R
+
 import android.app.StatusBarManager.WINDOW_STATUS_BAR
 import android.graphics.Point
 import android.util.Log

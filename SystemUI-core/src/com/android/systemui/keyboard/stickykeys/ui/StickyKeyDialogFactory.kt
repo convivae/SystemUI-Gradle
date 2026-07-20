@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.stickykeys.ui
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.content.Context
 import android.view.Gravity

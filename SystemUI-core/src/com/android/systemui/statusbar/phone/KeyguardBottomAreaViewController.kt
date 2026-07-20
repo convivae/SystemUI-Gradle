@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone
 
+import com.android.systemui.R
+
 import com.android.systemui.flags.FeatureFlagsClassic
 import com.android.systemui.flags.Flags
 import com.android.systemui.Flags.smartspaceRelocateToBottom

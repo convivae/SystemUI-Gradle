@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.util
 
+import com.android.systemui.R
+
 import com.android.internal.logging.InstanceId
 import com.android.internal.logging.InstanceIdSequence
 import com.android.internal.logging.UiEvent

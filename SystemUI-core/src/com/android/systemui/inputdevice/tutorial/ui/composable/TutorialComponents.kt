@@ -16,6 +16,8 @@
 
 package com.android.systemui.inputdevice.tutorial.ui.composable
 
+import com.android.systemui.R
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth

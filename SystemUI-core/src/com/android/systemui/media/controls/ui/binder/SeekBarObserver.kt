@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.ui.binder
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.text.format.DateUtils

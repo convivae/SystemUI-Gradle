@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.call.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.view.View
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.systemui.Flags

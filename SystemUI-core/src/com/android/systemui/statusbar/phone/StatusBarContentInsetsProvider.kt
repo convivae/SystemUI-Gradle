@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone
 
+import com.android.systemui.R
+
 import android.annotation.Px
 import android.content.Context
 import android.content.res.Resources

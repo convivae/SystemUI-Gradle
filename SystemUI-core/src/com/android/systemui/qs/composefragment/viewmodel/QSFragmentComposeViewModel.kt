@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.composefragment.viewmodel
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.graphics.Rect
 import androidx.annotation.FloatRange
@@ -60,7 +62,6 @@ import com.android.systemui.qs.panels.domain.interactor.TileSquishinessInteracto
 import com.android.systemui.qs.panels.ui.viewmodel.InFirstPageViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.MediaInRowInLandscapeViewModel
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
-import com.android.systemui.R
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.LargeScreenHeaderHelper
 import com.android.systemui.shade.ShadeDisplayAware

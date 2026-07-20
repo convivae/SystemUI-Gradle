@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import android.app.Flags;
 import android.app.Notification;
 import android.graphics.drawable.Drawable;

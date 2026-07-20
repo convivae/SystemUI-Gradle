@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.dialog;
 
+import com.android.systemui.R
+
 import static com.android.systemui.media.dialog.MediaOutputSeekbar.VOLUME_PERCENTAGE_SCALE_SIZE;
 
 import android.animation.Animator;

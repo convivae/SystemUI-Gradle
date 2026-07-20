@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.satellite.ui.model
 
+import com.android.systemui.R
+
 import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.statusbar.pipeline.satellite.shared.model.SatelliteConnectionState

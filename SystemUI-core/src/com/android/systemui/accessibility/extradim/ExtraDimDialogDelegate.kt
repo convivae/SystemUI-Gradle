@@ -15,6 +15,8 @@
  */
 package com.android.systemui.accessibility.extradim
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.DialogInterface
 import android.os.Bundle

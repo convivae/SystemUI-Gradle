@@ -15,12 +15,13 @@
  */
 package com.android.systemui.clipboardoverlay
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import android.util.Size
-import com.android.systemui.R
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import java.io.IOException

@@ -16,6 +16,8 @@
 
 package com.android.systemui.navigationbar.views.buttons;
 
+import com.android.systemui.R
+
 import android.animation.ArgbEvaluator;
 import android.annotation.ColorInt;
 import android.annotation.DrawableRes;

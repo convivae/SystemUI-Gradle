@@ -14,6 +14,8 @@
 
 package com.android.systemui;
 
+import com.android.systemui.R
+
 import static android.view.DisplayCutout.BOUNDS_POSITION_BOTTOM;
 import static android.view.DisplayCutout.BOUNDS_POSITION_LEFT;
 import static android.view.DisplayCutout.BOUNDS_POSITION_LENGTH;

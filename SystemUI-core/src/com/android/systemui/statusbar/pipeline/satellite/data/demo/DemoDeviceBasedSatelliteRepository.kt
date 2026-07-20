@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.satellite.data.demo
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.dagger.SysUISingleton

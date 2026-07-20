@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.emptyshade.ui.view;
 
+import com.android.systemui.R
+
 import android.annotation.ColorInt;
 import android.annotation.DrawableRes;
 import android.annotation.StringRes;

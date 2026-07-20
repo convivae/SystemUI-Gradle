@@ -16,6 +16,8 @@
 
 package com.android.systemui
 
+import com.android.systemui.R
+
 import android.animation.ArgbEvaluator
 import android.content.Context
 import android.view.ContextThemeWrapper

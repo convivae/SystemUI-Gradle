@@ -16,6 +16,8 @@
 
 package com.android.systemui.common.ui.view;
 
+import com.android.systemui.R
+
 import android.annotation.IntDef;
 import android.annotation.Nullable;
 import android.content.Context;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.wallet.ui;
 
+import com.android.systemui.R
+
 import static com.android.systemui.wallet.ui.WalletCardCarousel.CARD_ANIM_ALPHA_DELAY;
 import static com.android.systemui.wallet.ui.WalletCardCarousel.CARD_ANIM_ALPHA_DURATION;
 

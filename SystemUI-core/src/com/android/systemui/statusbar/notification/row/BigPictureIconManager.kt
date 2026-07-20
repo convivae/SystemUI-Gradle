@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row
 
+import com.android.systemui.R
+
 import android.annotation.WorkerThread
 import android.app.ActivityManager
 import android.content.Context
@@ -26,7 +28,6 @@ import android.util.Log
 import android.util.Size
 import androidx.annotation.MainThread
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.internal.R
 import com.android.internal.widget.NotificationDrawableConsumer
 import com.android.internal.widget.NotificationIconManager
 import com.android.systemui.dagger.qualifiers.Application

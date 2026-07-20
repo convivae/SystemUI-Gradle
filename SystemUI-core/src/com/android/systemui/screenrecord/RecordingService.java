@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenrecord;
 
+import com.android.systemui.R
+
 import android.annotation.Nullable;
 import android.app.Notification;
 import android.app.NotificationChannel;

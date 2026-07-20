@@ -16,6 +16,8 @@
 
 package com.android.systemui.recents;
 
+import com.android.systemui.R
+
 import static com.android.systemui.Flags.enableViewCaptureTracing;
 import static com.android.systemui.shared.recents.utilities.Utilities.isLargeScreen;
 import static com.android.systemui.util.ConvenienceExtensionsKt.toKotlinLazy;

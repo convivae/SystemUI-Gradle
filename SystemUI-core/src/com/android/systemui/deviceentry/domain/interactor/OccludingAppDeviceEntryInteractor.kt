@@ -16,6 +16,8 @@
 
 package com.android.systemui.deviceentry.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.Intent
 import com.android.app.tracing.coroutines.launchTraced as launch

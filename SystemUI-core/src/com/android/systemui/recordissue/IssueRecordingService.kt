@@ -16,6 +16,8 @@
 
 package com.android.systemui.recordissue
 
+import com.android.systemui.R
+
 import android.app.IActivityManager
 import android.app.NotificationManager
 import android.content.Context

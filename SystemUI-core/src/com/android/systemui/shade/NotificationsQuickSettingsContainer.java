@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade;
 
+import com.android.systemui.R
+
 import static androidx.constraintlayout.core.widgets.Optimizer.OPTIMIZATION_GRAPH;
 
 import android.app.Fragment;

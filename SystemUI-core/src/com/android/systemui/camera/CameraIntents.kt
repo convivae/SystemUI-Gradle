@@ -16,6 +16,8 @@
 
 package com.android.systemui.camera
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager

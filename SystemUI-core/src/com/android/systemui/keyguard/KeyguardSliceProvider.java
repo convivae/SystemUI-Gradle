@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard;
 
+import com.android.systemui.R
+
 import android.annotation.AnyThread;
 import android.app.AlarmManager;
 import android.app.PendingIntent;

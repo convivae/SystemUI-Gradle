@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent

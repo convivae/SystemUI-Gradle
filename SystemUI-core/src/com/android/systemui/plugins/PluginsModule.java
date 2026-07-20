@@ -16,6 +16,8 @@
 
 package com.android.systemui.plugins;
 
+import com.android.systemui.R
+
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.PackageManager;

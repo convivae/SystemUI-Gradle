@@ -16,6 +16,8 @@
 
 package com.android.systemui.complication;
 
+import com.android.systemui.R
+
 import static com.android.systemui.complication.dagger.DreamHomeControlsComplicationComponent.DreamHomeControlsModule.DREAM_HOME_CONTROLS_CHIP_VIEW;
 import static com.android.systemui.complication.dagger.RegisteredComplicationsModule.DREAM_HOME_CONTROLS_CHIP_LAYOUT_PARAMS;
 import static com.android.systemui.controls.dagger.ControlsComponent.Visibility.AVAILABLE;

@@ -18,6 +18,8 @@
 
 package com.android.systemui.notetask
 
+import com.android.systemui.R
+
 import android.app.Activity
 import android.app.Service
 import android.app.role.RoleManager

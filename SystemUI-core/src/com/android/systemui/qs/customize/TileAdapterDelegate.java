@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.customize;
 
+import com.android.systemui.R
+
 import android.os.Bundle;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;

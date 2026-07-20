@@ -16,6 +16,8 @@
 
 package com.android.systemui.wallet.controller;
 
+import com.android.systemui.R
+
 import static com.android.systemui.wallet.controller.QuickAccessWalletController.WalletChangeEvent.DEFAULT_PAYMENT_APP_CHANGE;
 import static com.android.systemui.wallet.controller.QuickAccessWalletController.WalletChangeEvent.DEFAULT_WALLET_APP_CHANGE;
 import static com.android.systemui.wallet.controller.QuickAccessWalletController.WalletChangeEvent.WALLET_PREFERENCE_CHANGE;

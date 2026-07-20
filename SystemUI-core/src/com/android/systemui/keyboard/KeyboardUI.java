@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard;
 
+import com.android.systemui.R
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.BluetoothLeScanner;

@@ -1,5 +1,7 @@
 package com.android.systemui.statusbar
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator

@@ -18,6 +18,8 @@
 
 package com.android.systemui.qs.panels.ui.compose.infinitegrid
 
+import com.android.systemui.R
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -138,7 +140,6 @@ import com.android.systemui.qs.panels.ui.viewmodel.BounceableTileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.EditTileViewModel
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.model.groupAndSort
-import com.android.systemui.R
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay

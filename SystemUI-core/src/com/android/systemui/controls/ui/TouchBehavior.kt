@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.ui
 
+import com.android.systemui.R
+
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.view.View

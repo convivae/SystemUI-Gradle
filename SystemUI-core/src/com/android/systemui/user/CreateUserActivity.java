@@ -16,6 +16,8 @@
 
 package com.android.systemui.user;
 
+import com.android.systemui.R
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.IActivityManager;

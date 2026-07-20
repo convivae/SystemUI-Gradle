@@ -16,6 +16,8 @@
 
 package com.android.systemui.rotationlock
 
+import com.android.systemui.R
+
 import com.android.systemui.camera.CameraRotationModule
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.pipeline.shared.TileSpec

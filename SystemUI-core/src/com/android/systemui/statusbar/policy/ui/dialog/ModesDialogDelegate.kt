@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy.ui.dialog
 
+import com.android.systemui.R
+
 import android.content.Intent
 import android.provider.Settings
 import android.util.Log

@@ -16,6 +16,8 @@
 
 package com.android.systemui.accessibility.hearingaid;
 
+import com.android.systemui.R
+
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 

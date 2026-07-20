@@ -17,6 +17,8 @@
 
 package com.android.systemui.complication.dagger
 
+import com.android.systemui.R
+
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextClock

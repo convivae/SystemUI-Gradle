@@ -16,6 +16,8 @@
 
 package com.android.systemui.decor
 
+import com.android.systemui.R
+
 import android.annotation.ArrayRes
 import android.annotation.DrawableRes
 import android.content.res.Resources

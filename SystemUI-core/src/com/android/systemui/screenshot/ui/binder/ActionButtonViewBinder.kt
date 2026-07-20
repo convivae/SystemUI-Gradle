@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot.ui.binder
 
+import com.android.systemui.R
+
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout

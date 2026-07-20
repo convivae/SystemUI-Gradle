@@ -16,6 +16,8 @@
 
 package com.android.systemui.people.widget;
 
+import com.android.systemui.R
+
 import static android.Manifest.permission.READ_CONTACTS;
 import static android.app.NotificationManager.INTERRUPTION_FILTER_ALARMS;
 import static android.app.NotificationManager.INTERRUPTION_FILTER_ALL;

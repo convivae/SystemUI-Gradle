@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.customize;
 
+import com.android.systemui.R
+
 import android.Manifest.permission;
 import android.content.ComponentName;
 import android.content.Context;

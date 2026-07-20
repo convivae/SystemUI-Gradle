@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import android.annotation.CallSuper;
 import android.annotation.NonNull;
 import android.annotation.Nullable;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.dreams;
 
+import com.android.systemui.R
+
 import android.annotation.ColorInt;
 import android.content.Context;
 import android.content.res.TypedArray;

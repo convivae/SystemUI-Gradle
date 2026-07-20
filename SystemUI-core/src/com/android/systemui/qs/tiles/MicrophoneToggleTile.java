@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles;
 
+import com.android.systemui.R
+
 import static android.hardware.SensorPrivacyManager.Sensors.MICROPHONE;
 import static android.os.UserManager.DISALLOW_MICROPHONE_TOGGLE;
 

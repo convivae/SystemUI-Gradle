@@ -16,6 +16,8 @@
 
 package com.android.systemui.screenshot;
 
+import com.android.systemui.R
+
 import android.app.NotificationManager;
 import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;

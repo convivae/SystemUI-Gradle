@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
+import com.android.systemui.R
+
 import android.annotation.WorkerThread
 import android.app.Notification
 import android.app.Notification.EXTRA_SUBSTITUTE_APP_NAME

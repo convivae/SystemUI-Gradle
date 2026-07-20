@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.binder
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.content.res.ColorStateList
 import android.util.Log

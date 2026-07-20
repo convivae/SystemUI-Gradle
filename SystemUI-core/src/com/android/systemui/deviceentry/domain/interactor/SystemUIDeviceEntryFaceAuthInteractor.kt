@@ -16,6 +16,8 @@
 
 package com.android.systemui.deviceentry.domain.interactor
 
+import com.android.systemui.R
+
 import android.app.trust.TrustManager
 import android.content.Context
 import android.hardware.biometrics.BiometricFaceConstants

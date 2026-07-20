@@ -16,6 +16,8 @@
 
 package com.android.systemui.education.ui.view
 
+import com.android.systemui.R
+
 import android.app.Dialog
 import android.app.Notification
 import android.app.NotificationChannel

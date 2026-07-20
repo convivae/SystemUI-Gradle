@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
@@ -23,7 +25,6 @@ import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-import com.android.systemui.R
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.KeyguardUnlockAnimationController
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
@@ -34,7 +35,6 @@ import com.android.systemui.keyguard.ui.binder.KeyguardSmartspaceViewBinder
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
 import com.android.systemui.shade.ShadeDisplayAware
-import com.android.systemui.R
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
 import dagger.Lazy
 import javax.inject.Inject

@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.graphics.Rect
 import android.os.PowerManager
@@ -60,7 +62,6 @@ import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.Logger
 import com.android.systemui.log.dagger.CommunalTouchLog
 import com.android.systemui.media.controls.ui.controller.KeyguardMediaController
-import com.android.systemui.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator
 import com.android.systemui.shade.domain.interactor.ShadeInteractor

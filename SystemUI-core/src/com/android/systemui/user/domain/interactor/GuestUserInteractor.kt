@@ -17,6 +17,8 @@
 
 package com.android.systemui.user.domain.interactor
 
+import com.android.systemui.R
+
 import android.annotation.UserIdInt
 import android.app.admin.DevicePolicyManager
 import android.content.Context

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.DISABLE2_SYSTEM_ICONS;
 import static android.app.StatusBarManager.DISABLE_SYSTEM_INFO;
 

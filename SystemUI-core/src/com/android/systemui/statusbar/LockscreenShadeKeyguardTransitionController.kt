@@ -1,5 +1,7 @@
 package com.android.systemui.statusbar
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.util.IndentingPrintWriter
 import android.util.MathUtils

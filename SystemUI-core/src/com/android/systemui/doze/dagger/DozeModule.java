@@ -16,6 +16,8 @@
 
 package com.android.systemui.doze.dagger;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.hardware.Sensor;
 

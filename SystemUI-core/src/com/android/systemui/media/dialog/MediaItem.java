@@ -16,6 +16,8 @@
 
 package com.android.systemui.media.dialog;
 
+import com.android.systemui.R
+
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy;
 
+import com.android.systemui.R
+
 import android.annotation.NonNull;
 import android.app.StatusBarManager;
 import android.content.BroadcastReceiver;

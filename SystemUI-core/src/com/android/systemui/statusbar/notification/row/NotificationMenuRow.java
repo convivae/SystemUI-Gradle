@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row;
 
+import com.android.systemui.R
+
 import static android.app.NotificationChannel.SYSTEM_RESERVED_IDS;
 import static android.view.HapticFeedbackConstants.CLOCK_TICK;
 

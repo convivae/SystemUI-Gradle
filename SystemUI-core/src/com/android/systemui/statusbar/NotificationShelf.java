@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import static com.android.keyguard.BouncerPanelExpansionCalculator.aboutToShowBouncerProgress;
 import static com.android.systemui.util.ColorUtilKt.hexColorString;
 

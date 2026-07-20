@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.view.View
 import com.android.systemui.animation.DialogCuj
 import com.android.systemui.animation.DialogTransitionAnimator

@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
+import com.android.systemui.R
+
 import com.android.app.animation.Interpolators.EMPHASIZED_ACCELERATE
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone.ui;
 
+import com.android.systemui.R
+
 import static com.android.systemui.statusbar.phone.StatusBarIconHolder.TYPE_BINDABLE;
 import static com.android.systemui.statusbar.phone.StatusBarIconHolder.TYPE_ICON;
 import static com.android.systemui.statusbar.phone.StatusBarIconHolder.TYPE_MOBILE_NEW;

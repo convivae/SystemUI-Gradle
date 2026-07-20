@@ -16,6 +16,8 @@
 
 package com.android.systemui.ambient.touch.dagger;
 
+import com.android.systemui.R
+
 import android.content.res.Resources;
 
 import com.android.systemui.ambient.touch.ShadeTouchHandler;

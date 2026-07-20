@@ -1,5 +1,7 @@
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static com.android.keyguard.KeyguardStatusAreaView.TRANSLATE_X_CLOCK_DESIGN;
 import static com.android.keyguard.KeyguardStatusAreaView.TRANSLATE_Y_CLOCK_DESIGN;
 import static com.android.keyguard.KeyguardStatusAreaView.TRANSLATE_Y_CLOCK_SIZE;

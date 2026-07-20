@@ -16,6 +16,8 @@
 
 package com.android.systemui.temporarydisplay.chipbar
 
+import com.android.systemui.R
+
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context

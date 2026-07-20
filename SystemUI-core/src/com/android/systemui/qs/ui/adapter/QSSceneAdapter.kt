@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.ui.adapter
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.os.Bundle
@@ -35,7 +37,6 @@ import com.android.systemui.plugins.qs.QSContainerController
 import com.android.systemui.qs.QSContainerImpl
 import com.android.systemui.qs.QSImpl
 import com.android.systemui.qs.dagger.QSSceneComponent
-import com.android.systemui.R
 import com.android.systemui.settings.brightness.MirrorController
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.domain.interactor.ShadeInteractor

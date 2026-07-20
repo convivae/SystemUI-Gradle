@@ -1,5 +1,7 @@
 package com.android.systemui.sensorprivacy
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.DialogInterface
 import android.content.res.Resources

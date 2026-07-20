@@ -16,6 +16,8 @@
 
 package com.android.keyguard
 
+import com.android.systemui.R
+
 import android.app.Presentation
 import android.content.Context
 import android.graphics.Color
@@ -33,7 +35,6 @@ import com.android.keyguard.dagger.KeyguardStatusViewComponent
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.plugins.clocks.ClockController
 import com.android.systemui.plugins.clocks.ClockFaceController
-import com.android.systemui.R
 import com.android.systemui.shared.clocks.ClockRegistry
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory

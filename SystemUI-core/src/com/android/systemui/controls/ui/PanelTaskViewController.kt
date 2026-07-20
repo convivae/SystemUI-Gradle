@@ -17,6 +17,8 @@
 
 package com.android.systemui.controls.ui
 
+import com.android.systemui.R
+
 import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.content.ComponentName

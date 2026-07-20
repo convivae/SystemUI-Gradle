@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.pipeline.wifi.ui.model
 
+import com.android.systemui.R
+
 import android.annotation.DrawableRes
 import android.content.Context
 import androidx.annotation.StringRes

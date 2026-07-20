@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyboard.backlight.ui.view
 
+import com.android.systemui.R
+
 import android.annotation.AttrRes
 import android.annotation.ColorInt
 import android.app.Dialog

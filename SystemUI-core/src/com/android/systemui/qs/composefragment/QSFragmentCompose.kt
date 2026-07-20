@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.composefragment
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PointF
@@ -126,7 +128,6 @@ import com.android.systemui.qs.panels.ui.compose.TileGrid
 import com.android.systemui.qs.shared.ui.ElementKeys
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.qs.ui.composable.QuickSettingsTheme
-import com.android.systemui.R
 import com.android.systemui.util.LifecycleFragment
 import com.android.systemui.util.animation.UniqueObjectHostView
 import com.android.systemui.util.asIndenting

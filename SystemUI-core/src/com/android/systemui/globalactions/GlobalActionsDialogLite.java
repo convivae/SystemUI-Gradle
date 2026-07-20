@@ -16,6 +16,8 @@
 
 package com.android.systemui.globalactions;
 
+import com.android.systemui.R
+
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 import static android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;

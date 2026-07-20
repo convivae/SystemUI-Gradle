@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.data.quickaffordance
 
+import com.android.systemui.R
+
 import android.app.StatusBarManager
 import android.app.admin.DevicePolicyManager
 import android.content.Context

@@ -16,6 +16,8 @@
 
 package com.android.systemui.controls.management
 
+import com.android.systemui.R
+
 import android.content.ComponentName
 import android.content.res.Resources
 import android.view.LayoutInflater

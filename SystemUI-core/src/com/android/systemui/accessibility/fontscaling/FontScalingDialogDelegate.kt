@@ -15,6 +15,8 @@
  */
 package com.android.systemui.accessibility.fontscaling
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration

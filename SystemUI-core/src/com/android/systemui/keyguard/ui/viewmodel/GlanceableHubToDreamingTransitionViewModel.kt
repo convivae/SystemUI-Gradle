@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.util.LayoutDirection
 import com.android.app.animation.Interpolators
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor

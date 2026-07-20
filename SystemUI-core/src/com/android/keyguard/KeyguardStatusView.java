@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import com.android.systemui.R
+
 import static java.util.Collections.emptySet;
 
 import android.content.Context;

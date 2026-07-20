@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.policy
 
+import com.android.systemui.R
+
 import android.app.ActivityOptions
 import android.app.Notification
 import android.app.PendingIntent

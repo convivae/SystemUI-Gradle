@@ -15,10 +15,11 @@
  */
 package com.android.systemui.statusbar.phone.fragment
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.os.UserHandle
 import android.provider.Settings
-import com.android.internal.R
 import com.android.systemui.util.settings.SecureSettings
 
 /**

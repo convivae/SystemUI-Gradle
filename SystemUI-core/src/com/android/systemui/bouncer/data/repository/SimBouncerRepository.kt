@@ -16,6 +16,8 @@
 
 package com.android.systemui.bouncer.data.repository
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.content.IntentFilter
 import android.content.res.Resources

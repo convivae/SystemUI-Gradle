@@ -17,6 +17,8 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
+import com.android.systemui.R
+
 import android.content.Context
 import com.android.settingslib.Utils
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor

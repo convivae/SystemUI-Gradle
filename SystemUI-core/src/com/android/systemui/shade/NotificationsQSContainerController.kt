@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade
 
+import com.android.systemui.R
+
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -28,7 +30,6 @@ import androidx.constraintlayout.widget.ConstraintSet.START
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import androidx.lifecycle.lifecycleScope
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.systemui.R
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.fragments.FragmentService
@@ -39,7 +40,6 @@ import com.android.systemui.plugins.qs.QS
 import com.android.systemui.plugins.qs.QSContainerController
 import com.android.systemui.recents.OverviewProxyService
 import com.android.systemui.recents.OverviewProxyService.OverviewProxyListener
-import com.android.systemui.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.shared.system.QuickStepContract
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController

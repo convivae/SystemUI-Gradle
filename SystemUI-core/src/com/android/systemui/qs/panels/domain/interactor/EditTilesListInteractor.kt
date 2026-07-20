@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.panels.domain.interactor
 
+import com.android.systemui.R
+
 import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.common.shared.model.Text

@@ -16,6 +16,8 @@
 
 package com.android.systemui.wallet.ui;
 
+import com.android.systemui.R
+
 import static android.provider.Settings.ACTION_LOCKSCREEN_SETTINGS;
 
 import android.content.Intent;

@@ -15,6 +15,8 @@
  */
 package com.android.systemui.statusbar.notification.row
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.app.Flags
 import android.app.Notification

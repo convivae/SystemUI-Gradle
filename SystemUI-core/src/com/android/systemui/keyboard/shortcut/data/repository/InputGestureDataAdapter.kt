@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.data.repository
 
+import com.android.systemui.R
+
 import android.annotation.SuppressLint
 import android.app.role.RoleManager
 import android.content.ComponentName

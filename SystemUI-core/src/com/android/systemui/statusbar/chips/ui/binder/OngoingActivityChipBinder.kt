@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.ui.binder
 
+import com.android.systemui.R
+
 import android.annotation.IdRes
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable

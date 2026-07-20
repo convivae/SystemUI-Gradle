@@ -16,6 +16,8 @@
 
 package com.android.systemui.notetask
 
+import com.android.systemui.R
+
 import android.app.role.RoleManager
 import android.app.role.RoleManager.ROLE_NOTES
 import android.content.Context

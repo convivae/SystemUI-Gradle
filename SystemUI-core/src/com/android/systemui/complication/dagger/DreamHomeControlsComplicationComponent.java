@@ -16,6 +16,8 @@
 
 package com.android.systemui.complication.dagger;
 
+import com.android.systemui.R
+
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import android.content.Context;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.window;
 
+import com.android.systemui.R
+
 import static android.view.WindowInsets.Type.mandatorySystemGestures;
 import static android.view.WindowInsets.Type.statusBars;
 import static android.view.WindowInsets.Type.tappableElement;

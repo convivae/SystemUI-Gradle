@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.dialog.sliders.ui
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint

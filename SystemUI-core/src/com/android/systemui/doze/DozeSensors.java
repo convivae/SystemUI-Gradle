@@ -16,6 +16,8 @@
 
 package com.android.systemui.doze;
 
+import com.android.systemui.R
+
 import static android.hardware.biometrics.BiometricAuthenticator.TYPE_FINGERPRINT;
 import static android.hardware.biometrics.Flags.screenOffUnlockUdfps;
 

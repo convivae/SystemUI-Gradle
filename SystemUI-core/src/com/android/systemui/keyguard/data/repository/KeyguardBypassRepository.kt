@@ -16,6 +16,8 @@
 
 package com.android.systemui.keyguard.data.repository
 
+import com.android.systemui.R
+
 import android.annotation.IntDef
 import android.content.res.Resources
 import android.provider.Settings

@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics;
 
+import com.android.systemui.R
+
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.app.PendingIntent.FLAG_UPDATE_CURRENT;
 

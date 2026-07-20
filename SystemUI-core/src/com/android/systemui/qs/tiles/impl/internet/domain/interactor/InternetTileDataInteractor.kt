@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.tiles.impl.internet.domain.interactor
 
+import com.android.systemui.R
+
 import android.annotation.StringRes
 import android.content.Context
 import android.os.UserHandle
@@ -27,7 +29,6 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.qs.tiles.base.interactor.DataUpdateTrigger
 import com.android.systemui.qs.tiles.base.interactor.QSTileDataInteractor
 import com.android.systemui.qs.tiles.impl.internet.domain.model.InternetTileModel
-import com.android.systemui.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.pipeline.airplane.data.repository.AirplaneModeRepository
 import com.android.systemui.statusbar.pipeline.ethernet.domain.EthernetInteractor

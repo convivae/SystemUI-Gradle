@@ -18,6 +18,8 @@
 
 package com.android.systemui.qs.panels.ui.compose.infinitegrid
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import android.service.quicksettings.Tile.STATE_ACTIVE
 import android.service.quicksettings.Tile.STATE_INACTIVE
@@ -89,7 +91,6 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.ui.compose.borderOnFocus
-import com.android.systemui.R
 import java.util.function.Supplier
 import kotlinx.coroutines.CoroutineScope
 

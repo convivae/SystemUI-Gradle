@@ -16,6 +16,8 @@
 
 package com.android.systemui.globalactions;
 
+import com.android.systemui.R
+
 import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
 
 import android.annotation.Nullable;

@@ -16,6 +16,8 @@
 
 package com.android.systemui.volume.dialog.ui
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.content.res.Resources
 import com.android.systemui.dagger.qualifiers.UiBackground

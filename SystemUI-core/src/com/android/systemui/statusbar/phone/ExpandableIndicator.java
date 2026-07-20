@@ -14,6 +14,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import android.content.Context;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.util.AttributeSet;

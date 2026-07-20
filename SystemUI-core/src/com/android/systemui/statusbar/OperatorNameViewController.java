@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar;
 
+import com.android.systemui.R
+
 import android.os.Bundle;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionInfo;

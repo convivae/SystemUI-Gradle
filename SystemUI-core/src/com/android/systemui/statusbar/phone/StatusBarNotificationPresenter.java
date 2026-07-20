@@ -14,6 +14,8 @@
 
 package com.android.systemui.statusbar.phone;
 
+import com.android.systemui.R
+
 import static com.android.systemui.statusbar.notification.interruption.VisualInterruptionType.BUBBLE;
 import static com.android.systemui.statusbar.notification.interruption.VisualInterruptionType.PEEK;
 import static com.android.systemui.statusbar.notification.interruption.VisualInterruptionType.PULSE;

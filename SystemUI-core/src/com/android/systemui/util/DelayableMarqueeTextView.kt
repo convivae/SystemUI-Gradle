@@ -16,6 +16,8 @@
 
 package com.android.systemui.util
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.util.AttributeSet
 

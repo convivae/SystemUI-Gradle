@@ -16,6 +16,8 @@
 
 package com.android.systemui.usb;
 
+import com.android.systemui.R
+
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import android.annotation.IntDef;

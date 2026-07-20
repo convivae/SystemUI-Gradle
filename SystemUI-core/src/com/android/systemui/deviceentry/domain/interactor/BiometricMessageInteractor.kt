@@ -16,6 +16,8 @@
 
 package com.android.systemui.deviceentry.domain.interactor
 
+import com.android.systemui.R
+
 import android.content.res.Resources
 import com.android.systemui.biometrics.domain.interactor.FingerprintPropertyInteractor
 import com.android.systemui.dagger.SysUISingleton

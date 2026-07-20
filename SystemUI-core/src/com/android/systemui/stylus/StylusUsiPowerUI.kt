@@ -16,6 +16,8 @@
 
 package com.android.systemui.stylus
 
+import com.android.systemui.R
+
 import android.Manifest
 import android.app.ActivityManager
 import android.app.PendingIntent

@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics;
 
+import com.android.systemui.R
+
 import static android.app.StatusBarManager.SESSION_BIOMETRIC_PROMPT;
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 import static android.hardware.biometrics.BiometricFingerprintConstants.FINGERPRINT_ACQUIRED_GOOD;

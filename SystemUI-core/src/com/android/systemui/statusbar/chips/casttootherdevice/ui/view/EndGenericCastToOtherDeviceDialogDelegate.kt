@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.chips.casttootherdevice.ui.view
 
+import com.android.systemui.R
+
 import android.content.Context
 import android.os.Bundle
 import com.android.systemui.statusbar.chips.casttootherdevice.ui.viewmodel.CastToOtherDeviceChipViewModel.Companion.CAST_TO_OTHER_DEVICE_ICON

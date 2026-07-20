@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.phone.ongoingcall
 
+import com.android.systemui.R
+
 import android.app.ActivityManager
 import android.app.IActivityManager
 import android.app.Notification

@@ -16,6 +16,8 @@
 
 package com.android.systemui.biometrics.ui.binder
 
+import com.android.systemui.R
+
 import android.animation.Animator
 import android.animation.AnimatorSet
 import android.graphics.Outline
@@ -47,7 +49,6 @@ import com.android.systemui.biometrics.ui.viewmodel.isMedium
 import com.android.systemui.biometrics.ui.viewmodel.isSmall
 import com.android.systemui.biometrics.ui.viewmodel.isTop
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.R
 import kotlin.math.abs
 import kotlinx.coroutines.flow.combine
 import com.android.app.tracing.coroutines.launchTraced as launch
