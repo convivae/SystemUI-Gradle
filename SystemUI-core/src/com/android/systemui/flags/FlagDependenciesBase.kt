@@ -16,8 +16,6 @@
 
 package com.android.systemui.flags
 
-import com.android.systemui.R
-
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
