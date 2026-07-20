@@ -24,7 +24,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 
-import com.android.systemui.res.R;
 
 public class ClipboardView extends ImageView implements OnPrimaryClipChangedListener {
 

@@ -10,7 +10,6 @@ import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.qs.QSUserSwitcherEvent
 import com.android.systemui.qs.tiles.UserDetailView
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 
 /**

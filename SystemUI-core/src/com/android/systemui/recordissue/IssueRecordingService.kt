@@ -31,7 +31,6 @@ import com.android.systemui.animation.DialogTransitionAnimator
 import com.android.systemui.dagger.qualifiers.LongRunning
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.qs.pipeline.domain.interactor.PanelInteractor
-import com.android.systemui.res.R
 import com.android.systemui.screenrecord.RecordingController
 import com.android.systemui.screenrecord.RecordingService
 import com.android.systemui.screenrecord.RecordingServiceStrings

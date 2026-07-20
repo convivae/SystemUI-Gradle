@@ -50,7 +50,6 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialActionState.Finished
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialActionState.InProgress
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialActionState.NotStarted
-import com.android.systemui.res.R
 
 @Composable
 fun TutorialAnimation(

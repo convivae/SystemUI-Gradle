@@ -29,7 +29,6 @@ import android.provider.Settings;
 import android.view.DisplayCutout;
 
 import com.android.internal.policy.SystemBarUtils;
-import com.android.systemui.res.R;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.shared.system.QuickStepContract;
 

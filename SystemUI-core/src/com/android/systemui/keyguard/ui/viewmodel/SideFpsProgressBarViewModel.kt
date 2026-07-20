@@ -39,7 +39,6 @@ import com.android.systemui.keyguard.shared.model.FailFingerprintAuthenticationS
 import com.android.systemui.keyguard.shared.model.FingerprintAuthenticationStatus
 import com.android.systemui.keyguard.shared.model.SuccessFingerprintAuthenticationStatus
 import com.android.systemui.power.domain.interactor.PowerInteractor
-import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.phone.DozeServiceHost
 import javax.inject.Inject

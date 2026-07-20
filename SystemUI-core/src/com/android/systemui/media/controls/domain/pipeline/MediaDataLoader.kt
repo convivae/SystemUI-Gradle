@@ -57,7 +57,6 @@ import com.android.systemui.media.controls.shared.model.MediaNotificationAction
 import com.android.systemui.media.controls.util.MediaControllerFactory
 import com.android.systemui.media.controls.util.MediaDataUtils
 import com.android.systemui.media.controls.util.MediaFlags
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.NotificationMediaManager.isPlayingState
 import com.android.systemui.statusbar.notification.row.HybridGroupManager
 import com.android.systemui.util.kotlin.logD

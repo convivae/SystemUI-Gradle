@@ -27,7 +27,6 @@ import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.education.domain.interactor.KeyboardTouchpadEduInteractor
 import com.android.systemui.education.shared.model.EducationInfo
 import com.android.systemui.education.shared.model.EducationUiType
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.AccessibilityManagerWrapper
 import javax.inject.Inject
 import kotlinx.coroutines.delay

@@ -24,7 +24,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.FrameLayout;
 
-import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.List;

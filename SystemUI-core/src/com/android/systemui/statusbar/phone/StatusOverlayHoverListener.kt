@@ -32,7 +32,6 @@ import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.DarkIconDispatcher
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.data.repository.StatusBarConfigurationControllerStore
 import com.android.systemui.statusbar.data.repository.SysuiDarkIconDispatcherStore
 import com.android.systemui.statusbar.phone.SysuiDarkIconDispatcher.DarkChange

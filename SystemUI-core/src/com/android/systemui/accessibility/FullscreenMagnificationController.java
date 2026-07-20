@@ -54,7 +54,6 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.policy.ScreenDecorationsUtils;
 import com.android.systemui.Flags;
 import com.android.systemui.dagger.qualifiers.Main;
-import com.android.systemui.res.R;
 import com.android.systemui.util.leak.RotationUtils;
 
 import java.util.concurrent.Executor;

@@ -29,7 +29,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.settingslib.Utils;
 import com.android.systemui.bluetooth.qsdialog.DeviceItem;
-import com.android.systemui.res.R;
 
 import kotlin.Pair;
 

@@ -31,7 +31,6 @@ import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategory
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCommand
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutKey
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutSubCategory
-import com.android.systemui.res.R
 import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow

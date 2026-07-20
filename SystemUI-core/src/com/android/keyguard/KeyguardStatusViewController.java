@@ -535,7 +535,7 @@ public class KeyguardStatusViewController extends ViewController<KeyguardStatusV
         if (customClockAnimation && !MigrateClocksToBlueprint.isEnabled()) {
             // Find the clock, so we can exclude it from this transition.
             FrameLayout clockContainerView = mView.findViewById(
-                    com.android.systemui.customization.R.id.lockscreen_clock_view_large);
+                    com.android.systemui.R.id.lockscreen_clock_view_large);
 
             // The clock container can sometimes be null. If it is, just fall back to the
             // old animation rather than setting up the custom animations.

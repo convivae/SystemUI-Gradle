@@ -45,7 +45,6 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInterac
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.keyguard.ui.viewmodel.DreamingToLockscreenTransitionViewModel
 import com.android.systemui.power.domain.interactor.PowerInteractor
-import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import java.util.concurrent.Executor
 import javax.inject.Inject

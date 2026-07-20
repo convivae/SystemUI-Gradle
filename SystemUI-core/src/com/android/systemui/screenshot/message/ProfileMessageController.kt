@@ -21,7 +21,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import com.android.systemui.res.R
 import com.android.systemui.screenshot.data.model.ProfileType
 import com.android.systemui.screenshot.data.repository.ProfileTypeRepository
 import javax.inject.Inject

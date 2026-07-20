@@ -25,7 +25,6 @@ import androidx.constraintlayout.helper.widget.Flow;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.HardwareBgDrawable;
-import com.android.systemui.res.R;
 
 /**
  * ConstraintLayout implementation of the button layout created by the global actions dialog.

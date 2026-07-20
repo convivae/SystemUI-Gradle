@@ -46,7 +46,6 @@ import androidx.preference.Preference;
 import androidx.preference.Preference.OnPreferenceChangeListener;
 
 import com.android.systemui.Dependency;
-import com.android.systemui.res.R;
 import com.android.systemui.tuner.TunerService.Tunable;
 
 import java.util.ArrayList;

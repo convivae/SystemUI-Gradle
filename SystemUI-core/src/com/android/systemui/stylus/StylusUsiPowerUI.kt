@@ -39,7 +39,6 @@ import com.android.internal.logging.UiEventLogger
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.log.DebugLogger.debugLog
-import com.android.systemui.res.R
 import com.android.systemui.shared.hardware.hasInputDevice
 import com.android.systemui.shared.hardware.isAnyStylusSource
 import com.android.systemui.util.NotificationChannels

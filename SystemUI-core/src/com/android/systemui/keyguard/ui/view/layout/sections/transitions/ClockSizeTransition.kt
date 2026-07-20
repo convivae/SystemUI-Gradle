@@ -29,14 +29,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver.OnPreDrawListener
 import com.android.app.animation.Interpolators
-import com.android.systemui.customization.R as customR
+import com.android.systemui.R
 import com.android.systemui.keyguard.ui.view.layout.blueprints.transitions.IntraBlueprintTransition
 import com.android.systemui.keyguard.ui.view.layout.blueprints.transitions.IntraBlueprintTransition.Type
 import com.android.systemui.keyguard.ui.view.layout.sections.transitions.ClockSizeTransition.SmartspaceMoveTransition.Companion.STATUS_AREA_MOVE_DOWN_MILLIS
 import com.android.systemui.keyguard.ui.view.layout.sections.transitions.ClockSizeTransition.SmartspaceMoveTransition.Companion.STATUS_AREA_MOVE_UP_MILLIS
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
-import com.android.systemui.res.R
-import com.android.systemui.shared.R as sharedR
+import com.android.systemui.R
 import com.google.android.material.math.MathUtils
 import kotlin.math.abs
 
@@ -77,7 +76,7 @@ class ClockSizeTransition(
             if (!captureSmartspace) return
             val parent = view.parent as View
             val targetSSView =
-                parent.findViewById<View>(sharedR.id.bc_smartspace_view)
+                parent.findViewById<View>(R.id.bc_smartspace_view)
                     ?: parent.findViewById<View>(R.id.keyguard_slice_view)
             if (targetSSView == null) {
                 Log.e(TAG, "Failed to find smartspace equivalent target under $parent")
@@ -243,11 +242,11 @@ class ClockSizeTransition(
                 }
                     ?: run {
                         Log.e(TAG, "No large clock set, falling back")
-                        addTarget(customR.id.lockscreen_clock_view_large)
+                        addTarget(R.id.lockscreen_clock_view_large)
                     }
             } else {
                 if (DEBUG) Log.i(TAG, "Adding small clock")
-                addTarget(customR.id.lockscreen_clock_view)
+                addTarget(R.id.lockscreen_clock_view)
             }
         }
 
@@ -332,8 +331,8 @@ class ClockSizeTransition(
             duration =
                 if (isLargeClock) STATUS_AREA_MOVE_UP_MILLIS else STATUS_AREA_MOVE_DOWN_MILLIS
             interpolator = Interpolators.EMPHASIZED
-            addTarget(sharedR.id.date_smartspace_view)
-            addTarget(sharedR.id.bc_smartspace_view)
+            addTarget(R.id.date_smartspace_view)
+            addTarget(R.id.bc_smartspace_view)
 
             // Notifications normally and media on split shade needs to be moved
             addTarget(R.id.aod_notification_icon_container)

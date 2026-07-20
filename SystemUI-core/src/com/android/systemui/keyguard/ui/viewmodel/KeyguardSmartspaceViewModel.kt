@@ -17,11 +17,10 @@
 package com.android.systemui.keyguard.ui.viewmodel
 
 import android.content.Context
-import com.android.systemui.customization.R as customR
+import com.android.systemui.R
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.domain.interactor.KeyguardSmartspaceInteractor
-import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
 import javax.inject.Inject
@@ -96,17 +95,17 @@ constructor(
     companion object {
         fun getDateWeatherStartMargin(context: Context): Int {
             return context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_start) +
-                context.resources.getDimensionPixelSize(customR.dimen.status_view_margin_horizontal)
+                context.resources.getDimensionPixelSize(R.dimen.status_view_margin_horizontal)
         }
 
         fun getDateWeatherEndMargin(context: Context): Int {
             return context.resources.getDimensionPixelSize(R.dimen.below_clock_padding_end) +
-                context.resources.getDimensionPixelSize(customR.dimen.status_view_margin_horizontal)
+                context.resources.getDimensionPixelSize(R.dimen.status_view_margin_horizontal)
         }
 
         fun getSmartspaceHorizontalMargin(context: Context): Int {
             return context.resources.getDimensionPixelSize(R.dimen.smartspace_padding_horizontal) +
-                context.resources.getDimensionPixelSize(customR.dimen.status_view_margin_horizontal)
+                context.resources.getDimensionPixelSize(R.dimen.status_view_margin_horizontal)
         }
     }
 }

@@ -78,7 +78,6 @@ import com.android.internal.messages.nano.SystemMessageProto;
 import com.android.internal.util.Preconditions;
 import com.android.systemui.Flags;
 import com.android.systemui.navigationbar.NavigationModeController;
-import com.android.systemui.res.R;
 import com.android.systemui.util.settings.SecureSettings;
 import com.android.wm.shell.bubbles.DismissViewUtils;
 import com.android.wm.shell.shared.bubbles.DismissView;

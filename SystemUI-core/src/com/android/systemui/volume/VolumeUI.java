@@ -24,7 +24,6 @@ import com.android.settingslib.volume.data.repository.AudioRepository;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.qs.tiles.DndTile;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.util.kotlin.JavaAdapter;
 import com.android.systemui.volume.domain.interactor.AudioSharingInteractor;

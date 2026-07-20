@@ -27,7 +27,6 @@ import com.android.systemui.common.ui.view.LongPressHandlingView
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardTouchHandlingViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.FalsingManager
-import com.android.systemui.res.R
 
 object KeyguardLongPressViewBinder {
     /**

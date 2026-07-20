@@ -21,7 +21,6 @@ import android.content.res.Resources;
 import com.android.systemui.ambient.touch.ShadeTouchHandler;
 import com.android.systemui.ambient.touch.TouchHandler;
 import com.android.systemui.dagger.qualifiers.Main;
-import com.android.systemui.res.R;
 import com.android.systemui.scene.ui.view.WindowRootView;
 
 import dagger.Binds;

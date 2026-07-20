@@ -37,7 +37,6 @@ import com.android.systemui.controls.controller.ControlsFavoritePersistenceWrapp
 import com.android.systemui.keyguard.domain.backup.KeyguardQuickAffordanceBackupHelper
 import com.android.systemui.people.widget.PeopleBackupHelper
 import com.android.systemui.qs.panels.domain.backup.QSPreferencesBackupHelper
-import com.android.systemui.res.R
 import com.android.systemui.settings.UserFileManagerImpl
 
 /**

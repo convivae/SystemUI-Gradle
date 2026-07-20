@@ -18,7 +18,6 @@ package com.android.systemui.volume.dialog.ui.viewmodel
 
 import android.content.Context
 import android.content.res.Configuration
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.statusbar.policy.DevicePostureController
 import com.android.systemui.statusbar.policy.devicePosture

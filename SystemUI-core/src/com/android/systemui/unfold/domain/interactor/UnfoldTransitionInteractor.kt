@@ -18,7 +18,6 @@ package com.android.systemui.unfold.domain.interactor
 import android.view.View
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.unfold.data.repository.UnfoldTransitionRepository
 import com.android.systemui.unfold.data.repository.UnfoldTransitionStatus.TransitionFinished

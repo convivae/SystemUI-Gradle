@@ -21,7 +21,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.MediaStore
 import android.text.TextUtils
-import com.android.systemui.res.R
 import android.util.Log
 
 class CameraIntents {

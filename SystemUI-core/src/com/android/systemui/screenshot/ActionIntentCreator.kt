@@ -24,7 +24,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.UserHandle
-import com.android.systemui.res.R
 import com.android.systemui.screenshot.scroll.LongScreenshotActivity
 
 object ActionIntentCreator {

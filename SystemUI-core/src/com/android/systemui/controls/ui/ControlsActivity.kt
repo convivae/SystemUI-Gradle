@@ -35,7 +35,6 @@ import com.android.systemui.controls.management.ControlsManagementActivity
 import com.android.systemui.controls.management.applyInsets
 import com.android.systemui.controls.settings.ControlsSettingsDialogManager
 import com.android.systemui.flags.FeatureFlags
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.KeyguardStateController
 import javax.inject.Inject
 

@@ -17,7 +17,6 @@
 package com.android.systemui.statusbar.notification.collection.coordinator
 
 import android.content.Context
-import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.notification.AssistantFeedbackController
 import com.android.systemui.statusbar.notification.collection.ListEntry

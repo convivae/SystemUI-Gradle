@@ -31,7 +31,6 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyboard.stickykeys.ui.view.createStickyKeyIndicatorView
 import com.android.systemui.keyboard.stickykeys.ui.viewmodel.StickyKeysIndicatorViewModel
-import com.android.systemui.res.R
 import javax.inject.Inject
 
 @SysUISingleton

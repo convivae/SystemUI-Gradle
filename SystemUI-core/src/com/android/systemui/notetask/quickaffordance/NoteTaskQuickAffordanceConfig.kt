@@ -42,7 +42,6 @@ import com.android.systemui.notetask.NoteTaskController
 import com.android.systemui.notetask.NoteTaskEnabledKey
 import com.android.systemui.notetask.NoteTaskEntryPoint.QUICK_AFFORDANCE
 import com.android.systemui.notetask.NoteTaskInfoResolver
-import com.android.systemui.res.R
 import com.android.systemui.stylus.StylusManager
 import dagger.Lazy
 import java.util.concurrent.Executor

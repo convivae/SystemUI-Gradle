@@ -20,7 +20,6 @@ import android.graphics.Color;
 import android.os.Trace;
 
 import com.android.systemui.dock.DockManager;
-import com.android.systemui.res.R;
 import com.android.systemui.scrim.ScrimView;
 import com.android.systemui.statusbar.notification.stack.StackStateAnimator;
 

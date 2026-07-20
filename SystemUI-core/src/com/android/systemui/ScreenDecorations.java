@@ -85,7 +85,6 @@ import com.android.systemui.decor.RoundedCornerResDelegateImpl;
 import com.android.systemui.decor.ScreenDecorCommand;
 import com.android.systemui.log.ScreenDecorationsLogger;
 import com.android.systemui.qs.UserSettingObserver;
-import com.android.systemui.res.R;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.commandline.CommandRegistry;

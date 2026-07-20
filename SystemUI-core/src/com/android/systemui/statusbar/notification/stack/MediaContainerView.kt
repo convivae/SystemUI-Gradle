@@ -24,7 +24,6 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
 import com.android.systemui.Flags
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.notification.row.ExpandableView
 
 /** Root view to insert Lock screen media controls into the notification stack. */

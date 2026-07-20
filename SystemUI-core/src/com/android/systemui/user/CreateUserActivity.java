@@ -34,7 +34,6 @@ import androidx.annotation.Nullable;
 import com.android.internal.logging.UiEventLogger;
 import com.android.settingslib.users.CreateUserDialogController;
 import com.android.systemui.plugins.ActivityStarter;
-import com.android.systemui.res.R;
 
 import javax.inject.Inject;
 

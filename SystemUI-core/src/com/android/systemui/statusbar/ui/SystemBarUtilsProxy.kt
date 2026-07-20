@@ -19,7 +19,6 @@ package com.android.systemui.statusbar.ui
 import android.content.Context
 import com.android.internal.policy.SystemBarUtils
 import com.android.systemui.dagger.qualifiers.Application
-import com.android.systemui.res.R
 import dagger.Binds
 import javax.inject.Inject
 import kotlin.math.max

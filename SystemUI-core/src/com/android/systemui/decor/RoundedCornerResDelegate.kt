@@ -24,7 +24,6 @@ import android.util.DisplayUtils
 import android.util.Size
 import android.view.RoundedCorners
 import com.android.systemui.Dumpable
-import com.android.systemui.res.R
 import java.io.PrintWriter
 
 interface RoundedCornerResDelegate {

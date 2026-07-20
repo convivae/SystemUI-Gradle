@@ -67,7 +67,6 @@ import com.android.internal.logging.UiEventLogger.UiEventEnum;
 import com.android.settingslib.Utils;
 import com.android.systemui.Flags;
 import com.android.systemui.log.DebugLogger;
-import com.android.systemui.res.R;
 import com.android.systemui.screenshot.appclips.InternalBacklinksData.BacklinksData;
 import com.android.systemui.screenshot.appclips.InternalBacklinksData.CrossProfileError;
 import com.android.systemui.screenshot.scroll.CropView;

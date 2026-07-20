@@ -113,7 +113,6 @@ import android.view.KeyEvent.META_FUNCTION_ON
 import android.view.KeyEvent.META_META_ON
 import android.view.KeyEvent.META_SHIFT_ON
 import android.view.KeyEvent.META_SYM_ON
-import com.android.systemui.res.R
 
 object ShortcutHelperKeys {
 

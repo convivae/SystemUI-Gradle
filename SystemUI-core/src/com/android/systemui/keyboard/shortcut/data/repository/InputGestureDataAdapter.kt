@@ -44,7 +44,6 @@ import com.android.systemui.keyboard.shortcut.data.model.InternalGroupsSource
 import com.android.systemui.keyboard.shortcut.data.model.InternalKeyboardShortcutGroup
 import com.android.systemui.keyboard.shortcut.data.model.InternalKeyboardShortcutInfo
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType
-import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import javax.inject.Inject
 

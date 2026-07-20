@@ -53,7 +53,6 @@ import com.android.systemui.media.controls.ui.viewmodel.MediaRecsCardViewModel
 import com.android.systemui.monet.ColorScheme
 import com.android.systemui.monet.Style
 import com.android.systemui.plugins.FalsingManager
-import com.android.systemui.res.R
 import com.android.systemui.util.animation.TransitionLayout
 import kotlin.math.min
 import kotlinx.coroutines.CoroutineDispatcher

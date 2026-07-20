@@ -32,7 +32,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.systemui.Gefingerpoken;
-import com.android.systemui.res.R;
 
 import java.util.Collections;
 

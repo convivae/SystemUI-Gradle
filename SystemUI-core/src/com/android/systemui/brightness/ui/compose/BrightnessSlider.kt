@@ -65,7 +65,6 @@ import com.android.systemui.haptics.slider.SliderHapticFeedbackConfig
 import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.ui.compose.borderOnFocus
-import com.android.systemui.res.R
 import com.android.systemui.utils.PolicyRestriction
 
 @Composable

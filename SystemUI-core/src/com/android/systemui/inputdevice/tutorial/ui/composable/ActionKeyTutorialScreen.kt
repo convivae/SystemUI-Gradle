@@ -39,7 +39,6 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialActionState.Finished
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialActionState.NotStarted
-import com.android.systemui.res.R
 
 @Composable
 fun ActionKeyTutorialScreen(onDoneButtonClicked: () -> Unit, onBack: () -> Unit) {

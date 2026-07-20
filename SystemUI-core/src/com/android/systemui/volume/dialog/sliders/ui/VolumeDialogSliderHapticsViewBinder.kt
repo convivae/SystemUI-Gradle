@@ -19,7 +19,6 @@ package com.android.systemui.volume.dialog.sliders.ui
 import android.view.View
 import com.android.systemui.haptics.slider.HapticSlider
 import com.android.systemui.haptics.slider.HapticSliderPlugin
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.util.time.SystemClock
 import com.android.systemui.volume.dialog.sliders.dagger.VolumeDialogSliderScope

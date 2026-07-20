@@ -19,7 +19,6 @@ package com.android.systemui.recordissue
 import android.os.Bundle
 import android.view.Gravity
 import android.view.WindowManager
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 
 class ScreenCapturePermissionDialogDelegate(

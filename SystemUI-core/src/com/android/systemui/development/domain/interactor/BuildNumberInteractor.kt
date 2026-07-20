@@ -27,7 +27,6 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.development.data.repository.DevelopmentSettingRepository
 import com.android.systemui.development.shared.model.BuildNumber
-import com.android.systemui.res.R as SystemUIR
 import com.android.systemui.user.data.repository.UserRepository
 import com.android.systemui.user.utils.UserScopedService
 import javax.inject.Inject

@@ -43,7 +43,6 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
-import com.android.systemui.res.R;
 
 import java.util.HashSet;
 import java.util.Set;

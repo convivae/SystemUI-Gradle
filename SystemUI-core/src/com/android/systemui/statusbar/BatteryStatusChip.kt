@@ -25,7 +25,6 @@ import android.widget.LinearLayout
 import com.android.settingslib.flags.Flags.newStatusBarIcons
 import com.android.systemui.battery.BatteryMeterView
 import com.android.systemui.battery.unified.BatteryColors
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.events.BackgroundAnimatableView
 
 class BatteryStatusChip @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :

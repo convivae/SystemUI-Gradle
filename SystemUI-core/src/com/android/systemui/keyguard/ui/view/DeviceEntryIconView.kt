@@ -33,7 +33,6 @@ import com.airbnb.lottie.LottieCompositionFactory
 import com.airbnb.lottie.LottieDrawable
 import com.android.systemui.common.ui.view.LongPressHandlingView
 import com.android.systemui.log.LongPressHandlingViewLogger
-import com.android.systemui.res.R
 
 class DeviceEntryIconView
 @JvmOverloads

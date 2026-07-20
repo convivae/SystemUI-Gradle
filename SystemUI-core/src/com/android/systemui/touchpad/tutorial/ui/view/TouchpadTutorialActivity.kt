@@ -33,7 +33,6 @@ import com.android.compose.theme.PlatformTheme
 import com.android.systemui.inputdevice.tutorial.InputDeviceTutorialLogger
 import com.android.systemui.inputdevice.tutorial.InputDeviceTutorialLogger.TutorialContext
 import com.android.systemui.inputdevice.tutorial.KeyboardTouchpadTutorialMetricsLogger
-import com.android.systemui.res.R
 import com.android.systemui.touchpad.tutorial.ui.composable.BackGestureTutorialScreen
 import com.android.systemui.touchpad.tutorial.ui.composable.HomeGestureTutorialScreen
 import com.android.systemui.touchpad.tutorial.ui.composable.RecentAppsGestureTutorialScreen

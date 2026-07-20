@@ -59,7 +59,7 @@ import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.communal.ui.binder.CommunalTutorialIndicatorViewBinder
 import com.android.systemui.communal.ui.viewmodel.CommunalTutorialIndicatorViewModel
 import com.android.systemui.coroutines.newTracingContext
-import com.android.systemui.customization.R as customR
+import com.android.systemui.R
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
@@ -87,7 +87,6 @@ import com.android.systemui.plugins.clocks.ClockController
 import com.android.systemui.plugins.clocks.ClockPreviewConfig
 import com.android.systemui.plugins.clocks.ThemeConfig
 import com.android.systemui.plugins.clocks.WeatherData
-import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.shared.clocks.ClockRegistry
@@ -573,14 +572,14 @@ constructor(
             val layoutParams =
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
-                    resources.getDimensionPixelSize(customR.dimen.small_clock_height),
+                    resources.getDimensionPixelSize(R.dimen.small_clock_height),
                 )
             layoutParams.topMargin =
                 SystemBarUtils.getStatusBarHeight(previewContext) +
-                    resources.getDimensionPixelSize(customR.dimen.small_clock_padding_top)
+                    resources.getDimensionPixelSize(R.dimen.small_clock_padding_top)
             smallClockHostView.layoutParams = layoutParams
             smallClockHostView.setPaddingRelative(
-                /* start = */ resources.getDimensionPixelSize(customR.dimen.clock_padding_start),
+                /* start = */ resources.getDimensionPixelSize(R.dimen.clock_padding_start),
                 /* top = */ 0,
                 /* end = */ 0,
                 /* bottom = */ 0,
@@ -687,7 +686,7 @@ constructor(
         // When set clock to clockController,it will reset fontsize based on context.resources
         // We need to override it with overlaid resources
         clock.largeClock.events.onFontSettingChanged(
-            resources.getDimensionPixelSize(customR.dimen.large_clock_text_size).toFloat()
+            resources.getDimensionPixelSize(R.dimen.large_clock_text_size).toFloat()
         )
     }
 

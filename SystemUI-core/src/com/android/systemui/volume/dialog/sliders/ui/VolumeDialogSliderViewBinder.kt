@@ -21,7 +21,6 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.view.View
 import android.view.animation.DecelerateInterpolator
-import com.android.systemui.res.R
 import com.android.systemui.volume.dialog.sliders.dagger.VolumeDialogSliderScope
 import com.android.systemui.volume.dialog.sliders.ui.viewmodel.VolumeDialogSliderStateModel
 import com.android.systemui.volume.dialog.sliders.ui.viewmodel.VolumeDialogSliderViewModel

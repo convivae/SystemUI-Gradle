@@ -31,7 +31,6 @@ import com.android.systemui.qs.tiles.QuickAccessWalletTile;
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig;
 import com.android.systemui.qs.tiles.viewmodel.QSTilePolicy;
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig;
-import com.android.systemui.res.R;
 import com.android.systemui.wallet.controller.WalletContextualLocationsService;
 import com.android.systemui.wallet.ui.WalletActivity;
 

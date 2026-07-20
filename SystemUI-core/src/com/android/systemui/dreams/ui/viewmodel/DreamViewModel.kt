@@ -30,7 +30,6 @@ import com.android.systemui.keyguard.shared.model.TransitionState
 import com.android.systemui.keyguard.ui.viewmodel.DreamingToGlanceableHubTransitionViewModel
 import com.android.systemui.keyguard.ui.viewmodel.DreamingToLockscreenTransitionViewModel
 import com.android.systemui.keyguard.ui.viewmodel.GlanceableHubToDreamingTransitionViewModel
-import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.util.kotlin.FlowDumperImpl
 import javax.inject.Inject

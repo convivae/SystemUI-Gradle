@@ -40,7 +40,6 @@ import android.widget.CheckBox;
 import com.android.internal.app.AlertActivity;
 import com.android.internal.app.AlertController;
 import com.android.systemui.broadcast.BroadcastDispatcher;
-import com.android.systemui.res.R;
 
 import javax.inject.Inject;
 

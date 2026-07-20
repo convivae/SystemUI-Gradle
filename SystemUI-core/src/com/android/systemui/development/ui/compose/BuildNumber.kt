@@ -34,7 +34,6 @@ import androidx.compose.ui.semantics.semantics
 import com.android.systemui.communal.ui.compose.extensions.detectLongPressGesture
 import com.android.systemui.development.ui.viewmodel.BuildNumberViewModel
 import com.android.systemui.lifecycle.rememberViewModel
-import com.android.systemui.res.R
 
 @Composable
 fun BuildNumber(

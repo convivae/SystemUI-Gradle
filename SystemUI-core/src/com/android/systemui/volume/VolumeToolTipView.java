@@ -29,7 +29,6 @@ import android.widget.LinearLayout;
 import androidx.core.content.ContextCompat;
 
 import com.android.systemui.recents.TriangleShape;
-import com.android.systemui.res.R;
 
 /**
  * Tool tip view that draws an arrow that points to the volume dialog.

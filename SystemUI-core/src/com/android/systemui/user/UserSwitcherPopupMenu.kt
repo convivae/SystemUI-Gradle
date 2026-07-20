@@ -23,7 +23,6 @@ import android.view.View.MeasureSpec
 import android.widget.ListAdapter
 import android.widget.ListPopupWindow
 import android.widget.ListView
-import com.android.systemui.res.R
 
 /**
  * Popup menu for displaying items on the fullscreen user switcher.

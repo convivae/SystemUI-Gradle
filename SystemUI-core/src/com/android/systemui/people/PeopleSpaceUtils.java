@@ -57,7 +57,6 @@ import com.android.internal.widget.MessagingMessage;
 import com.android.settingslib.utils.ThreadUtils;
 import com.android.systemui.people.widget.PeopleSpaceWidgetManager;
 import com.android.systemui.people.widget.PeopleTileKey;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 
 import java.text.SimpleDateFormat;

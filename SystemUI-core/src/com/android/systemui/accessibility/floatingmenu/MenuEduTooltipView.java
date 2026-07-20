@@ -42,7 +42,6 @@ import androidx.annotation.NonNull;
 
 import com.android.settingslib.Utils;
 import com.android.systemui.recents.TriangleShape;
-import com.android.systemui.res.R;
 
 /**
  * The tooltip view shows the information about the operation of the anchor view {@link MenuView}

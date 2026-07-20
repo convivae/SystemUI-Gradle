@@ -33,7 +33,6 @@ import com.android.systemui.keyguard.util.WallpaperPickerIntentUtils
 import com.android.systemui.keyguard.util.WallpaperPickerIntentUtils.LAUNCH_SOURCE_KEYGUARD
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.ActivityStarter
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.flow.distinctUntilChanged

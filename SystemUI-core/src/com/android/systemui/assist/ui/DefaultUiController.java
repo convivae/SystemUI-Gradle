@@ -41,7 +41,6 @@ import com.android.systemui.assist.AssistManager;
 import com.android.systemui.assist.AssistantSessionEvent;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.navigationbar.NavigationBarController;
-import com.android.systemui.res.R;
 
 import dagger.Lazy;
 

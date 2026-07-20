@@ -47,7 +47,6 @@ import com.android.systemui.media.controls.util.MediaControllerFactory
 import com.android.systemui.media.controls.util.MediaDataUtils
 import com.android.systemui.media.muteawait.MediaMuteAwaitConnectionManager
 import com.android.systemui.media.muteawait.MediaMuteAwaitConnectionManagerFactory
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.ConfigurationController
 import dagger.Lazy
 import java.io.PrintWriter

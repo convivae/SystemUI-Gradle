@@ -34,7 +34,6 @@ import com.android.settingslib.Utils;
 import com.android.systemui.navigationbar.NavigationBarController;
 import com.android.systemui.navigationbar.views.NavigationBar;
 import com.android.systemui.navigationbar.views.NavigationBarTransitions;
-import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 

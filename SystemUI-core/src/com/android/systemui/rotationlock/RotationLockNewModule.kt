@@ -29,7 +29,6 @@ import com.android.systemui.qs.tiles.impl.rotation.ui.mapper.RotationLockTileMap
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileViewModel
-import com.android.systemui.res.R
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

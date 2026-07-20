@@ -31,7 +31,6 @@ import com.android.internal.statusbar.StatusBarIcon;
 import com.android.systemui.demomode.DemoMode;
 import com.android.systemui.plugins.DarkIconDispatcher;
 import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.StatusBarIconView;
 import com.android.systemui.statusbar.StatusIconDisplayable;
 import com.android.systemui.statusbar.pipeline.mobile.ui.MobileViewLogger;

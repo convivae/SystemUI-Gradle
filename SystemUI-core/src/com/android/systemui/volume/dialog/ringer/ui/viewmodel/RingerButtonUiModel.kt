@@ -19,7 +19,6 @@ package com.android.systemui.volume.dialog.ringer.ui.viewmodel
 import android.content.Context
 import com.android.internal.R as internalR
 import com.android.settingslib.Utils
-import com.android.systemui.res.R
 
 /** Models the UI state of ringer button */
 data class RingerButtonUiModel(

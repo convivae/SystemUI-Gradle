@@ -51,7 +51,6 @@ import android.widget.Toast;
 import com.android.internal.logging.UiEventLogger;
 import com.android.internal.util.ScreenshotRequest;
 import com.android.systemui.dagger.qualifiers.Background;
-import com.android.systemui.res.R;
 
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;

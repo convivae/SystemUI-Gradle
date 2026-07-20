@@ -38,7 +38,6 @@ import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.RecyclerViewAccessibilityDelegate;
 
-import com.android.systemui.res.R;
 
 import java.util.Collections;
 import java.util.List;

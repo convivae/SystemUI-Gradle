@@ -46,7 +46,6 @@ import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 
 import com.android.internal.graphics.ColorUtils;
 import com.android.systemui.Flags;
-import com.android.systemui.res.R;
 
 import java.util.List;
 

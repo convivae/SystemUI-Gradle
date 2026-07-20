@@ -29,7 +29,6 @@ import android.util.KeyValueListParser;
 import android.util.Log;
 
 import com.android.systemui.dagger.SysUISingleton;
-import com.android.systemui.res.R;
 
 import javax.inject.Inject;
 

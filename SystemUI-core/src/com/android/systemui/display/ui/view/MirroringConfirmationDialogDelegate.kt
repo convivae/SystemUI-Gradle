@@ -27,7 +27,6 @@ import androidx.annotation.StyleRes
 import androidx.annotation.VisibleForTesting
 import androidx.core.view.updatePadding
 import com.android.systemui.dagger.qualifiers.Application
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.DialogDelegate
 import com.android.systemui.statusbar.phone.SystemUIBottomSheetDialog
 import javax.inject.Inject

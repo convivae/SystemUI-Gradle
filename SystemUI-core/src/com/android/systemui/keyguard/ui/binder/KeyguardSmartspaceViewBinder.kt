@@ -29,8 +29,7 @@ import com.android.systemui.keyguard.ui.view.layout.blueprints.transitions.Intra
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.res.R
-import com.android.systemui.shared.R as sharedR
+import com.android.systemui.R
 import kotlinx.coroutines.DisposableHandle
 
 object KeyguardSmartspaceViewBinder {
@@ -87,7 +86,7 @@ object KeyguardSmartspaceViewBinder {
         val burnInLayer = keyguardRootView.requireViewById<Layer>(R.id.burn_in_layer)
         burnInLayer.apply {
             val smartspaceView =
-                keyguardRootView.requireViewById<View>(sharedR.id.bc_smartspace_view)
+                keyguardRootView.requireViewById<View>(R.id.bc_smartspace_view)
             if (smartspaceView.visibility == View.VISIBLE) {
                 addView(smartspaceView)
             } else {
@@ -121,7 +120,7 @@ object KeyguardSmartspaceViewBinder {
                     smartspaceViewModel.isDateWeatherDecoupled
             ) {
                 val dateView =
-                    constraintLayout.requireViewById<View>(sharedR.id.date_smartspace_view)
+                    constraintLayout.requireViewById<View>(R.id.date_smartspace_view)
                 addView(dateView)
             }
         }
@@ -138,7 +137,7 @@ object KeyguardSmartspaceViewBinder {
                     smartspaceViewModel.isDateWeatherDecoupled
             ) {
                 val dateView =
-                    constraintLayout.requireViewById<View>(sharedR.id.date_smartspace_view)
+                    constraintLayout.requireViewById<View>(R.id.date_smartspace_view)
                 removeView(dateView)
             }
         }

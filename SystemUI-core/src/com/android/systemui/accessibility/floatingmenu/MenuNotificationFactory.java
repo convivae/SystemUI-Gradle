@@ -22,7 +22,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.UserHandle;
 
-import com.android.systemui.res.R;
 import com.android.systemui.util.NotificationChannels;
 
 class MenuNotificationFactory {

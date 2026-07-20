@@ -80,7 +80,6 @@ import com.android.app.viewcapture.ViewCapture;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.qualifiers.Background;
-import com.android.systemui.res.R;
 import com.android.systemui.shared.system.TaskStackChangeListener;
 import com.android.systemui.shared.system.TaskStackChangeListeners;
 import com.android.systemui.util.settings.SecureSettings;

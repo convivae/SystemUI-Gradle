@@ -32,7 +32,6 @@ import com.android.internal.logging.UiEventLogger;
 import com.android.systemui.animation.DialogTransitionAnimator;
 import com.android.systemui.broadcast.BroadcastSender;
 import com.android.systemui.dagger.SysUISingleton;
-import com.android.systemui.res.R;
 
 /**
  * Dialog for media output transferring.

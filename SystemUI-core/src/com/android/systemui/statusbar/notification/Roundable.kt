@@ -3,7 +3,6 @@ package com.android.systemui.statusbar.notification
 import android.util.FloatProperty
 import android.view.View
 import androidx.annotation.FloatRange
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.notification.stack.AnimationProperties
 import com.android.systemui.statusbar.notification.stack.StackStateAnimator
 import kotlin.math.abs

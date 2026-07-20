@@ -21,7 +21,6 @@ import android.media.MediaRouter
 import android.media.projection.MediaProjectionInfo
 import android.text.TextUtils
 import com.android.systemui.log.core.LogLevel
-import com.android.systemui.res.R
 import com.android.systemui.util.Utils
 
 /** Represents a specific cast session. */

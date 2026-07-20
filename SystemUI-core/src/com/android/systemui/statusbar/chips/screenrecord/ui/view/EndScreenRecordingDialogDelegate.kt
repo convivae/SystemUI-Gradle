@@ -19,7 +19,6 @@ package com.android.systemui.statusbar.chips.screenrecord.ui.view
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Bundle
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.chips.mediaprojection.ui.view.EndMediaProjectionDialogHelper
 import com.android.systemui.statusbar.chips.screenrecord.ui.viewmodel.ScreenRecordChipViewModel
 import com.android.systemui.statusbar.phone.SystemUIDialog

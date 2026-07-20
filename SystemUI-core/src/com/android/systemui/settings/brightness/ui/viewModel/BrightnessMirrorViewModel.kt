@@ -20,7 +20,6 @@ import android.content.res.Resources
 import android.util.Log
 import android.view.View
 import com.android.systemui.dagger.qualifiers.Main
-import com.android.systemui.res.R
 import com.android.systemui.settings.brightness.BrightnessSliderController
 import com.android.systemui.settings.brightness.MirrorController
 import com.android.systemui.settings.brightness.ToggleSlider

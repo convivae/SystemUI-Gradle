@@ -24,7 +24,6 @@ import com.android.keyguard.BouncerKeyguardMessageArea
 import com.android.keyguard.KeyguardMessageArea
 import com.android.keyguard.KeyguardMessageAreaController
 import com.android.systemui.Flags
-import com.android.systemui.res.R
 
 class BouncerMessageView : LinearLayout {
     constructor(context: Context?) : super(context)

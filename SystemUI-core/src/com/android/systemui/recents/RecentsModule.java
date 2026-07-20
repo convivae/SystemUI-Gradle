@@ -20,7 +20,6 @@ import android.content.Context;
 
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.ContextComponentHelper;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.ConfigurationController.ConfigurationListener;
 
 import dagger.Binds;

@@ -30,7 +30,6 @@ import com.android.keyguard.KeyguardStatusView;
 import com.android.systemui.log.LogBuffer;
 import com.android.systemui.log.core.Logger;
 import com.android.systemui.log.dagger.KeyguardClockLog;
-import com.android.systemui.res.R;
 import com.android.systemui.shade.LargeScreenHeaderHelper;
 import com.android.systemui.shade.ShadeViewController;
 import com.android.systemui.statusbar.policy.KeyguardUserSwitcherListView;

@@ -18,7 +18,6 @@ package com.android.systemui.bouncer.util
 
 import android.app.ActivityManager
 import android.content.res.Resources
-import com.android.systemui.res.R
 import java.io.File
 
 private const val ENABLE_MENU_KEY_FILE = "/data/local/enable_menu_key"

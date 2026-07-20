@@ -27,7 +27,6 @@ import android.view.ViewGroup;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.HardwareBgDrawable;
-import com.android.systemui.res.R;
 
 /**
  * Flat, single-row implementation of the button layout created by the global actions dialog.

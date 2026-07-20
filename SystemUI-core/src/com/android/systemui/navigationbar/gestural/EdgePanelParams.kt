@@ -5,7 +5,6 @@ import android.util.TypedValue
 import androidx.core.animation.Interpolator
 import androidx.core.animation.PathInterpolator
 import androidx.dynamicanimation.animation.SpringForce
-import com.android.systemui.res.R
 
 data class EdgePanelParams(private var resources: Resources) {
 

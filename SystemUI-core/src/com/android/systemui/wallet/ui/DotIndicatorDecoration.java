@@ -27,7 +27,6 @@ import androidx.annotation.ColorInt;
 import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.android.systemui.res.R;
 
 final class DotIndicatorDecoration extends RecyclerView.ItemDecoration {
     private final int mUnselectedRadius;

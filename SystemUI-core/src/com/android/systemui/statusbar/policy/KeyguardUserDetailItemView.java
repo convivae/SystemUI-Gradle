@@ -27,7 +27,6 @@ import androidx.core.graphics.ColorUtils;
 import com.android.app.animation.Interpolators;
 import com.android.keyguard.KeyguardConstants;
 import com.android.systemui.qs.tiles.UserDetailItemView;
-import com.android.systemui.res.R;
 
 /**
  * Displays a user on the keyguard user switcher.

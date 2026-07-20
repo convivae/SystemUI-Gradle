@@ -43,7 +43,6 @@ import androidx.constraintlayout.widget.Constraints;
 import com.android.systemui.complication.ComplicationLayoutParams.Direction;
 import com.android.systemui.complication.ComplicationLayoutParams.Position;
 import com.android.systemui.complication.dagger.ComplicationModule;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.touch.TouchInsetManager;
 

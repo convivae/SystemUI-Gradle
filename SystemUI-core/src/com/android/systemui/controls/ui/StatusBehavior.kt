@@ -26,7 +26,6 @@ import android.service.controls.Control
 import android.view.View
 import android.view.WindowManager
 
-import com.android.systemui.res.R
 
 class StatusBehavior : Behavior {
     lateinit var cvh: ControlViewHolder

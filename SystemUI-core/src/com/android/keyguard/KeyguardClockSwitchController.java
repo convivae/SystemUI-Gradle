@@ -224,9 +224,9 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
 
         if (!MigrateClocksToBlueprint.isEnabled()) {
             mSmallClockFrame = mView
-                .findViewById(com.android.systemui.customization.R.id.lockscreen_clock_view);
+                .findViewById(com.android.systemui.R.id.lockscreen_clock_view);
             mLargeClockFrame = mView
-                .findViewById(com.android.systemui.customization.R.id.lockscreen_clock_view_large);
+                .findViewById(com.android.systemui.R.id.lockscreen_clock_view_large);
         }
 
         if (!mOnlyClock) {
@@ -261,7 +261,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
                 mView.getResources().getDimensionPixelSize(R.dimen.keyguard_clock_top_margin);
         mKeyguardLargeClockTopMargin =
                 mView.getResources().getDimensionPixelSize(
-                        com.android.systemui.customization.R.dimen.keyguard_large_clock_top_margin);
+                        com.android.systemui.R.dimen.keyguard_large_clock_top_margin);
         mKeyguardDateWeatherViewInvisibility =
                 mView.getResources().getInteger(R.integer.keyguard_date_weather_view_invisibility);
 
@@ -427,7 +427,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
                 mView.getResources().getDimensionPixelSize(R.dimen.keyguard_clock_top_margin);
         mKeyguardLargeClockTopMargin =
                 mView.getResources().getDimensionPixelSize(
-                        com.android.systemui.customization.R.dimen.keyguard_large_clock_top_margin);
+                        com.android.systemui.R.dimen.keyguard_large_clock_top_margin);
         mKeyguardDateWeatherViewInvisibility =
                 mView.getResources().getInteger(R.integer.keyguard_date_weather_view_invisibility);
         mView.updateClockTargetRegions();

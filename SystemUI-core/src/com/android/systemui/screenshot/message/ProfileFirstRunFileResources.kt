@@ -18,7 +18,6 @@ package com.android.systemui.screenshot.message
 
 import android.content.ComponentName
 import android.content.Context
-import com.android.systemui.res.R
 import javax.inject.Inject
 
 /** Provides various configuration resource values for the profile first run flow. */

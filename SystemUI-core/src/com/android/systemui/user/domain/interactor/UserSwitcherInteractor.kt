@@ -52,7 +52,6 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.process.ProcessWrapper
 import com.android.systemui.qs.user.UserSwitchDialogController
-import com.android.systemui.res.R
 import com.android.systemui.telephony.domain.interactor.TelephonyInteractor
 import com.android.systemui.user.CreateUserActivity
 import com.android.systemui.user.data.model.UserSwitcherSettingsModel

@@ -18,7 +18,6 @@ package com.android.systemui.statusbar.notification.collection.provider
 
 import android.content.Context
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 

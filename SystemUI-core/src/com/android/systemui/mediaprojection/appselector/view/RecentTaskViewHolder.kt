@@ -26,7 +26,6 @@ import com.android.systemui.mediaprojection.appselector.data.BadgedAppIconLoader
 import com.android.systemui.mediaprojection.appselector.data.RecentTask
 import com.android.systemui.mediaprojection.appselector.data.RecentTaskLabelLoader
 import com.android.systemui.mediaprojection.appselector.data.RecentTaskThumbnailLoader
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.ConfigurationController.ConfigurationListener
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory

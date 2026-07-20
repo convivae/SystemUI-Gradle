@@ -56,7 +56,6 @@ import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.log.DebugLogger;
 import com.android.systemui.notetask.NoteTaskController;
 import com.android.systemui.notetask.NoteTaskEntryPoint;
-import com.android.systemui.res.R;
 
 import java.util.concurrent.Executor;
 

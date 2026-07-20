@@ -36,7 +36,6 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import androidx.annotation.StringRes
 import com.android.systemui.mediaprojection.MediaProjectionMetricsLogger
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.DialogDelegate
 
 /** Base permission dialog for screen share and recording */

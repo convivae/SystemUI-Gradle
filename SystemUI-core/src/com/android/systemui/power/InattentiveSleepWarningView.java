@@ -33,7 +33,6 @@ import android.widget.FrameLayout;
 
 import com.android.app.viewcapture.ViewCapture;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
-import com.android.systemui.res.R;
 
 import kotlin.Lazy;
 

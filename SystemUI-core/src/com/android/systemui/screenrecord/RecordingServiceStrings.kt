@@ -17,7 +17,6 @@
 package com.android.systemui.screenrecord
 
 import android.content.res.Resources
-import com.android.systemui.res.R
 
 open class RecordingServiceStrings(private val res: Resources) {
     open val title

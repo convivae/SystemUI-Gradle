@@ -22,7 +22,6 @@ import android.widget.TextView
 import com.android.internal.logging.UiEventLogger
 import com.android.settingslib.bluetooth.CachedBluetoothDevice
 import com.android.systemui.dagger.qualifiers.Application
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory

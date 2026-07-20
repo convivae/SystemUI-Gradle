@@ -27,7 +27,6 @@ import com.android.internal.annotations.VisibleForTesting
 import com.android.systemui.media.controls.ui.drawable.SquigglyProgress
 import com.android.systemui.media.controls.ui.view.MediaViewHolder
 import com.android.systemui.media.controls.ui.viewmodel.SeekBarViewModel
-import com.android.systemui.res.R
 
 private const val TAG = "SeekBarObserver"
 

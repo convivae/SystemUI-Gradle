@@ -24,7 +24,6 @@ import com.android.internal.util.Preconditions
 import com.android.systemui.Flags
 import com.android.systemui.complication.DreamClockTimeComplication
 import com.android.systemui.complication.DreamClockTimeComplication.DreamClockTimeViewHolder
-import com.android.systemui.res.R
 import dagger.Module
 import dagger.Provides
 import dagger.Subcomponent

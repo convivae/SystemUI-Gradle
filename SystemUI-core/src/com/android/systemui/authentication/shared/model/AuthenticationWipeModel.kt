@@ -17,7 +17,6 @@
 package com.android.systemui.authentication.shared.model
 
 import androidx.annotation.StringRes
-import com.android.systemui.res.R
 
 /**
  * Some users have a DevicePolicyManager that requests a user/profile to be wiped after N

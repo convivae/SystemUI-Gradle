@@ -19,7 +19,6 @@ import android.content.Context
 import android.content.res.Configuration
 import android.util.AttributeSet
 import android.widget.FrameLayout
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.events.BackgroundAnimatableView
 
 /** Chip that appears in the status bar when an external display is connected. */

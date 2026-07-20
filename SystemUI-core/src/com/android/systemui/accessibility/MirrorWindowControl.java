@@ -34,7 +34,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
-import com.android.systemui.res.R;
 
 /**
  * Contains a movable control UI to manipulate mirrored window's position, size and scale. The

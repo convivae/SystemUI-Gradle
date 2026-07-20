@@ -29,7 +29,6 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.systemui.res.R;
 
 /**
  * Activity that alerts the user when contaminant is detected on USB port.

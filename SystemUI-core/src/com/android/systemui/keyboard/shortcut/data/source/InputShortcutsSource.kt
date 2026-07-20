@@ -29,7 +29,6 @@ import android.view.WindowManager.KeyboardShortcutsReceiver
 import com.android.systemui.Flags.shortcutHelperKeyGlyph
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyboard.shortcut.data.model.shortcutInfo
-import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.suspendCancellableCoroutine
 

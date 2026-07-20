@@ -33,7 +33,6 @@ import android.os.ServiceManager;
 import android.util.Log;
 import android.view.WindowManager;
 
-import com.android.systemui.res.R;
 
 /**
  * Notify user that a {@link NetworkTemplate} is over its

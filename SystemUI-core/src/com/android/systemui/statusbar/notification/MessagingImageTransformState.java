@@ -20,7 +20,6 @@ import android.util.Pools;
 import android.view.View;
 
 import com.android.internal.widget.MessagingImageMessage;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.ViewTransformationHelper;
 
 /**

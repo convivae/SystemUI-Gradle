@@ -53,7 +53,6 @@ import com.android.systemui.mediaprojection.MediaProjectionCaptureTarget
 import com.android.systemui.mediaprojection.MediaProjectionServiceHelper
 import com.android.systemui.mediaprojection.appselector.data.RecentTask
 import com.android.systemui.mediaprojection.appselector.view.MediaProjectionRecentsViewController
-import com.android.systemui.res.R
 import com.android.systemui.shared.system.ActivityManagerWrapper
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.util.AsyncActivityLauncher

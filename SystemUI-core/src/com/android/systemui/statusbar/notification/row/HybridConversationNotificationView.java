@@ -36,7 +36,6 @@ import com.android.internal.widget.ConversationAvatarData.GroupConversationAvata
 import com.android.internal.widget.ConversationAvatarData.OneToOneConversationAvatarData;
 import com.android.internal.widget.ConversationHeaderData;
 import com.android.internal.widget.ConversationLayout;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.NotificationFadeAware;
 import com.android.systemui.statusbar.notification.row.shared.AsyncHybridViewInflation;
 import com.android.systemui.statusbar.notification.row.shared.ConversationStyleSetAvatarAsync;

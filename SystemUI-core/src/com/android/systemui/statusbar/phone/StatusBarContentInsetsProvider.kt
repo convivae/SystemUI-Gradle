@@ -36,7 +36,6 @@ import com.android.systemui.StatusBarInsetsCommand
 import com.android.systemui.SysUICutoutInformation
 import com.android.systemui.SysUICutoutProvider
 import com.android.systemui.dump.DumpManager
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.commandline.CommandRegistry
 import com.android.systemui.statusbar.core.StatusBarConnectedDisplays
 import com.android.systemui.statusbar.policy.CallbackController

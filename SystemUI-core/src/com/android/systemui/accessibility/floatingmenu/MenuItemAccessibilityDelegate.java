@@ -28,7 +28,6 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.recyclerview.widget.RecyclerViewAccessibilityDelegate;
 
 import com.android.systemui.Flags;
-import com.android.systemui.res.R;
 
 /**
  * An accessibility item delegate for the individual items of the list view in the

@@ -22,7 +22,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 
 import com.android.systemui.complication.DreamMediaEntryComplication;
-import com.android.systemui.res.R;
 
 import dagger.Module;
 import dagger.Provides;

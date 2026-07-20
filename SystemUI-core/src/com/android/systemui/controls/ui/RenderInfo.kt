@@ -26,7 +26,6 @@ import android.service.controls.templates.TemperatureControlTemplate
 import android.util.ArrayMap
 import android.util.SparseArray
 
-import com.android.systemui.res.R
 
 data class RenderInfo(
     val icon: Drawable,

@@ -21,7 +21,6 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import com.android.systemui.res.R
 import com.android.systemui.user.data.source.UserRecord
 
 /**

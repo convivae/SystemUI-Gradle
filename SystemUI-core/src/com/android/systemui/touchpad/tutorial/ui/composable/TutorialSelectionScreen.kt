@@ -51,7 +51,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.android.systemui.inputdevice.tutorial.ui.composable.DoneButton
-import com.android.systemui.res.R
 import com.android.systemui.touchpad.tutorial.ui.gesture.isFourFingerTouchpadSwipe
 import com.android.systemui.touchpad.tutorial.ui.gesture.isThreeFingerTouchpadSwipe
 import com.android.systemui.touchpad.tutorial.ui.viewmodel.Screen

@@ -42,7 +42,6 @@ import android.widget.TextView;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.settingslib.Utils;
 import com.android.systemui.classifier.FalsingCollector;
-import com.android.systemui.res.R;
 
 import java.util.List;
 

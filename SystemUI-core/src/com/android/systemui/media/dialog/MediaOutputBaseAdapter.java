@@ -50,7 +50,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.android.settingslib.media.InputMediaDevice;
 import com.android.settingslib.media.MediaDevice;
 import com.android.settingslib.utils.ThreadUtils;
-import com.android.systemui.res.R;
 
 import java.util.List;
 

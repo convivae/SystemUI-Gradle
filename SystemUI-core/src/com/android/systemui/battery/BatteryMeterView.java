@@ -58,7 +58,6 @@ import com.android.systemui.battery.unified.BatteryLayersDrawable;
 import com.android.systemui.battery.unified.ColorProfile;
 import com.android.systemui.plugins.DarkIconDispatcher;
 import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.BatteryController;
 
 import java.io.PrintWriter;

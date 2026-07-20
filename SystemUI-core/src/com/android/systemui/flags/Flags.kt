@@ -20,7 +20,6 @@ import com.android.systemui.flags.FlagsFactory.releasedFlag
 import com.android.systemui.flags.FlagsFactory.resourceBooleanFlag
 import com.android.systemui.flags.FlagsFactory.sysPropBooleanFlag
 import com.android.systemui.flags.FlagsFactory.unreleasedFlag
-import com.android.systemui.res.R
 
 /**
  * List of [Flag] objects for use in SystemUI.

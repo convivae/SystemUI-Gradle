@@ -17,7 +17,7 @@
 package com.android.systemui.keyguard.ui.viewmodel
 
 import android.content.Context
-import com.android.systemui.customization.R as customR
+import com.android.systemui.R
 import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor
 import com.android.systemui.keyguard.shared.model.ClockSizeSetting
 import com.android.systemui.plugins.clocks.ClockPreviewConfig
@@ -75,7 +75,7 @@ constructor(
      */
     fun getSmallClockSmartspaceTopPadding(config: ClockPreviewConfig): Int {
         return getSmallClockTopPadding(config, systemBarUtils.getStatusBarHeaderHeightKeyguard()) +
-            config.previewContext.resources.getDimensionPixelSize(customR.dimen.small_clock_height)
+            config.previewContext.resources.getDimensionPixelSize(R.dimen.small_clock_height)
     }
 
     fun getLargeClockSmartspaceTopPadding(clockPreviewConfig: ClockPreviewConfig): Int {

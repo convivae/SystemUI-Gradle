@@ -51,7 +51,6 @@ import com.android.systemui.keyguard.util.WallpaperPickerIntentUtils.LAUNCH_SOUR
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.FalsingManager
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.util.doOnEnd
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -23,7 +23,6 @@ import androidx.annotation.FloatRange
 import androidx.annotation.Px
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.plugins.qs.QS
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.statusbar.policy.SplitShadeStateController
 import dagger.assisted.Assisted

@@ -21,7 +21,6 @@ import android.content.Intent
 import com.android.systemui.communal.widgets.EditWidgetsActivity.Companion.EXTRA_OPEN_WIDGET_PICKER_ON_START
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.plugins.ActivityStarter
-import com.android.systemui.res.R
 import javax.inject.Inject
 
 interface EditWidgetsActivityStarter {

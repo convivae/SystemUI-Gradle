@@ -35,7 +35,6 @@ import com.android.systemui.keyguard.KeyguardViewConfigurator
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.media.controls.ui.controller.KeyguardMediaController
-import com.android.systemui.res.R
 import com.android.systemui.shade.NotificationPanelView
 import com.android.systemui.shade.NotificationPanelViewController
 import com.android.systemui.shade.ShadeDisplayAware

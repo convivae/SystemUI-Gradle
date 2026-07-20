@@ -33,7 +33,6 @@ import com.android.systemui.communal.ui.viewmodel.CommunalTutorialIndicatorViewM
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.keyguard.ui.view.layout.sections.removeView
-import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.DisposableHandle
 

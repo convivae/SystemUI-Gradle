@@ -23,7 +23,6 @@ import com.android.settingslib.bluetooth.BluetoothUtils
 import com.android.settingslib.bluetooth.CachedBluetoothDevice
 import com.android.settingslib.bluetooth.LocalBluetoothManager
 import com.android.settingslib.flags.Flags
-import com.android.systemui.res.R
 
 private val backgroundOn = R.drawable.settingslib_switch_bar_bg_on
 private val backgroundOff = R.drawable.bluetooth_tile_dialog_bg_off

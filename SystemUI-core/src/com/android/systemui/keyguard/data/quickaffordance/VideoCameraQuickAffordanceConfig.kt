@@ -22,7 +22,6 @@ import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
 import com.android.systemui.ActivityIntentHelper
-import com.android.systemui.res.R
 import com.android.systemui.animation.Expandable
 import com.android.systemui.camera.CameraIntents
 import com.android.systemui.camera.CameraIntentsWrapper

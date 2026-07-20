@@ -29,7 +29,6 @@ import com.android.systemui.ambient.statusbar.ui.AmbientStatusBarView;
 import com.android.systemui.ambient.statusbar.ui.AmbientStatusBarViewController;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dreams.DreamOverlayContainerView;
-import com.android.systemui.res.R;
 import com.android.systemui.scene.ui.view.WindowRootView;
 import com.android.systemui.touch.TouchInsetManager;
 

@@ -22,7 +22,6 @@ import android.content.pm.UserInfo
 import android.graphics.Bitmap
 import android.os.UserManager
 import com.android.settingslib.RestrictedLockUtils.EnforcedAdmin
-import com.android.systemui.res.R
 import com.android.systemui.user.data.source.UserRecord
 import com.android.systemui.user.shared.model.UserActionModel
 import com.android.systemui.utils.UserRestrictionChecker

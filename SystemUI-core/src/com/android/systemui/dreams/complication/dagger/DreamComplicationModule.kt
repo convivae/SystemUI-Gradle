@@ -2,7 +2,6 @@ package com.android.systemui.dreams.complication.dagger
 
 import android.content.res.Resources
 import com.android.systemui.dagger.qualifiers.Main
-import com.android.systemui.res.R
 import dagger.Module
 import dagger.Provides
 import javax.inject.Named

@@ -22,7 +22,6 @@ import android.util.Slog;
 import android.widget.Toast;
 
 import com.android.systemui.SysUIToast;
-import com.android.systemui.res.R;
 
 /**
  *  Helper to manage showing/hiding a image to notify them that they are entering or exiting screen

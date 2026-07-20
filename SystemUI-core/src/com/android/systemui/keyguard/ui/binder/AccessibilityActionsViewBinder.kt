@@ -24,7 +24,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.systemui.keyguard.ui.viewmodel.AccessibilityActionsViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.res.R
 import kotlinx.coroutines.DisposableHandle
 import com.android.app.tracing.coroutines.launchTraced as launch
 

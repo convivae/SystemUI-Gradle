@@ -28,7 +28,6 @@ import android.widget.ProgressBar
 import androidx.core.view.isGone
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.res.R
 import javax.inject.Inject
 
 private const val TAG = "SideFpsProgressBar"

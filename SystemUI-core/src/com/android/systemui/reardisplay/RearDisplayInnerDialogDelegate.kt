@@ -19,7 +19,6 @@ package com.android.systemui.reardisplay
 import android.content.Context
 import android.os.Bundle
 import android.view.View
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory

@@ -32,7 +32,6 @@ import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
-import com.android.systemui.res.R
 import com.android.systemui.screenshot.scroll.ScrollCaptureController
 import com.android.systemui.screenshot.ui.viewmodel.ScreenshotViewModel
 import kotlin.math.abs

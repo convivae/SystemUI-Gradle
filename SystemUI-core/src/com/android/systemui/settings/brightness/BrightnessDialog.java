@@ -49,7 +49,6 @@ import com.android.systemui.brightness.ui.viewmodel.BrightnessSliderViewModel;
 import com.android.systemui.compose.ComposeInitializer;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.qs.flags.QsInCompose;
-import com.android.systemui.res.R;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.statusbar.policy.AccessibilityManagerWrapper;
 import com.android.systemui.util.concurrency.DelayableExecutor;

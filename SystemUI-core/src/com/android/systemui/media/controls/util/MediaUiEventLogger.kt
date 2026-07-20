@@ -24,7 +24,6 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.media.controls.shared.model.MediaData
 import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager
 import com.android.systemui.media.controls.ui.controller.MediaLocation
-import com.android.systemui.res.R
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
 

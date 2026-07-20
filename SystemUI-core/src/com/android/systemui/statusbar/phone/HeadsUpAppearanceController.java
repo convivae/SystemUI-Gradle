@@ -29,7 +29,6 @@ import com.android.internal.widget.ViewClippingUtil;
 import com.android.systemui.dagger.qualifiers.DisplaySpecific;
 import com.android.systemui.plugins.DarkIconDispatcher;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
-import com.android.systemui.res.R;
 import com.android.systemui.shade.ShadeHeadsUpTracker;
 import com.android.systemui.shade.ShadeViewController;
 import com.android.systemui.statusbar.CommandQueue;

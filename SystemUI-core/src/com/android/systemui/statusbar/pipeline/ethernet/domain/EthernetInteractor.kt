@@ -17,7 +17,6 @@
 package com.android.systemui.statusbar.pipeline.ethernet.domain
 
 import com.android.settingslib.AccessibilityContentDescriptions
-import com.android.systemui.res.R
 import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.dagger.SysUISingleton

@@ -60,7 +60,6 @@ import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.graphics.SfVsyncFrameCallbackProvider;
 import com.android.systemui.common.ui.view.SeekBarWithIconButtonsView;
-import com.android.systemui.res.R;
 import com.android.systemui.util.settings.SecureSettings;
 
 import java.lang.annotation.Retention;

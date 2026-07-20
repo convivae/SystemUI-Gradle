@@ -29,7 +29,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.settingslib.Utils;
-import com.android.systemui.res.R;
 
 /**
  * An ArrayAdapter which was used by Spinner in hearing devices dialog.

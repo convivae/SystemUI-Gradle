@@ -29,7 +29,6 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.qs.SettingObserver
 import com.android.systemui.qs.footer.data.model.UserSwitcherStatusModel
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.UserInfoController
 import com.android.systemui.statusbar.policy.UserSwitcherController
 import com.android.systemui.util.settings.GlobalSettings

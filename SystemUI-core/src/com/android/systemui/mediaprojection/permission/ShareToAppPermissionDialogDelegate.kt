@@ -20,7 +20,6 @@ import android.content.Context
 import android.media.projection.MediaProjectionConfig
 import android.os.Bundle
 import com.android.systemui.mediaprojection.MediaProjectionMetricsLogger
-import com.android.systemui.res.R
 import java.util.function.Consumer
 
 /**

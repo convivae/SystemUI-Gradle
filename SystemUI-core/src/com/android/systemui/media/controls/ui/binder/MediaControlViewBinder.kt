@@ -58,7 +58,6 @@ import com.android.systemui.media.controls.util.MediaDataUtils
 import com.android.systemui.monet.ColorScheme
 import com.android.systemui.monet.Style
 import com.android.systemui.plugins.FalsingManager
-import com.android.systemui.res.R
 import com.android.systemui.surfaceeffects.ripple.MultiRippleView
 import com.android.systemui.surfaceeffects.ripple.RippleAnimation
 import com.android.systemui.surfaceeffects.ripple.RippleAnimationConfig

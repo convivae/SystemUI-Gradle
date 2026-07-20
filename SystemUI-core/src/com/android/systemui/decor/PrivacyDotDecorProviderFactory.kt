@@ -25,7 +25,6 @@ import android.view.View
 import android.view.ViewGroup
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
-import com.android.systemui.res.R
 import javax.inject.Inject
 
 /**

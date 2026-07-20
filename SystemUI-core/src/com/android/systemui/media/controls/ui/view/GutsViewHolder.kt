@@ -26,7 +26,6 @@ import com.android.systemui.media.controls.ui.animation.accentPrimaryFromScheme
 import com.android.systemui.media.controls.ui.animation.surfaceFromScheme
 import com.android.systemui.media.controls.ui.animation.textPrimaryFromScheme
 import com.android.systemui.monet.ColorScheme
-import com.android.systemui.res.R
 
 /**
  * A view holder for the guts menu of a media player. The guts are shown when the user long-presses

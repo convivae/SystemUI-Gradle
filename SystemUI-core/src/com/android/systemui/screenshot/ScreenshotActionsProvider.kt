@@ -24,7 +24,6 @@ import androidx.appcompat.content.res.AppCompatResources
 import com.android.internal.logging.UiEventLogger
 import com.android.systemui.Flags.screenshotContextUrl
 import com.android.systemui.log.DebugLogger.debugLog
-import com.android.systemui.res.R
 import com.android.systemui.screenshot.ActionIntentCreator.createEdit
 import com.android.systemui.screenshot.ActionIntentCreator.createShareWithSubject
 import com.android.systemui.screenshot.ActionIntentCreator.createShareWithText

@@ -32,7 +32,6 @@ import android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_GESTURAL
 import android.view.accessibility.AccessibilityEvent
 import android.widget.FrameLayout
 import android.widget.ImageView
-import com.android.systemui.res.R
 import com.android.systemui.screenshot.FloatingWindowUtil
 
 class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :

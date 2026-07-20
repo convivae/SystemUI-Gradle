@@ -29,7 +29,6 @@ import com.android.systemui.people.PeopleTileViewHelper
 import com.android.systemui.people.data.model.PeopleTileModel
 import com.android.systemui.people.data.repository.PeopleTileRepository
 import com.android.systemui.people.data.repository.PeopleWidgetRepository
-import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

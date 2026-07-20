@@ -43,7 +43,6 @@ import com.android.systemui.qs.shared.model.TileCategory;
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig;
 import com.android.systemui.qs.tiles.viewmodel.QSTilePolicy;
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig;
-import com.android.systemui.res.R;
 import com.android.systemui.touch.TouchInsetManager;
 
 import dagger.Binds;

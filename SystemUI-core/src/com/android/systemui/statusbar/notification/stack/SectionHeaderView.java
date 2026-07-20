@@ -32,7 +32,6 @@ import android.widget.TextView;
 
 import androidx.core.view.ViewCompat;
 
-import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.row.StackScrollerDecorView;
 
 /**

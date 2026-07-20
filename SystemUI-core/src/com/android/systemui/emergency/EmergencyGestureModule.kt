@@ -27,7 +27,6 @@ import dagger.Module
 import dagger.Provides
 
 import com.android.systemui.dagger.qualifiers.Main
-import com.android.systemui.res.R
 
 /** Module for providing emergency gesture objects. */
 @Module

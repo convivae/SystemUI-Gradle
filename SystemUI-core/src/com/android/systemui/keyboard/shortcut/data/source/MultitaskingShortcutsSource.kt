@@ -32,7 +32,6 @@ import android.view.KeyboardShortcutGroup
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyboard.shortcut.data.model.shortcutInfo
-import com.android.systemui.res.R
 import com.android.window.flags.Flags.enableMoveToNextDisplayShortcut
 import com.android.window.flags.Flags.enableTaskResizingKeyboardShortcuts
 import com.android.wm.shell.shared.desktopmode.DesktopModeStatus

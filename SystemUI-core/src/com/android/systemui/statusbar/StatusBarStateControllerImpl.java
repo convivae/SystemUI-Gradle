@@ -55,7 +55,6 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor;
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor;
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor;
 import com.android.systemui.plugins.statusbar.StatusBarStateController.StateListener;
-import com.android.systemui.res.R;
 import com.android.systemui.scene.data.model.SceneStack;
 import com.android.systemui.scene.data.model.SceneStackKt;
 import com.android.systemui.scene.domain.interactor.SceneBackInteractor;

@@ -39,7 +39,6 @@ import com.android.systemui.deviceentry.shared.model.FaceTimeoutMessage
 import com.android.systemui.deviceentry.shared.model.FingerprintFailureMessage
 import com.android.systemui.deviceentry.shared.model.FingerprintLockoutMessage
 import com.android.systemui.lifecycle.ExclusiveActivatable
-import com.android.systemui.res.R.string.kg_too_many_failed_attempts_countdown
 import com.android.systemui.user.ui.viewmodel.UserSwitcherViewModel
 import com.android.systemui.util.kotlin.Utils.Companion.sample
 import com.android.systemui.util.time.SystemClock

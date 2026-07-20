@@ -29,7 +29,6 @@ import com.android.systemui.keyguard.shared.model.BiometricUnlockSource
 import com.android.systemui.power.data.repository.PowerRepository
 import com.android.systemui.power.shared.model.WakeSleepReason
 import com.android.systemui.power.shared.model.WakeSleepReason.TAP
-import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.CircleReveal
 import com.android.systemui.statusbar.LiftReveal

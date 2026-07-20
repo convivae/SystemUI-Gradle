@@ -17,7 +17,6 @@
 package com.android.systemui.decor
 
 import android.view.DisplayCutout
-import com.android.systemui.res.R
 
 class RoundedCornerDecorProviderFactory(
     private val roundedCornerResDelegate: RoundedCornerResDelegate

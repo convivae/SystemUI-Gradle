@@ -21,7 +21,6 @@ import android.content.Context
 import android.view.ContextThemeWrapper
 import com.android.settingslib.Utils
 import com.android.settingslib.flags.Flags.newStatusBarIcons
-import com.android.systemui.res.R
 
 /**
  * A color blender for `Theme.SystemUI` and other themes.

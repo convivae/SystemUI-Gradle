@@ -30,7 +30,6 @@ import com.android.systemui.mediaprojection.permission.ENTIRE_SCREEN
 import com.android.systemui.mediaprojection.permission.SINGLE_APP
 import com.android.systemui.mediaprojection.permission.ScreenShareMode
 import com.android.systemui.mediaprojection.permission.ScreenShareOption
-import com.android.systemui.res.R
 
 class ScreenRecordPermissionViewBinder(
     hostUid: Int,
