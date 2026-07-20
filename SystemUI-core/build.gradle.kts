@@ -145,9 +145,6 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
-    // 添加 stateIn 需要的协程 jvm 实现
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.9.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Dagger
     implementation(libs.dagger)
@@ -174,14 +171,4 @@ dependencies {
     // 注：原 compose/scene 源码已复制到 src 下，但因为它依赖一系列 Compose 内部 API
     //     （thenIf/drawInContainer 等），完整编译需要更多 Compose 依赖，
     //     暂时通过 sourceSets exclude 排除这些文件以让主流程通过。
-}
-
-// 让 compile* 任务在出错时仍然继续
-// 注：让 build 在 SystemUI-core 编译错误时继续尝试生成其它输出
-gradle.projectsEvaluated {
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        if (name.contains("compileDebug") || name.contains("compileRelease")) {
-            // 不做任何修改
-        }
-    }
 }

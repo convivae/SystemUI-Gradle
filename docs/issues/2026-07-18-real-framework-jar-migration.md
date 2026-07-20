@@ -706,3 +706,106 @@ AOSP 子模块都搬过来，约 5000+ 源文件。
   清理过的 prebuilt JAR
 - ⏳ `SystemUI-core` — 有约 24000 行 unresolved 引用（主要来自 SystemUI 内部
   SystemUI-shared 与 flags 模块），需要继续补充依赖
+
+---
+
+# 2026-07-20: SystemUI-core 大规模补充 AOSP 内部依赖
+
+## 背景
+
+SystemUI-core 包含 76,065 行 Kotlin/Java 代码（约 4,250 个源文件），完整复制了
+AOSP SystemUI 全部源代码。本任务尝试填补其中 24,000+ 编译错误，使其尽可能编译通过。
+
+## 复制内容
+
+### 1. pods/ 完整复制
+- `com/android/systemui/util/settings/*` (SecureSettings, GlobalSettings, SettingsProxy 等)
+- `com/android/systemui/dagger/*` (SysUISingleton, GlobalRootComponent 等)
+- `com/android/systemui/dagger/qualifiers/*` (Background, Application, Main,
+  DisplaySpecific, Tracing, NotifInflation 等全部 15 个 qualifier)
+- `com/android/systemui/retail/*` (RetailMode 实现)
+
+### 2. shared/ 选择性复制
+- `com/android/systemui/dagger/qualifiers/Main.java`
+- `com/android/systemui/dagger/qualifiers/DisplaySpecific.kt`
+- `com/android/systemui/dagger/qualifiers/Tracing.kt`
+
+### 3. compose/scene/ 完整 46 个源码文件
+- `SceneTransitionLayout.kt`、`Element.kt`、`MultiPointerDraggable.kt` 等
+- 完整依赖：com.android.compose.ui.*、nestedscroll.*
+
+### 4. ui/util/ 选择性复制
+- `SpaceVectorConverter.kt`、`IntIndexedMap.kt`、`MathHelpers.kt`
+
+### 5. nestedscroll/ 复制
+- `LargeTopAppBarNestedScrollConnection.kt`
+- `PriorityNestedScrollConnection.kt`
+
+### 6. utils/coroutines/flow/ 复制
+- `conflatedCallbackFlow`、`conflatedChannelFlow` (FlowConflated.kt)
+- `flatMapLatestConflated` (LatestConflated.kt)
+
+### 7. res/ 复制
+- aosp/frameworks/base/packages/SystemUI/res/、res-keyguard、res-product 全部资源
+
+### 8. prebuilt JAR
+- `SystemUISharedLib.jar` 包装为 Maven AAR（SystemUISharedLib-1.0.0.aar）
+- `tracinglib-platform.jar` (提供 `launchTraced`)
+
+### 9. R 类统一
+- 批量替换所有 `com.android.systemui.res.R` →
+  `com.android.systemui.R`（942 个文件）
+- 批量替换 `com.android.systemui.shared.R`、`com.android.systemui.shared.customization.R`、
+  `com.android.systemui.biometrics.R`、`com.android.systemui.customization.R` →
+  `com.android.systemui.R`
+
+## 编译错误演变
+
+| 时点 | 错误数 | 备注 |
+|------|--------|------|
+| 起始 | ~24,000+ | 初次尝试，缺少所有 AOSP 内部依赖 |
+| 添加 Compose + Coroutines | ~21,000 | 部分 Scene framework 引入 |
+| 复制 pods/ 全部 | ~11,450 | SysUISingleton 解决，Settings/Retail 引入 |
+| 引入 SharedLib AAR | ~10,541 | LogBuffer/FlagManager 等可用 |
+| 复制 compose/scene/ | ~10,541 | 副作用小，Scene framework 部分完整 |
+| 复制 res-keyguard | ~10,541 | R 类生成但命名空间不一致 |
+| 统一 R 类名 | ~6,857 | `res.R` → 统一 `R` |
+| 添加 tracinglib-platform | ~5,462 | launchTraced 解决 |
+| 复制 ui/util + nestedscroll | ~11,606 | Scene framework 中元素可访问但仍缺类型推断 |
+| 最终状态 | ~11,606 | **仍有约 12k errors** |
+
+## 剩余错误分析
+
+剩余错误主要分为：
+
+1. **`stateIn`/`asStateFlow`/`trySend`/`milliseconds` 等 Kotlin 协程扩展**：
+   - 这些函数在 `kotlinx-coroutines-core-jvm 1.9.0` 中确实存在
+   - 但 Kotlin 2.1.0 编译器无法解析
+   - **疑似 Kotlin Gradle Plugin vs Kotlin Compiler 版本不一致**
+2. **Compose Scene framework 的内部 AOSP 扩展**（如 `thenIf()`、
+   `drawInContainer()`）：需要 AOSP 修改过的 Compose 版本
+3. **类型推断级联错误**：一个 unresolved 类型会导致数十个 unresolved 引用
+4. **`sharedR`/`customR`/`biometricsR` 等子模块 R 类**：已经批量替换但还有一些遗漏
+
+## 文件改动
+
+- `SystemUI-core/src/com/android/systemui/util/settings/`（从 aosp pods/）
+- `SystemUI-core/src/com/android/systemui/dagger/`（从 aosp pods/）
+- `SystemUI-core/src/com/android/systemui/dagger/qualifiers/`（合并 aosp pods/shared）
+- `SystemUI-core/src/com/android/systemui/retail/`（从 aosp pods/）
+- `SystemUI-core/src/com/android/compose/animation/scene/`（46 个文件，从 compose/scene/）
+- `SystemUI-core/src/com/android/compose/nestedscroll/`（从 compose/scene/nestedscroll/）
+- `SystemUI-core/src/com/android/compose/ui/util/`（从 compose/scene/ui/util/）
+- `SystemUI-core/src/com/android/systemui/utils/coroutines/flow/`（从 utils/）
+- `SystemUI-core/src/res/`、`res-keyguard/`、`res-product/`（从 aosp packages/SystemUI/）
+- `libs/prebuilts/tracinglib-platform.jar`（从 aosp out/.../tracinglib-platform.jar）
+- `libs/maven/com/android/systemui/SystemUISharedLib/1.0.0/`（包装 prebuilt JAR 为 AAR）
+- `SystemUI-core/build.gradle.kts`：增加依赖、添加 compileOnly(libs.systemui.sharedlib)
+- `gradle/libs.versions.toml`：增加 `systemui-sharedlib` library entry
+
+## 下一步
+
+1. **解决 Kotlin 协程扩展 unresolved**：尝试切换到 Kotlin 2.2.x 版本，或升级 coroutines 到 1.10.x。
+2. **优化 R 类**：批量替换剩余 shared/customization R 引用。
+3. **集成 Scene framework 完整编译**：需要定制版 Compose runtime。
+4. **完成全量编译**：逐步解决剩余 12k 个错误。
