@@ -26,6 +26,7 @@ import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.CompletableDeferred
+import com.android.systemui.util.kotlin.userId
 
 private const val TAG = "SystemUiProxy"
 

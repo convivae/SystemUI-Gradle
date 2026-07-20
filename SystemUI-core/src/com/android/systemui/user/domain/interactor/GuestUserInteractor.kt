@@ -46,6 +46,7 @@ import kotlinx.coroutines.CoroutineScope
 import com.android.app.tracing.coroutines.launchTraced as launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import com.android.systemui.util.kotlin.userId
 
 /** Encapsulates business logic to interact with guest user data and systems. */
 @SysUISingleton

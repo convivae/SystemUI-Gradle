@@ -28,6 +28,7 @@ import com.android.systemui.settings.UserFileManagerImpl
 import java.io.File
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
+import com.android.systemui.util.kotlin.userId
 
 /**
  * Class to track the auxiliary persistence of controls.

@@ -40,6 +40,7 @@ import com.android.app.tracing.coroutines.asyncTraced as async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.withContext
+import com.android.systemui.util.kotlin.userId
 
 /** Provides data related to accessibility quick setting shortcut option. */
 interface AccessibilityQsShortcutsRepository {

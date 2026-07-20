@@ -35,6 +35,7 @@ import android.util.IconDrawableFactory
 import androidx.annotation.WorkerThread
 import com.android.settingslib.applications.DefaultAppInfo
 import java.util.Objects
+import com.android.systemui.util.kotlin.userId
 
 open class ControlsServiceInfo(
     private val context: Context,

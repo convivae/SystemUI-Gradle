@@ -83,6 +83,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Inject;
+import com.android.systemui.util.kotlin.userId
 
 /**
  * Controller which coordinates all the biometric unlocking actions with the UI.

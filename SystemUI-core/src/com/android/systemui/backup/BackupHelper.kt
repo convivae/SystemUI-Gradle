@@ -40,6 +40,7 @@ import com.android.systemui.keyguard.domain.backup.KeyguardQuickAffordanceBackup
 import com.android.systemui.people.widget.PeopleBackupHelper
 import com.android.systemui.qs.panels.domain.backup.QSPreferencesBackupHelper
 import com.android.systemui.settings.UserFileManagerImpl
+import com.android.systemui.util.kotlin.userId
 
 /**
  * Helper for backing up elements in SystemUI

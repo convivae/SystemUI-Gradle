@@ -24,6 +24,7 @@ import android.util.Log
 import com.android.app.tracing.traceSection
 import com.android.systemui.keyguard.data.quickaffordance.KeyguardQuickAffordanceSelectionManager
 import com.android.systemui.settings.UserFileManagerImpl
+import com.android.systemui.util.kotlin.userId
 
 /** Handles backup & restore for keyguard quick affordances. */
 class KeyguardQuickAffordanceBackupHelper(

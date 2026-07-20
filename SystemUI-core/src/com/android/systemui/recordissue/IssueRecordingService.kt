@@ -44,6 +44,7 @@ import com.android.traceur.PresetTraceConfigs
 import com.android.traceur.TraceConfig
 import java.util.concurrent.Executor
 import javax.inject.Inject
+import com.android.systemui.util.kotlin.userId
 
 class IssueRecordingService
 @Inject

@@ -27,6 +27,7 @@ import com.android.systemui.qs.pipeline.domain.interactor.PanelInteractor
 import com.android.systemui.settings.UserContextProvider
 import com.android.traceur.PresetTraceConfigs
 import java.util.concurrent.Executor
+import com.android.systemui.util.kotlin.userId
 
 private const val SHELL_PACKAGE = "com.android.shell"
 private const val NOTIFY_SESSION_ENDED_SETTING = "should_notify_trace_session_ended"

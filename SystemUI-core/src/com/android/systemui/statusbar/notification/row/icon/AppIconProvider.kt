@@ -43,6 +43,7 @@ import dagger.Provides
 import java.io.PrintWriter
 import javax.inject.Inject
 import javax.inject.Provider
+import com.android.systemui.util.kotlin.userId
 
 /** A provider used to cache and fetch app icons used by notifications. */
 interface AppIconProvider {

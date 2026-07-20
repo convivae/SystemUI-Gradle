@@ -38,6 +38,7 @@ import com.android.systemui.statusbar.policy.DataSaverController
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.withContext
+import com.android.systemui.util.kotlin.userId
 
 /** Handles data saver tile clicks. */
 class DataSaverTileUserActionInteractor
