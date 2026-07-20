@@ -1996,7 +1996,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         }
 
         mPowerButtonReveal = new PowerButtonReveal(mContext.getResources().getDimensionPixelSize(
-                com.android.systemui.res.R.dimen.physical_power_button_center_screen_location_y));
+                R.dimen.physical_power_button_center_screen_location_y));
     }
 
     private void logStateToEventlog() {

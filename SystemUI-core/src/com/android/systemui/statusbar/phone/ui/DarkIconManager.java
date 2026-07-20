@@ -51,7 +51,7 @@ public class DarkIconManager extends IconManager {
         mIconHorizontalMargin =
                 mContext.getResources()
                         .getDimensionPixelSize(
-                                com.android.systemui.res.R.dimen.status_bar_icon_horizontal_margin);
+                                R.dimen.status_bar_icon_horizontal_margin);
         mDarkIconDispatcher = darkIconDispatcher;
     }
 

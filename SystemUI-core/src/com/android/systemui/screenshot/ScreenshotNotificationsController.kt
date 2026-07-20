@@ -59,12 +59,12 @@ internal constructor(
         // Repurpose the existing notification or create a new one
         val builder =
             Notification.Builder(context, NotificationChannels.ALERTS)
-                .setTicker(res.getString(com.android.systemui.res.R.string.screenshot_failed_title))
+                .setTicker(res.getString(R.string.screenshot_failed_title))
                 .setContentTitle(
-                    res.getString(com.android.systemui.res.R.string.screenshot_failed_title)
+                    res.getString(R.string.screenshot_failed_title)
                 )
                 .setContentText(errorMsg)
-                .setSmallIcon(com.android.systemui.res.R.drawable.stat_notify_image_error)
+                .setSmallIcon(R.drawable.stat_notify_image_error)
                 .setWhen(System.currentTimeMillis())
                 .setVisibility(Notification.VISIBILITY_PUBLIC) // ok to show outside lockscreen
                 .setCategory(Notification.CATEGORY_ERROR)
@@ -101,7 +101,7 @@ internal constructor(
     private val externalDisplayString: String
         get() =
             res.getString(
-                com.android.systemui.res.R.string.screenshot_failed_external_display_indication
+                R.string.screenshot_failed_external_display_indication
             )
 
     /** Factory for [ScreenshotNotificationsController]. */

@@ -120,7 +120,7 @@ public class MagnificationImpl implements Magnification, CommandQueue.Callbacks 
             final Context windowContext = mContext.createWindowContext(display,
                         TYPE_ACCESSIBILITY_OVERLAY,
                         /* options */ null);
-            windowContext.setTheme(com.android.systemui.res.R.style.Theme_SystemUI);
+            windowContext.setTheme(R.style.Theme_SystemUI);
 
             Supplier<SurfaceControlViewHost> scvhSupplier = () ->
                     new SurfaceControlViewHost(mContext,
@@ -169,7 +169,7 @@ public class MagnificationImpl implements Magnification, CommandQueue.Callbacks 
                     TYPE_ACCESSIBILITY_OVERLAY, /* options */ null);
             Supplier<SurfaceControlViewHost> scvhSupplier = () -> new SurfaceControlViewHost(
                     mContext, mContext.getDisplay(), new InputTransferToken(), TAG);
-            windowContext.setTheme(com.android.systemui.res.R.style.Theme_SystemUI);
+            windowContext.setTheme(R.style.Theme_SystemUI);
             return new FullscreenMagnificationController(
                     windowContext,
                     mHandler,
@@ -210,7 +210,7 @@ public class MagnificationImpl implements Magnification, CommandQueue.Callbacks 
         protected MagnificationSettingsController createInstance(Display display) {
             final Context windowContext = mContext.createWindowContext(display,
                     TYPE_ACCESSIBILITY_OVERLAY, /* options */ null);
-            windowContext.setTheme(com.android.systemui.res.R.style.Theme_SystemUI);
+            windowContext.setTheme(R.style.Theme_SystemUI);
             return new MagnificationSettingsController(
                     windowContext,
                     new SfVsyncFrameCallbackProvider(),

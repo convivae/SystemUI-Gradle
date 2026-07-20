@@ -120,7 +120,7 @@ internal object SingleLineViewInflater {
                     null,
                     SingleIcon(
                         context.getDrawable(
-                            com.android.systemui.res.R.drawable
+                            R.drawable
                                 .ic_redacted_notification_single_line_icon
                         )
                     ),
@@ -130,10 +130,10 @@ internal object SingleLineViewInflater {
             }
         return SingleLineViewModel(
             context.getString(
-                com.android.systemui.res.R.string.redacted_notification_single_line_title
+                R.string.redacted_notification_single_line_title
             ),
             context.getString(
-                com.android.systemui.res.R.string.redacted_notification_single_line_text
+                R.string.redacted_notification_single_line_text
             ),
             conversationData,
         )

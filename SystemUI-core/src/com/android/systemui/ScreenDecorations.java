@@ -350,7 +350,7 @@ public class ScreenDecorations implements
         mDotFactory = dotFactory;
         mFaceScanningFactory = faceScanningFactory;
         mCameraProtectionLoader = cameraProtectionLoader;
-        mFaceScanningViewId = com.android.systemui.res.R.id.face_scanning_anim;
+        mFaceScanningViewId = R.id.face_scanning_anim;
         mLogger = logger;
         mFacePropertyRepository = facePropertyRepository;
         mJavaAdapter = javaAdapter;
@@ -1231,7 +1231,7 @@ public class ScreenDecorations implements
         if (faceScanningOverlay != null) {
             faceScanningOverlay.setFaceScanningAnimColor(
                     Utils.getColorAttrDefaultColor(faceScanningOverlay.getContext(),
-                            com.android.systemui.res.R.attr.wallpaperTextColorAccent));
+                            R.attr.wallpaperTextColorAccent));
         }
     }
 

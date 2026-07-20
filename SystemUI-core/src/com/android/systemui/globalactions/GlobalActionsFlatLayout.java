@@ -56,7 +56,7 @@ public class GlobalActionsFlatLayout extends GlobalActionsLayout {
     }
 
     private View getOverflowButton() {
-        return findViewById(com.android.systemui.res.R.id.global_actions_overflow_button);
+        return findViewById(R.id.global_actions_overflow_button);
     }
 
     @Override

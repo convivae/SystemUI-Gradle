@@ -169,14 +169,14 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
         addSpace(linearLayout)
         addCircle(
             config,
-            com.android.systemui.res.R.id.action_remove_menu,
+            R.id.action_remove_menu,
             R.drawable.pip_ic_close_white,
             linearLayout
         )
         addCircle(
             config,
-            com.android.systemui.res.R.id.action_edit,
-            com.android.systemui.res.R.drawable.ic_screenshot_edit,
+            R.id.action_edit,
+            R.drawable.ic_screenshot_edit,
             linearLayout
         )
         // END DragToInteractView modification

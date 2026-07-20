@@ -93,8 +93,8 @@ abstract class ControlsModule {
                 tileSpec = TileSpec.create(DEVICE_CONTROLS_SPEC),
                 uiConfig =
                     QSTileUIConfig.Resource(
-                        iconRes = com.android.systemui.res.R.drawable.controls_icon,
-                        labelRes = com.android.systemui.res.R.string.quick_controls_title
+                        iconRes = R.drawable.controls_icon,
+                        labelRes = R.string.quick_controls_title
                     ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,

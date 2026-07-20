@@ -54,7 +54,7 @@ public class GlobalActionsLayoutLite extends GlobalActionsLayout {
     public void onUpdateList() {
         super.onUpdateList();
         int nElementsWrap = getResources().getInteger(
-                com.android.systemui.res.R.integer.power_menu_lite_max_columns);
+                R.integer.power_menu_lite_max_columns);
         int nChildren = getListView().getChildCount() - 1; // don't count flow element
 
         // Avoid having just one action on the last row if there are more than 2 columns because

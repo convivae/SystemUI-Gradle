@@ -29,7 +29,7 @@ public class SelectablePreference extends CheckBoxPreference {
 
     public SelectablePreference(Context context) {
         super(context);
-        setWidgetLayoutResource(com.android.systemui.res.R.layout.preference_widget_radiobutton);
+        setWidgetLayoutResource(R.layout.preference_widget_radiobutton);
         setSelectable(true);
         mSize = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32,
                 context.getResources().getDisplayMetrics());

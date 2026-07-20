@@ -10,11 +10,8 @@ val frameworkJars = files(
     "${rootProject.projectDir}/libs/framework-statsd.jar"
 )
 
-gradle.projectsEvaluated {
-    tasks.withType<JavaCompile>().configureEach {
-        classpath = frameworkJars + classpath
-    }
-}
+// No manipulation - use whatever default
+
 
 android {
     namespace = "com.android.systemui"

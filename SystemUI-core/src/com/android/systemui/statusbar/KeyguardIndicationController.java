@@ -512,7 +512,7 @@ public class KeyguardIndicationController {
                     INDICATION_IS_DISMISSIBLE,
                     new KeyguardIndication.Builder()
                             .setMessage(mContext.getResources().getString(
-                                    com.android.systemui.res.R.string.dismissible_keyguard_swipe)
+                                    R.string.dismissible_keyguard_swipe)
                             )
                             .setTextColor(mInitialTextColorState)
                             .build(),
@@ -770,7 +770,7 @@ public class KeyguardIndicationController {
                             .setTextColor(Utils.getColorAttr(
                                     mContext, com.android.internal.R.attr.textColorOnAccent))
                             .setBackground(mContext.getDrawable(
-                                    com.android.systemui.res.R.drawable.logout_button_background))
+                                    R.drawable.logout_button_background))
                             .setClickListener((view) -> {
                                 if (mFalsingManager.isFalseTap(LOW_PENALTY)) {
                                     return;
