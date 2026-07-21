@@ -43,6 +43,7 @@ import com.android.internal.policy.PhoneWindow;
 import com.android.settingslib.R;
 
 import java.util.Arrays;
+import com.android.systemui.R
 
 public class ZenDurationDialog {
     private static final int[] MINUTE_BUCKETS = ZenModeConfig.MINUTE_BUCKETS;

@@ -33,6 +33,7 @@ import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
 import java.io.PrintWriter
 import javax.inject.Inject
+import com.android.systemui.R
 
 /**
  * This base class provides the helpers necessary to define dependencies between flags from the

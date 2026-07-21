@@ -24,6 +24,7 @@ import com.android.internal.app.ResolverListAdapter
 import com.android.systemui.mediaprojection.devicepolicy.PersonalProfile
 import com.android.systemui.mediaprojection.devicepolicy.ScreenCaptureDevicePolicyResolver
 import javax.inject.Inject
+import com.android.systemui.R
 
 @MediaProjectionAppSelectorScope
 class MediaProjectionBlockerEmptyStateProvider

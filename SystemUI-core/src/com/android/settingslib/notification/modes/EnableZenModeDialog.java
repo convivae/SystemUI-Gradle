@@ -53,6 +53,7 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.Objects;
+import com.android.systemui.R
 
 public class EnableZenModeDialog {
     private static final String TAG = "EnableZenModeDialog";

@@ -21,6 +21,7 @@ import android.app.AutomaticZenRule;
 import com.android.internal.R;
 
 import com.google.common.collect.ImmutableMap;
+import com.android.systemui.R
 
 /**
  * Known icon keys for zen modes that lack a custom {@link AutomaticZenRule#getIconResId()}, based

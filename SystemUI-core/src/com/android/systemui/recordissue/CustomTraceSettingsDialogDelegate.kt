@@ -29,6 +29,7 @@ import com.android.traceur.PresetTraceConfigs
 import com.android.traceur.TraceConfig
 import com.android.traceur.res.R as T
 import java.util.function.Consumer
+import com.android.systemui.R
 
 class CustomTraceSettingsDialogDelegate(
     private val factory: SystemUIDialog.Factory,

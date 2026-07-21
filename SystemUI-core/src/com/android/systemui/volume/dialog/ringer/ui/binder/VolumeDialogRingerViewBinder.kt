@@ -48,6 +48,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import com.android.systemui.R
 
 private const val CLOSE_DRAWER_DELAY = 300L
 
