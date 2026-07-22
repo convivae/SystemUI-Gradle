@@ -1103,5 +1103,4 @@
     Whether the user switching can only happen by logging out and going through the system user (login screen).
     -->
     <bool name="config_userSwitchingMustGoThroughLoginScreen">false</bool>
-<bool name="config_enableLockScreenCustomClocks">true</bool>
 </resources>

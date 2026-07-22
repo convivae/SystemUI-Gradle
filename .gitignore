@@ -78,3 +78,6 @@ libs/maven/
 !libs/**/*.jar
 !libs/**/*.aar
 !gradle/wrapper/gradle-wrapper.jar
+res-product/
+res-keyguard/
+res-gradle/

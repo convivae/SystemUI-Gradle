@@ -41,7 +41,12 @@ android {
     sourceSets {
         getByName("main") {
             java.srcDir("src")
-            res.srcDirs("res")
+            // AOSP 资源目录（直接复制自 frameworks/base/packages/SystemUI/）
+            res.srcDirs(
+                "res",
+                "res-keyguard",
+                "res-product"
+            )
             manifest.srcFile("AndroidManifest.xml")
         }
         getByName("debug") {
@@ -106,6 +111,8 @@ dependencies {
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-tags.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-statsd.jar"))
+    // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
+    compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
 
     // 本地 Maven AAR
     implementation(libs.systemui.settingslib)
