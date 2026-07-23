@@ -83,3 +83,7 @@ systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell
 systemui-wifitrackerlib = { group = "com.android.systemui", name = "WifiTrackerLib", version = "1.0.0" }
 systemui-sharedlib = { group = "com.android.systemui", name = "SystemUISharedLib", version = "1.0.0" }
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "androidxLifecycle" }
+
+# Local Maven jars for AOSP internal Flags classes
+android-server-notification-flags = { group = "com.android.server.notification", name = "Flags", version = "1.0.0" }
+android-systemui-flags = { group = "com.android.systemui.flags", name = "flags", version = "1.0.0" }
