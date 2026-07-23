@@ -85,5 +85,6 @@ systemui-sharedlib = { group = "com.android.systemui", name = "SystemUISharedLib
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "androidxLifecycle" }
 
 # Local Maven jars for AOSP internal Flags classes
-android-server-notification-flags = { group = "com.android.server.notification", name = "Flags", version = "1.0.0" }
+android-server-notification-flags = { group = "com.android.server", name = "notification-flags", version = "1.0.0" }
 android-systemui-flags = { group = "com.android.systemui.flags", name = "flags", version = "1.0.0" }
+

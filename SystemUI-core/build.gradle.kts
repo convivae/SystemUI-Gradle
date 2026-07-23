@@ -113,6 +113,8 @@ dependencies {
     implementation(files("${rootProject.projectDir}/libs/SystemUI-statsd.jar"))
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
+    implementation(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
+    
 
     // 本地 Maven AAR
     implementation(libs.systemui.settingslib)
