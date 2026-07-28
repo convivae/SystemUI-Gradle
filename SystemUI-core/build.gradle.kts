@@ -116,6 +116,10 @@ dependencies {
     // SystemUI-proto.jar 只含 protobuf.nano 运行时，缺 .proto 生成类；
     // 补上 AOSP 生成的 nano proto 类 (CommunalHubState / SystemUIProtoDump / QsTileState 等)
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto-gen.jar"))
+    // SystemUIUnfoldLib：FOLD_UPDATE_* 常量 + FoldStateProvider 等（可折叠设备 unfold 动画）
+    implementation(files("${rootProject.projectDir}/libs/SystemUI-unfold.jar"))
+    // androidx.window：FoldingFeature / WindowLayoutInfo 等
+    implementation("androidx.window:window:1.3.0")
     implementation(files("${rootProject.projectDir}/libs/SystemUI-tags.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-statsd.jar"))
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)

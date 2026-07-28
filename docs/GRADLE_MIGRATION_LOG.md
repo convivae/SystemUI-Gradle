@@ -582,3 +582,22 @@ customization/shared/plugin 三个 prebuilt jar 里的 `log/core/LogMessage` 是
 
 无新增 unresolved 符号类型。要点：多 jar 同名类冲突时，靠 classpath 顺序（新 jar 排前）取胜。
 详见 `docs/issues/2026-07-28-systemui-log-jar.md`。
+
+---
+
+## 2026-07-28 — 补齐 unfold jar + androidx.window
+
+### 现象
+`unfold.updates.FOLD_UPDATE_*` / `FoldStateProvider` 及 `androidx.window.FoldingFeature` unresolved。
+
+### 解决方案（AGENTS §1 + maven）
+- `libs/SystemUI-unfold.jar`（AOSP SystemUIUnfoldLib，112 类）
+- maven `androidx.window:window:1.3.0`
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 885 |
+| + unfold jar + androidx.window | **844** |
+
+无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-unfold-jar-androidx-window.md`。

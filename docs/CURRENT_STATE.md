@@ -1,8 +1,8 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
 > **最后更新**: 2026-07-28
-> **当前错误数**: 885
-> **当前阶段**: Stage 2/3/4 推进中（R 歧义 + datastore + transitive R + AIDL/SettingsLib/proto/log jar + customization api）
+> **当前错误数**: 844
+> **当前阶段**: Stage 2/3/4 推进中（R 歧义 + datastore + transitive R + 多个 AOSP jar 补齐 + customization api）
 
 > ⚠️ **Stage 2 根因更正 (2026-07-28)**: 阻塞**不是** classpath/Kotlin 2.2.10/缺 FeatureFlags，
 > 而是源码 stub `com/android/server/notification/Flags.kt` 遮蔽了 jar。已 `git rm`，2000 → 1979。
@@ -46,6 +46,7 @@
 | 2026-07-28 | **1039** | **补齐完整 SettingsLib jar（kotlin+javac，AudioRepository/LocalBluetoothLeBroadcast 等）** |
 | 2026-07-28 | **938** | **补齐 nano proto 生成类 jar（CommunalHubState/SystemUIProtoDump/QsTileState 等）** |
 | 2026-07-28 | **885** | **补齐新版 SystemUILogLib jar（LogMessage.str1 + MessageInitializer/Printer typealias）** |
+| 2026-07-28 | **844** | **补齐 SystemUIUnfoldLib jar + androidx.window（FOLD_UPDATE_*/FoldingFeature）** |
 
 **目标**: 0 (完整编译通过)
 
