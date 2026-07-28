@@ -35,7 +35,6 @@ import com.android.compose.theme.typography.platformTypography
 import com.android.compose.windowsizeclass.LocalWindowSizeClass
 import com.android.compose.windowsizeclass.calculateWindowSizeClass
 import com.android.internal.R
-import com.android.systemui.R
 
 /** The Material 3 theme that should wrap all Platform Composables. */
 @Composable

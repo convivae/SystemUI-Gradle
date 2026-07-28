@@ -16,7 +16,6 @@
 
 package com.android.systemui.volume.domain.interactor
 
-import com.android.systemui.R
 
 import android.annotation.SuppressLint
 import android.content.Context

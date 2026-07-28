@@ -22,7 +22,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.android.internal.R
-import com.android.systemui.R
 
 /** CompositionLocal used to pass [AndroidColorScheme] down the tree. */
 val LocalAndroidColorScheme =
