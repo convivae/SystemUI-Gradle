@@ -1,7 +1,7 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
 > **最后更新**: 2026-07-28
-> **当前错误数**: 844
+> **当前错误数**: 809
 > **当前阶段**: Stage 2/3/4 推进中（R 歧义 + datastore + transitive R + 多个 AOSP jar 补齐 + customization api）
 
 > ⚠️ **Stage 2 根因更正 (2026-07-28)**: 阻塞**不是** classpath/Kotlin 2.2.10/缺 FeatureFlags，
@@ -47,6 +47,7 @@
 | 2026-07-28 | **938** | **补齐 nano proto 生成类 jar（CommunalHubState/SystemUIProtoDump/QsTileState 等）** |
 | 2026-07-28 | **885** | **补齐新版 SystemUILogLib jar（LogMessage.str1 + MessageInitializer/Printer typealias）** |
 | 2026-07-28 | **844** | **补齐 SystemUIUnfoldLib jar + androidx.window（FOLD_UPDATE_*/FoldingFeature）** |
+| 2026-07-28 | **809** | **补齐 lottie/lottie_compose jar（com.airbnb.lottie.* 动画）** |
 
 **目标**: 0 (完整编译通过)
 

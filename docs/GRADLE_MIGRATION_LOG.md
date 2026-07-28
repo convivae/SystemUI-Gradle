@@ -601,3 +601,22 @@ customization/shared/plugin 三个 prebuilt jar 里的 `log/core/LogMessage` 是
 | + unfold jar + androidx.window | **844** |
 
 无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-unfold-jar-androidx-window.md`。
+
+---
+
+## 2026-07-28 — 补齐 lottie / lottie_compose jar
+
+### 现象
+`com.airbnb.lottie.*` / `com.airbnb.lottie.compose.*` unresolved。
+
+### 解决方案（AGENTS §1）
+补 AOSP external/lottie 产物 `libs/lottie.jar`（277 类）+ `libs/lottie_compose.jar`（50 类），compileOnly。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 844 |
+| + lottie/lottie_compose | **809** |
+
+残留 `LottieColorUtils` 实为 `settingslib.widget`，非 lottie。无新增 unresolved 符号类型。
+详见 `docs/issues/2026-07-28-lottie-jar.md`。

@@ -120,6 +120,9 @@ dependencies {
     implementation(files("${rootProject.projectDir}/libs/SystemUI-unfold.jar"))
     // androidx.window：FoldingFeature / WindowLayoutInfo 等
     implementation("androidx.window:window:1.3.0")
+    // Lottie 动画（com.airbnb.lottie.* / lottie.compose.*），来自 AOSP external/lottie 编译产物
+    compileOnly(files("${rootProject.projectDir}/libs/lottie.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/lottie_compose.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-tags.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-statsd.jar"))
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
