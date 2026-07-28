@@ -436,3 +436,31 @@ implementation("androidx.datastore:datastore-core:1.1.1")
 | 加 datastore 依赖 | **1806** |
 
 无新增错误类型（LC_ALL=C 对比 unresolved 符号集，新增为空）。
+
+---
+
+## 2026-07-28 — Stage 4 (部分): customization res + transitive R
+
+### 现象
+`com.android.systemui.R.dimen.large_clock_text_size` / `R.id.lockscreen_clock_view` 等
+时钟/customization 资源引用 unresolved。
+
+### 根因
+(1) `:SystemUI-customization` 模块没有 res 目录；
+(2) `android.nonTransitiveRClass=true` 使依赖资源不合并进 `com.android.systemui.R`
+（AOSP 靠 static-lib 传递合并，源码统一写 `com.android.systemui.R`）。
+
+### 解决方案
+- 从 AOSP 复制 `customization/res` → `SystemUI-customization/res` + `res.srcDir("res")`。
+- `gradle.properties`: `android.nonTransitiveRClass=false`（对齐 AOSP 传递合并）。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 1806 |
+| 仅复制 res (nonTransitive=true) | 1806（无效）|
+| 关闭 nonTransitiveRClass | **1759** |
+
+无新增错误类型。smartspace ids（在 shared/res）未解决：core 用 prebuilt SharedLib.jar
+依赖 shared 而非 project，给 shared 加 res 无效（已回退）。详见
+`docs/issues/2026-07-28-transitive-r-customization-res.md`。

@@ -13,6 +13,9 @@ android {
     sourceSets {
         getByName("main") {
             manifest.srcFile("src/main/AndroidManifest.xml")
+            // 从 AOSP SystemUI/customization/res 复制而来 (ids/dimens/attrs/strings 等)，
+            // 让 lockscreen_clock_view / date_smartspace_view 等 id 被合并进 com.android.systemui.R
+            res.srcDir("res")
         }
     }
 
