@@ -489,3 +489,26 @@ AIDL 接口 unresolved，级联 `clearCallingIdentity` / `restoreCallingIdentity
 
 无新增错误类型。残留 9 个为嵌套回调接口的 nullability mismatch（非 unresolved）。
 详见 `docs/issues/2026-07-28-systemui-aidl-jar.md`。
+
+---
+
+## 2026-07-28 — customization prebuilt jar 改 api 暴露给 core
+
+### 现象
+`com.android.systemui.shared.keyguard.shared.model.KeyguardQuickAffordanceSlots` /
+`ClockRegistry` 等大量 `com.android.systemui.shared.*` unresolved。
+
+### 根因
+类明明在 `SystemUICustomizationLib.jar`（路径匹配 import），但 `:SystemUI-customization`
+用 `implementation(files(...))` 引入 —— `implementation` 不向下游 `:SystemUI-core` 暴露。
+
+### 解决方案
+`SystemUI-customization/build.gradle.kts`：`implementation(files(...))` → `api(files(...))`。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 1658 |
+| 改 api | **1491** |
+
+无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-customization-api-exposure.md`。

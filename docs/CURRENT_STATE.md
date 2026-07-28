@@ -1,8 +1,8 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
 > **最后更新**: 2026-07-28
-> **当前错误数**: 1658
-> **当前阶段**: Stage 2/3/4 推进中（R 歧义 + datastore + transitive R + AIDL jar）
+> **当前错误数**: 1491
+> **当前阶段**: Stage 2/3/4 推进中（R 歧义 + datastore + transitive R + AIDL jar + customization api）
 
 > ⚠️ **Stage 2 根因更正 (2026-07-28)**: 阻塞**不是** classpath/Kotlin 2.2.10/缺 FeatureFlags，
 > 而是源码 stub `com/android/server/notification/Flags.kt` 遮蔽了 jar。已 `git rm`，2000 → 1979。
@@ -42,6 +42,7 @@
 | 2026-07-28 | **1806** | **补齐 androidx.datastore 依赖（datastore-preferences/core）** |
 | 2026-07-28 | **1759** | **customization res 补齐 + 关闭 nonTransitiveRClass（传递合并）** |
 | 2026-07-28 | **1658** | **引入 systemui-aidl.jar（11 个 AIDL 接口，从 AOSP classes.jar 提取）** |
+| 2026-07-28 | **1491** | **customization prebuilt jar 改 api 暴露给 core（KeyguardQuickAffordanceSlots 等）** |
 
 **目标**: 0 (完整编译通过)
 

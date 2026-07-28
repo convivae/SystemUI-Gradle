@@ -32,5 +32,7 @@ android {
 dependencies {
     // 注：完整复制源码包含 Compose、AndroidX、SystemUI 时钟等多个复杂依赖，
     //     编译工作量过大，保留为 prebuilt JAR 形式
-    implementation(files("${rootProject.projectDir}/libs/prebuilts/SystemUICustomizationLib.jar"))
+    // 用 api 而非 implementation 暴露 prebuilt 里的 com.android.systemui.shared.* 类
+    // (KeyguardQuickAffordanceSlots / ClockRegistry 等)，供 :SystemUI-core 编译引用
+    api(files("${rootProject.projectDir}/libs/prebuilts/SystemUICustomizationLib.jar"))
 }
