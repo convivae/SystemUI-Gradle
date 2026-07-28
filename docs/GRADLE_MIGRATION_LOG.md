@@ -387,3 +387,25 @@ docs/GRADLE_MIGRATION_LOG.md
 | 删除 stub | **1979** |
 
 详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md` 与 `docs/PITFALLS.md §2.4`。
+
+---
+
+## 2026-07-28 — Stage 3 (部分): 消除全项目 R import 歧义
+
+### 现象
+7 个文件同时 import 两个名为 `R` 的类 → `imported name 'R' is ambiguous`，
+并级联使文件内所有 `R.xxx` 报 unresolved。
+
+### 解决方案
+每个文件删除多余的 `import com.android.systemui.R`，对齐 AOSP 原文件的单一 R import
+（保留 `internal.R` / `wm.shell.R` / `android.R` / `settingslib.R`）。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| Stage 2 后 | 1979 |
+| 修 AndroidColorScheme.kt | 1953 |
+| 修 PlatformTheme.kt | 1923 |
+| 修其余 5 个文件（R 歧义清零） | **1879** |
+
+详见 `docs/issues/2026-07-28-r-import-ambiguity.md` 与 `docs/PITFALLS.md §3.2`。

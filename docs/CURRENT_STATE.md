@@ -1,8 +1,8 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
 > **最后更新**: 2026-07-28
-> **当前错误数**: 1979
-> **当前阶段**: Stage 2 (server-notification-flags.jar) **已解决** → 转 Stage 3 (Compose)
+> **当前错误数**: 1879
+> **当前阶段**: Stage 2 已解决 + Stage 3 (Compose R 歧义) **部分完成** → 继续 Stage 3/Stage 4
 
 > ⚠️ **Stage 2 根因更正 (2026-07-28)**: 阻塞**不是** classpath/Kotlin 2.2.10/缺 FeatureFlags，
 > 而是源码 stub `com/android/server/notification/Flags.kt` 遮蔽了 jar。已 `git rm`，2000 → 1979。
@@ -36,6 +36,9 @@
 | 2026-07-23 | 2000 | Stage 2 启动，暂无突破 |
 | 2026-07-28 | 2000 | 调试 session，未减少 |
 | 2026-07-28 | **1979** | **删除遮蔽 jar 的 stub `server/notification/Flags.kt`（Stage 2 解决）** |
+| 2026-07-28 | 1953 | 修 `compose/theme/AndroidColorScheme.kt` R 歧义 |
+| 2026-07-28 | 1923 | 修 `compose/theme/PlatformTheme.kt` R 歧义 |
+| 2026-07-28 | **1879** | **修其余 5 个文件 R 歧义（全项目 R 歧义清零）** |
 
 **目标**: 0 (完整编译通过)
 

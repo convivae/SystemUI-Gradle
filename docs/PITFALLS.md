@@ -167,22 +167,35 @@ find . -path "*/<包路径>/<类名>.*" -not -path "*/build/*"
 
 **当前**: 源码**未在 git 中**（`SystemUI-core/src/com/android/compose/animation/scene/*` 显示 `??`），但被 `srcDir("src")` 包含，会被编译。
 
-### 3.2 Compose Theme R 冲突
+### 3.2 Compose / 多命名空间 R import 歧义 (2026-07-28 **已解决**)
 
-**现象**: `AndroidColorScheme.kt` 60 个 `Conflicting import: imported name 'R' is ambiguous.`
+**现象**: `imported name 'R' is ambiguous`，且**级联**使文件内所有 `R.xxx` 报 unresolved。
+全项目 7 个文件命中（不止 Compose Theme）。
 
-**根因**: 同文件 import 多个 `R`（`com.android.systemui.R` + `com.android.compose.theme.R`）
+**根因**: 这些文件被（非 AOSP 地）多加了一行 `import com.android.systemui.R`，
+与文件本应使用的另一个 R（`internal.R` / `wm.shell.R` / `android.R` / `settingslib.R`）冲突。
+**AOSP 原文件每个都只 import 一个 R。**
 
-**绕道**:
-```kotlin
-import com.android.systemui.R as SystemUiR
-import com.android.compose.theme.R as ComposeR
-// 使用时:
-SystemUiR.color.xxx
-ComposeR.color.xxx
-```
+**正解（对齐 AOSP）**: 删除多余的那一个 import，而**不是**改成 alias import。
+之前本节猜测用 `import ... as SystemUiR / ComposeR` alias —— **是错的**，
+实际 7 个文件各自只需保留单一 R（见下表），删掉多余的 `systemui.R` 即可。
 
-**当前**: 未尝试。简单 fix。
+| 文件 | 保留(对齐AOSP) | 删除 |
+|------|---------------|------|
+| compose/theme/AndroidColorScheme.kt | `com.android.internal.R` | systemui.R |
+| compose/theme/PlatformTheme.kt | `com.android.internal.R` | systemui.R |
+| accessibility/floatingmenu/DragToInteractView.kt | `com.android.wm.shell.R` | systemui.R |
+| screenshot/ScreenshotWindow.kt | `android.R` | systemui.R |
+| user/ui/dialog/AddUserDialog.kt | `com.android.settingslib.R` | systemui.R |
+| user/ui/dialog/ExitGuestDialog.kt | `com.android.settingslib.R` | systemui.R |
+| volume/domain/interactor/DeviceIconInteractor.kt | `com.android.settingslib.R` | systemui.R |
+
+**结果**: 1979 → 1879 (−100)，全项目 R 歧义清零。详见 `docs/issues/2026-07-28-r-import-ambiguity.md`。
+
+**残留 caveat**: `AddUserDialog.kt` / `DragToInteractView.kt` 因我们多模块资源拆分，
+**确实同时**需要两个 R 命名空间（少数 id/string 只在 SystemUI-core/res）。删 systemui.R 后仍净下降，
+故先按对齐 AOSP 处理；这几个残留 unresolved（`user_add_user_message_guest_remove`、`action_edit` 等）
+是诚实的资源缺口，正解是**这时才用 alias import**，留作 Stage 4 资源完整性处理。
 
 ---
 

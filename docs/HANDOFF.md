@@ -35,11 +35,12 @@ echo "Total errors: $(grep -c '^e: file:' /tmp/build.log)"
 echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /tmp/build.log)"
 ```
 
-**当前基线（2026-07-28）**: 1979 错误（Stage 2 已解决，见 §4.1）。其中：
-- ~~server-notification Flags~~: ✅ 已清零（删除 stub `Flags.kt`）
-- Compose Scene Framework (`com.android.compose.animation.scene.*`): 12 个
-- Compose Theme (`AndroidColorScheme.kt` R 冲突): 60 个
-- 其他业务模块: 剩余 ~1907 个
+**当前基线（2026-07-28）**: **1879** 错误（Stage 2 + Stage 3 R 歧义部分完成，见 §4.1）。其中：
+- ~~server-notification Flags~~: ✅ 已清零（删除 stub `Flags.kt`，Stage 2）
+- ~~全项目 R import 歧义~~: ✅ 已清零（7 文件删多余 `systemui.R`，1979→1879，见 `docs/issues/2026-07-28-r-import-ambiguity.md`）
+- Compose Scene Framework (`com.android.compose.animation.scene.*`): 12 个（`thenIf`/`drawInContainer`/`ContainerState` 等内部 Compose API）
+- PlatformTheme.kt 残留 windowsizeclass: 4 个
+- 其他业务模块（多为 Dagger `@Inject` — KAPT 禁用无 codegen）: 剩余 ~1850 个
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
