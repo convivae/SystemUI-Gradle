@@ -114,6 +114,10 @@ dependencies {
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
     implementation(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
+
+    // server-notification Flags (AOSP @aconfig Flags) - 显式声明，避免 Kotlin 编译器遗漏
+    // 配合 root build.gradle.kts 中的 allprojects 注入以保证顺序
+    implementation(libs.android.server.notification.flags)
     
 
     // 本地 Maven AAR

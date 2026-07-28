@@ -20,6 +20,11 @@ allprojects {
                 )
                 classpath = files(frameworkJar) + classpath
             }
+            // 把 server notification flags jar 放在 classpath 前面 (优先解析)
+            // 否则 framework.jar 同名 stub 会遮蔽它
+            if (serverNotificationFlagsJar.exists()) {
+                classpath = files(serverNotificationFlagsJar) + classpath
+            }
             // 添加 internalFlagsJars 到 JavaCompile (供 kotlin 的 javac 调用)
             classpath = files(internalFlagsJars) + classpath
             if (serverNotificationFlagsJar.exists()) {
@@ -30,8 +35,8 @@ allprojects {
         // 但 kotlin android plugin 在 KotlinCompile 任务之外还使用 javac，
         // 所以也需要把 jar 加到 JavaCompile (KotlinCompile 间接依赖)
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            // internalFlagsJars 必须在 framework.jar 之前加载
-            // 否则 framework.jar 的同名 stub 会遮蔽 internalFlagsJars
+            // server-notification-flags 必须在 framework.jar 之前加载
+            // 否则 framework.jar 的同名 stub 会遮蔽 notification-flags
             if (serverNotificationFlagsJar.exists()) {
                 libraries.from(serverNotificationFlagsJar)
             }
