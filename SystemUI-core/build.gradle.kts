@@ -128,6 +128,8 @@ dependencies {
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
     implementation(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
+    // motion_tool_lib (com.android.app.motiontool.*，来自 AOSP frameworks/libs/systemui/motiontoollib)
+    compileOnly(files("${rootProject.projectDir}/libs/motion_tool_lib.jar"))
 
     // server-notification Flags (AOSP @aconfig Flags) - 显式声明，避免 Kotlin 编译器遗漏
     // 配合 root build.gradle.kts 中的 allprojects 注入以保证顺序
