@@ -620,3 +620,28 @@ customization/shared/plugin 三个 prebuilt jar 里的 `log/core/LogMessage` 是
 
 残留 `LottieColorUtils` 实为 `settingslib.widget`，非 lottie。无新增 unresolved 符号类型。
 详见 `docs/issues/2026-07-28-lottie-jar.md`。
+
+---
+
+## 2026-07-28 — 补齐 PlatformComposeCore 源码 + compose androidx 依赖
+
+### 现象
+Compose Scene 框架内部 `thenIf`/`modifiers`/`graphics`/`drawInContainer`/`rememberDrawablePainter`/
+`windowsizeclass`/`roundToPx` 等 unresolved。
+
+### 根因
+移植时漏了 PlatformComposeCore 的 6 个源码目录（modifiers/ui.graphics/windowsizeclass/gesture/grid/runtime），
+Scene 源码依赖它们。
+
+### 解决方案（AGENTS §1：复制 AOSP 源码 + maven）
+- 复制上述 6 个目录到 `SystemUI-core/src/com/android/compose/`
+- maven `androidx.compose.animation:animation-graphics:1.7.5` + `androidx.compose.material3:material3-window-size-class:1.3.1`
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 809 |
+| 复制 6 目录 | 755 |
+| + 2 androidx | **741** |
+
+无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-compose-core-source.md`。

@@ -190,7 +190,11 @@ dependencies {
     // Compose (用于 Scene 框架与 UI 组件)
     implementation("androidx.compose.runtime:runtime:1.7.5")
     implementation("androidx.compose.animation:animation:1.7.5")
+    // animation-graphics: AnimatedImageVector / animatedVectorResource（CommonTile 等）
+    implementation("androidx.compose.animation:animation-graphics:1.7.5")
     implementation("androidx.compose.material3:material3:1.3.1")
+    // material3-window-size-class: WindowSizeClass（compose windowsizeclass 目录）
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
     implementation("androidx.compose.foundation:foundation:1.7.5")
     implementation("androidx.compose.ui:ui:1.7.5")
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.5")
