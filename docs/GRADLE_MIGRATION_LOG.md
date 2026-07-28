@@ -537,3 +537,25 @@ kotlin jar（kotlin 类）+ javac jar（java 类），单独任一都不全。
 | + javac jar | **1039** |
 
 两步均无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-settingslib-full-jar.md`。
+
+---
+
+## 2026-07-28 — 补齐 nano proto 生成类 jar
+
+### 现象
+`communal.nano.CommunalHubState` / `dump.nano.SystemUIProtoDump` / `qs.nano.QsTileState`
+等 nano proto 生成类 unresolved（字段 str1/nano/int1 级联）。
+
+### 根因
+我方 `SystemUI-proto.jar` 只含 protobuf.nano 运行时，缺 .proto 生成类。
+
+### 解决方案（AGENTS §1）
+补 `libs/SystemUI-proto-gen.jar`（AOSP javac 产物，15 个 nano 类），`implementation` 引入。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 1039 |
+| 补 gen jar | **938** |
+
+无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-proto-nano-gen-jar.md`。

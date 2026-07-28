@@ -109,6 +109,9 @@ dependencies {
 
     // 本地 JAR
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))
+    // SystemUI-proto.jar 只含 protobuf.nano 运行时，缺 .proto 生成类；
+    // 补上 AOSP 生成的 nano proto 类 (CommunalHubState / SystemUIProtoDump / QsTileState 等)
+    implementation(files("${rootProject.projectDir}/libs/SystemUI-proto-gen.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-tags.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-statsd.jar"))
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
