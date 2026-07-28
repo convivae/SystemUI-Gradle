@@ -559,3 +559,26 @@ kotlin jar（kotlin 类）+ javac jar（java 类），单独任一都不全。
 | 补 gen jar | **938** |
 
 无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-proto-nano-gen-jar.md`。
+
+---
+
+## 2026-07-28 — 补齐新版 SystemUILogLib jar
+
+### 现象
+`LogMessage.str1/str2/int1/bool1` + `MessageInitializer`/`MessagePrinter` typealias unresolved。
+
+### 根因
+customization/shared/plugin 三个 prebuilt jar 里的 `log/core/LogMessage` 是旧版（无 str1、无 typealias）。
+
+### 解决方案（AGENTS §1）
+补 `libs/SystemUI-log.jar`（AOSP 新版），放 dependencies 块**首行** `api` 引入，
+使其在 classpath 上优先于 prebuilt 旧版。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 938 |
+| 补 log jar | **885** |
+
+无新增 unresolved 符号类型。要点：多 jar 同名类冲突时，靠 classpath 顺序（新 jar 排前）取胜。
+详见 `docs/issues/2026-07-28-systemui-log-jar.md`。
