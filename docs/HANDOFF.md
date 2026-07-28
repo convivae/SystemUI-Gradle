@@ -35,12 +35,11 @@ echo "Total errors: $(grep -c '^e: file:' /tmp/build.log)"
 echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /tmp/build.log)"
 ```
 
-**当前基线（2026-07-28）**: 2000 错误。其中：
-- `screenshareNotificationHiding` 等 server-notification Flags: ~13 个
-- `FlagDependencies.kt` 中的 server.notification.Flags: 6 个
+**当前基线（2026-07-28）**: 1979 错误（Stage 2 已解决，见 §4.1）。其中：
+- ~~server-notification Flags~~: ✅ 已清零（删除 stub `Flags.kt`）
 - Compose Scene Framework (`com.android.compose.animation.scene.*`): 12 个
 - Compose Theme (`AndroidColorScheme.kt` R 冲突): 60 个
-- 其他业务模块: 剩余 ~1909 个
+- 其他业务模块: 剩余 ~1907 个
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
@@ -115,9 +114,9 @@ SystemUI-Gradle/
 ## 4. 我（当前 AI）留下未完成的事
 
 ### 4.1 Stage 2 (server-notification-flags.jar)
-- **状态**: 阻塞。已确认 jar 在 classpath 但 Kotlin 仍报错
-- **本会话尝试**: 双重 hack (libraries.from + classpath)，结果错误数维持 2000 不变
-- **下次 Agent 行动**: 看 `docs/issues/2026-07-28-server-flags-debug-session.md` 完整实验数据
+- **状态**: ✅ **已解决 (2026-07-28)**。根因是源码 stub `com/android/server/notification/Flags.kt`
+  遮蔽了 jar，`git rm` 后 2000 → 1979。**不是** classpath/Kotlin 2.2.10/FeatureFlags 的问题。
+- **详情**: `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`、`docs/PITFALLS.md §2.4`
 
 ### 4.2 Stage 3 (Compose Scene Framework)
 - **状态**: 12 个错误，全部在 `com.android.compose.animation.scene.*`

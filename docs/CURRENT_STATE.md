@@ -1,8 +1,12 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
 > **最后更新**: 2026-07-28
-> **当前错误数**: 2000
-> **当前阶段**: Stage 2 (server-notification-flags.jar) 阻塞
+> **当前错误数**: 1979
+> **当前阶段**: Stage 2 (server-notification-flags.jar) **已解决** → 转 Stage 3 (Compose)
+
+> ⚠️ **Stage 2 根因更正 (2026-07-28)**: 阻塞**不是** classpath/Kotlin 2.2.10/缺 FeatureFlags，
+> 而是源码 stub `com/android/server/notification/Flags.kt` 遮蔽了 jar。已 `git rm`，2000 → 1979。
+> 详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
 
 ---
 
@@ -31,6 +35,7 @@
 | 2026-07-22 | 2000 | 加 Monet + SystemUI Flags jar |
 | 2026-07-23 | 2000 | Stage 2 启动，暂无突破 |
 | 2026-07-28 | 2000 | 调试 session，未减少 |
+| 2026-07-28 | **1979** | **删除遮蔽 jar 的 stub `server/notification/Flags.kt`（Stage 2 解决）** |
 
 **目标**: 0 (完整编译通过)
 
@@ -103,7 +108,18 @@
 
 ## 4. 已知问题与决策点
 
-### 4.1 ⚠️ `libs/server-notification-flags.jar` 是空 jar
+### 4.0 ✅ [已解决 2026-07-28] Stage 2 server-notification-flags
+
+**根因**: 源码 stub `SystemUI-core/src/com/android/server/notification/Flags.kt`（`object Flags`）
+遮蔽了 jar 里的真实 `Flags` 类。全项目编译时 Kotlin 优先用源码定义，stub 没有
+`screenshareNotificationHiding()` 且把 flag 声明为 `val` 而非方法 → 13+6 个 unresolved。
+
+**修复**: `git rm` 该 stub。2000 → 1979。前面几轮围绕 classpath/Kotlin 版本/FeatureFlags 的
+排查全部走偏（详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`）。
+
+> 下方 4.1/4.2 记录的是历史怀疑点，**已被证伪**，保留供教训参考。
+
+### 4.1 ⚠️ [已证伪] `libs/server-notification-flags.jar` 是空 jar
 
 ```bash
 $ unzip -l libs/server-notification-flags.jar

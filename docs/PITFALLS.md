@@ -74,7 +74,12 @@ $ unzip -l libs/server-notification-flags.jar
 val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar")
 ```
 
-### 2.2 Kotlin 2.2.10 看不到 aconfig Flags `@UnsupportedAppUsage` 注解的类
+### 2.2 [已证伪 2026-07-28] Kotlin 2.2.10 看不到 aconfig Flags `@UnsupportedAppUsage` 注解的类
+
+> ⚠️ **本条推测已被证伪**。真正根因：源码 stub `com/android/server/notification/Flags.kt`
+> 遮蔽了 jar。孤立 K2JVMCompiler（含完整 128 项 AGP classpath）编译成功，证明 classpath 和
+> Kotlin 2.2.10 都无罪。见下方 §2.4 与 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
+> 下面保留原推测内容供"如何走偏"的教训参考。
 
 **现象**: 
 - Jar 在 classpath（`./gradlew --debug` 验证）
@@ -114,9 +119,34 @@ val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/
 - 或者大类的某个方法签名不同
 - 或者 `@UnsupportedAppUsage` 在不同类的处理方式不同
 
----
+> ⚠️ 以上全部错。真正差异见 §2.4。
 
-## 3. Compose 踩坑
+### 2.4 ✅ [真正根因 2026-07-28] 源码 stub 遮蔽 jar 类
+
+**现象**: `Unresolved reference '<方法名>'`，但 jar 在 classpath、`javap` 能看到方法、孤立编译成功。
+
+**根因**: 源码树里存在同包同名的 stub（如 `src/com/android/server/notification/Flags.kt` 里的
+`object Flags`）。**全项目编译时 Kotlin 优先用源码定义，而非 jar**。stub 缺少 jar 里的方法
+（或把方法写成了 `val` 属性），于是消费者 import 该方法就 unresolved。
+
+**为何 systemui-flags.jar 能工作**: 因为源码里**没有** `com.android.systemui.Flags` 的 stub，
+所以它正常从 jar 解析——与包名/类大小/注解统统无关。
+
+**诊断决定性实验**:
+```bash
+# 1. 孤立编译最小复现（只 import 那个方法并调用）
+java -cp "$KC:$KS:$KR:$KX" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler \
+  -cp "<完整 AGP classpath>" -d /tmp/out -jvm-target 21 Test.kt
+# → 成功 ⇒ classpath / 编译器都无罪，问题在源码集
+
+# 2. 查有没有同名源码遮蔽 jar
+find . -path "*/<包路径>/<类名>.*" -not -path "*/build/*"
+```
+
+**修复**: `git rm` 该 stub（本身违反 §规则1）。
+
+**通用规律**: 只有 (源码是 stub) + (有真实 jar 提供该类) + (消费者引用了 stub 缺失的成员)
+三者同时满足才致错。见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md` §3 的同类隐患清单。
 
 ### 3.1 Compose 内部 API (`thenIf`, `drawInContainer`)
 

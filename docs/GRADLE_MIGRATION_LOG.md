@@ -359,3 +359,31 @@ docs/PITFALLS.md → docs/architecture/STAGE2-3-RESEARCH-LOG.md →
 docs/issues/2026-07-28-server-flags-debug-session.md →
 docs/GRADLE_MIGRATION_LOG.md
 ```
+
+---
+
+## 问题十三：Stage 2 根因定位 —— stub 源码遮蔽 jar (2026-07-28)
+
+### 问题描述
+`com.android.server.notification.Flags` 的 `screenshareNotificationHiding` 等
+19 个 `Unresolved reference`，卡了 2026-07-23 ~ 2026-07-28 多轮排查未解。
+
+### 根因（与此前所有推测相反）
+源码 `SystemUI-core/src/com/android/server/notification/Flags.kt` 是一个 `object Flags` **stub**，
+全项目编译时 Kotlin 优先用它而非 jar。stub 缺 `screenshareNotificationHiding()`，
+并把 `politeNotifications` 等写成 `val` 而非方法 → 13 + 6 个错误。
+
+此前围绕 classpath 注入 / Kotlin 2.2.10 / 缺 FeatureFlags 的排查全部走偏。
+决定性实验：孤立 K2JVMCompiler 用**完整 128 项 AGP classpath** 编译最小复现文件 → 成功，
+证明 classpath 与编译器都无罪，问题只可能在源码集。
+
+### 解决方案
+`git rm SystemUI-core/src/com/android/server/notification/Flags.kt`。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 2000 |
+| 删除 stub | **1979** |
+
+详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md` 与 `docs/PITFALLS.md §2.4`。
