@@ -645,3 +645,29 @@ Scene 源码依赖它们。
 | + 2 androidx | **741** |
 
 无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-compose-core-source.md`。
+
+---
+
+## 2026-07-28 — 补齐 compose/features + biometric + animation 源码（大步）
+
+### 现象
+scene `Scene`/`Overlay`/`QuickSettingsShade`、biometric `asBiometricModality`、
+`Bounceable`/`Easings` 等 unresolved。
+
+### 根因
+移植时漏了 compose/features/src(152)、biometrics/shared/model(9)、compose/core/animation(4)。
+且 features 文件用 `com.android.systemui.res.R`，我方 R 在 `com.android.systemui.R`。
+
+### 解决方案（AGENTS §1 + 用户「复制真代码可暂升错误」原则）
+复制三块 AOSP 源码 + `sed` 把 39 文件 `res.R`→`R`。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 724 |
+| +features | 771（暂升） |
+| +biometric+animation | 705 |
+| +res.R→R | **509** |
+
+净降 215，仅新增 2 个 honest 缺口（MotionTestValues / setShowTitleItems）。
+详见 `docs/issues/2026-07-28-compose-features-source.md`。
