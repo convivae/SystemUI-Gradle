@@ -182,6 +182,9 @@ dependencies {
     implementation("androidx.tracing:tracing:1.2.0")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    // DataStore (对齐 AOSP SystemUI 的 androidx.datastore_datastore-preferences)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-core:1.1.1")
 
     // 注：原 compose/scene 源码已复制到 src 下，但因为它依赖一系列 Compose 内部 API
     //     （thenIf/drawInContainer 等），完整编译需要更多 Compose 依赖，

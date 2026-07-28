@@ -409,3 +409,30 @@ docs/GRADLE_MIGRATION_LOG.md
 | 修其余 5 个文件（R 歧义清零） | **1879** |
 
 详见 `docs/issues/2026-07-28-r-import-ambiguity.md` 与 `docs/PITFALLS.md §3.2`。
+
+---
+
+## 2026-07-28 — 补齐 androidx.datastore 依赖
+
+### 现象
+多个文件 `import androidx.datastore.preferences.core.*` / `androidx.datastore.core.DataStore`
+报 `Unresolved reference 'Preferences' / 'longPreferencesKey' / 'preferences'` 等，级联影响使用处。
+
+### 根因
+AOSP SystemUI `Android.bp` 依赖 `androidx.datastore_datastore-preferences`，
+但 Gradle 迁移时未声明该依赖。
+
+### 解决方案
+`SystemUI-core/build.gradle.kts` 添加（google() 仓库已配置，直接 maven 引入）：
+```
+implementation("androidx.datastore:datastore-preferences:1.1.1")
+implementation("androidx.datastore:datastore-core:1.1.1")
+```
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 1879 |
+| 加 datastore 依赖 | **1806** |
+
+无新增错误类型（LC_ALL=C 对比 unresolved 符号集，新增为空）。
