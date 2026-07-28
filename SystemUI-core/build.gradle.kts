@@ -122,6 +122,10 @@ dependencies {
 
     // 本地 Maven AAR
     implementation(libs.systemui.settingslib)
+    // 我方 SettingsLib aar 只含 res，不含 kotlin class；补上 AOSP 完整 SettingsLib jar：
+    // kotlin jar (AudioRepository 等 kotlin 类) + javac jar (LocalBluetoothLeBroadcast 等 java 类)
+    compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-full.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-javac.jar"))
     implementation(libs.systemui.iconloader)
     implementation(libs.systemui.wmshell)
     implementation(libs.systemui.wifitrackerlib)

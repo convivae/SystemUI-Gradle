@@ -512,3 +512,28 @@ AIDL 接口 unresolved，级联 `clearCallingIdentity` / `restoreCallingIdentity
 | 改 api | **1491** |
 
 无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-customization-api-exposure.md`。
+
+---
+
+## 2026-07-28 — 补齐完整 SettingsLib jar
+
+### 现象
+`com.android.settingslib.volume.data.repository.AudioRepository` /
+`bluetooth.LocalBluetoothLeBroadcast` 等大量 `com.android.settingslib.*` unresolved。
+
+### 根因
+我方 `SettingsLib-1.0.0.aar` 只含 res 不含 class。AOSP SettingsLib 混合模块编译产物分
+kotlin jar（kotlin 类）+ javac jar（java 类），单独任一都不全。
+
+### 解决方案（AGENTS §1）
+补 `libs/SettingsLib-full.jar`（kotlin）+ `libs/SettingsLib-javac.jar`（javac），
+`compileOnly` 引入 core，保留原 aar 提供 res。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 1491 |
+| + kotlin jar | 1150 |
+| + javac jar | **1039** |
+
+两步均无新增 unresolved 符号类型。详见 `docs/issues/2026-07-28-settingslib-full-jar.md`。
