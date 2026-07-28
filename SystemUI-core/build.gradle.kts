@@ -197,6 +197,8 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.3.1")
     // material3-window-size-class: WindowSizeClass（compose windowsizeclass 目录）
     implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
+    // Material Components for Android（com.google.android.material.slider.Slider 等，非 compose）
+    implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.compose.foundation:foundation:1.7.5")
     implementation("androidx.compose.ui:ui:1.7.5")
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.5")
