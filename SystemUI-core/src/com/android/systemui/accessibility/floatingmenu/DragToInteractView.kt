@@ -175,7 +175,7 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
         addCircle(
             config,
             R.id.action_edit,
-            R.drawable.ic_screenshot_edit,
+            com.android.internal.R.drawable.ic_screenshot_edit,
             linearLayout
         )
         // END DragToInteractView modification

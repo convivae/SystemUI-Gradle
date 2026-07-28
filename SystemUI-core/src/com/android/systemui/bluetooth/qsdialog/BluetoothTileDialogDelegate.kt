@@ -408,8 +408,8 @@ internal constructor(
                     val tintColor =
                         com.android.settingslib.Utils.getColorAttr(
                                 context,
-                                if (item.isActive) R.attr.materialColorOnPrimaryContainer
-                                else R.attr.materialColorOnSurface,
+                                if (item.isActive) com.android.internal.R.attr.materialColorOnPrimaryContainer
+                                else com.android.internal.R.attr.materialColorOnSurface,
                             )
                             .defaultColor
 

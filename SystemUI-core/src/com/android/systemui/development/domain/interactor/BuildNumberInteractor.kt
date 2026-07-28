@@ -63,7 +63,7 @@ constructor(
     private val buildText =
         BuildNumber(
             resources.getString(
-                R.string.bugreport_status,
+                com.android.internal.R.string.bugreport_status,
                 Build.VERSION.RELEASE_OR_CODENAME,
                 Build.ID,
             )

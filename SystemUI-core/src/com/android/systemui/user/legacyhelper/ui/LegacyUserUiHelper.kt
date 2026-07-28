@@ -50,7 +50,7 @@ object LegacyUserUiHelper {
         } else if (isAddUser) {
             R.drawable.ic_add
         } else if (isGuest) {
-            com.android.settingslib.R.drawable.ic_account_circle
+            com.android.internal.R.drawable.ic_account_circle
         } else if (isAddSupervisedUser) {
             com.android.settingslib.R.drawable.ic_add_supervised_user
         } else if (isManageUsers) {

@@ -761,7 +761,7 @@ constructor(
     private suspend fun getUserImage(isGuest: Boolean, userId: Int): Drawable {
         if (isGuest) {
             return checkNotNull(
-                applicationContext.getDrawable(com.android.settingslib.R.drawable.ic_account_circle)
+                applicationContext.getDrawable(com.android.internal.R.drawable.ic_account_circle)
             )
         }
 
