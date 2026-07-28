@@ -50,3 +50,17 @@ LC_ALL=C 对比 verify20(809)→verify22(741)：**无新增 unresolved 符号类
 | lottie 后 | 809 |
 | 复制 6 个 compose core 目录 | 755 |
 | + animation-graphics + material3-window-size-class | **741** |
+
+## 后续：compose/core 顶层文件（741→724）
+
+另补 `compose/core` 3 个顶层文件 `PlatformButtons.kt`/`PlatformSlider.kt`/`SystemUiController.kt`
+（PlatformButton/PlatformOutlinedButton/Slider 等），只依赖标准 Compose，−17。
+
+## ⚠️ 失败尝试：批量复制 compose/features/src（724→771，已回滚）
+
+`compose/features/src`（153 文件，含 `scene.ui.composable.Scene`/`Overlay`/`QuickSettingsShade`/
+`SceneContainerTransitions` 等）**外部依赖面看似干净**（只 androidx/systemui/compose/settingslib/keyguard
++ 2 文件引 `platform.test.motion`），但整体复制后错误 **724→771（+47）净增**。
+原因：这 153 个文件引用大量尚未移植的 core 内部类，引入的新 unresolved 多于其解决的。
+**结论**：features 模块不能裸复制，需先补齐其依赖链（依赖完整化），属更大工程，留待专门规划。
+已精确删除这 152 个 untracked 文件回到 724。
