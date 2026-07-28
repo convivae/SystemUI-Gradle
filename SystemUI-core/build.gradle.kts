@@ -185,6 +185,11 @@ dependencies {
     // DataStore (对齐 AOSP SystemUI 的 androidx.datastore_datastore-preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.datastore:datastore-core:1.1.1")
+    // SystemUI AIDL 生成接口 (从 AOSP SystemUI classes.jar 提取)
+    // 源码里的 14 个 .aidl 未经 AGP aidl 编译 (SysUISdk framework.aidl 缺 hidden 接口如 IRemoteCallback)，
+    // 改为直接引入 AOSP 已编译的 I*Service/$Stub 类，消除 IGlanceableHubWidgetManagerService 等
+    // unresolved 及其级联 (clearCallingIdentity 等)。
+    compileOnly(files("${rootProject.projectDir}/libs/systemui-aidl.jar"))
 
     // 注：原 compose/scene 源码已复制到 src 下，但因为它依赖一系列 Compose 内部 API
     //     （thenIf/drawInContainer 等），完整编译需要更多 Compose 依赖，

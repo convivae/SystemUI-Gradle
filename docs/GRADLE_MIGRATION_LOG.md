@@ -464,3 +464,28 @@ implementation("androidx.datastore:datastore-core:1.1.1")
 无新增错误类型。smartspace ids（在 shared/res）未解决：core 用 prebuilt SharedLib.jar
 依赖 shared 而非 project，给 shared 加 res 无效（已回退）。详见
 `docs/issues/2026-07-28-transitive-r-customization-res.md`。
+
+---
+
+## 2026-07-28 — 引入 SystemUI AIDL 生成接口 jar
+
+### 现象
+`IGlanceableHubWidgetManagerService` / `IHomeControlsRemoteProxy` / `IScreenshotProxy` 等
+AIDL 接口 unresolved，级联 `clearCallingIdentity` / `restoreCallingIdentity`。
+
+### 根因
+14 个 `.aidl` 与源码同放 `src/`，但 AGP 8+ 默认关闭 aidl 编译；开启后又因
+`SysUISdk/framework.aidl` 缺 hidden 接口（`android.os.IRemoteCallback` 等）而失败。
+
+### 解决方案（AGENTS §1：从 AOSP 编译产物提取 jar）
+从 `aosp/out/.../SystemUI_intermediates/classes.jar` 提取 11 个 `I*Service`
+接口 + 嵌套类打包为 `libs/systemui-aidl.jar`，`compileOnly` 引入。
+
+### 错误数演变
+| 时点 | 错误数 |
+|------|--------|
+| 修复前 | 1759 |
+| 引入 systemui-aidl.jar | **1658** |
+
+无新增错误类型。残留 9 个为嵌套回调接口的 nullability mismatch（非 unresolved）。
+详见 `docs/issues/2026-07-28-systemui-aidl-jar.md`。
