@@ -16,7 +16,7 @@
 
 package com.android.systemui.statusbar.notification.row.icon
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.annotation.WorkerThread
 import android.app.ActivityManager

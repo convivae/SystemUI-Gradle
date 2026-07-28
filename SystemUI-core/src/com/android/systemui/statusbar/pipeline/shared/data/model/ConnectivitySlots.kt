@@ -16,7 +16,7 @@
 
 package com.android.systemui.statusbar.pipeline.shared.data.model
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import com.android.systemui.dagger.SysUISingleton

@@ -16,7 +16,7 @@
 
 package com.android.systemui.screenshot
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import android.media.AudioAttributes

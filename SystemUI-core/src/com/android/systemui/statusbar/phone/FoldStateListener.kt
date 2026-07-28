@@ -15,7 +15,7 @@
  */
 package com.android.systemui.statusbar.phone
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import android.hardware.devicestate.DeviceState

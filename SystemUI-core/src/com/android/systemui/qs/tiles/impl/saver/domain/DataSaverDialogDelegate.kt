@@ -16,7 +16,7 @@
 
 package com.android.systemui.qs.tiles.impl.saver.domain
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import android.content.DialogInterface

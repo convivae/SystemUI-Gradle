@@ -69,7 +69,7 @@ internal constructor(
                 .setVisibility(Notification.VISIBILITY_PUBLIC) // ok to show outside lockscreen
                 .setCategory(Notification.CATEGORY_ERROR)
                 .setAutoCancel(true)
-                .setColor(context.getColor(R.color.system_notification_accent_color))
+                .setColor(context.getColor(com.android.internal.R.color.system_notification_accent_color))
         val intent =
             devicePolicyManager.createAdminSupportIntent(
                 DevicePolicyManager.POLICY_DISABLE_SCREEN_CAPTURE

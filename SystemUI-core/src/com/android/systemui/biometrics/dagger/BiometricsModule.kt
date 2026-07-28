@@ -16,7 +16,7 @@
 
 package com.android.systemui.biometrics.dagger
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import android.content.res.Resources

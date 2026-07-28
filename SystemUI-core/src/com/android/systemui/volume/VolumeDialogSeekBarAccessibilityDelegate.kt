@@ -16,7 +16,7 @@
 
 package com.android.systemui.volume
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.os.Bundle
 import android.view.View

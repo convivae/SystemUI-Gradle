@@ -16,7 +16,7 @@
 
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import android.provider.Settings.Secure.DEVICE_STATE_ROTATION_LOCK_IGNORED

@@ -16,7 +16,7 @@
 
 package com.android.systemui.media.controls.ui.animation
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator

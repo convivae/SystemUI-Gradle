@@ -16,7 +16,7 @@
 
 package com.android.systemui.bouncer.domain.interactor
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.annotation.SuppressLint
 import android.app.ActivityOptions

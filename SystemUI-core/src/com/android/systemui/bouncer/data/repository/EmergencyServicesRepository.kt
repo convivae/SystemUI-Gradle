@@ -16,7 +16,7 @@
 
 package com.android.systemui.bouncer.data.repository
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.res.Resources
 import com.android.systemui.common.ui.GlobalConfig

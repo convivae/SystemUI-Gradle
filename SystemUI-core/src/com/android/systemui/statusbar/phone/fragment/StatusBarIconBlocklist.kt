@@ -40,7 +40,7 @@ fun getStatusBarIconBlocklist(
     val blocklist = res.getStringArray(
             R.array.config_collapsed_statusbar_icon_blocklist).toList()
 
-    val vibrateIconSlot: String = res.getString(R.string.status_bar_volume)
+    val vibrateIconSlot: String = res.getString(com.android.internal.R.string.status_bar_volume)
     val showVibrateIcon = settings.getIntForUser(
             Settings.Secure.STATUS_BAR_SHOW_VIBRATE_ICON,
             0,

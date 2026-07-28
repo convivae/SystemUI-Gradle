@@ -1,6 +1,6 @@
 package com.android.systemui.statusbar.notification.logging
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable

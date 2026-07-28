@@ -165,7 +165,7 @@ internal object SingleLineViewInflater {
 
         val senderName =
             systemUiContext.resources.getString(
-                R.string.conversation_single_line_name_display,
+                com.android.internal.R.string.conversation_single_line_name_display,
                 if (Flags.cleanUpSpansAndNewLines()) name?.toString() else name,
             )
 
@@ -189,13 +189,13 @@ internal object SingleLineViewInflater {
             return ""
         }
         return if (isGroupConversation) {
-            systemUiContext.resources.getString(R.string.conversation_title_fallback_group_chat)
+            systemUiContext.resources.getString(com.android.internal.R.string.conversation_title_fallback_group_chat)
         } else {
             // Is one-to-one, let's try to use the last sender's name
             // The last back-up is the value of resource: conversation_title_fallback_one_to_one
             senderName
                 ?: systemUiContext.resources.getString(
-                    R.string.conversation_title_fallback_one_to_one
+                    com.android.internal.R.string.conversation_title_fallback_one_to_one
                 )
         }
     }
@@ -214,7 +214,7 @@ internal object SingleLineViewInflater {
         // will be SingleLineViewModel.contentText
         if (!message.isImageMessage()) return null
         // If is image message, return a placeholder
-        return context.resources.getString(R.string.conversation_single_line_image_placeholder)
+        return context.resources.getString(com.android.internal.R.string.conversation_single_line_image_placeholder)
     }
 
     /**

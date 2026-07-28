@@ -16,7 +16,7 @@
 
 package com.android.systemui.display.data.repository
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import android.hardware.devicestate.DeviceState as PlatformDeviceState

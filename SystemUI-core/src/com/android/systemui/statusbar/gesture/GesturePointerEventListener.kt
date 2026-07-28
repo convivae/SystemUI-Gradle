@@ -15,7 +15,7 @@
  */
 package com.android.systemui.statusbar.gesture
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.Context
 import android.graphics.Rect

@@ -16,7 +16,7 @@
 
 package com.android.systemui.keyguard
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter

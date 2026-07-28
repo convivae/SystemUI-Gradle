@@ -1,6 +1,6 @@
 package com.android.systemui.qs
 
-import com.android.systemui.R
+import com.android.internal.R
 
 import android.content.BroadcastReceiver
 import android.content.Context
