@@ -1,7 +1,7 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
 > **最后更新**: 2026-07-28
-> **当前错误数**: 250
+> **当前错误数**: 244
 > **当前阶段**: Stage 2/3/4 推进中（R 歧义 + datastore + transitive R + 多个 AOSP jar 补齐 + customization api）
 
 > ⚠️ **Stage 2 根因更正 (2026-07-28)**: 阻塞**不是** classpath/Kotlin 2.2.10/缺 FeatureFlags，

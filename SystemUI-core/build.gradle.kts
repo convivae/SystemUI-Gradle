@@ -206,6 +206,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core:1.7.5")
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
     implementation("androidx.tracing:tracing:1.2.0")
+    // concurrent-futures-ktx: ListenableFuture.await()（media/zen 等）
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.2.0")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     // DataStore (对齐 AOSP SystemUI 的 androidx.datastore_datastore-preferences)
