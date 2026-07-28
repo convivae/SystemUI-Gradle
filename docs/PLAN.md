@@ -1,145 +1,107 @@
 # SystemUI-Gradle 详细开发计划 (PLAN.md)
 
-> 最近更新: 2026-07-23 (基于 AGENTS.md)
-> 当前错误数: 2000
-> 目标错误数: 0 → 可编译
+> **最后更新**: 2026-07-28
+> **当前错误数**: 2000
+> **目标错误数**: 0 → 可编译
+> **当前阶段**: Stage 2 (server-notification-flags.jar) — **阻塞**
 
 ---
 
 ## 阶段总览
 
 ```
-阶段 1 (本次提交): 文档 + 阶段性 commit  ← 当前
-阶段 2: 高优先级阻塞错误 (server-notification-flags.jar 解析问题)
-阶段 3: Compose Scene Framework 集成
-阶段 4: 业务模块错误
-阶段 5: 完整编译验证 + 打包
+阶段 1 ✅ (2026-07-22): 文档 + 阶段性 commit
+阶段 2 🚧 (2026-07-23 ~ 现在): server-notification-flags.jar 解析问题 — 阻塞中
+阶段 3 ⏳ (待启动): Compose Scene Framework 集成
+阶段 4 ⏳ (待启动): 业务模块错误
+阶段 5 ⏳ (待启动): 完整编译验证 + 打包
 ```
 
 ---
 
-## 阶段 1: 文档与阶段性 commit (已完成大部分)
-
-### 目标
-- 记录所有规则到 AGENTS.md
-- 清理 debug 代码
-- 提交当前进度
+## 阶段 1: 文档与阶段性 commit ✅ 已完成 (2026-07-22)
 
 ### 任务
 1. ✅ 创建 AGENTS.md
 2. ✅ 清理 build.gradle.kts debug 输出
 3. ✅ 写 docs/issues/2026-07-22-stub-cleanup-and-deps.md
-4. ⏳ 提交本次工作
+4. ✅ 提交 (commit `a7176c7` 等)
 
-### 提交命令
-```bash
-git add -A
-git commit -m "..."
-```
+### 错误数变化
+- 进入: 2412
+- 离开: 2000
+- 减少: 412（删除 stub + 加 Monet + 加 SystemUI Flags）
 
 ---
 
-## 阶段 2: server-notification-flags.jar 解析问题
+## 阶段 2: server-notification-flags.jar 解析问题 🚧 阻塞中
 
 ### 问题描述
-- 错误: `Unresolved reference 'screenshareNotificationHiding'`
-- 涉及文件: `SensitiveContentCoordinator.kt`, `StackCoordinator.kt`, `FlagDependencies.kt`
-- 现象: jar 在 classpath 中（DEBUG 输出验证），但 Kotlin 仍报 Unresolved
-- 推测: Kotlin compile 缓存、AGP 9 处理 jar 的特殊行为
 
-### 调查步骤
+- 错误: `Unresolved reference 'screenshareNotificationHiding'` × 13 + `FlagDependencies.kt` 6 个
+- 现象: jar 在 classpath 中（`./gradlew --debug` 验证），但 Kotlin 仍报 Unresolved
+- 推测根因: AGP 9 嵌入 Kotlin 2.2.10 + `@UnsupportedAppUsage` 注解交互
 
-#### 步骤 2.1: 验证 jar 内容正确
-```bash
-unzip -p libs/server-notification-flags.jar META-INF/MANIFEST.MF
-javap -p -classpath libs/server-notification-flags.jar com.android.server.notification.Flags | head
-unzip -p libs/server-notification-flags.jar com/android/server/notification/Flags.class | javap -p /dev/stdin
+### 详细调研文档
+
+- `docs/issues/2026-07-23-server-notification-flags-unresolvable.md` (2026-07-23 第一轮)
+- `docs/issues/2026-07-28-server-flags-debug-session.md` (2026-07-28 第二轮)
+- `docs/architecture/STAGE2-3-RESEARCH-LOG.md` (深度调研)
+
+### 涉及文件
+
+```
+SensitiveContentCoordinator.kt       (25, 98, 108, 115, 178, 211, 217)
+StackCoordinator.kt                  (20, 71)
+NotifUiAdjustmentProvider.kt         (25, 73, 92, 145)
+FlagDependencies.kt                  (79, 82, 85)
 ```
 
-#### 步骤 2.2: 验证 classpath 顺序
-- 检查 `internalFlagsJars` 是否在 framework.jar 之前
-- 尝试将 jar 放到 `compileOnly` 中测试
+### 已尝试方案（全部失败）
 
-#### 步骤 2.3: 检查 AGP 9 jar 解析行为
-- AGP 9 可能要求 jar 包含 `module-info.class` 或 JVM module
-- 检查是否有 `META-INF/versions/` 目录标记 Java 版本
+| # | 方案 | 失败原因 |
+|---|------|---------|
+| 1 | `compileOnly(files("libs/server-notification-flags.jar"))` | 空 jar |
+| 2 | `implementation(files("libs/server-notification-flags.jar"))` | 空 jar |
+| 3 | Maven AAR | 仍 unresolved |
+| 4 | Maven JAR | 仍 unresolved |
+| 5 | flatDir repository | 仍 unresolved |
+| 6 | allprojects `libraries.from()` 注入 | 注入成功但 unresolved |
+| 7 | 提供 `AconfigFlagAccessor` 注解 | 仍 unresolved |
+| 8 | 提供 `UnsupportedAppUsage` 注解 | 仍 unresolved |
+| 9 | 提供 `FeatureFlags` 接口 | 未尝试 |
+| 10 | 升级 Kotlin 到 2.2.10 | plugin 冲突 |
+| 11 | 独立 kotlin("jvm") 2.1.0 项目测试 | 成功 → 证明问题在 AGP+Kotlin2.2.10 |
 
-#### 步骤 2.4: 尝试解决方案
+### 下一步（建议下个 AI 优先尝试）
 
-| 方案 | 描述 | 风险 |
-|------|------|------|
-| A: 改用 AAR | 把 Flags + 资源打包成 AAR | 复杂 |
-| B: 强制 --rerun-tasks | 清 Kotlin 缓存 | 可能无效 |
-| C: 复制 source 源码作为 Kotlin 源 | 在 SystemUI-core/src 下复制 com.android.server.notification.Flags.kt | 违反"不允许 stub"规则 |
-| D: 查找是否有 services.jar 集成方式 | 把 services.jar 整个引入 | 太大（~50MB） |
-| E: 改用 classes.jar 的某个子目录 | 把整个 services_intermediates 的 com.android.server.notification 包打包 | 复杂 |
-
-**首选方案**: A - 提取 Flags + 相关依赖为 AAR，包含 Resources
-
-#### 步骤 2.5: 提取完整 notification Flags
-
-如果方案 A 不可行，尝试提取完整的 `com.android.server.notification.*` 包到单个 jar：
-
-```bash
-unzip -j aosp/out/target/common/obj/JAVA_LIBRARIES/services_intermediates/classes.jar 'com/android/server/notification/*' -d /tmp/sn_full/
-jar cf libs/server-notification.jar /tmp/sn_full/...
-```
-
-#### 步骤 2.6: 失败时的兜底方案
-
-如果所有方案都不可行：
-- 临时**移除**所有 `com.android.server.notification.Flags.screenshareNotificationHiding` 的引用
-- 用 `false` 替换（因为 AOSP 默认 screenshareNotificationHiding() = false）
-- 但要明确记录这是"受限的临时方案"违反规则 P
+| # | 实验 | 预期 | 风险 |
+|---|------|------|------|
+| A | 提取 `FeatureFlags` 接口跟 Flags 一起打包 | 可能解决 | 低 |
+| B | 加 `-Xverbose` 看 Kotlin 真实日志 | 诊断根因 | 低 |
+| C | K2JVMCompiler 完整 classpath（含 systemui-flags）跑测试 | 验证问题是否在 Kotlin 版本 | 低 |
+| D | 接受阻塞，转 Stage 3 | 不阻塞主线 | 无 |
 
 ### 预期错误数变化
-- 目标: 2000 → 1850 (减少约 150 个错误)
-- 涉及 ~13 个文件中的 `screenshareNotificationHiding` + ~30 个其他 server.Flags 引用
+
+- 如果 A/B 成功: 2000 → 1970 (减少 30)
+- 如果 D: 维持 2000，先做 Stage 3
 
 ---
 
-## 阶段 3: Compose Scene Framework 集成
+## 阶段 3: Compose Scene Framework 集成 ⏳
 
 ### 问题描述
+
 大量错误来自 `SystemUI-core/src/com/android/compose/` 包：
-- `animation/scene/*` - Scene Framework
-- `nestedscroll/*` - NestedScroll 连接器
-- `theme/*` - Material You 主题
-- `ui/util/*` - 实用工具
+- `animation/scene/*` (12 个)
+- `theme/*` (60 个)
+- `nestedscroll/*` (0 个，已排除? 待确认)
+- `ui/util/*` (0 个，已排除? 待确认)
 
 ### AOSP 来源
 
 #### 3.1 Scene Framework
-- AOSP 源码: `frameworks/base/packages/SystemUI/.../scene/` (也可能是 Jetpack Compose 内部)
-- 检查: `/home/conv/myspace/aosp/`
-- 关键文件: `SceneTransitionLayout.kt`, `AnimateToScene.kt` 等
-
-#### 3.2 Compose 内部
-- `thenIf`, `drawInContainer` 等内部 API 来自 Compose compiler
-- 可能需要 Compose AAR（特定版本）
-
-### 实现方案
-
-#### 方案 A: 提取 Scene Framework AAR (优先)
-
-```bash
-# 从 AOSP 编译产物提取
-find /home/conv/myspace/aosp/out -name "*.aar" | grep -i "scene\|compose" | head
-```
-
-如果没有 AAR，需要：
-1. 用 `gen_aar_maven.py` 模式编译生成
-2. 或复制源码到独立 module
-
-#### 方案 B: 复制源码为独立 module
-
-```bash
-# 创建 :SystemUI-scene module
-mkdir -p SystemUI-scene/src/com/android/compose/scene
-cp -r aosp/frameworks/.../scene/* SystemUI-scene/src/
-```
-
-### 关键检查
 
 ```bash
 # 1. Scene Framework 是否存在于 AOSP?
@@ -153,12 +115,42 @@ find /home/conv/myspace/aosp/out -name "*.jar" | xargs -I{} \
 grep "import androidx.compose" SystemUI-core/src/com/android/compose/animation/scene/*.kt | head -3
 ```
 
+#### 3.2 缺失符号
+
+| 符号 | 类型 | 来源 |
+|------|------|------|
+| `thenIf` | Modifier 扩展 | Compose 内部 |
+| `drawInContainer` | DrawModifier | Compose 内部 |
+| `ContainerState` | 状态类 | Compose 内部 |
+| `modifiers.*` | 子包 | Compose 内部 |
+| `graphics.*` | 子包 | Compose 内部 |
+
+### 实现方案
+
+| 方案 | 描述 | 风险 |
+|------|------|------|
+| A | 提取 AOSP Scene AAR | 中（可能不存在） |
+| B | 升级 androidx.compose 到 1.8.0 | 中 |
+| C | 复制源码为独立 module | 中（违反规则 P? 待确认） |
+| D | 排除源码（暂时禁用） | 高（用户看不到 UI） |
+
+### Compose Theme R 冲突
+
+- `AndroidColorScheme.kt` 同时 import `com.android.systemui.R` 和 `com.android.compose.theme.R`
+- 解决方案：alias import
+
+```kotlin
+import com.android.systemui.R as SystemUiR
+import com.android.compose.theme.R as ComposeR
+```
+
 ### 预期错误数变化
-- 目标: 1850 → 1500 (减少约 350 个错误)
+
+- 成功: 2000 → 1850 (减少 150)
 
 ---
 
-## 阶段 4: 业务模块错误
+## 阶段 4: 业务模块错误 ⏳
 
 ### 4.1 分类剩余错误
 
@@ -168,16 +160,31 @@ grep "import androidx.compose" SystemUI-core/src/com/android/compose/animation/s
   awk -F: '{print $1}' | sort | uniq -c | sort -rn | head -20
 ```
 
-### 4.2 常见错误类型
+### 4.2 顶级错误包
+
+| 错误数 | 包 |
+|--------|-----|
+| 81 | systemui/volume/domain/interactor |
+| 79 | systemui/bluetooth/qsdialog |
+| 57 | systemui/scene |
+| 57 | systemui/communal/widgets |
+| 56 | systemui/volume/panel/component/mediaoutput/domain/interactor |
+| 51 | systemui/keyguard/ui/preview |
+| 51 | systemui/education/data/repository |
+| 48 | systemui/volume/dialog/sliders/ui |
+| 46 | systemui/communal/data/repository |
+
+### 4.3 常见错误类型
 
 | 类型 | 数量(预估) | 解决方案 |
 |------|----------|---------|
-| Compose Modifier 内部 | ~400 | 升级 Compose 依赖 |
-| aconfig Flag | ~50 | 提取 aconfig Flags jar |
+| Compose Modifier 内部 | ~400 | Stage 3 升级 Compose |
+| aconfig Flag | ~50 | Stage 2 修复 |
 | 缺失的业务类 | ~200 | 提取 AOSP 业务类 |
 | 测试代码 | ~300 | 排除测试代码 |
+| KAPT 注入 | ~600 | 解 KAPT 阻塞 |
 
-### 4.3 排除测试代码
+### 4.4 排除测试代码
 
 ```kotlin
 android {
@@ -189,18 +196,31 @@ android {
 }
 ```
 
-### 4.4 升级 Compose 依赖
+### 4.5 启用 KSP 替代 KAPT
 
 ```kotlin
-implementation("androidx.compose.foundation:foundation:1.8.0")  // 内部 API 更全
+// build.gradle.kts (root)
+plugins {
+    id("com.google.devtools.ksp") version "2.1.0-1.0.29" apply false
+}
+
+// SystemUI-core/build.gradle.kts
+plugins {
+    id("com.google.devtools.ksp")
+}
+
+dependencies {
+    ksp(libs.dagger.compiler)
+}
 ```
 
 ### 预期错误数变化
-- 目标: 1500 → 500 (减少约 1000 个错误)
+
+- 目标: 1850 → 500 (减少约 1350 个错误)
 
 ---
 
-## 阶段 5: 最终验证
+## 阶段 5: 最终验证 ⏳
 
 ### 5.1 编译完整 :SystemUI-core
 
@@ -220,7 +240,14 @@ implementation("androidx.compose.foundation:foundation:1.8.0")  // 内部 API �
 ./gradlew :app:assembleDebug 2>&1 | tail -20
 ```
 
+### 5.4 安装到设备
+
+```bash
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
 ### 预期最终错误数
+
 - 目标: 0 → 完整编译通过
 
 ---
@@ -233,6 +260,7 @@ implementation("androidx.compose.foundation:foundation:1.8.0")  // 内部 API �
 | KAPT 与 AGP 9 不兼容 | Dagger 错误 | 用 KSP 或退到 AGP 8 |
 | AOSP framework.jar 与 SDK 冲突 | 重复类 | 详细 AAR 拆分 |
 | 资源 ID 不匹配 | R 类引用错误 | framework.jar + private res |
+| Kotlin 2.2.10 + AGP 9 不识别某些 Flags | unresolved | 提取相关接口 |
 
 ---
 
@@ -240,32 +268,38 @@ implementation("androidx.compose.foundation:foundation:1.8.0")  // 内部 API �
 
 每个阶段建议对应一个 commit：
 
-1. `docs: add AGENTS.md with rules and progress`
-2. `feat(deps): resolve server-notification-flags.jar ...`
-3. `feat(scene): integrate Compose Scene Framework AAR`
-4. `feat(deps): upgrade Compose to 1.8.x for internal APIs`
-5. `fix: exclude test code from main source set`
-6. `feat: complete SystemUI Gradle build pipeline`
+1. ✅ `docs: add AGENTS.md with rules and progress`
+2. ✅ `refactor: 遵循参考项目 (CarSystemUIGradle) 引入依赖方式 - 删除所有 stub`
+3. ✅ `feat(SystemUI-core): 完整合并 framework.jar 到 SysUISdk/android.jar`
+4. ⏳ `feat(deps): resolve server-notification-flags.jar ...`
+5. ⏳ `feat(scene): integrate Compose Scene Framework AAR`
+6. ⏳ `feat(deps): upgrade Compose to 1.8.x for internal APIs`
+7. ⏳ `chore(deps): migrate from KAPT to KSP`
+8. ⏳ `fix: exclude test code from main source set`
+9. ⏳ `feat: complete SystemUI Gradle build pipeline`
 
 ---
 
 ## 开发时间估算
 
-| 阶段 | 预估时间 | 累计 |
-|------|---------|------|
-| 阶段 1 | 0.5h | 0.5h |
-| 阶段 2 | 2-4h | 2.5-4.5h |
-| 阶段 3 | 4-8h | 6.5-12.5h |
-| 阶段 4 | 2-4h | 8.5-16.5h |
-| 阶段 5 | 1-2h | 9.5-18.5h |
+| 阶段 | 状态 | 预估时间 | 已用 |
+|------|------|---------|------|
+| 阶段 1 | ✅ | 0.5h | 0.5h |
+| 阶段 2 | 🚧 | 2-4h | 4h (阻塞) |
+| 阶段 3 | ⏳ | 4-8h | 0 |
+| 阶段 4 | ⏳ | 2-4h | 0 |
+| 阶段 5 | ⏳ | 1-2h | 0 |
 
-总计: 约 1-2 个工作日
+总计：预估 9.5-18.5h，已用 ~4.5h
 
 ---
 
 ## 参考资源
 
-- [AGENTS.md](./AGENTS.md) - 项目规则与进度
+- [AGENTS.md](../AGENTS.md) - 项目规则与进度
+- [docs/HANDOFF.md](./HANDOFF.md) - ⭐ 下个 AI 入口
+- [docs/CURRENT_STATE.md](./CURRENT_STATE.md) - 当前状态快照
+- [docs/PITFALLS.md](./PITFALLS.md) - 踩坑记录
 - [docs/GRADLE_MIGRATION_LOG.md](./GRADLE_MIGRATION_LOG.md) - 历史错误数演变
 - [CarSystemUIGradle](../CarSystemUIGradle) - 参考实现 (同用户私有项目)
-- [tools/gen_aar_maven.py](./tools/gen_aar_maven.py) - AAR 生成脚本
+- [tools/gen_aar_maven.py](../tools/gen_aar_maven.py) - AAR 生成脚本

@@ -308,3 +308,54 @@ BUILD SUCCESSFUL。临时文件已删除。
 ### Plan 修订
 M1 描述已根据参考项目发现更新（不再做独立 module，直接 `compileOnly`）。
 Q2 (Dagger codegen) 答案 = kapt，按参考项目 `kotlin-kapt` 插件 + `kapt(libs.dagger.compiler)`。
+---
+
+## 问题十一：错误数演变（2026-07-22 ~ 2026-07-28）
+
+### 错误数时间线
+
+| 日期 | 错误数 | Δ | 改动 |
+|------|--------|---|------|
+| 2026-07-22 初 | 5296 | — | 仅 sdk android.jar |
+| 2026-07-22 | 4675 | -621 | 替换 framework.jar (AOSP 完整版) |
+| 2026-07-22 | 3008 | -1667 | 合并 SDK android.jar + framework.jar |
+| 2026-07-22 | 2412 | -596 | 删除所有 v1 stub (~60 个) |
+| 2026-07-22 | 2000 | -412 | 加 Monet + SystemUI Flags jar |
+| 2026-07-23 | 2000 | 0 | 启动 Stage 2 (server-notification-flags) |
+| 2026-07-28 | 2000 | 0 | Stage 2 调试 session，未突破 |
+
+### 趋势
+
+- **2026-07-22 一日减少 3296 个错误**（最大单日降幅）
+- **2026-07-23 起进入平台期** (2000 难以下降)
+- 主要阻塞: server-notification-flags.jar + KAPT 禁用 + Compose 内部 API
+
+---
+
+## 问题十二：Stage 2-3 文档化 (2026-07-28)
+
+### 问题描述
+用户要求把所有"当前正在做的、需要做的、长期做的、遇到的问题、原则"记录到多个文档，
+让下一个 AI Agent 拿上就能上手。
+
+### 解决方案
+
+创建/更新以下文档：
+
+1. `docs/HANDOFF.md` (新) - 5 分钟上手纲要
+2. `AGENTS.md` (重写) - 完整规则 + 现状
+3. `docs/CURRENT_STATE.md` (新) - 状态快照
+4. `docs/PITFALLS.md` (新) - 踩坑记录
+5. `docs/issues/2026-07-28-server-flags-debug-session.md` (新) - 本次实验
+6. `docs/architecture/STAGE2-3-RESEARCH-LOG.md` (新) - 深度调研
+7. `docs/PLAN.md` (更新) - 阶段计划
+8. `docs/GRADLE_MIGRATION_LOG.md` (本条目) - 历史演变
+
+### 下个 AI 必读顺序
+
+```
+docs/HANDOFF.md → AGENTS.md → docs/CURRENT_STATE.md → docs/PLAN.md →
+docs/PITFALLS.md → docs/architecture/STAGE2-3-RESEARCH-LOG.md →
+docs/issues/2026-07-28-server-flags-debug-session.md →
+docs/GRADLE_MIGRATION_LOG.md
+```
