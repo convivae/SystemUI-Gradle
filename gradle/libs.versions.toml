@@ -75,6 +75,7 @@ dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = 
 # Third-party
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
+lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 
 # Local Maven AARs (SystemUI modules)
 systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "1.0.0" }

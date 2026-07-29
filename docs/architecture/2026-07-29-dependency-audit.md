@@ -55,8 +55,9 @@
 - **SystemUISharedLib ×3**：`prebuilts/SystemUISharedLib.jar`（:SystemUI-shared）
   + `libs.systemui.sharedlib` maven-aar（core compileOnly）
   + `libs/maven/.../SystemUISharedLib-1.0.0.aar`。→ 改源码后**三者全删**。
-- **SettingsLib ×3**：`libs.systemui.settingslib` maven-aar + `SettingsLib-full.jar` + `SettingsLib-javac.jar`。
-  → tier②，保留**一种**（建议 maven-aar，含资源），删两个 jar。
+- **SettingsLib**：`libs.systemui.settingslib` maven-aar（**只含 res**）+ `SettingsLib-full.jar`(413)
+  + `SettingsLib-javac.jar`(645, code)。→ **经核实非冗余**：aar 供资源、jar 供代码，是合理的
+  res/code 拆分，tier② 合规，**保留**。（原审查误判为三重冗余，已更正）
 
 ### 2.4 🗑️ 死依赖（无任何 build.gradle 引用，可删）
 
