@@ -18,6 +18,13 @@ HIDDEN_IFACES = [
     "android.os.IRemoteCallback",
 ]
 
+# SystemUI aidl import 了、但 public framework.aidl 缺失的 framework @hide parcelable。
+# 类本身在 framework.jar；这里只补 aidl 预处理声明，避免把 framework 代码源码复制进 SystemUI。
+# 例：ISystemUiProxy.aidl `import com.android.internal.util.ScreenshotRequest;`
+HIDDEN_PARCELABLES = [
+    "com.android.internal.util.ScreenshotRequest",
+]
+
 
 def main() -> int:
     sdk_root = (
@@ -42,6 +49,13 @@ def main() -> int:
     to_append = []
     for iface in HIDDEN_IFACES:
         decl = f"interface {iface};"
+        if decl in content:
+            print(f"  已存在: {decl}")
+        else:
+            to_append.append(decl)
+            print(f"  待补齐: {decl}")
+    for parcel in HIDDEN_PARCELABLES:
+        decl = f"parcelable {parcel};"
         if decl in content:
             print(f"  已存在: {decl}")
         else:
