@@ -5,8 +5,7 @@ plugins {
 
 android {
     namespace = "com.android.app.animation"
-    compileSdk = rootProject.extra["compileSdkPreview"] as Int
-    buildToolsVersion = "35.0.0"
+    compileSdkPreview = "SysUISdk"
 
     defaultConfig {
         minSdk = 32

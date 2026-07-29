@@ -106,6 +106,28 @@ AOSP Android.bp 表明 `android_app "SystemUI"` 涉及以下文件/属性，必�
 | `defaults: ["platform_app_defaults", "SystemUI_optimized_defaults", "wmshell_defaults"]` | 不翻译（AOSP 平台层配置，由 soong 注入；Gradle 不存在） | 注释标记 |
 | `required: ["privapp_whitelist_com.android.systemui"]` | 不复制（OEM 设备） | 注释标记 |
 
+### 决策 7：namespace 冲突处理
+
+**问题**：AGP 要求每个 module 有独立 namespace，否则 manifest merger 报错：
+```
+Manifest merger failed : Attribute application@name value=(com.android.systemui.app.SystemUIApplication)
+is also present at [:SystemUI-core] AndroidManifest.xml value=(com.android.systemui.SystemUIApplication)
+```
+
+**AOSP 无此问题**——soong 用 `package=` 区分，namespace 是 AGP 强加概念。
+
+**决策**：
+- `:app` namespace 改为 `com.android.systemui.app`（独立 namespace，区别于 core）
+- `:app` 的 `applicationId` 仍为 `com.android.systemui`（AOSP 真实 APK id）
+- `:app` 与 `:SystemUI-core` 的 manifest 删除 `package=` 属性（AGP 9 要求 module namespace 与 manifest package 一致，否则直接报错；AOSP 1:1 优先保留其他属性，但这一项必须变通，参见规则 C 例外说明）
+- `:SystemUI-core` manifest 删除 `<application>` 整块（library 模块不应有 `<application>`；按 AOSP `Android.bp:421` `SystemUI-core` 是 `android_library` 不含 manifest 字段，本项目之前留下的 application 块是历史遗留，违反决策 1 "按 bp 定义"）
+- reference: `CarSystemUIGradle/app/build.gradle.kts:22` 用 `namespace = "com.android.systemui.car"` + `applicationId = "com.android.systemui"`（车载版等价处理）
+
+### 决策 8：AGP 8+ `buildToolsVersion` 与 `compileSdkPreview` 用法
+
+- `buildToolsVersion` 已被 AGP 隐式管理，**不再写**——保留会触发 deprecation
+- `compileSdkPreview = "SysUISdk"` 是项目约定的字符串（与 rootProject 内的 SDK 标识一致）；不要写成 `compileSdk = rootProject.extra["compileSdkPreview"] as Int`（root extra 没有这个 key，会在 configure 阶段抛 `Cannot get property 'compileSdkPreview' on extra properties extension as it does not exist`）
+
 ## 副作用 / 约束
 
 - 移动入口类时需更新 :SystemUI-core/build.gradle.kts 不再 include 这两个文件；`:app/build.gradle.kts` 加 `aidl.srcDirs("src/main/aidl")`（如果有 aidl）
