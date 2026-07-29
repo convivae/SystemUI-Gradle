@@ -74,6 +74,7 @@ dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = 
 
 # Third-party
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
+errorprone-annotations = { module = "com.google.errorprone:error_prone_annotations", version = "2.28.0" }
 lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 

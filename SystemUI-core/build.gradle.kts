@@ -84,9 +84,7 @@ android {
 // }
 
 dependencies {
-    // SystemUILogLib：新版 LogMessage (含 str1/str2/int1/bool1 + MessageInitializer/MessagePrinter
-    // typealias)。放在最前面，优先于 customization/shared/plugin prebuilt 里的旧版 LogMessage。
-    api(files("${rootProject.projectDir}/libs/SystemUI-log.jar"))
+    // SystemUILogLib / SystemUICommon 已改为源码模块（Phase B），替代原 SystemUI-log.jar
 
     // 项目模块
     // SystemUI-shared 内部的 classes 来自 SystemUISharedLib.jar（prebuilt）
@@ -95,6 +93,8 @@ dependencies {
     implementation(project(":SystemUI-plugin-core"))
     implementation(project(":SystemUI-animation"))
     implementation(project(":SystemUI-customization"))
+    implementation(project(":SystemUI-common"))
+    implementation(project(":SystemUI-log"))
 
     // SystemUI-shared 内部的 classes（FlagManager, LogBuffer 等）
     // 来自 AOSP 编译的 SystemUISharedLib.jar（AAR）

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.android.systemui.plugin"
+    namespace = "com.android.systemui.common"
     compileSdkPreview = "SysUISdk"
 
     defaultConfig {
@@ -33,24 +33,16 @@ android {
 }
 
 dependencies {
-    // Internal project modules
-    implementation(project(":SystemUI-plugin-core"))
-    implementation(project(":SystemUI-animation"))
-
     // Framework APIs - provided by system at runtime
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-    // clocks 插件用 com.android.systemui.log.core.MessageBuffer → 依赖源码模块 :SystemUI-log（Phase B）
-    implementation(project(":SystemUI-log"))
+    // Tracing.kt 用 com.android.app.tracing.coroutines.createCoroutineTracingContext（tier② tracinglib）
+    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
 
     // AndroidX
     implementation(libs.androidx.annotation)
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.dynamicanimation)
-    implementation(libs.androidx.recyclerview)
-    // clocks 插件 ClockFaceLayout 用 androidx.constraintlayout.widget.ConstraintSet（对齐 AOSP plugin/Android.bp）
-    implementation(libs.androidx.constraintlayout)
 
     // Kotlin
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
 }
