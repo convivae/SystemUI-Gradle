@@ -41,6 +41,9 @@ android {
     sourceSets {
         getByName("main") {
             java.srcDir("src")
+            // AOSP 源码里的 .aidl 参与源码编译（规则 S：AIDL 是 SystemUI 自有代码，不用 jar）
+            // aidl/ 目录放 SysUISdk framework.aidl 缺失的隐藏框架接口（android.os.IRemoteCallback）
+            aidl.srcDirs("src", "aidl")
             // AOSP 资源目录（直接复制自 frameworks/base/packages/SystemUI/）
             res.srcDirs(
                 "res",
@@ -62,6 +65,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    buildFeatures {
+        aidl = true
     }
 
     kotlin {
@@ -224,11 +231,9 @@ dependencies {
     // DataStore (对齐 AOSP SystemUI 的 androidx.datastore_datastore-preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.datastore:datastore-core:1.1.1")
-    // SystemUI AIDL 生成接口 (从 AOSP SystemUI classes.jar 提取)
-    // 源码里的 14 个 .aidl 未经 AGP aidl 编译 (SysUISdk framework.aidl 缺 hidden 接口如 IRemoteCallback)，
-    // 改为直接引入 AOSP 已编译的 I*Service/$Stub 类，消除 IGlanceableHubWidgetManagerService 等
-    // unresolved 及其级联 (clearCallingIdentity 等)。
-    compileOnly(files("${rootProject.projectDir}/libs/systemui-aidl.jar"))
+    // SystemUI AIDL：源码里的 .aidl 现由 AGP 源码编译（buildFeatures.aidl=true + aidl.srcDirs），
+    // SysUISdk framework.aidl 缺失的隐藏框架接口 android.os.IRemoteCallback 由 aidl/ 目录（AOSP 源码）补齐。
+    // 已删 libs/systemui-aidl.jar：AIDL 是 SystemUI 自有代码，规则 S 要求源码编译。
 
     // 注：原 compose/scene 源码已复制到 src 下，但因为它依赖一系列 Compose 内部 API
     //     （thenIf/drawInContainer 等），完整编译需要更多 Compose 依赖，
