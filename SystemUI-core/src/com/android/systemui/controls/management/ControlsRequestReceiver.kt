@@ -28,7 +28,6 @@ import android.os.UserHandle
 import android.service.controls.Control
 import android.service.controls.ControlsProviderService
 import android.util.Log
-import com.android.systemui.util.kotlin.userId
 
 /**
  * Proxy to launch in user 0

@@ -42,7 +42,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import com.android.systemui.util.kotlin.userId
 
 interface InstalledTilesComponentRepository {
 

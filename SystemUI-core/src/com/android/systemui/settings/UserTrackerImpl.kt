@@ -51,7 +51,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import com.android.app.tracing.coroutines.launchTraced as launch
 import kotlinx.coroutines.sync.Mutex
-import com.android.systemui.util.kotlin.userId
 
 /**
  * SystemUI cache for keeping track of the current user and associated values.

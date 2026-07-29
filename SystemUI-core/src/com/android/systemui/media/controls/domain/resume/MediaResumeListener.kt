@@ -48,7 +48,6 @@ import java.io.PrintWriter
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executor
 import javax.inject.Inject
-import com.android.systemui.util.kotlin.userId
 
 private const val TAG = "MediaResumeListener"
 
