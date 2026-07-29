@@ -76,6 +76,28 @@
 - **允许批量源码复制导致错误数上升**（用户 2026-07-29 明确）：SystemUI 自有源码可先整体复制过来，
   错误后续再解决——此时**规则 I 的"错误上升>50 回滚"不适用**于源码补全操作。
 
+### 1.6 SystemUI 源码/aidl/res 必须"不漏不多"（用户明确要求，2026-07-29）
+
+> **规则 C (Complete & Exact)**: AOSP `packages/SystemUI/` 下与 SystemUI 相关的**代码、aidl、res 资源
+> 必须全部复制过来**——**不能有漏的，也不能有多的**（即与 AOSP 对应目录逐一对齐，多余文件要删）。
+
+- 校验方法：对比 AOSP `packages/SystemUI/{src,**/*.aidl,res*}` 与项目对应目录的文件集差异。
+- "多的" = 项目里有、AOSP 没有的文件（如早期手写的 stub 副本），必须删除。
+- "漏的" = AOSP 有、项目缺的文件，必须补齐。
+
+### 1.7 framework（非 SystemUI）代码严禁源码复制（用户明确要求，2026-07-29）
+
+> **规则 F (Framework via SDK/jar only)**: **只要不是 SystemUI 内部的代码，一律不许源码复制**，
+> 只能通过 **jar / aar(maven)** 引入；若 **SysUISdk 里缺**（如 framework 隐藏 aidl 接口），
+> **重新生成 / 补 SysUISdk**，而不是把 framework 源码拷进 SystemUI 模块。
+
+- 典型：SystemUI aidl `import android.os.IRemoteCallback`（framework @hide 接口），
+  public `framework.aidl` 缺 → **在 SysUISdk 的 `framework.aidl` 追加 `interface X;` 声明**
+  （由 `tools/install_sdk.py` 幂等完成），**不是**把 `IRemoteCallback.aidl` 拷进 `SystemUI-core/`。
+- SysUISdk 生成/补丁方法参考 `CarSystemUIGradle`（自定义 SDK platform，见其 `docs/GRADLE_MIGRATION.md`）。
+- 反面教训（2026-07-29）：一度把 framework `IRemoteCallback.aidl` 源码复制进 core → 被用户否决，
+  改为补 SysUISdk。
+
 ---
 
 ## 二、本项目开发原则
@@ -333,6 +355,7 @@ javap -p <ClassName>
 | `docs/issues/YYYY-MM-DD-<topic>.md` | 每日详细问题记录 |
 | `docs/architecture/YYYY-MM-DD-<topic>.md` | 复杂调研 |
 | `tools/gen_aar_maven.py` | AAR 生成脚本 |
+| `tools/install_sdk.py` | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口）|
 
 ---
 
@@ -346,6 +369,7 @@ javap -p <ClassName>
 - 用户希望参考 `CarSystemUIGradle` 项目的做法
 - **用户要求给下一个 AI 留完整交接文档** (2026-07-28 提醒)
 - 用户坚持"无 stub"原则 (2026-07-22 决定)
+- **`tools/` 下脚本一律写 Python，不写 shell** (用户 2026-07-29 明确)
 
 ---
 

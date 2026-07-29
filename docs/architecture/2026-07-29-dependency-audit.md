@@ -120,7 +120,9 @@ plugin 无法反向依赖 core（已遇 `MessageBuffer` 问题，临时用 `comp
 （其余 `PendingIntent`/`RemoteViews`/`WalletCard`/`AppWidgetProviderInfo` 等 android.* 类型都在）。
 解法（用户明确要求源码 aidl，AIDL 是 SystemUI 自有代码不该有 jar）：
 - core 开 `buildFeatures { aidl = true }` + `aidl.srcDirs("src","aidl")`，14 个 `.aidl` 源码编译；
-- `aidl/android/os/IRemoteCallback.aidl` 从 AOSP `frameworks/base` 复制补齐唯一缺失的隐藏接口；
+- **framework 隐藏接口 `android.os.IRemoteCallback` 在 SysUISdk 层面补齐**（不源码复制 framework 代码）：
+  `framework.aidl` 追加 `interface android.os.IRemoteCallback;`，由 `tools/install_sdk.py` 幂等完成
+  （规则 F：非 SystemUI 代码不许源码复制，SysUISdk 缺则重新生成/补 SysUISdk）；
 - **删 hand-written stub `IGlanceableHubWidgetManagerService.kt`**（AOSP 无此文件，早期绕过 aidl 未编译
   造的残缺副本，遮蔽 aidl 生成的正确接口）→ communal/widgets 29→0；
 - 删 `libs/systemui-aidl.jar`。
