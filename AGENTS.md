@@ -235,11 +235,13 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 | 2026-07-29 | 116 | clocks 塞 :SystemUI-plugin |
 | 2026-07-29 | 102 | Phase A–C：tier① 全源码化 + KSP 跑 Dagger（无回归） |
 | 2026-07-29 | 73 | Phase D：AIDL 源码编译删 systemui-aidl.jar（communal/widgets 29→0） |
+| 2026-07-29 | 70 | 规则 C 审查：删 5 个伪造 stub + 18 处伪造 import（回归 AOSP 原貌） |
 
 ### 4.2 当前错误数
 
-- **73** (截至 2026-07-29，Phase A–D 完成后稳定)
+- **70** (截至 2026-07-29，src/aidl/res 完整性审查后)
 - 详细分类见 `docs/architecture/2026-07-29-dependency-audit.md` §6
+- 完整性审查结论见 `docs/issues/2026-07-29-completeness-audit.md`
 
 ### 4.3 待解决 (按优先级)
 
