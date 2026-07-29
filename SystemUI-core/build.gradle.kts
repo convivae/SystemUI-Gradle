@@ -128,6 +128,8 @@ dependencies {
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
     implementation(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
+    // com.android.settingslib.flags.Flags (aconfig, enableLeAudioSharing 等)
+    compileOnly(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
     // motion_tool_lib (com.android.app.motiontool.*，来自 AOSP frameworks/libs/systemui/motiontoollib)
     compileOnly(files("${rootProject.projectDir}/libs/motion_tool_lib.jar"))
     // Traceur (record issue 用 PresetTraceConfigs/TraceConfig + com.android.traceur.res.R)
