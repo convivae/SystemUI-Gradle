@@ -39,12 +39,17 @@ dependencies {
 
     // Framework APIs - provided by system at runtime
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
+    // clocks 插件用到 com.android.systemui.log.core.MessageBuffer；log 源码在 :SystemUI-core，
+    // plugin 不能反向依赖 core，故 compileOnly 引入含 log.core 的 shared jar（不打包，运行时由 core 提供）
+    compileOnly(files("${rootProject.projectDir}/libs/prebuilts/SystemUISharedLib.jar"))
 
     // AndroidX
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.dynamicanimation)
     implementation(libs.androidx.recyclerview)
+    // clocks 插件 ClockFaceLayout 用 androidx.constraintlayout.widget.ConstraintSet（对齐 AOSP plugin/Android.bp）
+    implementation(libs.androidx.constraintlayout)
 
     // Kotlin
     implementation(libs.kotlin.stdlib)
