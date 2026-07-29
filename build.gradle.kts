@@ -49,6 +49,9 @@ allprojects {
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             compilerOptions {
                 jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+                // kairos 用 @ExperimentalFrpApi 标注自身 API，对应 AOSP
+                // utils/kairos/Android.bp 的 -opt-in flag，否则内部互相引用全报 opt-in 错误
+                freeCompilerArgs.add("-opt-in=com.android.systemui.kairos.ExperimentalFrpApi")
             }
 
         }

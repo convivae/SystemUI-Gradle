@@ -51,6 +51,31 @@
 - 关键脚本：`tools/gen_aar_maven.py` （已从 CarSystemUIGradle 复制）
 - 关键资源：参考 `CarSystemUIGradle/SystemUI-core/build.gradle.kts` 的依赖引入方式
 
+### 1.5 源码 vs jar 判定原则 (用户明确要求，2026-07-29)
+
+> **规则 S (Source-first for SystemUI)**: AOSP `packages/SystemUI/` 下 **SystemUI 自有的代码**
+> 一律**源码复制**做**源码依赖**（不用 jar）；**SystemUI 之外的模块**按下面三层策略引入。
+
+依赖分三层（2026-07-29 用户细化）：
+
+| 层 | 是什么 | 引入方式 | 例子 |
+|---|---|---|---|
+| ① SystemUI 自有代码 | soong 模块定义在 `packages/SystemUI/**/Android.bp` 内 | **源码复制**（source module） | shared、animation、customization、log、common、unfold、kairos、compose/core、compose/scene、plugin |
+| ② AOSP 特有产物 | 公网 Maven 上没有 / 被 AOSP 改过 / aconfig 生成 | **jar / aar**（从 AOSP 编译产物提取） | framework.jar、android.car.jar、SettingsLib、WindowManager-Shell、WifiTrackerLib、monet/libmonet、iconloader、systemui/notification/settingslib flags |
+| ③ 标准第三方上游库 | 公网 Maven 直接有的通用库 | **正常 Gradle Maven 版本依赖**（像普通 app 一样，不要用 jar/aar） | androidx.*、kotlinx_coroutines、dagger2、com.google.android.material、lottie、jsr305/jsr330 |
+
+- 判定 ①：看 soong 模块定义是否位于 `frameworks/base/packages/SystemUI/**/Android.bp`
+- 判定 ②/③：能在公网 Maven 找到且未被 AOSP fork → ③ Maven 版本依赖；否则 → ② jar/aar
+- **② 里 jar vs maven-aar 的区别 = 资源冲突（用户 2026-07-29 说明）**：
+  jar 无资源，纯代码依赖用 jar；带资源的 AOSP 库直接生成 aar 会 res 重复/冲突，
+  故用 `tools/gen_aar_maven.py` 打成**本地 maven 仓 aar**（`libs/maven/`），
+  借 Gradle/AAPT2 的标准资源合并去重化解冲突。
+  → 纯代码=jar；带资源会冲突=maven-aar；标准三方=Maven 版本依赖。
+- ⚠️ 若某模块同时有源码和 prebuilt jar 会重复类：改源码时**必须移除对应 jar**
+- 完整调研见 `docs/architecture/2026-07-29-systemui-module-source-vs-jar.md`
+- **允许批量源码复制导致错误数上升**（用户 2026-07-29 明确）：SystemUI 自有源码可先整体复制过来，
+  错误后续再解决——此时**规则 I 的"错误上升>50 回滚"不适用**于源码补全操作。
+
 ---
 
 ## 二、本项目开发原则
