@@ -16,7 +16,7 @@
 
 package com.android.systemui.util
 
-import android.animation.Animator
+import androidx.core.animation.Animator
 
 /**
  * Add an action which will be invoked when the animation has ended.

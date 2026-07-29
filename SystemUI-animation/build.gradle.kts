@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -10,9 +11,13 @@ android {
         minSdk = 32
     }
 
+    // 对齐 AOSP PlatformAnimationLib：src 含 java/kotlin，res 目录
     sourceSets {
         getByName("main") {
-            manifest.srcFile("src/main/AndroidManifest.xml")
+            java.srcDirs("src")
+            kotlin.srcDirs("src")
+            res.srcDirs("res")
+            manifest.srcFile("AndroidManifest.xml")
         }
     }
 
@@ -21,14 +26,38 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    kotlin {
+        jvmToolchain(21)
+    }
+
+    // 对齐 AOSP kotlincflags: ["-Xjvm-default=all"]
+    kotlinOptions {
+        freeCompilerArgs = freeCompilerArgs + "-Xjvm-default=all"
+    }
+
     lint {
         abortOnError = false
     }
 }
 
 dependencies {
-    // 使用清理后的 prebuilt JAR（AOSP 编译产物）
-    // 注：完整复制源码需要解决 flags_lib、ShellTransitions 等大量 AOSP 内部依赖，
-    //     因此保留为 prebuilt JAR 形式，确保主流程畅通
-    implementation(files("${rootProject.projectDir}/libs/prebuilts/PlatformAnimationLib.jar"))
+    // Framework APIs（allprojects 已注入，此处显式声明便于阅读）
+    compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
+
+    // tier② AOSP 特有产物 jar
+    compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
+    // animationlib（frameworks/libs/systemui:animationlib，提供 com.android.app.animation.*）
+    compileOnly(files("${rootProject.projectDir}/libs/animationlib.jar"))
+    // com.android.systemui.Flags（aconfig）
+    compileOnly(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
+    // com.android.systemui.shared.Flags（aconfig，shared_flags_lib）
+    compileOnly(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
+
+    // tier③ 标准第三方（maven 版本依赖）
+    implementation(libs.androidx.annotation)
+    implementation(libs.androidx.core.ktx)
+    implementation("androidx.core:core-animation:1.0.0")
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
 }
