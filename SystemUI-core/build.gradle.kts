@@ -87,8 +87,6 @@ dependencies {
     // SystemUILogLib / SystemUICommon 已改为源码模块（Phase B），替代原 SystemUI-log.jar
 
     // 项目模块
-    // SystemUI-shared 内部的 classes 来自 SystemUISharedLib.jar（prebuilt）
-    // 使用 compileOnly 避免循环依赖，但编译时仍可访问其类
     implementation(project(":SystemUI-plugin"))
     implementation(project(":SystemUI-plugin-core"))
     implementation(project(":SystemUI-animation"))
@@ -96,9 +94,17 @@ dependencies {
     implementation(project(":SystemUI-common"))
     implementation(project(":SystemUI-log"))
 
-    // SystemUI-shared 内部的 classes（FlagManager, LogBuffer 等）
-    // 来自 AOSP 编译的 SystemUISharedLib.jar（AAR）
-    compileOnly(libs.systemui.sharedlib)
+    // SystemUI-shared 已源码化（Phase C），替代原 SystemUISharedLib.jar（AAR）
+    implementation(project(":SystemUI-shared"))
+
+    // UncaughtExceptionPreHandlerManager：shared 内该类因 libcore 隐藏 API 无法源码编译，
+    // 由 AOSP 编译产物提取的 class 提供（core 的 SystemUIService/PluginsModule 引用它）
+    compileOnly(files("${rootProject.projectDir}/libs/shared-uncaught-handler.jar"))
+
+    // msdl / view_capture（frameworks/libs/systemui，tier② prebuilt jar）
+    // 原先由 SystemUISharedLib.jar（fat turbine-combined）透传，shared 源码化后需 core 直接依赖
+    compileOnly(files("${rootProject.projectDir}/libs/msdl.jar"))
+    compileOnly(files("${rootProject.projectDir}/libs/view_capture.jar"))
 
     // tracinglib-platform（提供 launchTraced 等 Trace 协程扩展）
     implementation(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
