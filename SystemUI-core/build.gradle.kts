@@ -235,7 +235,8 @@ dependencies {
     // SysUISdk framework.aidl 缺失的隐藏框架接口 android.os.IRemoteCallback 由 aidl/ 目录（AOSP 源码）补齐。
     // 已删 libs/systemui-aidl.jar：AIDL 是 SystemUI 自有代码，规则 S 要求源码编译。
 
-    // 注：原 compose/scene 源码已复制到 src 下，但因为它依赖一系列 Compose 内部 API
-    //     （thenIf/drawInContainer 等），完整编译需要更多 Compose 依赖，
-    //     暂时通过 sourceSets exclude 排除这些文件以让主流程通过。
+    // 注：compose/scene（com.android.compose.animation.scene，45 文件）与 compose/core
+    //     （com.android.compose）是 SystemUI 自有代码（soong 模块 PlatformComposeSceneTransitionLayout /
+    //     PlatformComposeCore），已随 src/ 源码编译，依赖上方 androidx.compose.* maven（tier③）。
+    //     全量重编 0 报错，无需再排除或拆独立模块。
 }

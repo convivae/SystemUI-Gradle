@@ -115,18 +115,22 @@ plugin 无法反向依赖 core（已遇 `MessageBuffer` 问题，临时用 `comp
 正解 = 抽 `:SystemUI-log`、`:SystemUI-common` 独立源码模块。
 → **请确认**是否新增这两个模块。
 
-**困难② AIDL 无法从源码编译（systemui-aidl.jar）**
-14 个 `.aidl` 引用 framework 隐藏 AIDL 接口（`IRemoteCallback`、`IAppWidgetHostListener` 等），
-SysUISdk 的 `framework.aidl` 缺这些 → AGP aidl 编译器解析失败，现用预编译 systemui-aidl.jar 兜底。
-这是 tier① 代码但**当前无法源码编译**。选项：
-(a) 保留 jar 作**有文档说明的 tier② 例外**（推荐，先跑通）；
-(b) 补全 framework.aidl 的隐藏接口 .aidl 后再源码编译；
-(c) 复制所需 framework .aidl 到项目。
-→ **倾向 (a)**，请确认。
+**困难② AIDL 无法从源码编译（systemui-aidl.jar）— ✅ 已解决 `b959266`（102→73）**
+原判断有误：SysUISdk 的 `framework.aidl` **只缺 `android.os.IRemoteCallback` 这一个**隐藏接口
+（其余 `PendingIntent`/`RemoteViews`/`WalletCard`/`AppWidgetProviderInfo` 等 android.* 类型都在）。
+解法（用户明确要求源码 aidl，AIDL 是 SystemUI 自有代码不该有 jar）：
+- core 开 `buildFeatures { aidl = true }` + `aidl.srcDirs("src","aidl")`，14 个 `.aidl` 源码编译；
+- `aidl/android/os/IRemoteCallback.aidl` 从 AOSP `frameworks/base` 复制补齐唯一缺失的隐藏接口；
+- **删 hand-written stub `IGlanceableHubWidgetManagerService.kt`**（AOSP 无此文件，早期绕过 aidl 未编译
+  造的残缺副本，遮蔽 aidl 生成的正确接口）→ communal/widgets 29→0；
+- 删 `libs/systemui-aidl.jar`。
 
-**困难③ compose/scene(50) 依赖 Compose 内部/实验 API**
-`thenIf`、`drawInContainer` 等非公开 API，源码化需对齐 Compose 版本或补依赖，会引入一批错误。
-→ 建议放 Phase D，单独处理。
+**困难③ compose/scene(45) 依赖 Compose 内部/实验 API — ✅ 已解决（无需额外工作）**
+复核发现：compose/scene（`com.android.compose.animation.scene`，45 文件）与 compose/core
+（`com.android.compose`）是 SystemUI 自有代码（soong 模块 PlatformComposeSceneTransitionLayout /
+PlatformComposeCore），**早已随 core `src/` 源码编译**，依赖的 `androidx.compose.* 1.7.5`（tier③）
+maven 已在 core 引入。全量 `--rerun-tasks` 重编 0 报错。原"通过 sourceSets exclude 排除"的注释已过时，
+本轮清理。→ compose/scene ≠ androidx.compose：前者 SystemUI 自有、构建于后者之上。
 
 **困难④ shared/animation/customization jar→源码 是大迁移**
 各自有独立依赖链，去 jar 会触发大量 duplicate-class 与 unresolved，错误数将明显上升
@@ -146,7 +150,7 @@ Dagger 生成符号（`Dagger*`/`*_Factory`）仅 2 个，暂不阻塞；但**�
 - [x] Phase B `:SystemUI-common`、`:SystemUI-log` 模块 — `4102b41`
 - [x] Phase C shared / animation / customization / unfold 源码化
       — `25d4619` / `8f90c34` / `31226e1` / `31b9654`
-- [ ] Phase D compose/scene + AIDL 决策
+- [x] Phase D compose/scene（复核为已源码编译）+ AIDL 源码化 `b959266`（102→73）
 - [x] Dagger KAPT→KSP：unfold 已用 KSP 跑通（见下）；core 待迁
 
 ---

@@ -212,10 +212,11 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 | 2026-07-29 | 142 | biometrics/keyguard/kairos 等大批源码补全 |
 | 2026-07-29 | 116 | clocks 塞 :SystemUI-plugin |
 | 2026-07-29 | 102 | Phase A–C：tier① 全源码化 + KSP 跑 Dagger（无回归） |
+| 2026-07-29 | 73 | Phase D：AIDL 源码编译删 systemui-aidl.jar（communal/widgets 29→0） |
 
 ### 4.2 当前错误数
 
-- **102** (截至 2026-07-29，Phase A–C 完成后稳定)
+- **73** (截至 2026-07-29，Phase A–D 完成后稳定)
 - 详细分类见 `docs/architecture/2026-07-29-dependency-audit.md` §6
 
 ### 4.3 待解决 (按优先级)
