@@ -35,12 +35,11 @@ echo "Total errors: $(grep -c '^e: file:' /tmp/build.log)"
 echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /tmp/build.log)"
 ```
 
-**当前基线（2026-07-28）**: **1879** 错误（Stage 2 + Stage 3 R 歧义部分完成，见 §4.1）。其中：
-- ~~server-notification Flags~~: ✅ 已清零（删除 stub `Flags.kt`，Stage 2）
-- ~~全项目 R import 歧义~~: ✅ 已清零（7 文件删多余 `systemui.R`，1979→1879，见 `docs/issues/2026-07-28-r-import-ambiguity.md`）
-- Compose Scene Framework (`com.android.compose.animation.scene.*`): 12 个（`thenIf`/`drawInContainer`/`ContainerState` 等内部 Compose API）
-- PlatformTheme.kt 残留 windowsizeclass: 4 个
-- 其他业务模块（多为 Dagger `@Inject` — KAPT 禁用无 codegen）: 剩余 ~1850 个
+**当前基线（2026-07-29）**: **70** 错误（src/aidl/res 完整性审查后）。其中：
+- ~~server-notification Flags~~: ✅ 已清零（删除 stub `Flags.kt`）
+- ~~全项目 R import 歧义~~: ✅ 已清零
+- Compose Scene Framework (`com.android.compose.animation.scene.*`): 12 个
+- 其他残留错误: ~58 个
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
@@ -119,14 +118,36 @@ SystemUI-Gradle/
   遮蔽了 jar，`git rm` 后 2000 → 1979。**不是** classpath/Kotlin 2.2.10/FeatureFlags 的问题。
 - **详情**: `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`、`docs/PITFALLS.md §2.4`
 
-### 4.2 Stage 3 (Compose Scene Framework)
+### 4.2 animationlib 源码化（进行中，未提交）
+- **状态**: 🚧 源码已复制、模块骨架已创建、settings.gradle.kts 已加，但 animation/customization 的
+  `build.gradle.kts` 还没改（还在用 `compileOnly(animationlib.jar)`），`libs/animationlib.jar` 也还没删
+- **详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
+- **下一步**:
+  1. `:SystemUI-animation` / `:SystemUI-customization` 的 `compileOnly(animationlib.jar)` → `api(project(":SystemUI-animationlib"))`
+  2. 删除 `libs/animationlib.jar`
+  3. 检查 WMShell.jar 的 6 个重叠类是否冲突
+
+### 4.3 app 模块构建
+- **状态**: 🚧 调研完成，待实施
+- **当前问题**: `app/` 目录几乎为空——只有 `build.gradle.kts` 和空壳 `AndroidManifest.xml`
+- **AOSP 对应**: `android_app "SystemUI"` 模块（Android.bp:772），通过 `static_libs` 把 core + 所有子模块链接进来
+- **关键发现**: `SystemUIApplication.java` / `SystemUIService.java` 的源码已在 `:SystemUI-core/src/`，`:app` 不需要复制源码
+- **需要做的事**:
+  1. 从 AOSP 复制 `AndroidManifest.xml`（含大量 uses-permission、service/activity 声明）
+  2. 补全 `:app` 的 dependencies（对齐 AOSP static_libs）
+  3. 配置资源合并策略（res-keyguard / res-product）
+- **详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §四`
+
+### 4.4 Stage 3 (Compose Scene Framework)
 - **状态**: 12 个错误，全部在 `com.android.compose.animation.scene.*`
 - **错误种类**: `thenIf`, `drawInContainer`, Modifier 内部 API, `ContainerState`
 - **下次 Agent 行动**: 详查 `docs/CURRENT_STATE.md` §3
 
-### 4.3 Stage 4 (业务模块错误)
-- **状态**: ~1909 个错误分散在 ~80 个包
-- **下次 Agent 行动**: 用 `docs/PITFALLS.md` 中的分类模板分析
+### 4.5 AIDL 编译知识（已解答）
+- **问题**: 为什么 framework.jar 不能满足 AIDL 编译需要？
+- **答案**: aidl 工具只认 `.aidl` 声明文件，不读 jar 字节码。framework.aidl 和 framework.jar
+  服务于两个不同编译阶段，互补不可替代。详见 `docs/issues/2026-07-29-aidl-animationlib-app.md §一`
+- **ISystemUiProxy.aidl** 属于 `:SystemUI-shared` 模块，由 `OverviewProxyService.java` 使用
 
 ---
 

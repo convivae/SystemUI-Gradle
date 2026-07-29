@@ -1,9 +1,9 @@
 # SystemUI-Gradle 详细开发计划 (PLAN.md)
 
-> **最后更新**: 2026-07-28
-> **当前错误数**: 2000
+> **最后更新**: 2026-07-29
+> **当前错误数**: 509
 > **目标错误数**: 0 → 可编译
-> **当前阶段**: Stage 2 (server-notification-flags.jar) — **阻塞**
+> **当前阶段**: Stage 3/4 推进中（animationlib 源码化 + app 模块构建）
 
 ---
 
@@ -11,9 +11,10 @@
 
 ```
 阶段 1 ✅ (2026-07-22): 文档 + 阶段性 commit
-阶段 2 🚧 (2026-07-23 ~ 现在): server-notification-flags.jar 解析问题 — 阻塞中
-阶段 3 ⏳ (待启动): Compose Scene Framework 集成
-阶段 4 ⏳ (待启动): 业务模块错误
+阶段 2 ✅ (2026-07-28): server-notification-flags.jar — 已解决（删除 stub Flags.kt）
+阶段 2.5 ✅ (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509
+阶段 3 🚧 (2026-07-29): animationlib 源码化 + app 模块构建
+阶段 4 ⏳ (待启动): Compose Scene Framework + 业务模块错误
 阶段 5 ⏳ (待启动): 完整编译验证 + 打包
 ```
 
@@ -34,62 +35,105 @@
 
 ---
 
-## 阶段 2: server-notification-flags.jar 解析问题 🚧 阻塞中
+## 阶段 2: server-notification-flags.jar 解析问题 ✅ 已解决 (2026-07-28)
 
-### 问题描述
+### 问题
 
 - 错误: `Unresolved reference 'screenshareNotificationHiding'` × 13 + `FlagDependencies.kt` 6 个
-- 现象: jar 在 classpath 中（`./gradlew --debug` 验证），但 Kotlin 仍报 Unresolved
-- 推测根因: AGP 9 嵌入 Kotlin 2.2.10 + `@UnsupportedAppUsage` 注解交互
 
-### 详细调研文档
+### 根因
 
-- `docs/issues/2026-07-23-server-notification-flags-unresolvable.md` (2026-07-23 第一轮)
-- `docs/issues/2026-07-28-server-flags-debug-session.md` (2026-07-28 第二轮)
-- `docs/architecture/STAGE2-3-RESEARCH-LOG.md` (深度调研)
+源码 stub `SystemUI-core/src/com/android/server/notification/Flags.kt`（`object Flags`）
+遮蔽了 jar 里的真实 `Flags` 类。全项目编译时 Kotlin 优先用源码定义，stub 没有
+`screenshareNotificationHiding()` 且把 flag 声明为 `val` 而非方法 → 13+6 个 unresolved。
 
-### 涉及文件
+### 修复
 
-```
-SensitiveContentCoordinator.kt       (25, 98, 108, 115, 178, 211, 217)
-StackCoordinator.kt                  (20, 71)
-NotifUiAdjustmentProvider.kt         (25, 73, 92, 145)
-FlagDependencies.kt                  (79, 82, 85)
-```
+`git rm` 该 stub。2000 → 1979。
 
-### 已尝试方案（全部失败）
+### 教训
 
-| # | 方案 | 失败原因 |
-|---|------|---------|
-| 1 | `compileOnly(files("libs/server-notification-flags.jar"))` | 空 jar |
-| 2 | `implementation(files("libs/server-notification-flags.jar"))` | 空 jar |
-| 3 | Maven AAR | 仍 unresolved |
-| 4 | Maven JAR | 仍 unresolved |
-| 5 | flatDir repository | 仍 unresolved |
-| 6 | allprojects `libraries.from()` 注入 | 注入成功但 unresolved |
-| 7 | 提供 `AconfigFlagAccessor` 注解 | 仍 unresolved |
-| 8 | 提供 `UnsupportedAppUsage` 注解 | 仍 unresolved |
-| 9 | 提供 `FeatureFlags` 接口 | 未尝试 |
-| 10 | 升级 Kotlin 到 2.2.10 | plugin 冲突 |
-| 11 | 独立 kotlin("jvm") 2.1.0 项目测试 | 成功 → 证明问题在 AGP+Kotlin2.2.10 |
-
-### 下一步（建议下个 AI 优先尝试）
-
-| # | 实验 | 预期 | 风险 |
-|---|------|------|------|
-| A | 提取 `FeatureFlags` 接口跟 Flags 一起打包 | 可能解决 | 低 |
-| B | 加 `-Xverbose` 看 Kotlin 真实日志 | 诊断根因 | 低 |
-| C | K2JVMCompiler 完整 classpath（含 systemui-flags）跑测试 | 验证问题是否在 Kotlin 版本 | 低 |
-| D | 接受阻塞，转 Stage 3 | 不阻塞主线 | 无 |
-
-### 预期错误数变化
-
-- 如果 A/B 成功: 2000 → 1970 (减少 30)
-- 如果 D: 维持 2000，先做 Stage 3
+之前几轮围绕 classpath/Kotlin 版本/FeatureFlags 的排查全部走偏。详见：
+- `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`
+- `docs/issues/2026-07-28-server-flags-debug-session.md`
 
 ---
 
-## 阶段 3: Compose Scene Framework 集成 ⏳
+## 阶段 2.5: jar 补齐 + 源码补齐 ✅ 已完成 (2026-07-28)
+
+### 操作
+
+- R 歧义修复（7 文件，1979→1879）
+- 补齐 androidx.datastore 依赖（1879→1806）
+- customization res 补齐 + 关闭 nonTransitiveRClass（1806→1759）
+- 引入 systemui-aidl.jar（1759→1658）
+- customization prebuilt jar 改 api 暴露给 core（1658→1491）
+- 补齐完整 SettingsLib jar（1491→1039）
+- 补齐 nano proto 生成类 jar（1039→938）
+- 补齐 SystemUILogLib jar（938→885）
+- 补齐 SystemUIUnfoldLib jar + androidx.window（885→844）
+- 补齐 lottie/lottie_compose jar（844→809）
+- 补齐 PlatformComposeCore 源码 + compose androidx 依赖（809→741）
+- 补齐 compose/core 顶层组件文件（741→724）
+- 补齐 compose/features+biometric+animation 源码 + res.R→R 规范化（724→509）
+
+---
+
+## 阶段 3: animationlib 源码化 + app 模块构建 🚧 进行中
+
+### 3.1 animationlib 源码化
+
+根据规则 S，`animationlib` 属于 ① SystemUI 自有代码，应源码复制做源码依赖。
+
+**已完成的操作**：
+1. 从 AOSP 复制 4 个 Java 源文件 + 4 个 res 资源文件到 `SystemUI-animationlib/`
+2. 创建 `SystemUI-animationlib/build.gradle.kts`（library 模块）
+3. `settings.gradle.kts` 添加 `include(":SystemUI-animationlib")`
+
+**待完成**：
+1. `:SystemUI-animation` / `:SystemUI-customization` 的 `compileOnly(animationlib.jar)` → `api(project(":SystemUI-animationlib"))`
+2. 删除 `libs/animationlib.jar`
+3. 检查 WMShell.jar 的 6 个重叠类是否冲突
+4. 编译验证
+
+**详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
+
+### 3.2 app 模块构建
+
+**问题**: `app/` 目录几乎为空，只有 `build.gradle.kts` 和空壳 `AndroidManifest.xml`
+
+**AOSP 对应**: `android_app "SystemUI"` 模块（Android.bp:772），通过 `static_libs` 把 core + 所有子模块链接进来
+
+**关键发现**: `SystemUIApplication.java` / `SystemUIService.java` 的源码已在 `:SystemUI-core/src/`，
+`:app` 不需要复制源码，只需要：
+1. 从 AOSP 复制 `AndroidManifest.xml`（含大量 uses-permission、service/activity 声明）
+2. 补全 `:app` 的 dependencies（对齐 AOSP static_libs）
+3. 配置资源合并策略（res-keyguard / res-product）
+
+**实施步骤**：
+
+```
+Phase 1: 基础可编译
+  1. 从 AOSP 复制 AndroidManifest.xml 到 app/src/main/
+  2. 补全 :app 的 dependencies
+  3. 验证 ./gradlew :app:assembleDebug 可以运行
+
+Phase 2: APK 内容验证
+  1. 检查生成的 APK 是否包含所有类
+  2. 检查资源是否正确合并
+  3. 检查 AndroidManifest 是否正确合并
+
+Phase 3: 可安装验证
+  1. 用 platform keystore 签名
+  2. adb install 到设备
+  3. 验证 SystemUIService 启动
+```
+
+**详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §四`
+
+---
+
+## 阶段 4: Compose Scene Framework + 业务模块错误 ⏳
 
 ### 问题描述
 

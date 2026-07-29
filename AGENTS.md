@@ -154,10 +154,11 @@
 ### 3.1 模块结构
 
 ```
-:app                          # 主入口，依赖其他所有模块
+:app                          # 主入口（APK 打包），依赖其他所有模块
 :SystemUI-core                # 主模块 (~95% 代码)
 :SystemUI-shared              # 共享库（源码，含 aidl）
 :SystemUI-animation           # 动画库（源码）
+:SystemUI-animationlib        # 插值器/动画工具库（源码，从 animationlib.jar 源码化）
 :SystemUI-customization       # 配置库（源码）
 :SystemUI-unfold              # 折叠屏过渡库（源码，KSP 跑 Dagger）
 :SystemUI-common              # 通用工具（源码，含 shared-utils）
@@ -186,6 +187,7 @@ libs/
 ├── SystemUI-statsd.jar
 ├── monet.jar                           # ColorScheme/Shades/Style
 ├── systemui-flags.jar                  # com.android.systemui.Flags
+├── animationlib.jar                    # ⚠️ 待移除（已源码化为 :SystemUI-animationlib）
 ├── server-notification-flags.jar       # 见 notes: 实际为空, 真实 jar 在 libs/maven/
 ├── prebuilts/
 │   ├── SystemUISharedLib.jar
@@ -246,25 +248,28 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 ### 4.3 待解决 (按优先级)
 
 #### 高优先级 (阻塞主流程)
-1. **server-notification-flags.jar 不可解析** (Stage 2)
-   - 现象: `Unresolved reference 'screenshareNotificationHiding'` 等等
-   - 状态: jar 实际在 classpath（`./gradlew --debug` 验证），但 Kotlin 2.2.10 编译器仍报 Unresolved
-   - 详细: `docs/issues/2026-07-28-server-flags-debug-session.md`
-   - **下次 AI Agent 必读**
+1. **animationlib 源码化未完成** — 源码已复制、模块骨架已创建，但 animation/customization 的
+   `build.gradle.kts` 还没改（还在用 `compileOnly(animationlib.jar)`），`libs/animationlib.jar` 也还没删
+   - 详情: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
+   - 注意: WMShell.jar 也有 6 个 `com.android.app.animation.*` 重叠类，需检查冲突
+
+2. **app 模块构建** — `app/` 目录几乎为空，需要从 AOSP 复制 AndroidManifest.xml、补全 dependencies
+   - 详情: `docs/issues/2026-07-29-aidl-animationlib-app.md §四`
+   - 关键发现: SystemUIApplication/SystemUIService 源码已在 core/src，app 不需要复制源码
 
 #### 中优先级 (Compose)
-2. **Compose Scene Framework** (`com.android.compose.animation.scene.*`) — 12 错误
-3. **Compose Theme** (`AndroidColorScheme.kt`) — 60 错误（R 冲突）
-4. **Compose NestedScroll** (`com.android.compose.nestedscroll.*`) — 0 错误（已排除）
-5. **Compose UI Util** (`com.android.compose.ui.util.*`) — 0 错误（已排除）
+3. **Compose Scene Framework** (`com.android.compose.animation.scene.*`) — 12 错误
+4. **Compose Theme** (`AndroidColorScheme.kt`) — R 冲突（已大幅减少）
 
 #### 低优先级 (功能模块)
-6. 业务模块编译错误 (~1909 个分散在 80+ 包)
-7. 测试代码编译
+5. 业务模块编译错误（分散在多个包）
+6. 测试代码编译
 
-### 4.4 紧急修复
+### 4.4 已解决
 
-`compose/animation/scene` 之外的 `compose/{nestedscroll,ui/util}` 文件已**未跟踪**（`git status` 中的 `??`），但 `compose/animation/scene` 文件也已 untracked。可推断这些文件不会被编译（源码未被 build.gradle 引用）。
+- **server-notification-flags.jar** (Stage 2): ✅ 已解决。根因是源码 stub 遮蔽 jar，`git rm` 后 2000 → 1979
+  - 详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`
+- **全项目 R import 歧义**: ✅ 已清零（7 文件删多余 `systemui.R`，1979→1879）
 
 ---
 

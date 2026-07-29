@@ -1,21 +1,15 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
     namespace = "com.android.app.animation"
-    compileSdkPreview = "SysUISdk"
+    compileSdk = rootProject.extra["compileSdkPreview"] as Int
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         minSdk = 32
-    }
-
-    sourceSets {
-        getByName("main") {
-            java.srcDirs("src/main/java")
-            manifest.srcFile("src/main/AndroidManifest.xml")
-        }
     }
 
     compileOptions {
@@ -23,21 +17,19 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    kotlin {
-        jvmToolchain(21)
+    sourceSets {
+        getByName("main") {
+            java.srcDirs("src/main/java")
+            res.srcDirs("src/main/res")
+            manifest.srcFile("src/main/AndroidManifest.xml")
+        }
     }
 
-    lint {
-        abortOnError = false
+    buildFeatures {
+        resValues = false
     }
 }
 
 dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-
-    implementation(libs.androidx.annotation)
-    implementation(libs.androidx.core.ktx)
-    // androidx.core:core-animation 提供 androidx.core.animation.* 类
-    implementation("androidx.core:core-animation:1.0.0")
-    implementation(libs.kotlin.stdlib)
 }

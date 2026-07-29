@@ -1,12 +1,11 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **最后更新**: 2026-07-28
-> **当前错误数**: 142
-> **当前阶段**: Stage 2/3/4 推进中（R 歧义 + datastore + transitive R + 多个 AOSP jar 补齐 + customization api）
+> **最后更新**: 2026-07-29
+> **当前错误数**: 509（上次编译 2026-07-28）
+> **当前阶段**: Stage 3/4 推进中（animationlib 源码化 + app 模块构建）
 
-> ⚠️ **Stage 2 根因更正 (2026-07-28)**: 阻塞**不是** classpath/Kotlin 2.2.10/缺 FeatureFlags，
-> 而是源码 stub `com/android/server/notification/Flags.kt` 遮蔽了 jar。已 `git rm`，2000 → 1979。
-> 详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
+> ⚠️ **Stage 2 已解决 (2026-07-28)**: server-notification-flags 的根因是源码 stub 遮蔽 jar，
+> `git rm` 后 2000 → 1979。详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
 
 ---
 
@@ -51,6 +50,7 @@
 | 2026-07-28 | **741** | **补齐 PlatformComposeCore 源码（modifiers/ui.graphics/windowsizeclass 等）+ compose androidx 依赖** |
 | 2026-07-28 | **724** | **补齐 compose/core 顶层组件文件（PlatformButton/Slider/SystemUiController）** |
 | 2026-07-28 | **509** | **补齐 compose/features(152)+biometric(9)+animation(4) 源码 + res.R→R 规范化(39)** |
+| 2026-07-29 | — | animationlib 源码化进行中（未提交，未重编译） |
 
 **目标**: 0 (完整编译通过)
 
