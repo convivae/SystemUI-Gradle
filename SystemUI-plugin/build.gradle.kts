@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     // clocks 插件 ClockFaceLayout 用 androidx.constraintlayout.widget.ConstraintSet（对齐 AOSP plugin/Android.bp）
     implementation(libs.androidx.constraintlayout)
+    // plugins/qs/TileDetailsViewModel 用 androidx.compose.runtime.Composable
+    implementation("androidx.compose.runtime:runtime:1.7.5")
 
     // Kotlin
     implementation(libs.kotlin.stdlib)
