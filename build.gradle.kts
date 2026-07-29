@@ -1,6 +1,9 @@
 plugins {
     id("com.android.application") apply false
     id("com.android.library") apply false
+    // KSP：用于跑 Dagger 注解处理器（KAPT 1.9+ 与 Gradle 9.5 不兼容，改用 KSP）
+    // 版本须对齐实际 Kotlin 编译器 2.2.10
+    id("com.google.devtools.ksp") version "2.2.10-2.0.2" apply false
 }
 
 // Inject framework.jar + internal flags jars into every Java/Kotlin compile.

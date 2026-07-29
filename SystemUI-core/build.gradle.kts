@@ -123,7 +123,7 @@ dependencies {
     // 补上 AOSP 生成的 nano proto 类 (CommunalHubState / SystemUIProtoDump / QsTileState 等)
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto-gen.jar"))
     // SystemUIUnfoldLib：FOLD_UPDATE_* 常量 + FoldStateProvider 等（可折叠设备 unfold 动画）
-    implementation(files("${rootProject.projectDir}/libs/SystemUI-unfold.jar"))
+    implementation(project(":SystemUI-unfold"))
     // androidx.window：FoldingFeature / WindowLayoutInfo 等
     implementation("androidx.window:window:1.3.0")
     // Lottie 动画（com.airbnb.lottie.* / lottie.compose.*）→ tier③ 标准第三方，用 maven 版本依赖

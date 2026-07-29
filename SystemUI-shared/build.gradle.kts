@@ -61,7 +61,7 @@ dependencies {
     // tier② AOSP 特有产物 jar（含资源/内部类，非源码模块）
     compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
     // SystemUIUnfoldLib 暂以 jar 引入（后续 Phase C 再源码化）
-    compileOnly(files("${rootProject.projectDir}/libs/SystemUI-unfold.jar"))
+    compileOnly(project(":SystemUI-unfold"))
     // tracinglib（frameworks/libs/systemui，tier② prebuilt jar）
     compileOnly(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
     // view_capture（frameworks/libs/systemui/viewcapturelib，tier② prebuilt jar）
