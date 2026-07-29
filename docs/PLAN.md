@@ -79,7 +79,7 @@
 
 ---
 
-## 阶段 3: animationlib 源码化 + app 模块构建 🚧 进行中
+## 阶段 3: animationlib 源码化 + app 模块按 bp 重构 🚧 进行中
 
 ### 3.1 animationlib 源码化
 
@@ -98,38 +98,44 @@
 
 **详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
 
-### 3.2 app 模块构建
+### 3.2 app 模块按 AOSP `Android.bp` 重构 (ADR 0003)
 
-**问题**: `app/` 目录几乎为空，只有 `build.gradle.kts` 和空壳 `AndroidManifest.xml`
+按规则 B（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`），项目结构必须对齐 AOSP bp：
 
-**AOSP 对应**: `android_app "SystemUI"` 模块（Android.bp:772），通过 `static_libs` 把 core + 所有子模块链接进来
+**当前问题**：
+- `app/` 几乎为空（4 行 manifest）
+- `SystemUIApplication.java` / `SystemUIService.java` 是 `android_app` 入口但放在 `:SystemUI-core/`
+- `:app/build.gradle.kts` 冗余地依赖 `:SystemUI-shared/-animation/-customization/-plugin/-plugin-core`
 
-**关键发现**: `SystemUIApplication.java` / `SystemUIService.java` 的源码已在 `:SystemUI-core/src/`，
-`:app` 不需要复制源码，只需要：
-1. 从 AOSP 复制 `AndroidManifest.xml`（含大量 uses-permission、service/activity 声明）
-2. 补全 `:app` 的 dependencies（对齐 AOSP static_libs）
-3. 配置资源合并策略（res-keyguard / res-product）
+**AOSP Android.bp 关键定义**：
+- `android_app "SystemUI"` (line 958)：只 `static_libs: ["SystemUI-core"]`
+- `android_library "SystemUI-core"` (line 421)：自身 `srcs`，`static_libs` 含所有子模块
+- srcs 不含 manifest（manifest 由 `android_app` 持有）
 
 **实施步骤**：
 
 ```
-Phase 1: 基础可编译
-  1. 从 AOSP 复制 AndroidManifest.xml 到 app/src/main/
-  2. 补全 :app 的 dependencies
-  3. 验证 ./gradlew :app:assembleDebug 可以运行
+Phase 1: 移动入口类（系统结构对齐）
+  1. 把 :SystemUI-core/src/com/android/systemui/SystemUIApplication.java
+     移到 :app/src/main/java/com/android/systemui/
+  2. 同样移动 SystemUIService.java
+  3. 调整 :SystemUI-core/build.gradle.kts 不再 include 这两个文件
 
-Phase 2: APK 内容验证
-  1. 检查生成的 APK 是否包含所有类
-  2. 检查资源是否正确合并
-  3. 检查 AndroidManifest 是否正确合并
+Phase 2: 复制 AOSP 完整 manifest
+  1. 复制 /home/conv/myspace/aosp/frameworks/base/packages/SystemUI/AndroidManifest.xml (1158 行)
+     到 :app/src/main/AndroidManifest.xml
 
-Phase 3: 可安装验证
-  1. 用 platform keystore 签名
-  2. adb install 到设备
-  3. 验证 SystemUIService 启动
+Phase 3: 清理冗余依赖
+  1. :app/build.gradle.kts 只保留 implementation(project(":SystemUI-core"))
+  2. 删除 :SystemUI-shared/-animation/-customization/-plugin/-plugin-core 的直接依赖
+
+Phase 4: 验证
+  1. ./gradlew :app:assembleDebug
+  2. 检查 APK 含 SystemUIApplication/SystemUIService
+  3. 检查资源合并无冲突
 ```
 
-**详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §四`
+**详情**: `docs/adr/0003-app-module-aligns-aosp-bp.md`
 
 ---
 

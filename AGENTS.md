@@ -16,6 +16,18 @@
 
 ---
 
+## 〇.二、ADR (架构决策记录)
+
+项目所有**架构级决策**写在 [`docs/adr/`](./docs/adr/)。引用文件：
+
+- **ADR 0001** `aosp-res-via-local-maven.md` — AOSP res 缺失处理优先级 + local maven 而非 flatDir 的根因
+- **ADR 0002** `tools-scripts-only-python.md` — `tools/` 下脚本一律 Python，禁止 .sh
+- **ADR 0003** `app-module-aligns-aosp-bp.md` — 模块划分/依赖/入口类位置严格按 AOSP `Android.bp`
+
+写 ADR 的判定：决策 **难以反转 + 没有上下文会令人困惑 + 有真正权衡**。
+
+---
+
 ## 一、依赖引入规则 (用户明确要求，2026-07-22)
 
 > **规则 P (Project Rule)**: 不允许使用 stub 技术。
@@ -98,6 +110,35 @@
 - 反面教训（2026-07-29）：一度把 framework `IRemoteCallback.aidl` 源码复制进 core → 被用户否决，
   改为补 SysUISdk。
 
+### 1.8 res 缺失处理优先级（用户明确要求，2026-07-29）
+
+> **规则 R (Res provenance)**: 资源文件 (res/) 一律来自 **AOSP 源码 / aar / maven**，禁止凭空生成。
+
+res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-maven.md`）：
+
+1. **AOSP 源码**（规则 S 优先）：SystemUI 自有的 res 在 `SystemUI-core/res{, -keyguard, -product}/`，
+   必须与 AOSP 1:1 对齐（规则 C 不漏不多）
+2. **AOSP 编译产物**：
+   - 无 res 的纯代码库 → `libs/<name>.jar`
+   - 有 res 的库 → 经 `tools/gen_aar_maven.py` 打包成本地 maven aar 到 `libs/maven/`，
+     在 `settings.gradle.kts` 通过 `maven { url = uri("${rootProject.projectDir}/libs/maven") }` 引入
+3. **公网 maven**（规则 ③）：androidx/material/lottie 等
+
+❌ **绝对禁止** Agent 在 res/ 下生成同名资源绕过编译错误。
+
+### 1.9 项目结构对齐 AOSP `Android.bp`（用户明确要求，2026-07-29）
+
+> **规则 B (bp-aligned structure)**: 整个项目结构、模块命名、依赖顺序严格按
+> AOSP `frameworks/base/packages/SystemUI/Android.bp` 定义。
+
+详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`：
+
+- `android_app "SystemUI"` → `:app`（APK 入口，仅 `static_libs: ["SystemUI-core"]`）
+- `android_library "SystemUI-core"` → `:SystemUI-core`（含 src + compose + 所有子模块 static_libs）
+- 各子模块（shared/animation/customization/common/log/unfold/plugin/plugin-core）独立 android_library
+- `SystemUIApplication.java` / `SystemUIService.java` 是 `android_app` 入口，**必须放在 `:app/src/main/java/`**，不能放在 `:SystemUI-core`
+- `:app/src/main/AndroidManifest.xml` 从 AOSP 完整复制（1158 行），不允许最小化
+
 ---
 
 ## 二、本项目开发原则
@@ -141,11 +182,23 @@
 > **规则 H (Human Escalation)**: 遇到下面任一情况，**停止**并用 `AskQuestion` 询问用户
 
 1. 必须创建 stub 类（违反规则 P）
-2. 必须修改 res/ 下的资源文件
-3. 错误数大幅上升（>200）而非下降
-4. 需要产品决策（多个等价方案）
-5. 需要修改 AGENTS.md 的核心规则
-6. 所有尝试过的方案都失败，需要决策下一步方向
+2. 必须修改 res/ 下的资源文件（违反规则 R）
+3. 必须凭空生成同名 res 资源解决编译错误（违反规则 R）
+4. 必须创建 .sh 脚本（违反规则 R/ADR 0002，scripts must be Python）
+5. 错误数大幅上升（>200）而非下降
+6. 需要产品决策（多个等价方案）
+7. 需要修改 AGENTS.md 的核心规则
+8. 所有尝试过的方案都失败，需要决策下一步方向
+
+---
+
+## 二.二、架构决策记录 (ADR)
+
+参考 `docs/adr/`：
+
+- **ADR 0001** — AOSP res 缺失处理优先级 + local maven 而非 flatDir 的根因（双层去重）
+- **ADR 0002** — `tools/` 下脚本一律 Python，禁止 .sh（除非纯系统 CLI 调用）
+- **ADR 0003** — 项目结构/模块命名/依赖严格按 AOSP `Android.bp`
 
 ---
 
@@ -153,18 +206,20 @@
 
 ### 3.1 模块结构
 
+按 AOSP `frameworks/base/packages/SystemUI/Android.bp`（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）：
+
 ```
-:app                          # 主入口（APK 打包），依赖其他所有模块
-:SystemUI-core                # 主模块 (~95% 代码)
-:SystemUI-shared              # 共享库（源码，含 aidl）
-:SystemUI-animation           # 动画库（源码）
-:SystemUI-animationlib        # 插值器/动画工具库（源码，从 animationlib.jar 源码化）
-:SystemUI-customization       # 配置库（源码）
-:SystemUI-unfold              # 折叠屏过渡库（源码，KSP 跑 Dagger）
-:SystemUI-common              # 通用工具（源码，含 shared-utils）
-:SystemUI-log                 # 日志库（源码）
-:SystemUI-plugin              # 插件接口 (运行时)
-:SystemUI-plugin-core         # 插件注解 (编译时)
+:app                          # android_app "SystemUI"（APK 入口，SystemUIApplication/SystemUIService 在此）
+:SystemUI-core                # android_library "SystemUI-core"（主模块，src + compose + 所有子模块 static_libs）
+:SystemUI-shared              # android_library "SystemUISharedLib"（源码，含 aidl）
+:SystemUI-animation           # android_library "PlatformAnimationLib"（源码）
+:SystemUI-animationlib        # android_library "PlatformAnimationLib-core/server"（插值器/动画工具库，源码）
+:SystemUI-customization       # android_library "SystemUICustomizationLib"（源码）
+:SystemUI-unfold              # android_library "SystemUIUnfoldLib"（源码，KSP 跑 Dagger）
+:SystemUI-common              # android_library "SystemUICommon"（源码，含 shared-utils）
+:SystemUI-log                 # android_library "SystemUILogLib"（源码）
+:SystemUI-plugin              # android_library "SystemUIPluginLib"（运行时接口，源码）
+:SystemUI-plugin-core         # android_library "PluginCoreLib/PluginAnnotationLib"（编译时注解，源码）
 ```
 
 > **源码化里程碑（2026-07-29）**：tier① 自有代码 shared/animation/customization/unfold/log/common
@@ -221,7 +276,7 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 
 ---
 
-## 四、当前进度状态 (2026-07-28)
+## 四、当前进度状态 (2026-07-29)
 
 ### 4.1 已完成
 
@@ -248,14 +303,16 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 ### 4.3 待解决 (按优先级)
 
 #### 高优先级 (阻塞主流程)
-1. **animationlib 源码化未完成** — 源码已复制、模块骨架已创建，但 animation/customization 的
+1. **app 模块按 bp 重构**（ADR 0003）：
+   - 移动 `SystemUIApplication.java` / `SystemUIService.java` 从 `:SystemUI-core` 到 `:app/src/main/java/`
+   - 复制 AOSP 完整 `AndroidManifest.xml`（1158 行）到 `:app/src/main/`
+   - 删除 `:app/build.gradle.kts` 中冗余的子模块依赖（:SystemUI-shared 等由 :SystemUI-core 通过 static_libs 引入）
+   - 详情: `docs/adr/0003-app-module-aligns-aosp-bp.md`、`docs/issues/2026-07-29-aidl-animationlib-app.md §四`
+
+2. **animationlib 源码化收尾**：源码已复制、模块骨架已创建，但 animation/customization 的
    `build.gradle.kts` 还没改（还在用 `compileOnly(animationlib.jar)`），`libs/animationlib.jar` 也还没删
    - 详情: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
    - 注意: WMShell.jar 也有 6 个 `com.android.app.animation.*` 重叠类，需检查冲突
-
-2. **app 模块构建** — `app/` 目录几乎为空，需要从 AOSP 复制 AndroidManifest.xml、补全 dependencies
-   - 详情: `docs/issues/2026-07-29-aidl-animationlib-app.md §四`
-   - 关键发现: SystemUIApplication/SystemUIService 源码已在 core/src，app 不需要复制源码
 
 #### 中优先级 (Compose)
 3. **Compose Scene Framework** (`com.android.compose.animation.scene.*`) — 12 错误
@@ -361,8 +418,10 @@ javap -p <ClassName>
 | `docs/GRADLE_MIGRATION_LOG.md` | 历史错误数演变 |
 | `docs/issues/YYYY-MM-DD-<topic>.md` | 每日详细问题记录 |
 | `docs/architecture/YYYY-MM-DD-<topic>.md` | 复杂调研 |
-| `tools/gen_aar_maven.py` | AAR 生成脚本 |
+| `docs/adr/NNNN-<slug>.md` | 架构决策记录 (ADR) |
+| `tools/gen_aar_maven.py` | AAR 生成脚本（参考项目移植，本项目 `AOSP_ROOT` 待改） |
 | `tools/install_sdk.py` | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口）|
+| `tools/clean_prebuilts.py` | 清理 prebuilt jar 中的冲突类（与 maven 重复）|
 
 ---
 
@@ -387,6 +446,7 @@ javap -p <ClassName>
 | 2026-07-22 起草 | 初始版本，仅有规则 |
 | 2026-07-23 增订 | 加入当前进度和待解决 |
 | 2026-07-28 重写 | 配合 docs/HANDOFF.md 重组结构，新增 §0 优先级、§1.4 参考、§2.5 求助规则、§3.2 libs 警告、§4.1 错误数演变表 |
+| 2026-07-29 增订 | 新增 §0.二 ADR 索引、§1.5 规则 S、§1.6 规则 C、§1.7 规则 F、§1.8 规则 R、§1.9 规则 B（bp 对齐）；同步 ADR 0001/0002/0003 |
 
 ---
 

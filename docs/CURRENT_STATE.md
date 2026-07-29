@@ -1,11 +1,26 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **最后更新**: 2026-07-29
-> **当前错误数**: 509（上次编译 2026-07-28）
-> **当前阶段**: Stage 3/4 推进中（animationlib 源码化 + app 模块构建）
+> **最后更新**: 2026-07-29（ADR 增订）
+> **当前错误数**: 70（Stage 2 已解 + 完整性审查完成）；当前 build 失败（`SystemUI-animationlib` 配置不完整，见 §4）
+> **当前阶段**: Stage 3 推进中（animationlib 收尾 + app 模块按 bp 重构）
 
-> ⚠️ **Stage 2 已解决 (2026-07-28)**: server-notification-flags 的根因是源码 stub 遮蔽 jar，
+> ✅ **Stage 2 已解决 (2026-07-28)**: server-notification-flags 的根因是源码 stub 遮蔽 jar，
 > `git rm` 后 2000 → 1979。详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
+
+> 🆕 **2026-07-29 ADR**: 项目引入 3 份架构决策记录，详见 `docs/adr/`：
+> - **ADR 0001** `aosp-res-via-local-maven.md` — res 处理优先级 + local maven 根因
+> - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 脚本一律 Python
+> - **ADR 0003** `app-module-aligns-aosp-bp.md` — 项目结构对齐 AOSP `Android.bp`
+
+---
+
+## 0. 本次新增规则的速查
+
+| 规则 | 触发场景 | 行动 |
+|------|---------|------|
+| **R** (§1.8) | res 缺失编译报错 | AOSP 源码 → maven-aar → maven；**禁止**凭空生成 |
+| **B** (§1.9) | 想加模块/调依赖 | 按 AOSP `Android.bp` 校准（ADR 0003） |
+| ADR 0002 | 想写脚本 | Python；除非纯 CLI 调用才可 .sh |
 
 ---
 

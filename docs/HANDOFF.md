@@ -44,11 +44,20 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 ### 1.3 必须遵守的规则（优先级从高到低）
 
 1. **用户指令 > 本文件 > 默认系统提示**
-2. **不要创建 stub 类**（详细规则见 AGENTS.md §1）
-3. **不要擅自创建资源文件**（res/ 下的任何东西必须来自 AOSP 源码 / aar / maven）
-4. **增量开发**：每次 commit 错误数必须下降
-5. **所有改动先写文档** (`docs/issues/YYYY-MM-DD-<topic>.md`)
-6. **不要替用户做产品决策**：遇到 2+ 候选方案时用 `AskQuestion` 询问
+2. **规则 P**: 不要创建 stub 类（详见 AGENTS.md §1）
+3. **规则 S**: SystemUI 自有代码一律源码复制；非自有走 jar/aar/maven 三层（详见 §1.5）
+4. **规则 C**: SystemUI src/aidl/res 必须与 AOSP 不漏不多（详见 §1.6）
+5. **规则 F**: framework 等非 SystemUI 代码严禁源码复制（详见 §1.7）
+6. **规则 R**: res 缺失走 AOSP 源码/maven-aar/maven 三级；禁止凭空生成（详见 §1.8）
+7. **规则 B**: 项目结构按 AOSP `Android.bp`（详见 §1.9 + `docs/adr/0003`）
+8. **规则 I**: 增量开发；每次 commit 错误数必须下降（tier① 源码补全允许上升）
+9. **规则 D**: 所有改动先写文档 (`docs/issues/YYYY-MM-DD-<topic>.md`)
+10. **规则 H**: 不要替用户做产品决策；遇 2+ 候选方案用 `AskQuestion`
+
+详细决策见 `docs/adr/`：
+- **ADR 0001** `aosp-res-via-local-maven.md` — res 处理优先级
+- **ADR 0002** `tools-scripts-only-python.md` — 脚本一律 Python
+- **ADR 0003** `app-module-aligns-aosp-bp.md` — 项目结构对齐 bp
 
 ---
 
@@ -118,7 +127,18 @@ SystemUI-Gradle/
   遮蔽了 jar，`git rm` 后 2000 → 1979。**不是** classpath/Kotlin 2.2.10/FeatureFlags 的问题。
 - **详情**: `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`、`docs/PITFALLS.md §2.4`
 
-### 4.2 animationlib 源码化（进行中，未提交）
+### 4.2 app 模块按 bp 重构（ADR 0003，高优先级）
+- **状态**: 🚧 待实施（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）
+- **任务清单**:
+  1. 把 `SystemUIApplication.java` / `SystemUIService.java` 从 `:SystemUI-core/src/com/android/systemui/`
+     移到 `:app/src/main/java/com/android/systemui/`
+  2. 从 AOSP `frameworks/base/packages/SystemUI/AndroidManifest.xml` 复制完整 1158 行到 `:app/src/main/AndroidManifest.xml`
+  3. 删除 `:app/build.gradle.kts` 中冗余的 `implementation(project(":SystemUI-shared"))` 等
+     （`:SystemUI-core` 已通过 static_libs 引入）
+  4. 调整 `:SystemUI-core/build.gradle.kts` 不再 include 这两个文件
+- **关键决策**: 按 AOSP Android.bp，`:app` 只 `static_libs: ["SystemUI-core"]`，不再直接依赖子模块
+
+### 4.3 animationlib 源码化（进行中，未提交）
 - **状态**: 🚧 源码已复制、模块骨架已创建、settings.gradle.kts 已加，但 animation/customization 的
   `build.gradle.kts` 还没改（还在用 `compileOnly(animationlib.jar)`），`libs/animationlib.jar` 也还没删
 - **详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
@@ -126,17 +146,6 @@ SystemUI-Gradle/
   1. `:SystemUI-animation` / `:SystemUI-customization` 的 `compileOnly(animationlib.jar)` → `api(project(":SystemUI-animationlib"))`
   2. 删除 `libs/animationlib.jar`
   3. 检查 WMShell.jar 的 6 个重叠类是否冲突
-
-### 4.3 app 模块构建
-- **状态**: 🚧 调研完成，待实施
-- **当前问题**: `app/` 目录几乎为空——只有 `build.gradle.kts` 和空壳 `AndroidManifest.xml`
-- **AOSP 对应**: `android_app "SystemUI"` 模块（Android.bp:772），通过 `static_libs` 把 core + 所有子模块链接进来
-- **关键发现**: `SystemUIApplication.java` / `SystemUIService.java` 的源码已在 `:SystemUI-core/src/`，`:app` 不需要复制源码
-- **需要做的事**:
-  1. 从 AOSP 复制 `AndroidManifest.xml`（含大量 uses-permission、service/activity 声明）
-  2. 补全 `:app` 的 dependencies（对齐 AOSP static_libs）
-  3. 配置资源合并策略（res-keyguard / res-product）
-- **详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §四`
 
 ### 4.4 Stage 3 (Compose Scene Framework)
 - **状态**: 12 个错误，全部在 `com.android.compose.animation.scene.*`
