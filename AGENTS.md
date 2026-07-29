@@ -134,12 +134,21 @@
 ```
 :app                          # 主入口，依赖其他所有模块
 :SystemUI-core                # 主模块 (~95% 代码)
-:SystemUI-shared              # 共享库
-:SystemUI-animation           # 动画库
-:SystemUI-customization       # 配置库
+:SystemUI-shared              # 共享库（源码，含 aidl）
+:SystemUI-animation           # 动画库（源码）
+:SystemUI-customization       # 配置库（源码）
+:SystemUI-unfold              # 折叠屏过渡库（源码，KSP 跑 Dagger）
+:SystemUI-common              # 通用工具（源码，含 shared-utils）
+:SystemUI-log                 # 日志库（源码）
 :SystemUI-plugin              # 插件接口 (运行时)
 :SystemUI-plugin-core         # 插件注解 (编译时)
 ```
+
+> **源码化里程碑（2026-07-29）**：tier① 自有代码 shared/animation/customization/unfold/log/common
+> 已全部由 jar 改为源码依赖（规则 S），core 错误稳定 102。unfold 引入 **KSP**
+> （`com.google.devtools.ksp 2.2.10-2.0.2`，对齐编译器 2.2.10）跑 Dagger 处理器在项目内生成组件，
+> 破解 KAPT 禁用难题；dagger 2.57.2 用 `implementation` 直接坐标限定在 unfold（不透传 core）。
+> 详见 `docs/architecture/2026-07-29-dependency-audit.md` §6。
 
 ### 3.2 libs/ 内容
 
@@ -200,11 +209,14 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 | 2026-07-22 | 2412 | 删除所有 v1 stub 文件 |
 | 2026-07-22 | 2000 | 加 Monet jar + SystemUI Flags jar |
 | 2026-07-23 | 2000 | (本日到此) |
+| 2026-07-29 | 142 | biometrics/keyguard/kairos 等大批源码补全 |
+| 2026-07-29 | 116 | clocks 塞 :SystemUI-plugin |
+| 2026-07-29 | 102 | Phase A–C：tier① 全源码化 + KSP 跑 Dagger（无回归） |
 
 ### 4.2 当前错误数
 
-- **2000** (截至 2026-07-28)
-- 详细分类见 `docs/CURRENT_STATE.md` §3
+- **102** (截至 2026-07-29，Phase A–C 完成后稳定)
+- 详细分类见 `docs/architecture/2026-07-29-dependency-audit.md` §6
 
 ### 4.3 待解决 (按优先级)
 
@@ -272,6 +284,7 @@ javap -p <ClassName>
 | 提取 .class 到 jar | 低 | aconfig Flags |
 | 加 aar 依赖 | 低 | 含资源 |
 | 复制源码为 module | 中 | 完整模块 |
+| KSP 跑注解处理器 | 中 | Dagger 生成代码（KAPT 禁用，KSP 2.2.10-2.0.2 可用；见 unfold） |
 | 升级 Compose 版本 | 中 | 内部 API |
 | 排除源码 | 临时 | 暂时不用的代码 |
 

@@ -142,8 +142,50 @@ Dagger 生成符号（`Dagger*`/`*_Factory`）仅 2 个，暂不阻塞；但**�
 
 ## 五、待办跟踪
 
-- [ ] Phase A 清理（死依赖 + lottie + SettingsLib 合并）
-- [ ] Phase B `:SystemUI-common`、`:SystemUI-log` 模块
-- [ ] Phase C shared / animation / customization / unfold 源码化
+- [x] Phase A 清理（死依赖 + lottie + SettingsLib 合并）— `683ef39`
+- [x] Phase B `:SystemUI-common`、`:SystemUI-log` 模块 — `4102b41`
+- [x] Phase C shared / animation / customization / unfold 源码化
+      — `25d4619` / `8f90c34` / `31226e1` / `31b9654`
 - [ ] Phase D compose/scene + AIDL 决策
-- [ ] （另议）Dagger KAPT→KSP
+- [x] Dagger KAPT→KSP：unfold 已用 KSP 跑通（见下）；core 待迁
+
+---
+
+## 六、执行结果（2026-07-29 收尾）
+
+**Phase A–C 全部完成，core 编译错误稳定 102，全程无回归。**
+
+### 6.1 tier① 自有代码已全部源码化
+
+| 模块 | 原形态 | 现形态 | commit |
+|---|---|---|---|
+| :SystemUI-log | jar | 源码（10 文件） | `4102b41` |
+| :SystemUI-common | 内嵌 core | 源码（common 3 + shared-utils 2） | `4102b41` |
+| :SystemUI-shared | jar×3 | 源码（75，含 aidl） | `25d4619` |
+| :SystemUI-animation | jar | 源码（animation + lib + res） | `8f90c34` |
+| :SystemUI-customization | jar | 源码（35 + res） | `31226e1` |
+| :SystemUI-unfold | jar | 源码（36 kt + 2 aidl） | `31b9654` |
+
+透传修正：原 fat jar 透传给 core 的插件类改为补 :SystemUI-plugin 源码
+（bcsmartspace 2 + TileDetailsViewModel + compose.runtime）。
+
+### 6.2 困难⑤ 已破解：KSP 跑 Dagger
+
+- 引入 `com.google.devtools.ksp 2.2.10-2.0.2`（对齐实际编译器 2.2.10，非 catalog 标称的 2.1.0）
+- unfold 用 KSP + dagger-compiler **在项目内生成** `DaggerUnfoldSharedComponent` 等，彻底摆脱 jar hack
+- 版本坑：dagger 2.51.1 + KSP2 有 `unexpected jvm signature V` bug；2.56+ 又引入 `Lazy<T:Any>`
+  边界会波及 core 无界 `Lazy<T>`。→ 用 `implementation` 直接坐标把 **dagger 2.57.2 限定在 unfold**
+  （不透传 core，core 仍走 catalog 2.51.1，保持 102）
+- **意义**：KSP + Dagger 在本项目可用，为后续 core 的 Dagger 源码生成（消除 `DaggerReferenceGlobalRootComponent` 等）铺路
+
+### 6.3 tier② 例外（有文档说明的 jar）
+
+- `systemui-aidl.jar`（困难②，AIDL 隐藏接口，保留）
+- `libs/dynamicanimation-1.1.0-alpha04.jar`（unfold 用 `SpringAnimation.scheduler`/`FrameCallbackScheduler`，公网 maven 无此版本，从 AOSP prebuilt 提取 compileOnly）
+- `libs/animationlib.jar`（含 `Interpolators`，修正原误取的空 kotlin 产物→javac 产物）
+
+### 6.4 剩余
+
+- Phase D：compose/scene(50) 源码化（Compose 内部/实验 API，需对齐版本）+ AIDL 困难② 决策
+- core 102 中 communal/widgets 29（systemui-aidl compileOnly 类 Kotlin 不可见）、
+  Dagger 生成符号、R.string/drawable 缺失等，属后续功能补全
