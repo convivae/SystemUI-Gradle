@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 
 # 配置
-AOSP_ROOT = Path("/home/conv/myspace/rom/jkc-A/lagvm/LINUX/android")
+AOSP_ROOT = Path("/home/conv/myspace/aosp")
 SCRIPT_DIR = Path(__file__).parent.resolve()
 PROJECT_ROOT = SCRIPT_DIR.parent
 MAVEN_REPO = PROJECT_ROOT / "libs" / "maven"
