@@ -81,3 +81,7 @@ libs/maven/
 res-product/
 res-keyguard/
 res-gradle/
+
+# Python bytecode
+__pycache__/
+*.pyc

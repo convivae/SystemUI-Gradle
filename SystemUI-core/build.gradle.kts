@@ -125,11 +125,11 @@ dependencies {
     // 添加 android_module_lib_stubs_current.jar 提供缺失的 framework stub
     compileOnly(files("${rootProject.projectDir}/libs/android_module_lib_stubs_current.jar"))
 
-    // 本地 JAR
+    // AOSP bp：java_library "SystemUI-proto" (srcs: ["src/**/*.proto"], proto.type: "nano")
+    // 唯一的一等产物：SystemUI-proto.jar（含 15 个 .proto 生成类）。
+    // protobuf.nano 运行时由 compileOnly framework.jar 提供（与 AOSP bp 隐式依赖
+    // libprotobuf-java-nano 一致）。
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))
-    // SystemUI-proto.jar 只含 protobuf.nano 运行时，缺 .proto 生成类；
-    // 补上 AOSP 生成的 nano proto 类 (CommunalHubState / SystemUIProtoDump / QsTileState 等)
-    implementation(files("${rootProject.projectDir}/libs/SystemUI-proto-gen.jar"))
     // SystemUIUnfoldLib：FOLD_UPDATE_* 常量 + FoldStateProvider 等（可折叠设备 unfold 动画）
     implementation(project(":SystemUI-unfold"))
     // androidx.window：FoldingFeature / WindowLayoutInfo 等
