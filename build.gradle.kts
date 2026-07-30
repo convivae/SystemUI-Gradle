@@ -34,21 +34,11 @@ allprojects {
                 classpath = files(serverNotificationFlagsJar) + classpath
             }
         }
-        // KotlinCompile: libraries.from() 是 kotlin 编译的 classpath
-        // 但 kotlin android plugin 在 KotlinCompile 任务之外还使用 javac，
-        // 所以也需要把 jar 加到 JavaCompile (KotlinCompile 间接依赖)
-        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            // server-notification-flags 必须在 framework.jar 之前加载
-            // 否则 framework.jar 的同名 stub 会遮蔽 notification-flags
-            if (serverNotificationFlagsJar.exists()) {
-                libraries.from(serverNotificationFlagsJar)
-            }
-            libraries.from(internalFlagsJars)
-            if (frameworkJar.exists()) {
-                libraries.from(frameworkJar)
-            }
-        }
-        // 配置 Kotlin compilation 的 jvmTarget
+        // KotlinCompile: do NOT add framework.jar here. It pollutes the Compose runtime's
+        // inline metadata lookup (Kotlin can't find inline bodies for CompositionLocal.getCurrent,
+        // remember, etc., giving "Couldn't inline method call" internal errors).
+        // framework.jar is added only to JavaCompile.classpath above for Java code; Kotlin code
+        // sees the same hidden-API classes via SDK SysUISdk merge + AGP's automatic classpath.
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             compilerOptions {
                 jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
@@ -56,7 +46,6 @@ allprojects {
                 // utils/kairos/Android.bp 的 -opt-in flag，否则内部互相引用全报 opt-in 错误
                 freeCompilerArgs.add("-opt-in=com.android.systemui.kairos.ExperimentalFrpApi")
             }
-
         }
     }
 }

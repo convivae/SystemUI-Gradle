@@ -105,6 +105,29 @@ dependencies {
     // SystemUI-shared 已源码化（Phase C），替代原 SystemUISharedLib.jar（AAR）
     implementation(project(":SystemUI-shared"))
 
+    // AOSP bp 1:1 新增子模块 (Phase A/B) — 对齐 frameworks/base/packages/SystemUI/
+    // static_libs in AOSP SystemUI-core Android.bp:
+    //   kairos → SystemUI-utils-kairos
+    implementation(project(":SystemUI-utils-kairos"))
+    //   PlatformComposeCore → SystemUI-compose-core
+    implementation(project(":SystemUI-compose-core"))
+    //   PlatformComposeSceneTransitionLayout → SystemUI-compose-scene
+    implementation(project(":SystemUI-compose-scene"))
+    //   BiometricsSharedLib → SystemUI-shared-biometrics
+    implementation(project(":SystemUI-shared-biometrics"))
+    //   SystemUISharedLib-Keyguard → SystemUI-shared-keyguard
+    implementation(project(":SystemUI-shared-keyguard"))
+    //   SystemUI-proto → SystemUI-proto (顶层 java_library, 含 protobuf.nano 生成类)
+    implementation(project(":SystemUI-proto"))
+    //   pods/.../dagger:api → SystemUI-pods-dagger
+    implementation(project(":SystemUI-pods-dagger"))
+    //   pods/.../retail:impl → SystemUI-pods-retail
+    implementation(project(":SystemUI-pods-retail"))
+    implementation(project(":SystemUI-pods-data"))
+    implementation(project(":SystemUI-pods-domain"))
+    //   pods/.../util/settings:api → SystemUI-pods-settings
+    implementation(project(":SystemUI-pods-settings"))
+
     // UncaughtExceptionPreHandlerManager：shared 内该类因 libcore 隐藏 API 无法源码编译，
     // 由 AOSP 编译产物提取的 class 提供（core 的 SystemUIService/PluginsModule 引用它）
     compileOnly(files("${rootProject.projectDir}/libs/shared-uncaught-handler.jar"))
@@ -126,10 +149,11 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/android_module_lib_stubs_current.jar"))
 
     // AOSP bp：java_library "SystemUI-proto" (srcs: ["src/**/*.proto"], proto.type: "nano")
-    // 唯一的一等产物：SystemUI-proto.jar（含 15 个 .proto 生成类）。
-    // protobuf.nano 运行时由 compileOnly framework.jar 提供（与 AOSP bp 隐式依赖
-    // libprotobuf-java-nano 一致）。
+    // AOSP 一等产物 SystemUI-proto.jar（含 15 个 .proto 生成类如 CommunalHubState / QsTileState）。
+    // 我们另建 :SystemUI-proto 模块提供少量 Flags stub（framework 不可见部分）。
+    // protobuf.nano 运行时由 compileOnly framework.jar 提供。
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))
+    implementation(project(":SystemUI-proto"))
     // SystemUIUnfoldLib：FOLD_UPDATE_* 常量 + FoldStateProvider 等（可折叠设备 unfold 动画）
     implementation(project(":SystemUI-unfold"))
     // androidx.window：FoldingFeature / WindowLayoutInfo 等

@@ -137,15 +137,21 @@ def match_module_by_glob(aosp_full_relpath: str, modules: list[dict]) -> dict | 
 def bp_path_to_gradle(bp_path: str, bp_name: str) -> str:
     """Convert AOSP bp dir + name to Gradle module name.
 
-    Naming convention: SystemUI-<bp_path>-<bp_name>
-    For top-level (bp_path = '.'): SystemUI-<bp_name>
-
-    Special: when there is exactly ONE module in a bp dir (like compose/scene),
-    we omit the bp_name suffix to avoid noise.
+    Convention (AOSP 1:1, no name decoration):
+      - Top-level (.): SystemUI-<bp_name>
+      - pods/.../x: SystemUI-pods-<basename>
+      - Other dirs: SystemUI-<bp_path.replace('/', '-')>
     """
     if bp_path in (".", ""):
         return f"SystemUI-{bp_name}"
-    return f"SystemUI-{bp_path.replace('/', '-')}-{bp_name}"
+
+    # pods path → SystemUI-pods-<basename>
+    if bp_path.startswith("pods/"):
+        rest = bp_path[len("pods/"):]
+        basename = rest.rstrip("/").split("/")[-1]
+        return f"SystemUI-pods-{basename}"
+
+    return f"SystemUI-{bp_path.replace('/', '-')}"
 
 
 def main() -> int:

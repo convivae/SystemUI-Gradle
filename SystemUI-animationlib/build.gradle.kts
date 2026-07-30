@@ -31,4 +31,9 @@ android {
 
 dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
+    // androidx.core 提供 WindowInsetsControllerCompat / WindowCompat
+    implementation("androidx.core:core-ktx:1.13.1")
+    // androidx.core:core-animation 提供 androidx.core.animation.Interpolator / PathInterpolator
+    // 用 api 让下游 compose-core 也能看到
+    api("androidx.core:core-animation:1.0.0")
 }

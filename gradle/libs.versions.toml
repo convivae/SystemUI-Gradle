@@ -29,6 +29,10 @@ androidxPalette = "1.0.0"
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+# Compose Compiler plugin — 必须与 Kotlin 编译器版本对齐 (Kotlin 2.x)
+# 没有它，Compose 的 inline metadata 不会被生成，导致 "Couldn't inline method call" 内部错误
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
 [libraries]
 androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
