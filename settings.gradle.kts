@@ -25,6 +25,7 @@ dependencyResolutionManagement {
 rootProject.name = "SystemUI"
 include(":app")
 include(":SystemUI-core")
+include(":SystemUI-res")
 include(":SystemUI-shared")
 include(":SystemUI-animation")
 include(":SystemUI-customization")

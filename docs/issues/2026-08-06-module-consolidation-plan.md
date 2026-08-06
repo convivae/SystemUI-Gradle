@@ -122,3 +122,13 @@
     旧 compose-core 依赖相同，属预存问题非本次回归
   - 用户既定方针：严格按计划执行，错误先保留，继续后续任务
 - 对齐：MISSING 84（↓77，compose 源码归位）、EXTRA 96、MODIFIED 1046
+
+## Task 7: 创建 SystemUI-res 资源 namespace 模块
+
+- 从 AOSP 复制 res(1897)/res-keyguard(212)/res-product(86) → SystemUI-res（字节一致）
+- 删除 SystemUI-core/{res,res-keyguard,res-product} 与 app/AndroidManifest-res.xml
+- 创建 :SystemUI-res（namespace com.android.systemui.res，无源码，仅资源）
+  - 依赖 api(shared/customization/settingslib/leanback/slice-core/slice-view)
+- core 移除 res.srcDirs，加 implementation(:SystemUI-res)
+- **验证**：res/res-keyguard/res-product 字节级与 AOSP 一致
+- 对齐：RES-MISS 2195 → 0，RES-EXTRA 0，RES-MODIFIED 0

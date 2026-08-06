@@ -45,12 +45,7 @@ android {
             // framework 隐藏接口（android.os.IRemoteCallback）由 SysUISdk 的 framework.aidl 补齐，
             // 见 tools/install_sdk.py（规则 F：非 SystemUI 代码不源码复制）
             aidl.srcDirs("src")
-            // AOSP 资源目录（直接复制自 frameworks/base/packages/SystemUI/）
-            res.srcDirs(
-                "res",
-                "res-keyguard",
-                "res-product"
-            )
+            // 资源已独立为 :SystemUI-res（com.android.systemui.res.R namespace）
             manifest.srcFile("AndroidManifest.xml")
         }
         getByName("debug") {
@@ -100,6 +95,8 @@ dependencies {
     implementation(project(":SystemUI-animation"))
     implementation(project(":SystemUI-customization"))
     implementation(project(":SystemUI-common"))
+    // SystemUI 资源 namespace（com.android.systemui.res.R）
+    implementation(project(":SystemUI-res"))
 
     // SystemUI-shared 已源码化（Phase C），替代原 SystemUISharedLib.jar（AAR）
     implementation(project(":SystemUI-shared"))

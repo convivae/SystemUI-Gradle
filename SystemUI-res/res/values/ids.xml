@@ -288,9 +288,4 @@
 
     <item type="id" name="brightness_dialog_slider" />
 
-    <!-- 来自 AOSP SystemUI/shared/res/values/ids.xml：BcSmartspace 视图 id -->
-    <item type="id" name="bc_smartspace_view" />
-    <item type="id" name="date_smartspace_view" />
-    <item type="id" name="weather_smartspace_view" />
-
 </resources>
