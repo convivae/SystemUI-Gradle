@@ -49,3 +49,16 @@
 - 目标 13-module 清单已写入 ADR 0003 决策 1、AGENTS.md §3.1、HANDOFF §2。
 - animationlib 确认为非 SystemUI 代码，"源码化"方案废止，改为直接 AAR。
 - kairos 确认为 test-only，不进本 APK 生产图。
+
+## Task 2: 对齐脚本内容感知 + 目标 owner 感知
+
+- 新增 `tools/tests/test_check_source_alignment.py`（8 个单测，全过）。
+- 重写 `tools/check_source_alignment.py`：
+  - 每条映射对应一个 AOSP source root → 目标 13-module 物理 source root
+  - 新增 `diff_pair` 字节级内容比较（[MODIFIED] / [RES-MODIFIED]）
+  - root-aware misplaced 判定（同 module 不同 source root 也算放错）
+  - `--strict` 在任一 missing/misplaced/extra/modified/app/res 问题时退出 1
+  - 移除 SURFACEEFFECTS_PREFIX / check_shader_lib（surfaceeffects 现归入 animation 映射）
+- 红色基线（迁移未发生，`--strict` 退出 1）：
+  - [MISSING] 212 / [MISPLACED] 162 / [EXTRA] 107 / [MODIFIED] 1046 / [RES-MISS] 2196
+  - MODIFIED 1046 反映历史对 core/src 的 R import 规范化等改动，Task 8 重新同步 AOSP 后将归零
