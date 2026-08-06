@@ -2,9 +2,20 @@
 
 > ⚠️ **历史快照警告（2026-08-06）**：本文件 §2–§6 主体停留在 2026-07-29，错误数、待办和 app 入口类计划已过时。当前规则与优先级以 `AGENTS.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md` 为准。
 >
-> **当前阶段（2026-08-06）**：**13-module 拓扑实施**。已审定从当前 22 module 收敛为 13-module 目标架构（语义对齐 BP，非 target 1:1）。animationlib 是非 SystemUI 代码（`frameworks/libs/systemui`），须改为直接 AAR；kairos 为 test-only，不进本 APK 生产图。实施计划见 `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`，架构决策见 `docs/architecture/2026-08-06-module-structure-audit.md`。
+> **当前阶段（2026-08-08）**：**13-module 拓扑已建立**。从 22 module 收敛为 13-module 目标架构（Task 1–10 全部完成）。语义对齐 BP，非 target 1:1。源码/res 对齐全绿（`check_source_alignment.py --strict` exit 0：MISSING/MISPLACED/EXTRA/MODIFIED/RES 全 0）。animationlib 改为直接 AAR；kairos 为 test-only 不进生产图。架构决策见 `docs/architecture/2026-08-06-module-structure-audit.md`，实施记录见 `docs/issues/2026-08-06-module-consolidation-plan.md`。
 >
-> **构建状态**：当前构建仍被 AAR 重复 R transform 阻塞（SettingsLib/iconloader/WindowManager-Shell AAR），在 Kotlin 编译前失败，**无可信 Kotlin 错误数基线**。错误数在任何阶段都只作为诊断数据，不是提交门槛；入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复拆为后续独立 artifact-recovery 计划。
+> **最终 13 个 Gradle module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
+>
+> **隔离编译证据**：`:SystemUI-animation`、`:SystemUI-shared-biometrics`、`:SystemUI-plugin`（配置解析）通过。
+>
+> **保留错误（待办，未修复）**：
+> 1. `:SystemUI-common:compileKotlin` — `android.icu.text.SimpleDateFormat` unresolved（JVM 模块无 AGP android.jar）
+> 2. `:SystemUI-compose:compileDebugKotlin` — `androidx.core.animation.Interpolator` unresolved（缺 `androidx.core:core` 依赖）
+> 3. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注，见 Task 9 待办）
+>
+> **core 编译边界**：`./gradlew :SystemUI-core:compileDebugKotlin` 被上游保留错误 1/2 阻断，第一个失败 task 为 `:SystemUI-common:compileKotlin`。core 自身 Kotlin 未开始；AAR transform 错误未出现（被上游阻断）。
+>
+> **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复拆为后续独立 artifact-recovery 计划（尚未创建）。`./gradlew :app:assembleDebug` 未运行。
 >
 > 下文 §1–§8 为历史记录，保留供诊断参考，不代表当前优先级。
 

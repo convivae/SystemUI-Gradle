@@ -215,3 +215,58 @@ org.gradle.api.GradleException: Error resolving plugin [id: 'org.jetbrains.kotli
 - **待办**：`PluginProtector` 不生成，下游 `Unresolved reference 'PluginProtector'` 作为保留错误
 
 后续需在 Kotlin 标注处理方向上决策（KAPT 兼容性实证 / KSP 重写 / 其他），不在本计划内。
+
+## Task 10: 最终 13-module 验证和 checkpoint
+
+### Step 2: settings graph 断言 — PASS
+13-module 顺序与 expected 完全一致（python 断言通过）。
+
+### Step 3: 源码/资源对齐 — PASS（全绿）
+- py_compile tools/*.py + tests — PASS
+- unittest 16 tests — PASS
+- `check_source_alignment.py --strict` exit 0
+  - MISSING 0 / MISPLACED 0 / EXTRA 0 / MODIFIED 0
+  - RES-MISS 0 / RES-EXTRA 0 / RES-MODIFIED 0
+- 对比 Task 2 红色基线（MISSING 212 / MISPLACED 162 / EXTRA 107 / MODIFIED 1046 / RES-MISS 2196）：
+  全部归零，源码/res 与 AOSP 字节级一致。
+
+### Step 4: Gradle 配置 + 隔离模块编译
+- `./gradlew projects` BUILD SUCCESSFUL（13 模块）
+- `:SystemUI-animation:compileDebugKotlin` — PASS
+- `:SystemUI-shared-biometrics:compileDebugKotlin` — PASS
+- `:SystemUI-plugin:compileDebugKotlin` — 配置解析成功（annotationProcessorPath 生效），
+  下游 :SystemUI-common 失败阻断
+- `:SystemUI-common:compileKotlin` — FAILED（保留错误 1：android.icu）
+- `:SystemUI-compose:compileDebugKotlin` — FAILED（保留错误 2：Interpolator）
+
+### Step 5: core 编译边界
+`./gradlew :SystemUI-core:compileDebugKotlin` 第一个失败 task：
+`:SystemUI-common:compileKotlin`（android.icu），接着 `:SystemUI-compose:compileDebugKotlin`。
+core 自身 Kotlin 未开始；AAR transform 错误未出现（被上游保留错误阻断）。
+日志：/tmp/systemui-core-after-topology.log
+
+### Step 6: 状态与交接
+- 最终 13 module 已记录到 CURRENT_STATE.md / HANDOFF.md
+- 源码/res strict 对齐 exit 0
+- 隔离编译结果见上
+- core 实际首 blocker：:SystemUI-common 保留错误
+- 下一步：artifact-recovery 计划 + 解决 3 个保留错误
+- `:app:assembleDebug` 未运行
+
+### Step 7: checkpoint commit
+13-module 拓扑 checkpoint。
+
+## 3 个保留错误总结（待后续计划处理）
+
+1. **:SystemUI-common `android.icu.text.SimpleDateFormat`**
+   - 根因：JVM 模块（java-library + kotlin.jvm）不自动获得 AGP android.jar；
+     framework.jar 不含 android.icu 包；SysUISdk android.jar 有但未注入 JVM 模块
+   - 方向：JVM + compileOnly(android.jar) 或改回 com.android.library
+
+2. **:SystemUI-compose `androidx.core.animation.Interpolator`**
+   - 根因：计划 deps 未列 androidx.core:core；pre-existing，非回归
+   - 方向：加 androidx.core:core 依赖
+
+3. **:SystemUI-plugin PluginProtector 不生成**
+   - 根因：javac 原生处理器看不到 .kt 标注；KAPT 与 Gradle 9.5 不兼容；KSP API 不兼容
+   - 方向：KAPT 兼容性实证 / KSP 重写 / 其他

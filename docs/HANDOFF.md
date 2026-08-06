@@ -43,7 +43,18 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 
 > **2026-08-06 更新**：该 70 错误不是当前基线。当前 checkpoint 中的 AAR 生成改写导致 AAR transform 在编译前失败，错误数暂时无统计意义。用户已明确错误数在任何阶段都只作为诊断，不是提交/回滚/审批门槛；当前先校准源码/jar/AAR 来源与模块边界。详见 `AGENTS.md` §2.1 和 `docs/architecture/2026-08-06-reference-project-rationale.md`。
 >
-> **2026-08-06 模块拓扑更新**：已审定从当前 22 module 收敛为 13-module 拓扑（语义对齐 BP，非 target 1:1）。animationlib 是非 SystemUI 代码（`frameworks/libs/systemui`），须改为直接 AAR，不再“源码化”。实施计划见 `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`。
+> **2026-08-08 模块拓扑完成**：13-module 拓扑已建立（Task 1–10 全部完成），从 22 module 收敛为 13-module 目标架构。语义对齐 BP，非 target 1:1。`check_source_alignment.py --strict` exit 0（源码/res 全绿）。animationlib 改为直接 AAR；kairos 为 test-only 不进生产图。
+>
+> **最终 13 module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
+>
+> **保留错误（待办）**：
+> 1. `:SystemUI-common` — `android.icu.text.SimpleDateFormat`（JVM 模块无 AGP android.jar）
+> 2. `:SystemUI-compose` — `androidx.core.animation.Interpolator`（缺 `androidx.core:core`）
+> 3. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注）
+>
+> **core 编译被上游 1/2 阻断**，第一个失败 task 为 `:SystemUI-common:compileKotlin`。
+>
+> **下一步**：创建 artifact-recovery 计划（SettingsLib/iconloader/WM Shell/WifiTrackerLib 直接 AAR + 重复 R transform 修复），并解决上述 3 个保留错误。
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
