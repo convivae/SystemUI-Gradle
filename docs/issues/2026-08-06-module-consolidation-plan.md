@@ -195,3 +195,23 @@ org.gradle.api.GradleException: Error resolving plugin [id: 'org.jetbrains.kotli
 4. 其他用户指定方向
 
 当前未恢复 stub，等待裁决。
+
+### 用户裁决（方向 A → 待办）
+
+用户选择"完全转向 KSP，不使用 KAPT"。但实证发现：
+- `ProtectedPluginProcessor` 是 `javax.annotation.processing.AbstractProcessor`（javac API），
+  KSP 用 `SymbolProcessor` API，**不兼容**，不能直接换插件。
+- 全部 8 个 `@ProtectedInterface` 标注在 `.kt` 文件（ClockController 等 clocks + TestPlugin）。
+- javac 原生注解处理器（`JavaCompile.options.annotationProcessorPath`）**只看 Java 源码**，
+  看不到 Kotlin 源码 → `PluginProtector` 不会生成。
+
+用户裁决：**先留待办，继续往下执行**（方向 3）。
+
+当前实现：
+- 移除 KAPT 插件依赖与 `kotlin-kapt` catalog 别名
+- `:SystemUI-plugin` 用 `JavaCompile` + `annotationProcessorPath(project(":SystemUI-plugin-processor"))`
+  原生调用处理器（processor 源码原样不动，规则 C 满足）
+- `:SystemUI-plugin:compileDebugKotlin` 配置解析成功（annotationProcessorPath 生效）
+- **待办**：`PluginProtector` 不生成，下游 `Unresolved reference 'PluginProtector'` 作为保留错误
+
+后续需在 Kotlin 标注处理方向上决策（KAPT 兼容性实证 / KSP 重写 / 其他），不在本计划内。
