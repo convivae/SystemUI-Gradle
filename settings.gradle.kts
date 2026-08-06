@@ -32,7 +32,6 @@ include(":SystemUI-plugin")
 include(":SystemUI-plugin-core")
 include(":SystemUI-common")
 include(":SystemUI-unfold")
-include(":SystemUI-animationlib")
 
 // AOSP bp 1:1 新增子模块 (Phase A 脚手架)
 // utils/kairos/ → kairos

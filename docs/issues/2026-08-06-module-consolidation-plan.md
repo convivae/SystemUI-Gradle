@@ -81,3 +81,16 @@
   - 根因：JVM 模块无 AGP android.jar；`android.icu.text.SimpleDateFormat` 只在 SysUISdk
     android.jar，不在 framework.jar。计划依赖块未列 android.jar。
   - 用户明确：严格按计划执行，此错误先保留，不修复，继续后续任务。
+
+## Task 4: animationlib 直接 AAR + Shader 源码合并
+
+- 新增 `tools/package_aosp_aar.py`（严格直接-AAR 打包器）+ `tools/tests/test_package_aosp_aar.py`（8 单测全过）
+  - 合并 Soong javac + kotlin JAR；拒绝 R.class；重复非 MANIFEST entry 报 DuplicateEntryError
+  - res 字节级复制；不生成 POM；不触碰 libs/maven/
+- 生成 `libs/aars/animationlib.aar`（19677 bytes，含 Animations/Interpolators，无 R.class）
+- 同步 AOSP `animation/src`（54 文件，含 22 surfaceeffects）+ `animation/res`（4 文件）→ SystemUI-animation
+- 消费者重连：animation/customization `api(files(aars/animationlib.aar))`；compose-core `implementation(files(...))`
+- 删除 `:SystemUI-animationlib` 模块、`libs/animationlib.jar`；settings 移除 include
+- 清理 AGENTS.md §3.2、README.md、scripts/scaffold 中的旧引用
+- **验证**：`:SystemUI-animation:compileDebugKotlin` BUILD SUCCESSFUL（仅警告）
+- 对齐：MISSING 175（↓37）、MISPLACED 162、EXTRA 107、MODIFIED 1046

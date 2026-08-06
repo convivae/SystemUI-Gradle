@@ -53,7 +53,8 @@ dependencies {
 
     // tier② AOSP 特有产物 jar
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/animationlib.jar"))
+    // animationlib 直接 AAR（含 res）
+    api(files("${rootProject.projectDir}/libs/aars/animationlib.aar"))
 
     // tier③ 标准第三方（maven 版本依赖）
     implementation(libs.androidx.annotation)

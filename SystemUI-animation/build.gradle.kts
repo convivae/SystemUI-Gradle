@@ -47,7 +47,8 @@ dependencies {
     // tier② AOSP 特有产物 jar
     compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
     // animationlib（frameworks/libs/systemui:animationlib，提供 com.android.app.animation.*）
-    compileOnly(files("${rootProject.projectDir}/libs/animationlib.jar"))
+    // 直接 AAR（含 res），替代旧 animationlib.jar
+    api(files("${rootProject.projectDir}/libs/aars/animationlib.aar"))
     // com.android.systemui.Flags（aconfig）
     compileOnly(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
     // com.android.systemui.shared.Flags（aconfig，shared_flags_lib）

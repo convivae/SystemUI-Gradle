@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package com.android.app.animation;
+package com.android.systemui.surfaceeffects.utils
 
-public final class MathUtils {
-    public static float log(float a) {
-        return (float) Math.log(a);
-    }
-
-    public static float max(float a, float b) {
-        return a > b ? a : b;
+/** Copied from android.utils.MathUtils */
+object MathUtils {
+    fun lerp(start: Float, stop: Float, amount: Float): Float {
+        return start + (stop - start) * amount
     }
 }

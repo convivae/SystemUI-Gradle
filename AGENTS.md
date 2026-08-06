@@ -273,8 +273,9 @@ libs/
 ├── SystemUI-statsd.jar
 ├── monet.jar                           # ColorScheme/Shades/Style
 ├── systemui-flags.jar                  # com.android.systemui.Flags
-├── animationlib.jar                    # ⚠️ 待移除（已源码化为 :SystemUI-animationlib）
 ├── server-notification-flags.jar       # 见 notes: 实际为空, 真实 jar 在 libs/maven/
+├── aars/                               # 直接 AAR（含资源，未入 maven）
+│   └── animationlib.aar                 # frameworks/libs/systemui:animationlib
 ├── prebuilts/
 │   ├── SystemUISharedLib.jar
 │   ├── SystemUIPluginLib.jar

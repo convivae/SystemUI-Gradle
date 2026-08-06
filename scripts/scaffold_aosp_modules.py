@@ -74,7 +74,7 @@ MODULES = [
             ('implementation', "androidx.compose.material:material-icons-extended:1.7.5"),
             ('implementation', "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7"),
             # Interpolator / InterpolatorsAndroidX (com.android.app.animation.*) 来自 animationlib
-            ('implementation', 'project(":SystemUI-animationlib")'),
+            ('implementation', 'files("${rootProject.projectDir}/libs/aars/animationlib.aar")'),
             # Expandable / TransitionAnimator (com.android.systemui.animation.*) 来自 animation
             ('implementation', 'project(":SystemUI-animation")'),
             # androidx.savedstate: 来自 androidx.savedstate.core

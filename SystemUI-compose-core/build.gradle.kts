@@ -68,8 +68,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core:1.7.8")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation(project(":SystemUI-animationlib"))
     implementation(project(":SystemUI-animation"))
+    // animationlib 直接 AAR（临时，Task 6 合并 Compose 后清理）
+    implementation(files("${rootProject.projectDir}/libs/aars/animationlib.aar"))
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
     implementation(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
     implementation("androidx.tracing:tracing:1.2.0")

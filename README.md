@@ -38,7 +38,6 @@ SystemUI-Gradle/
 ├── SystemUI-core/               # ~95% of SystemUI source (~1,400 .kt/.java files)
 ├── SystemUI-shared/             # Shared utility library
 ├── SystemUI-animation/          # Animation library
-├── SystemUI-animationlib/       # Animations prebuilt AAR
 ├── SystemUI-customization/      # Customization library
 ├── SystemUI-plugin/             # Plugin interfaces (runtime)
 ├── SystemUI-plugin-core/        # Plugin annotations (compile-time)
