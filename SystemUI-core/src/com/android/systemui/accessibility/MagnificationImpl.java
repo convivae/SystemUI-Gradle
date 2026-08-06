@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility;
 
-import com.android.systemui.R
-
 import static android.provider.Settings.Secure.ACCESSIBILITY_MAGNIFICATION_MODE_FULLSCREEN;
 import static android.provider.Settings.Secure.ACCESSIBILITY_MAGNIFICATION_MODE_WINDOW;
 import static android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
@@ -120,7 +118,7 @@ public class MagnificationImpl implements Magnification, CommandQueue.Callbacks 
             final Context windowContext = mContext.createWindowContext(display,
                         TYPE_ACCESSIBILITY_OVERLAY,
                         /* options */ null);
-            windowContext.setTheme(R.style.Theme_SystemUI);
+            windowContext.setTheme(com.android.systemui.res.R.style.Theme_SystemUI);
 
             Supplier<SurfaceControlViewHost> scvhSupplier = () ->
                     new SurfaceControlViewHost(mContext,
@@ -169,7 +167,7 @@ public class MagnificationImpl implements Magnification, CommandQueue.Callbacks 
                     TYPE_ACCESSIBILITY_OVERLAY, /* options */ null);
             Supplier<SurfaceControlViewHost> scvhSupplier = () -> new SurfaceControlViewHost(
                     mContext, mContext.getDisplay(), new InputTransferToken(), TAG);
-            windowContext.setTheme(R.style.Theme_SystemUI);
+            windowContext.setTheme(com.android.systemui.res.R.style.Theme_SystemUI);
             return new FullscreenMagnificationController(
                     windowContext,
                     mHandler,
@@ -210,7 +208,7 @@ public class MagnificationImpl implements Magnification, CommandQueue.Callbacks 
         protected MagnificationSettingsController createInstance(Display display) {
             final Context windowContext = mContext.createWindowContext(display,
                     TYPE_ACCESSIBILITY_OVERLAY, /* options */ null);
-            windowContext.setTheme(R.style.Theme_SystemUI);
+            windowContext.setTheme(com.android.systemui.res.R.style.Theme_SystemUI);
             return new MagnificationSettingsController(
                     windowContext,
                     new SfVsyncFrameCallbackProvider(),

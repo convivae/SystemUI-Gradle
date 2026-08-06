@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
@@ -54,6 +52,7 @@ import android.widget.Space
 import android.widget.TextView
 import androidx.annotation.VisibleForTesting
 import com.android.systemui.Dumpable
+import com.android.systemui.res.R
 import com.android.systemui.controls.ControlsMetricsLogger
 import com.android.systemui.controls.ControlsServiceInfo
 import com.android.systemui.controls.CustomIconCache

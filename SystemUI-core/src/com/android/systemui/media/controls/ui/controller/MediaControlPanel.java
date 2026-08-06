@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.controller;
 
-import com.android.systemui.R
-
 import static android.provider.Settings.ACTION_MEDIA_CONTROLS_SETTINGS;
 
 import static com.android.settingslib.flags.Flags.legacyLeAudioSharing;
@@ -121,6 +119,7 @@ import com.android.systemui.monet.ColorScheme;
 import com.android.systemui.monet.Style;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.FalsingManager;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shared.system.SysUiStatsLog;
 import com.android.systemui.statusbar.NotificationLockscreenUserManager;

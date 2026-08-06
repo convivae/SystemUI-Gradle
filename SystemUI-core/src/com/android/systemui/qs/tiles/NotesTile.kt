@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles
 
-import com.android.systemui.R
-
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
@@ -40,6 +38,7 @@ import com.android.systemui.qs.tiles.impl.notes.domain.interactor.NotesTileUserA
 import com.android.systemui.qs.tiles.impl.notes.domain.model.NotesTileModel
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfigProvider
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 /** Quick settings tile: Notes */

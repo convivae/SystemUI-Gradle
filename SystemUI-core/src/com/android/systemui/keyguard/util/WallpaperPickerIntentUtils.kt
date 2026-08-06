@@ -16,10 +16,9 @@
 
 package com.android.systemui.keyguard.util
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.Intent
+import com.android.systemui.res.R
 
 /** Provides function(s) to get intent for launching the Wallpaper Picker app. */
 object WallpaperPickerIntentUtils {

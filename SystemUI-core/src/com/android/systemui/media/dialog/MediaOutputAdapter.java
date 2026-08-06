@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.dialog;
 
-import com.android.systemui.R
-
 import static com.android.settingslib.media.MediaDevice.SelectionBehavior.SELECTION_BEHAVIOR_GO_TO_APP;
 import static com.android.settingslib.media.MediaDevice.SelectionBehavior.SELECTION_BEHAVIOR_NONE;
 import static com.android.settingslib.media.MediaDevice.SelectionBehavior.SELECTION_BEHAVIOR_TRANSFER;
@@ -43,6 +41,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.settingslib.media.LocalMediaManager.MediaDeviceState;
 import com.android.settingslib.media.MediaDevice;
+import com.android.systemui.res.R;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static java.util.Collections.emptySet;
 
 import android.content.Context;
@@ -31,7 +29,7 @@ import android.view.ViewGroup;
 import android.view.ViewPropertyAnimator;
 import android.widget.GridLayout;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.TouchLogger;
 import com.android.systemui.statusbar.CrossFadeHelper;
 

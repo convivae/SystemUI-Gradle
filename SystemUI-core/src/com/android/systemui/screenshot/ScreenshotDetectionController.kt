@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot
 
-import com.android.systemui.R
-
 import android.content.pm.PackageManager
 import android.content.pm.PackageManager.ComponentInfoFlags
 import android.content.pm.PackageManager.MATCH_ANY_USER
@@ -27,6 +25,7 @@ import android.view.IWindowManager
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.TextView
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 class ScreenshotDetectionController

@@ -30,6 +30,7 @@ import com.android.internal.statusbar.StatusBarIcon
 import com.android.internal.util.ContrastColorUtil
 import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.StatusBarIconView
 import com.android.systemui.statusbar.notification.collection.NotifCollection
 import com.android.systemui.statusbar.notification.icon.IconPack
@@ -52,7 +53,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import com.android.systemui.R
 
 /** Binds a view-model to a [NotificationIconContainer]. */
 object NotificationIconContainerViewBinder {

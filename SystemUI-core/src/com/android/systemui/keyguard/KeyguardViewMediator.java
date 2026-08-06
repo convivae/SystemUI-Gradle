@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard;
 
-import com.android.systemui.R
-
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 import static android.provider.Settings.Secure.LOCK_SCREEN_LOCK_AFTER_TIMEOUT;
 import static android.provider.Settings.System.LOCKSCREEN_SOUNDS_ENABLED;
@@ -154,6 +152,7 @@ import com.android.systemui.log.SessionTracker;
 import com.android.systemui.navigationbar.NavigationModeController;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.process.ProcessWrapper;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shade.ShadeController;

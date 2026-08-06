@@ -16,8 +16,6 @@
 
 package com.android.systemui.shade.carrier;
 
-import com.android.systemui.R
-
 import android.annotation.StyleRes;
 import android.content.Context;
 import android.util.AttributeSet;
@@ -26,7 +24,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.android.systemui.FontSizeUtils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Displays Carrier name and network status in the shade header

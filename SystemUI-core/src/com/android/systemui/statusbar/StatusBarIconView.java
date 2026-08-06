@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import static com.android.systemui.plugins.DarkIconDispatcher.getTint;
 
 import android.animation.Animator;
@@ -62,6 +60,7 @@ import com.android.internal.statusbar.StatusBarIcon.Shape;
 import com.android.internal.util.ContrastColorUtil;
 import com.android.systemui.Flags;
 import com.android.systemui.modes.shared.ModesUiIcons;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.NotificationContentDescription;
 import com.android.systemui.statusbar.notification.NotificationDozeHelper;
 import com.android.systemui.statusbar.notification.NotificationUtils;

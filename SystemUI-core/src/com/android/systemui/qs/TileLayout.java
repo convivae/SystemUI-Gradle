@@ -1,7 +1,5 @@
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.Utils.useQsMediaPlayer;
 
 import android.content.Context;
@@ -24,7 +22,7 @@ import com.android.systemui.qs.QSPanel.QSTileLayout;
 import com.android.systemui.qs.QSPanelControllerBase.TileRecord;
 import com.android.systemui.qs.tileimpl.HeightOverrideable;
 import com.android.systemui.qs.tileimpl.QSTileViewImplKt;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 

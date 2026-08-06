@@ -14,8 +14,6 @@
 
 package com.android.systemui.statusbar.phone.fragment;
 
-import com.android.systemui.R
-
 import static com.android.systemui.statusbar.phone.fragment.StatusBarVisibilityModel.createHiddenModel;
 
 import android.annotation.Nullable;
@@ -50,6 +48,7 @@ import com.android.systemui.demomode.DemoMode;
 import com.android.systemui.demomode.DemoModeController;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shade.ShadeExpansionStateManager;
 import com.android.systemui.shade.domain.interactor.PanelExpansionInteractor;

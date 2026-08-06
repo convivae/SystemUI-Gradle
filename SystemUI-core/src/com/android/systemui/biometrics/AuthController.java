@@ -16,8 +16,6 @@
 
 package com.android.systemui.biometrics;
 
-import com.android.systemui.R
-
 import static android.hardware.biometrics.BiometricAuthenticator.TYPE_FACE;
 import static android.hardware.biometrics.BiometricAuthenticator.TYPE_FINGERPRINT;
 import static android.hardware.fingerprint.FingerprintSensorProperties.TYPE_REAR;
@@ -626,7 +624,7 @@ public class AuthController implements
             int xFpLocation = mCachedDisplayInfo.getNaturalWidth() / 2;
             try {
                 xFpLocation = mContext.getResources().getDimensionPixelSize(
-                        com.android.systemui.R.dimen
+                        com.android.systemui.res.R.dimen
                                 .physical_fingerprint_sensor_center_screen_location_x);
             } catch (Resources.NotFoundException e) {
             }
@@ -634,7 +632,7 @@ public class AuthController implements
             return new Point(
                     (int) (xFpLocation * mScaleFactor),
                     (int) (mContext.getResources().getDimensionPixelSize(
-                            com.android.systemui.R.dimen
+                            com.android.systemui.res.R.dimen
                                     .physical_fingerprint_sensor_center_screen_location_y)
                             * mScaleFactor)
             );

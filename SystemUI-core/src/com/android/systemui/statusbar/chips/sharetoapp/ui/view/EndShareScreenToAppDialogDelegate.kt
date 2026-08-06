@@ -16,11 +16,10 @@
 
 package com.android.systemui.statusbar.chips.sharetoapp.ui.view
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.os.Bundle
 import com.android.systemui.mediaprojection.data.model.MediaProjectionState
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.chips.mediaprojection.domain.model.ProjectionChipModel
 import com.android.systemui.statusbar.chips.mediaprojection.ui.view.EndMediaProjectionDialogHelper
 import com.android.systemui.statusbar.chips.sharetoapp.ui.viewmodel.ShareToAppChipViewModel.Companion.SHARE_TO_APP_ICON

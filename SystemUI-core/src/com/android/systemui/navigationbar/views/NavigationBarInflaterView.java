@@ -16,8 +16,6 @@
 
 package com.android.systemui.navigationbar.views;
 
-import com.android.systemui.R
-
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_3BUTTON;
 
@@ -44,6 +42,7 @@ import com.android.systemui.navigationbar.views.buttons.KeyButtonView;
 import com.android.systemui.navigationbar.views.buttons.ReverseLinearLayout;
 import com.android.systemui.navigationbar.views.buttons.ReverseLinearLayout.ReverseRelativeLayout;
 import com.android.systemui.recents.OverviewProxyService;
+import com.android.systemui.res.R;
 import com.android.systemui.shared.system.QuickStepContract;
 
 import java.io.PrintWriter;

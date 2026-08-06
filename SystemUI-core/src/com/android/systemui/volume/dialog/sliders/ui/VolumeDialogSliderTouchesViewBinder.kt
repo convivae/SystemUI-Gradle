@@ -16,10 +16,9 @@
 
 package com.android.systemui.volume.dialog.sliders.ui
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.view.View
+import com.android.systemui.res.R
 import com.android.systemui.volume.dialog.sliders.dagger.VolumeDialogSliderScope
 import com.android.systemui.volume.dialog.sliders.ui.viewmodel.VolumeDialogSliderInputEventsViewModel
 import com.google.android.material.slider.Slider

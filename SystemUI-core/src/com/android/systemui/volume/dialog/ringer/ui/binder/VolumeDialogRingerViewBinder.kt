@@ -31,6 +31,7 @@ import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import com.android.internal.R as internalR
 import com.android.settingslib.Utils
+import com.android.systemui.res.R
 import com.android.systemui.util.children
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.ringer.ui.util.VolumeDialogRingerDrawerTransitionListener
@@ -48,7 +49,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import com.android.systemui.R
 
 private const val CLOSE_DRAWER_DELAY = 300L
 

@@ -16,8 +16,6 @@
 
 package com.android.systemui.settings.brightness;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.brightnessSliderFocusState;
 
 import android.content.Context;
@@ -26,6 +24,7 @@ import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.SeekBar;
 
+import com.android.systemui.res.R;
 
 public class ToggleSeekBar extends SeekBar {
     private String mAccessibilityLabel;

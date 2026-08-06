@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import static android.hardware.biometrics.BiometricSourceType.FACE;
 
 import static com.android.systemui.flags.Flags.LOCKSCREEN_ENABLE_LANDSCAPE;
@@ -43,6 +41,7 @@ import com.android.systemui.dump.DumpManager;
 import com.android.systemui.flags.FeatureFlags;
 import com.android.systemui.keyguard.KeyguardUnlockAnimationController;
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor;
+import com.android.systemui.res.R;
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor;
 
 import dagger.Lazy;

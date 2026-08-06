@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenrecord
 
-import com.android.systemui.R
-
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.LogBufferFactory
@@ -34,6 +32,7 @@ import com.android.systemui.qs.tiles.impl.screenrecord.domain.ui.ScreenRecordTil
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileViewModel
+import com.android.systemui.res.R
 import com.android.systemui.screenrecord.data.model.ScreenRecordModel
 import com.android.systemui.screenrecord.data.repository.ScreenRecordRepository
 import com.android.systemui.screenrecord.data.repository.ScreenRecordRepositoryImpl

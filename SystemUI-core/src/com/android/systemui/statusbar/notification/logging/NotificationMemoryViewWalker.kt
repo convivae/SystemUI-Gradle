@@ -1,7 +1,5 @@
 package com.android.systemui.statusbar.notification.logging
 
-import com.android.internal.R
-
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -9,6 +7,7 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import com.android.internal.R
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow
 import com.android.systemui.util.children
 

@@ -31,6 +31,7 @@ import com.android.settingslib.volume.shared.model.AudioStream
 import com.android.settingslib.volume.shared.model.RingerMode
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.volume.Events
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
@@ -49,7 +50,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.android.systemui.R
 
 private const val SHOW_RINGER_TOAST_COUNT = 12
 

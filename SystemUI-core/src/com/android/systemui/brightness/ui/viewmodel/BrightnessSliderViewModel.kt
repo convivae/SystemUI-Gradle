@@ -16,8 +16,6 @@
 
 package com.android.systemui.brightness.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
@@ -32,6 +30,7 @@ import com.android.systemui.common.shared.model.Text
 import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
 import com.android.systemui.lifecycle.ExclusiveActivatable
 import com.android.systemui.lifecycle.Hydrator
+import com.android.systemui.res.R
 import com.android.systemui.settings.brightness.domain.interactor.BrightnessMirrorShowingInteractor
 import com.android.systemui.settings.brightness.ui.BrightnessWarningToast
 import com.android.systemui.utils.PolicyRestriction

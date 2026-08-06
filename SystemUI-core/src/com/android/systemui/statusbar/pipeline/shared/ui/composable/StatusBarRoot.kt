@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.pipeline.shared.ui.composable
 
-import com.android.systemui.R
-
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -34,6 +32,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.plugins.DarkIconDispatcher
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.data.repository.DarkIconDispatcherStore
 import com.android.systemui.statusbar.events.domain.interactor.SystemStatusEventAnimationInteractor
 import com.android.systemui.statusbar.notification.icon.ui.viewbinder.NotificationIconContainerStatusBarViewBinder

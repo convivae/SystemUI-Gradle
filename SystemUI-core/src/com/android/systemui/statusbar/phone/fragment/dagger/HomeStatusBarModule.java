@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone.fragment.dagger;
 
-import com.android.systemui.R
-
 import android.view.View;
 import android.view.ViewStub;
 
@@ -25,6 +23,7 @@ import com.android.systemui.battery.BatteryMeterView;
 import com.android.systemui.dagger.qualifiers.DisplaySpecific;
 import com.android.systemui.dagger.qualifiers.RootView;
 import com.android.systemui.plugins.DarkIconDispatcher;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.HeadsUpStatusBarView;
 import com.android.systemui.statusbar.data.repository.DarkIconDispatcherStore;
 import com.android.systemui.statusbar.data.repository.StatusBarConfigurationController;

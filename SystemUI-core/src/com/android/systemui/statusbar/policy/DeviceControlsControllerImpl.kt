@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
-
 import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
@@ -27,6 +25,7 @@ import com.android.systemui.controls.ControlsServiceInfo
 import com.android.systemui.controls.dagger.ControlsComponent
 import com.android.systemui.controls.management.ControlsListingController
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserContextProvider
 import com.android.systemui.statusbar.policy.DeviceControlsController.Callback
 import com.android.systemui.util.settings.SecureSettings

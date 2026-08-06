@@ -16,8 +16,6 @@
 
 package com.android.systemui.biometrics.ui.binder
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Resources
 import android.hardware.biometrics.PromptContentItem
@@ -42,6 +40,7 @@ import android.widget.TextView
 import com.android.settingslib.Utils
 import com.android.systemui.biometrics.Utils.ellipsize
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.res.R
 import kotlin.math.ceil
 
 private const val TAG = "BiometricCustomizedViewBinder"

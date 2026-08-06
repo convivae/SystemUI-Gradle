@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.dialog;
 
-import com.android.systemui.R
-
 import static com.android.settingslib.flags.Flags.legacyLeAudioSharing;
 
 import android.content.Context;
@@ -34,6 +32,7 @@ import com.android.internal.logging.UiEventLogger;
 import com.android.systemui.animation.DialogTransitionAnimator;
 import com.android.systemui.broadcast.BroadcastSender;
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.res.R;
 
 /**
  * Dialog for media output transferring.

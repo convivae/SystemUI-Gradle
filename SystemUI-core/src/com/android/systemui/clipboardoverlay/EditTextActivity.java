@@ -16,8 +16,6 @@
 
 package com.android.systemui.clipboardoverlay;
 
-import com.android.systemui.R
-
 import static java.util.Objects.requireNonNull;
 
 import android.app.Activity;
@@ -39,7 +37,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Lightweight activity for editing text clipboard contents

@@ -17,8 +17,6 @@
 
 package com.android.systemui.user.domain.interactor
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.annotation.UserIdInt
 import android.app.ActivityManager
@@ -54,6 +52,7 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.process.ProcessWrapper
 import com.android.systemui.qs.user.UserSwitchDialogController
+import com.android.systemui.res.R
 import com.android.systemui.telephony.domain.interactor.TelephonyInteractor
 import com.android.systemui.user.CreateUserActivity
 import com.android.systemui.user.data.model.UserSwitcherSettingsModel
@@ -761,7 +760,7 @@ constructor(
     private suspend fun getUserImage(isGuest: Boolean, userId: Int): Drawable {
         if (isGuest) {
             return checkNotNull(
-                applicationContext.getDrawable(com.android.internal.R.drawable.ic_account_circle)
+                applicationContext.getDrawable(com.android.settingslib.R.drawable.ic_account_circle)
             )
         }
 

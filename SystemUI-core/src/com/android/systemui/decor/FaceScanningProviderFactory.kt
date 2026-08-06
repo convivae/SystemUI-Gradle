@@ -16,8 +16,6 @@
 
 package com.android.systemui.decor
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.util.Log
 import android.view.DisplayCutout
@@ -133,7 +131,7 @@ class FaceScanningOverlayProviderImpl(
     private val logger: ScreenDecorationsLogger,
     private val facePropertyRepository: FacePropertyRepository,
 ) : BoundDecorProvider() {
-    override val viewId: Int = R.id.face_scanning_anim
+    override val viewId: Int = com.android.systemui.res.R.id.face_scanning_anim
 
     override fun onReloadResAndMeasure(
         view: View,

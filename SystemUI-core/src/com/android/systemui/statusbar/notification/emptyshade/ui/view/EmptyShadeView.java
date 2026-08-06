@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.emptyshade.ui.view;
 
-import com.android.systemui.R
-
 import android.annotation.ColorInt;
 import android.annotation.DrawableRes;
 import android.annotation.StringRes;
@@ -34,6 +32,7 @@ import androidx.annotation.NonNull;
 
 import com.android.systemui.animation.LaunchableView;
 import com.android.systemui.animation.LaunchableViewDelegate;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.emptyshade.shared.ModesEmptyShadeFix;
 import com.android.systemui.statusbar.notification.row.StackScrollerDecorView;
 import com.android.systemui.statusbar.notification.stack.ExpandableViewState;

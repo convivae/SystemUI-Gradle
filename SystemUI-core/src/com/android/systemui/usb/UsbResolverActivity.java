@@ -16,8 +16,6 @@
 
 package com.android.systemui.usb;
 
-import com.android.systemui.R
-
 import static com.android.internal.app.IntentForwarderActivity.FORWARD_INTENT_TO_MANAGED_PROFILE;
 
 import android.content.ActivityNotFoundException;
@@ -40,6 +38,7 @@ import android.widget.CheckBox;
 
 import com.android.internal.app.ResolverActivity;
 import com.android.internal.app.chooser.TargetInfo;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.Iterator;

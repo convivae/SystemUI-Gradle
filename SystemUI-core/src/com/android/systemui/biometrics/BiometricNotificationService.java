@@ -16,8 +16,6 @@
 
 package com.android.systemui.biometrics;
 
-import com.android.systemui.R
-
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.app.PendingIntent.FLAG_UPDATE_CURRENT;
 
@@ -47,7 +45,7 @@ import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardUpdateMonitorCallback;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.SysUISingleton;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 
 import java.util.Optional;

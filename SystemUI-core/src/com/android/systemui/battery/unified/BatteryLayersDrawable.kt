@@ -16,8 +16,6 @@
 
 package com.android.systemui.battery.unified
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Matrix
@@ -29,6 +27,7 @@ import android.graphics.drawable.LayerDrawable
 import android.util.PathParser
 import android.view.Gravity
 import android.view.View
+import com.android.systemui.res.R
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt

@@ -16,8 +16,6 @@
 
 package com.android.systemui.wallpapers.data.repository
 
-import com.android.systemui.R
-
 import android.app.WallpaperInfo
 import android.app.WallpaperManager
 import android.content.Context

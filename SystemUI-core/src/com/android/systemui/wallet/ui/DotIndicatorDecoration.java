@@ -16,8 +16,6 @@
 
 package com.android.systemui.wallet.ui;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -29,6 +27,7 @@ import androidx.annotation.ColorInt;
 import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.systemui.res.R;
 
 final class DotIndicatorDecoration extends RecyclerView.ItemDecoration {
     private final int mUnselectedRadius;

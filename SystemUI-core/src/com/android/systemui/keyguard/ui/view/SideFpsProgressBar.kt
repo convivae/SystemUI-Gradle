@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.view
 
-import com.android.systemui.R
-
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.view.Gravity
@@ -30,6 +28,7 @@ import android.widget.ProgressBar
 import androidx.core.view.isGone
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 private const val TAG = "SideFpsProgressBar"

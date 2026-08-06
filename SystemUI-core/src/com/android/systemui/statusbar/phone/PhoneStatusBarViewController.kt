@@ -15,8 +15,6 @@
  */
 package com.android.systemui.statusbar.phone
 
-import com.android.systemui.R
-
 import android.app.StatusBarManager.WINDOW_STATUS_BAR
 import android.graphics.Point
 import android.util.Log
@@ -33,6 +31,7 @@ import com.android.systemui.dagger.qualifiers.DisplaySpecific
 import com.android.systemui.flags.FeatureFlags
 import com.android.systemui.flags.Flags.ENABLE_UNFOLD_STATUS_BAR_ANIMATIONS
 import com.android.systemui.plugins.DarkIconDispatcher
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.ui.view.WindowRootView
 import com.android.systemui.shade.ShadeController

@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume;
 
-import com.android.systemui.R
-
 import static android.app.slice.Slice.HINT_ERROR;
 import static android.app.slice.SliceItem.FORMAT_SLICE;
 
@@ -35,6 +33,7 @@ import androidx.slice.Slice;
 import androidx.slice.SliceItem;
 import androidx.slice.widget.SliceView;
 
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.List;

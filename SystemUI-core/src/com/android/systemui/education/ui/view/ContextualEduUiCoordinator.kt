@@ -16,8 +16,6 @@
 
 package com.android.systemui.education.ui.view
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.app.Notification
 import android.app.NotificationChannel
@@ -48,6 +46,7 @@ import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutoria
 import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity.Companion.INTENT_TUTORIAL_SCOPE_KEYBOARD
 import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity.Companion.INTENT_TUTORIAL_SCOPE_TOUCHPAD_BACK
 import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity.Companion.INTENT_TUTORIAL_SCOPE_TOUCHPAD_HOME
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 

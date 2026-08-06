@@ -16,8 +16,6 @@
 
 package com.android.systemui.decor
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Resources
 import android.view.DisplayCutout
@@ -27,6 +25,7 @@ import android.view.View
 import android.view.ViewGroup
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 /**

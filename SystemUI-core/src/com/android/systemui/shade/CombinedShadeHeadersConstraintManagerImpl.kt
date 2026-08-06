@@ -16,10 +16,9 @@
 
 package com.android.systemui.shade
 
-import com.android.systemui.R
-
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.ConstraintSet
+import com.android.systemui.res.R
 import com.android.systemui.dagger.SysUISingleton
 
 /**

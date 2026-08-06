@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.text.TextUtils;
 import android.view.View;
@@ -25,7 +23,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.TextView;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Replaces fancy colons with regular colons. Only works on TextViews.

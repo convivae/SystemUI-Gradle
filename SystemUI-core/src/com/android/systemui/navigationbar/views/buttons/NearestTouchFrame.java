@@ -16,8 +16,6 @@
 
 package com.android.systemui.navigationbar.views.buttons;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
@@ -30,6 +28,7 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.VisibleForTesting;
 
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.Comparator;

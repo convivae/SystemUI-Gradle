@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls
 
-import com.android.systemui.R
-
 import android.Manifest
 import android.content.ComponentName
 import android.content.Context
@@ -34,6 +32,7 @@ import android.service.controls.ControlsProviderService
 import android.util.IconDrawableFactory
 import androidx.annotation.WorkerThread
 import com.android.settingslib.applications.DefaultAppInfo
+import com.android.systemui.res.R
 import java.util.Objects
 
 open class ControlsServiceInfo(

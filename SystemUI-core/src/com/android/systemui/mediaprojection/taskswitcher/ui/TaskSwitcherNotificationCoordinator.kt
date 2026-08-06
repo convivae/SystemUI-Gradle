@@ -16,8 +16,6 @@
 
 package com.android.systemui.mediaprojection.taskswitcher.ui
 
-import com.android.systemui.R
-
 import android.app.ActivityManager.RunningTaskInfo
 import android.app.Notification
 import android.app.NotificationManager
@@ -33,6 +31,7 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.mediaprojection.taskswitcher.ui.model.TaskSwitcherNotificationUiState.NotShowing
 import com.android.systemui.mediaprojection.taskswitcher.ui.model.TaskSwitcherNotificationUiState.Showing
 import com.android.systemui.mediaprojection.taskswitcher.ui.viewmodel.TaskSwitcherNotificationViewModel
+import com.android.systemui.res.R
 import com.android.systemui.util.NotificationChannels
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope

@@ -16,8 +16,6 @@
 
 package com.android.systemui.communal.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.util.SizeF
 import android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
 import android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
@@ -35,6 +33,7 @@ import com.android.systemui.communal.util.WidgetViewFactory
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dagger.qualifiers.UiBackground
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope

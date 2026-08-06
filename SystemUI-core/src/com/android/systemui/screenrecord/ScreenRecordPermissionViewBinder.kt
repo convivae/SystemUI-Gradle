@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenrecord
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.hardware.display.DisplayManager
@@ -32,6 +30,7 @@ import com.android.systemui.mediaprojection.permission.ENTIRE_SCREEN
 import com.android.systemui.mediaprojection.permission.SINGLE_APP
 import com.android.systemui.mediaprojection.permission.ScreenShareMode
 import com.android.systemui.mediaprojection.permission.ScreenShareOption
+import com.android.systemui.res.R
 
 class ScreenRecordPermissionViewBinder(
     hostUid: Int,

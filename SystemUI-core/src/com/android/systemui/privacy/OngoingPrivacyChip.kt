@@ -14,8 +14,6 @@
 
 package com.android.systemui.privacy
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
@@ -29,6 +27,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import com.android.settingslib.Utils
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.events.BackgroundAnimatableView
 
 class OngoingPrivacyChip @JvmOverloads constructor(

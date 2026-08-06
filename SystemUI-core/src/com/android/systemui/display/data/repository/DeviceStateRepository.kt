@@ -16,8 +16,6 @@
 
 package com.android.systemui.display.data.repository
 
-import com.android.internal.R
-
 import android.content.Context
 import android.hardware.devicestate.DeviceState as PlatformDeviceState
 import android.hardware.devicestate.DeviceState.PROPERTY_FEATURE_DUAL_DISPLAY_INTERNAL_DEFAULT
@@ -28,6 +26,7 @@ import android.hardware.devicestate.DeviceState.PROPERTY_FOLDABLE_DISPLAY_CONFIG
 import android.hardware.devicestate.DeviceState.PROPERTY_FOLDABLE_HARDWARE_CONFIGURATION_FOLD_IN_HALF_OPEN
 import android.hardware.devicestate.DeviceStateManager
 import android.hardware.devicestate.feature.flags.Flags as DeviceStateManagerFlags
+import com.android.internal.R
 import com.android.systemui.common.coroutine.ConflatedCallbackFlow.conflatedCallbackFlow
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.display.data.repository.DeviceStateRepository.DeviceState

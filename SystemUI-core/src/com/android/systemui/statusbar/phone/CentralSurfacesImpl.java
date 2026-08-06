@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static android.app.StatusBarManager.DISABLE_HOME;
 import static android.app.StatusBarManager.WINDOW_STATE_HIDDEN;
 import static android.app.StatusBarManager.WINDOW_STATE_SHOWING;
@@ -160,6 +158,7 @@ import com.android.systemui.qs.QSFragmentLegacy;
 import com.android.systemui.qs.QSPanelController;
 import com.android.systemui.qs.composefragment.QSFragmentCompose;
 import com.android.systemui.qs.flags.QSComposeFragment;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.domain.interactor.WindowRootViewVisibilityInteractor;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.scrim.ScrimView;
@@ -1996,7 +1995,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         }
 
         mPowerButtonReveal = new PowerButtonReveal(mContext.getResources().getDimensionPixelSize(
-                R.dimen.physical_power_button_center_screen_location_y));
+                com.android.systemui.res.R.dimen.physical_power_button_center_screen_location_y));
     }
 
     private void logStateToEventlog() {

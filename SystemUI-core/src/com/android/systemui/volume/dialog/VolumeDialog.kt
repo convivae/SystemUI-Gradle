@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume.dialog
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.content.Context
 import android.graphics.PixelFormat
@@ -29,6 +27,7 @@ import android.view.WindowManager
 import com.android.app.tracing.coroutines.coroutineScopeTraced
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.res.R
 import com.android.systemui.volume.Events
 import com.android.systemui.volume.dialog.dagger.VolumeDialogComponent
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogVisibilityInteractor

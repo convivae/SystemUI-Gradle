@@ -1,7 +1,5 @@
 package com.android.systemui.battery
 
-import com.android.systemui.R
-
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.model.TileCategory
@@ -16,6 +14,7 @@ import com.android.systemui.qs.tiles.impl.battery.ui.BatterySaverTileMapper
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileViewModel
+import com.android.systemui.res.R
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

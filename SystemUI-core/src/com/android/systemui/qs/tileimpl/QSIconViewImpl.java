@@ -14,8 +14,6 @@
 
 package com.android.systemui.qs.tileimpl;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.qsNewTiles;
 import static com.android.systemui.Flags.removeUpdateListenerInQsIconViewImpl;
 
@@ -44,7 +42,7 @@ import com.android.settingslib.Utils;
 import com.android.systemui.plugins.qs.QSIconView;
 import com.android.systemui.plugins.qs.QSTile;
 import com.android.systemui.plugins.qs.QSTile.State;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.Objects;
 

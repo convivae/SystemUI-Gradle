@@ -16,13 +16,12 @@
 
 package com.android.systemui.statusbar.notification.headsup;
 
-import com.android.systemui.R
-
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.util.Log;
 import android.view.View;
 
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 import com.android.systemui.util.Compile;

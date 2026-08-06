@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import static android.app.ActivityManager.LOCK_TASK_MODE_LOCKED;
 import static android.app.ActivityManager.LOCK_TASK_MODE_NONE;
 import static android.app.StatusBarManager.DISABLE_BACK;
@@ -82,6 +80,7 @@ import com.android.app.viewcapture.ViewCapture;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.res.R;
 import com.android.systemui.shared.system.TaskStackChangeListener;
 import com.android.systemui.shared.system.TaskStackChangeListeners;
 import com.android.systemui.util.settings.SecureSettings;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
-
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -26,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.res.R
 import com.android.systemui.util.concurrency.DelayableExecutor
 import javax.inject.Inject
 

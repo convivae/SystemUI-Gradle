@@ -16,11 +16,10 @@
 
 package com.android.systemui.statusbar.chips.casttootherdevice.ui.view
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.os.Bundle
 import com.android.systemui.mediaprojection.data.model.MediaProjectionState
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.chips.casttootherdevice.ui.viewmodel.CastToOtherDeviceChipViewModel.Companion.CAST_TO_OTHER_DEVICE_ICON
 import com.android.systemui.statusbar.chips.mediaprojection.domain.model.ProjectionChipModel
 import com.android.systemui.statusbar.chips.mediaprojection.ui.view.EndMediaProjectionDialogHelper

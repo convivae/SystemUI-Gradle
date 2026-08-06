@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles;
 
-import com.android.systemui.R
-
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
@@ -42,7 +40,7 @@ import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.pipeline.domain.interactor.PanelInteractor;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.LocationController;
 import com.android.systemui.statusbar.policy.LocationController.LocationChangeCallback;

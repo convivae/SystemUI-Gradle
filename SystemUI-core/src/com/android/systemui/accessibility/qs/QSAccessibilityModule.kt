@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.qs
 
-import com.android.systemui.R
-
 import com.android.systemui.Flags
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.pipeline.shared.TileSpec
@@ -65,6 +63,7 @@ import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileViewModel
 import com.android.systemui.qs.tiles.viewmodel.StubQSTileViewModel
+import com.android.systemui.res.R
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

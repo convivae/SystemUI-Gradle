@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
-
 import android.app.ActivityOptions
 import android.app.Notification
 import android.app.Notification.Action.SEMANTIC_ACTION_MARK_CONVERSATION_AS_PRIORITY
@@ -44,6 +42,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction
 import android.widget.Button
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.shared.system.ActivityManagerWrapper
 import com.android.systemui.shared.system.DevicePolicyManagerWrapper
 import com.android.systemui.shared.system.PackageManagerWrapper

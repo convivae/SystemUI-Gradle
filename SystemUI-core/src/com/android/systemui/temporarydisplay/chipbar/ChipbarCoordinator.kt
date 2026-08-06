@@ -16,8 +16,6 @@
 
 package com.android.systemui.temporarydisplay.chipbar
 
-import com.android.systemui.R
-
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
@@ -51,6 +49,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.plugins.FalsingManager
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.temporarydisplay.TemporaryViewDisplayController

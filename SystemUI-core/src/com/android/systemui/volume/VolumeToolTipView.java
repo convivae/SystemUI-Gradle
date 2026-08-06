@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.CornerPathEffect;
 import android.graphics.Paint;
@@ -31,6 +29,7 @@ import android.widget.LinearLayout;
 import androidx.core.content.ContextCompat;
 
 import com.android.systemui.recents.TriangleShape;
+import com.android.systemui.res.R;
 
 /**
  * Tool tip view that draws an arrow that points to the volume dialog.

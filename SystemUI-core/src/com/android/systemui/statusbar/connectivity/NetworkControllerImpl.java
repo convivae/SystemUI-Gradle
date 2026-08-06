@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.connectivity;
 
-import com.android.systemui.R
-
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
@@ -74,6 +72,7 @@ import com.android.systemui.log.LogBuffer;
 import com.android.systemui.log.core.LogLevel;
 import com.android.systemui.log.dagger.StatusBarNetworkControllerLog;
 import com.android.systemui.qs.tiles.dialog.InternetDialogManager;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.pipeline.StatusBarPipelineFlags;
 import com.android.systemui.statusbar.policy.ConfigurationController;

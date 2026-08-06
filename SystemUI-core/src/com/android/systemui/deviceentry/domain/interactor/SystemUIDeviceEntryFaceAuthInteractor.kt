@@ -16,8 +16,6 @@
 
 package com.android.systemui.deviceentry.domain.interactor
 
-import com.android.systemui.R
-
 import android.app.trust.TrustManager
 import android.content.Context
 import android.hardware.biometrics.BiometricFaceConstants
@@ -47,6 +45,7 @@ import com.android.systemui.keyguard.shared.model.KeyguardState.OFF
 import com.android.systemui.keyguard.shared.model.TransitionState
 import com.android.systemui.log.FaceAuthenticationLogger
 import com.android.systemui.power.domain.interactor.PowerInteractor
+import com.android.systemui.res.R
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes

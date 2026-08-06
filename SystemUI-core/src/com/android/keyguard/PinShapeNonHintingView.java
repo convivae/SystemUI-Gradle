@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.PIN_SHAPES;
 
 import android.animation.Animator;
@@ -42,7 +40,7 @@ import androidx.core.graphics.drawable.DrawableCompat;
 
 import com.android.app.animation.Interpolators;
 import com.android.settingslib.Utils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * This class contains implementation for methods that will be used when user has set a

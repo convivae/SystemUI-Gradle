@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility;
 
-import com.android.systemui.R
-
 import static com.android.systemui.accessibility.WindowMagnificationSettings.MagnificationSize;
 
 import android.annotation.NonNull;
@@ -81,7 +79,7 @@ public class MagnificationSettingsController implements ComponentCallbacks {
                 context.getDisplay(),
                 WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL,
                 null);
-        mContext.setTheme(R.style.Theme_SystemUI);
+        mContext.setTheme(com.android.systemui.res.R.style.Theme_SystemUI);
         mDisplayId = mContext.getDisplayId();
         mConfiguration = new Configuration(mContext.getResources().getConfiguration());
         mSettingsControllerCallback = settingsControllerCallback;

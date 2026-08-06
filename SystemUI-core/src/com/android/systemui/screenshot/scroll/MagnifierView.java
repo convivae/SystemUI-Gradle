@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot.scroll;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.NonNull;
@@ -36,6 +34,7 @@ import android.view.ViewPropertyAnimator;
 import androidx.annotation.Nullable;
 
 import com.android.internal.graphics.ColorUtils;
+import com.android.systemui.res.R;
 
 /**
  * MagnifierView shows a full-res cropped circular display of a given ImageTileSet, contents and

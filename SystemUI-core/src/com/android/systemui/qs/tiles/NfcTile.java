@@ -17,8 +17,6 @@
 
 package com.android.systemui.qs.tiles;
 
-import com.android.systemui.R
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -47,7 +45,7 @@ import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import javax.inject.Inject;
 

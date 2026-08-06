@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import static android.app.StatusBarManager.DISABLE2_QUICK_SETTINGS;
 
 import static com.android.systemui.media.dagger.MediaModule.QS_PANEL;
@@ -59,7 +57,7 @@ import com.android.systemui.qs.dagger.QSComponent;
 import com.android.systemui.qs.flags.QSComposeFragment;
 import com.android.systemui.qs.footer.ui.viewmodel.FooterActionsViewModel;
 import com.android.systemui.qs.logging.QSLogger;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.settings.brightness.MirrorController;
 import com.android.systemui.shade.transition.LargeScreenShadeInterpolator;

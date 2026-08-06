@@ -16,8 +16,6 @@
 
 package com.android.systemui.bouncer.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.util.TypedValue
 import android.view.View
@@ -25,6 +23,7 @@ import com.android.systemui.authentication.shared.model.AuthenticationMethodMode
 import com.android.systemui.authentication.shared.model.AuthenticationPatternCoordinate
 import com.android.systemui.bouncer.domain.interactor.BouncerInteractor
 import com.android.systemui.bouncer.ui.helper.BouncerHapticPlayer
+import com.android.systemui.res.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

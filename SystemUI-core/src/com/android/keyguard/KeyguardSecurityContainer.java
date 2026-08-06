@@ -15,8 +15,6 @@
  */
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.KEYGUARD_DIALOG_FAILED_ATTEMPTS_ALMOST_ERASING_PROFILE;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.KEYGUARD_DIALOG_FAILED_ATTEMPTS_ERASING_PROFILE;
 import static android.view.WindowInsets.Type.ime;
@@ -102,7 +100,7 @@ import com.android.settingslib.drawable.CircleFramedDrawable;
 import com.android.systemui.Gefingerpoken;
 import com.android.systemui.classifier.FalsingA11yDelegate;
 import com.android.systemui.plugins.FalsingManager;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.TouchLogger;
 import com.android.systemui.shared.system.SysUiStatsLog;
 import com.android.systemui.statusbar.policy.BaseUserSwitcherAdapter;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.plugins;
 
-import com.android.systemui.R
-
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -25,6 +23,7 @@ import android.os.Build;
 
 import com.android.systemui.dagger.PluginModule;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 import com.android.systemui.shared.plugins.PluginActionManager;
 import com.android.systemui.shared.plugins.PluginEnabler;
 import com.android.systemui.shared.plugins.PluginInstance;

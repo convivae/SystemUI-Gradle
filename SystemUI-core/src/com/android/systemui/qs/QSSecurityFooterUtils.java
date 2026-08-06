@@ -15,8 +15,6 @@
  */
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import static android.app.admin.DevicePolicyManager.DEVICE_OWNER_TYPE_FINANCED;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.QS_DIALOG_MANAGEMENT;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.QS_DIALOG_MANAGEMENT_CA_CERT;
@@ -86,7 +84,7 @@ import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.qs.footer.domain.model.SecurityButtonConfig;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.security.data.model.SecurityModel;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shade.ShadeDisplayAware;

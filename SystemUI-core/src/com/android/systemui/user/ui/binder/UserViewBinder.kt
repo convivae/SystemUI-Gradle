@@ -17,8 +17,6 @@
 
 package com.android.systemui.user.ui.binder
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -27,6 +25,7 @@ import android.view.View
 import android.widget.ImageView
 import androidx.core.content.res.ResourcesCompat
 import com.android.settingslib.Utils
+import com.android.systemui.res.R
 import com.android.systemui.common.ui.binder.TextViewBinder
 import com.android.systemui.user.ui.viewmodel.UserViewModel
 

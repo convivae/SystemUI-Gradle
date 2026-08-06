@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.util.Log
 import com.android.keyguard.KeyguardUpdateMonitor
@@ -26,6 +24,7 @@ import com.android.systemui.bouncer.domain.interactor.PrimaryBouncerInteractor
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.data.repository.DeviceEntryFingerprintAuthRepository
+import com.android.systemui.res.R
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes

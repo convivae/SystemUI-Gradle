@@ -16,10 +16,9 @@
 
 package com.android.systemui.shade
 
-import com.android.systemui.R
-
 import android.content.Context
 import com.android.internal.policy.SystemBarUtils
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlin.math.max
 

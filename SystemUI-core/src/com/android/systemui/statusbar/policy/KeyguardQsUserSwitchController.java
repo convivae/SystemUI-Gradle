@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Resources;
 import android.database.DataSetObserver;
@@ -42,6 +40,7 @@ import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.user.UserSwitchDialogController;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.SysuiStatusBarStateController;
 import com.android.systemui.statusbar.notification.AnimatableProperty;
 import com.android.systemui.statusbar.notification.PropertyAnimator;

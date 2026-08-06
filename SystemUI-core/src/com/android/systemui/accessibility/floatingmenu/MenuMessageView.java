@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
-import com.android.systemui.R
-
 import static android.util.TypedValue.COMPLEX_UNIT_PX;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
@@ -38,6 +36,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import com.android.systemui.res.R;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

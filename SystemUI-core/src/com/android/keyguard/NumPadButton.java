@@ -15,8 +15,6 @@
  */
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BUTTON;
 import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_KEY;
 
@@ -33,7 +31,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.Nullable;
 
 import com.android.settingslib.Utils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Similar to the {@link NumPadKey}, but displays an image.

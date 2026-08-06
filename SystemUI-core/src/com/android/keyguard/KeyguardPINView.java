@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 
@@ -43,7 +41,7 @@ import androidx.constraintlayout.widget.ConstraintSet;
 
 import com.android.app.animation.Interpolators;
 import com.android.settingslib.animation.DisappearAnimationUtils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.DevicePostureController.DevicePostureInt;
 
 /**

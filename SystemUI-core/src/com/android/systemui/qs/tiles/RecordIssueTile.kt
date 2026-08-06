@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles
 
-import com.android.systemui.R
-
 import android.app.AlertDialog
 import android.app.BroadcastOptions
 import android.app.PendingIntent
@@ -52,6 +50,7 @@ import com.android.systemui.recordissue.IssueRecordingState
 import com.android.systemui.recordissue.RecordIssueDialogDelegate
 import com.android.systemui.recordissue.RecordIssueModule.Companion.TILE_SPEC
 import com.android.systemui.recordissue.TraceurConnection
+import com.android.systemui.res.R
 import com.android.systemui.screenrecord.RecordingController
 import com.android.systemui.screenrecord.RecordingService
 import com.android.systemui.settings.UserContextProvider

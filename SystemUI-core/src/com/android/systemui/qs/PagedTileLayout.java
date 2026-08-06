@@ -1,7 +1,5 @@
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import static com.android.internal.jank.InteractionJankMonitor.CUJ_NOTIFICATION_SHADE_QS_SCROLL_SWIPE;
 import static com.android.systemui.qs.PageIndicator.PageScrollActionListener.LEFT;
 import static com.android.systemui.qs.PageIndicator.PageScrollActionListener.RIGHT;
@@ -40,7 +38,7 @@ import com.android.systemui.qs.PageIndicator.PageScrollActionListener.Direction;
 import com.android.systemui.qs.QSPanel.QSTileLayout;
 import com.android.systemui.qs.QSPanelControllerBase.TileRecord;
 import com.android.systemui.qs.logging.QSLogger;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.List;

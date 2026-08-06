@@ -16,18 +16,18 @@
 
 package com.android.systemui.development.domain.interactor
 
-import com.android.systemui.R
-
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.res.Resources
 import android.os.Build
 import android.os.UserHandle
+import com.android.internal.R as InternalR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.development.data.repository.DevelopmentSettingRepository
 import com.android.systemui.development.shared.model.BuildNumber
+import com.android.systemui.res.R as SystemUIR
 import com.android.systemui.user.data.repository.UserRepository
 import com.android.systemui.user.utils.UserScopedService
 import javax.inject.Inject
@@ -63,7 +63,7 @@ constructor(
     private val buildText =
         BuildNumber(
             resources.getString(
-                com.android.internal.R.string.bugreport_status,
+                InternalR.string.bugreport_status,
                 Build.VERSION.RELEASE_OR_CODENAME,
                 Build.ID,
             )

@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.management
 
-import com.android.systemui.R
-
 import android.content.ComponentName
 import android.content.res.Resources
 import android.view.LayoutInflater
@@ -28,6 +26,7 @@ import android.widget.TextView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.RecyclerView
+import com.android.systemui.res.R
 import com.android.systemui.controls.ControlsServiceInfo
 import com.android.systemui.util.icuMessageFormat
 import java.text.Collator

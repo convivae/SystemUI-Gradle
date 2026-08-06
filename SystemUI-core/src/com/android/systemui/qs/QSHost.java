@@ -14,8 +14,6 @@
 
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.res.Resources;
@@ -24,7 +22,7 @@ import android.provider.Settings;
 import androidx.annotation.NonNull;
 
 import com.android.systemui.plugins.qs.QSTile;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.Arrays;

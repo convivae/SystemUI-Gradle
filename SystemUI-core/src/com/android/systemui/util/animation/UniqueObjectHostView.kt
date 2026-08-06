@@ -16,13 +16,12 @@
 
 package com.android.systemui.util.animation
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import com.android.systemui.res.R
 
 /**
  * A special view that is designed to host a single "unique object". The unique object is

@@ -16,8 +16,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Resources;
 import android.os.Handler;
@@ -26,6 +24,7 @@ import android.util.Log;
 
 import com.android.systemui.dagger.GlobalRootComponent;
 import com.android.systemui.dagger.SysUIComponent;
+import com.android.systemui.res.R;
 import com.android.systemui.util.InitializationChecker;
 import com.android.wm.shell.dagger.WMComponent;
 import com.android.wm.shell.dagger.WMShellConcurrencyModule;

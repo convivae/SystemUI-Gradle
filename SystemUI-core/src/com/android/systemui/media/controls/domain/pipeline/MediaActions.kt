@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
-import com.android.systemui.R
-
 import android.annotation.WorkerThread
 import android.app.ActivityOptions
 import android.app.BroadcastOptions
@@ -38,6 +36,7 @@ import com.android.systemui.media.controls.shared.model.MediaAction
 import com.android.systemui.media.controls.shared.model.MediaButton
 import com.android.systemui.media.controls.shared.model.MediaNotificationAction
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.NotificationMediaManager.isConnectingState
 import com.android.systemui.statusbar.NotificationMediaManager.isPlayingState
 import com.android.systemui.util.kotlin.logI

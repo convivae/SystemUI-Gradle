@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.taptotransfer.sender
 
-import com.android.systemui.R
-
 import android.app.StatusBarManager
 import android.content.Context
 import android.media.MediaRoute2Info
@@ -30,6 +28,7 @@ import com.android.systemui.common.shared.model.Text
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.media.taptotransfer.common.MediaTttUtils
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.CommandQueue
 import com.android.systemui.temporarydisplay.TemporaryViewDisplayController
 import com.android.systemui.temporarydisplay.ViewPriority

@@ -16,14 +16,12 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 public class EmergencyCarrierArea extends AlphaOptimizedLinearLayout {
 

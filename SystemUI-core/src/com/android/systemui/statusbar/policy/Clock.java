@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import android.annotation.NonNull;
 import android.app.StatusBarManager;
 import android.content.BroadcastReceiver;
@@ -54,6 +52,7 @@ import com.android.systemui.broadcast.BroadcastDispatcher;
 import com.android.systemui.demomode.DemoModeCommandReceiver;
 import com.android.systemui.plugins.DarkIconDispatcher;
 import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.CommandQueue;
 import com.android.systemui.statusbar.phone.ui.StatusBarIconController;

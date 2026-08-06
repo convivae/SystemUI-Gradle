@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone
 
-import com.android.systemui.R
-
 import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.app.ActivityTaskManager
@@ -48,6 +46,7 @@ import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.KeyguardViewMediator
 import com.android.systemui.keyguard.WakefulnessLifecycle
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.shade.ShadeController
 import com.android.systemui.shade.domain.interactor.ShadeAnimationInteractor

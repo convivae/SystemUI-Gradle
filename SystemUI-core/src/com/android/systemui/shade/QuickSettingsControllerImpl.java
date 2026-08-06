@@ -17,8 +17,6 @@
 
 package com.android.systemui.shade;
 
-import com.android.systemui.R
-
 import static android.view.WindowInsets.Type.ime;
 
 import static com.android.systemui.classifier.Classifier.QS_COLLAPSE;
@@ -76,7 +74,7 @@ import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.qs.QS;
 import com.android.systemui.qs.flags.QSComposeFragment;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.screenrecord.RecordingController;
 import com.android.systemui.shade.data.repository.ShadeRepository;

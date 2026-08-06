@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.View;
@@ -25,6 +23,7 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.android.systemui.res.R;
 
 /**
  * Layout used for displaying keyboard shortcut items inside an alert dialog.

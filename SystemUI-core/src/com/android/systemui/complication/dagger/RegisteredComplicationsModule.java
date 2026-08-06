@@ -16,8 +16,6 @@
 
 package com.android.systemui.complication.dagger;
 
-import com.android.systemui.R
-
 import android.content.res.Resources;
 import android.view.ViewGroup;
 
@@ -25,6 +23,7 @@ import com.android.systemui.complication.ComplicationLayoutParams;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.flags.FeatureFlags;
 import com.android.systemui.flags.Flags;
+import com.android.systemui.res.R;
 
 import dagger.Module;
 import dagger.Provides;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
-import com.android.systemui.R
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,6 +30,7 @@ import androidx.recyclerview.widget.RecyclerView.Adapter;
 import com.android.internal.accessibility.common.ShortcutConstants.AccessibilityFragmentType;
 import com.android.internal.accessibility.dialog.AccessibilityTarget;
 import com.android.systemui.accessibility.floatingmenu.AccessibilityTargetAdapter.ViewHolder;
+import com.android.systemui.res.R;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

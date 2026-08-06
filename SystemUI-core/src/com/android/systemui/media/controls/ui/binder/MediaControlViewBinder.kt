@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.binder
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.Color
@@ -60,6 +58,7 @@ import com.android.systemui.media.controls.util.MediaDataUtils
 import com.android.systemui.monet.ColorScheme
 import com.android.systemui.monet.Style
 import com.android.systemui.plugins.FalsingManager
+import com.android.systemui.res.R
 import com.android.systemui.surfaceeffects.ripple.MultiRippleView
 import com.android.systemui.surfaceeffects.ripple.RippleAnimation
 import com.android.systemui.surfaceeffects.ripple.RippleAnimationConfig

@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.binder
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.graphics.drawable.Animatable2
 import android.util.Size
@@ -44,6 +42,7 @@ import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.FalsingManager
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.util.doOnEnd
 import javax.inject.Inject

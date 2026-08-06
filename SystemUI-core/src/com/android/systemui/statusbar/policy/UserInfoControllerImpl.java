@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -40,6 +38,7 @@ import com.android.internal.util.UserIcons;
 import com.android.settingslib.drawable.UserIconDrawable;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 
 import java.util.ArrayList;

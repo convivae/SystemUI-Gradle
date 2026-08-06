@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import android.app.RemoteInput;
 import android.content.Context;
 import android.content.res.Resources;
@@ -29,6 +27,7 @@ import android.util.Log;
 import com.android.internal.config.sysui.SystemUiDeviceConfigFlags;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 import com.android.systemui.util.DeviceConfigProxy;
 
 import java.util.concurrent.Executor;

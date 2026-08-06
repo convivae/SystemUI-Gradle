@@ -16,8 +16,6 @@
 
 package com.android.systemui.navigationbar.views.buttons;
 
-import com.android.systemui.R
-
 import static android.view.Display.INVALID_DISPLAY;
 import static android.view.KeyEvent.KEYCODE_UNKNOWN;
 import static android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK;
@@ -64,6 +62,7 @@ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.Dependency;
 import com.android.systemui.assist.AssistManager;
 import com.android.systemui.recents.OverviewProxyService;
+import com.android.systemui.res.R;
 import com.android.systemui.shared.navigationbar.KeyButtonRipple;
 import com.android.systemui.shared.system.QuickStepContract;
 

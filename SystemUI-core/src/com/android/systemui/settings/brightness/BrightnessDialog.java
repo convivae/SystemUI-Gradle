@@ -16,8 +16,6 @@
 
 package com.android.systemui.settings.brightness;
 
-import com.android.systemui.R
-
 import static android.content.Intent.EXTRA_BRIGHTNESS_DIALOG_IS_FULL_WIDTH;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
@@ -51,6 +49,7 @@ import com.android.systemui.brightness.ui.viewmodel.BrightnessSliderViewModel;
 import com.android.systemui.compose.ComposeInitializer;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.qs.flags.QsInCompose;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.statusbar.policy.AccessibilityManagerWrapper;
 import com.android.systemui.util.concurrency.DelayableExecutor;

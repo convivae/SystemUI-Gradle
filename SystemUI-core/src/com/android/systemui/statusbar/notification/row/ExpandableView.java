@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.notificationColorUpdateLogger;
 
 import android.animation.AnimatorListenerAdapter;
@@ -38,6 +36,7 @@ import androidx.annotation.Nullable;
 
 import com.android.app.animation.Interpolators;
 import com.android.systemui.Dumpable;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.StatusBarIconView;
 import com.android.systemui.statusbar.notification.Roundable;
 import com.android.systemui.statusbar.notification.RoundableState;

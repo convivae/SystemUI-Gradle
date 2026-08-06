@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.drawable.AnimationDrawable;
@@ -27,6 +25,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.RemoteViews.RemoteView;
 
+import com.android.systemui.res.R;
 
 @RemoteView
 public class AnimatedImageView extends ImageView {

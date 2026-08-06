@@ -16,8 +16,6 @@
 
 package com.android.systemui.bluetooth.qsdialog
 
-import com.android.systemui.R
-
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
@@ -45,6 +43,7 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

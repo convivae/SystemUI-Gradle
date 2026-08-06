@@ -16,8 +16,6 @@
 
 package com.android.systemui.biometrics
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -43,6 +41,7 @@ import com.android.systemui.keyguard.WakefulnessLifecycle
 import com.android.systemui.keyguard.shared.model.BiometricUnlockSource
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.statusbar.StatusBarStateController
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.CircleReveal
 import com.android.systemui.statusbar.LiftReveal
 import com.android.systemui.statusbar.LightRevealEffect

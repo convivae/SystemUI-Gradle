@@ -16,8 +16,6 @@
 
 package com.android.systemui.communal.dagger
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Resources
 import com.android.systemui.CoreStartable
@@ -45,6 +43,7 @@ import com.android.systemui.communal.widgets.EditWidgetsActivityStarterImpl
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.model.SceneContainerConfig
 import com.android.systemui.scene.shared.model.SceneDataSource
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator

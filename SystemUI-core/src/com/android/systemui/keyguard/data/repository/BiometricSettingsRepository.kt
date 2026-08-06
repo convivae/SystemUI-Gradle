@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.data.repository
 
-import com.android.systemui.R
-
 import android.app.admin.DevicePolicyManager
 import android.app.admin.DevicePolicyManager.ACTION_DEVICE_POLICY_MANAGER_STATE_CHANGED
 import android.content.Context
@@ -41,6 +39,7 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.keyguard.shared.model.AuthenticationFlags
 import com.android.systemui.keyguard.shared.model.DevicePosture
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.pipeline.mobile.data.repository.MobileConnectionsRepository
 import com.android.systemui.user.data.repository.UserRepository

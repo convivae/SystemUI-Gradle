@@ -15,8 +15,6 @@
  */
 package com.android.systemui.screenshot
 
-import com.android.systemui.R
-
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -24,6 +22,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.os.UserHandle
 import android.view.Display
+import com.android.internal.R
 import com.android.internal.messages.nano.SystemMessageProto
 import com.android.systemui.SystemUIApplication
 import com.android.systemui.util.NotificationChannels
@@ -59,17 +58,17 @@ internal constructor(
         // Repurpose the existing notification or create a new one
         val builder =
             Notification.Builder(context, NotificationChannels.ALERTS)
-                .setTicker(res.getString(R.string.screenshot_failed_title))
+                .setTicker(res.getString(com.android.systemui.res.R.string.screenshot_failed_title))
                 .setContentTitle(
-                    res.getString(R.string.screenshot_failed_title)
+                    res.getString(com.android.systemui.res.R.string.screenshot_failed_title)
                 )
                 .setContentText(errorMsg)
-                .setSmallIcon(R.drawable.stat_notify_image_error)
+                .setSmallIcon(com.android.systemui.res.R.drawable.stat_notify_image_error)
                 .setWhen(System.currentTimeMillis())
                 .setVisibility(Notification.VISIBILITY_PUBLIC) // ok to show outside lockscreen
                 .setCategory(Notification.CATEGORY_ERROR)
                 .setAutoCancel(true)
-                .setColor(context.getColor(com.android.internal.R.color.system_notification_accent_color))
+                .setColor(context.getColor(R.color.system_notification_accent_color))
         val intent =
             devicePolicyManager.createAdminSupportIntent(
                 DevicePolicyManager.POLICY_DISABLE_SCREEN_CAPTURE
@@ -101,7 +100,7 @@ internal constructor(
     private val externalDisplayString: String
         get() =
             res.getString(
-                R.string.screenshot_failed_external_display_indication
+                com.android.systemui.res.R.string.screenshot_failed_external_display_indication
             )
 
     /** Factory for [ScreenshotNotificationsController]. */

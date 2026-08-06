@@ -16,8 +16,6 @@
 
 package com.android.systemui.recordissue
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
@@ -28,6 +26,7 @@ import androidx.annotation.WorkerThread
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.recordissue.RecordIssueModule.Companion.TILE_SPEC
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserFileManager
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.util.settings.GlobalSettings

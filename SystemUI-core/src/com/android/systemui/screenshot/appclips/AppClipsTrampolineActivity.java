@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot.appclips;
 
-import com.android.systemui.R
-
 import static android.content.Intent.CAPTURE_CONTENT_FOR_NOTE_BLOCKED_BY_ADMIN;
 import static android.content.Intent.CAPTURE_CONTENT_FOR_NOTE_FAILED;
 import static android.content.Intent.CAPTURE_CONTENT_FOR_NOTE_SUCCESS;
@@ -58,6 +56,7 @@ import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.log.DebugLogger;
 import com.android.systemui.notetask.NoteTaskController;
 import com.android.systemui.notetask.NoteTaskEntryPoint;
+import com.android.systemui.res.R;
 
 import java.util.concurrent.Executor;
 

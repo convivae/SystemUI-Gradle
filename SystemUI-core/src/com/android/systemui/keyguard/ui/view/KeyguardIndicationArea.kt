@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.view
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.text.TextUtils
 import android.util.AttributeSet
@@ -27,6 +25,7 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.KeyguardIndicationTextView
 
 class KeyguardIndicationArea(

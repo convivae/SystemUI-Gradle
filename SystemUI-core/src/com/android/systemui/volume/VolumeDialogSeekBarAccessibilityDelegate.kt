@@ -16,13 +16,12 @@
 
 package com.android.systemui.volume
 
-import com.android.internal.R
-
 import android.os.Bundle
 import android.view.View
 import android.view.View.AccessibilityDelegate
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.SeekBar
+import com.android.internal.R
 
 class VolumeDialogSeekBarAccessibilityDelegate(
     private val accessibilityStep: Int,

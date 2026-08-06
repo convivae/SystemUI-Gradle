@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.statusBarSignalPolicyRefactor;
 
 import android.annotation.NonNull;
@@ -29,6 +27,7 @@ import android.util.Log;
 import com.android.settingslib.mobile.TelephonyIcons;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.connectivity.IconState;
 import com.android.systemui.statusbar.connectivity.NetworkController;
 import com.android.systemui.statusbar.connectivity.SignalCallback;

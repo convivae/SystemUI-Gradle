@@ -16,8 +16,7 @@
 
 package com.android.systemui.qs.tiles.impl.sensorprivacy.ui
 
-import com.android.systemui.R
-
+import com.android.systemui.res.R
 
 sealed interface SensorPrivacyTileResources {
     fun getIconRes(isBlocked: Boolean): Int

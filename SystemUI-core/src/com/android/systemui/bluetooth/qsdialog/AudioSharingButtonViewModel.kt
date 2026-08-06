@@ -16,12 +16,11 @@
 
 package com.android.systemui.bluetooth.qsdialog
 
-import com.android.systemui.R
-
 import androidx.annotation.StringRes
 import com.android.settingslib.bluetooth.BluetoothUtils
 import com.android.settingslib.bluetooth.LocalBluetoothManager
 import com.android.systemui.lifecycle.ExclusiveActivatable
+import com.android.systemui.res.R
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.awaitCancellation

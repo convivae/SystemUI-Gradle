@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static androidx.constraintlayout.widget.ConstraintSet.END;
 import static androidx.constraintlayout.widget.ConstraintSet.PARENT_ID;
 
@@ -56,7 +54,7 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor;
 import com.android.systemui.plugins.clocks.ClockController;
 import com.android.systemui.power.domain.interactor.PowerInteractor;
 import com.android.systemui.power.shared.model.ScreenPowerState;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.AnimatableProperty;
 import com.android.systemui.statusbar.notification.PropertyAnimator;
 import com.android.systemui.statusbar.notification.stack.AnimationProperties;
@@ -537,7 +535,7 @@ public class KeyguardStatusViewController extends ViewController<KeyguardStatusV
         if (customClockAnimation && !MigrateClocksToBlueprint.isEnabled()) {
             // Find the clock, so we can exclude it from this transition.
             FrameLayout clockContainerView = mView.findViewById(
-                    com.android.systemui.R.id.lockscreen_clock_view_large);
+                    com.android.systemui.customization.R.id.lockscreen_clock_view_large);
 
             // The clock container can sometimes be null. If it is, just fall back to the
             // old animation rather than setting up the custom animations.

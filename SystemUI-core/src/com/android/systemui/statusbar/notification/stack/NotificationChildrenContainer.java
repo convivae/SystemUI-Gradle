@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
-import com.android.systemui.R
-
 import static android.app.Flags.notificationsRedesignTemplates;
 
 import android.app.Notification;
@@ -46,6 +44,7 @@ import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.widget.NotificationExpandButton;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.statusbar.NotificationGroupingUtil;
 import com.android.systemui.statusbar.notification.FeedbackIcon;

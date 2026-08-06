@@ -18,12 +18,11 @@
 
 package com.android.systemui.statusbar.notification
 
-import com.android.systemui.R
-
 import android.app.Notification
 import android.content.Context
 import android.text.TextUtils
 import androidx.annotation.MainThread
+import com.android.systemui.res.R
 
 /** Returns accessibility content description for a given notification. */
 @MainThread

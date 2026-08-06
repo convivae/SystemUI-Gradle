@@ -16,14 +16,13 @@
 
 package com.android.systemui.statusbar.notification.collection.render
 
-import com.android.systemui.R
-
 import android.annotation.StringRes
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.notification.dagger.HeaderClickAction
 import com.android.systemui.statusbar.notification.dagger.HeaderText

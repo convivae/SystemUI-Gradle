@@ -15,8 +15,6 @@
  */
 package com.android.systemui.qs.tiles.dialog;
 
-import com.android.systemui.R
-
 import static com.android.settingslib.satellite.SatelliteDialogUtils.TYPE_IS_WIFI;
 import static com.android.systemui.Prefs.Key.QS_HAS_TURNED_OFF_MOBILE_DATA;
 import static com.android.systemui.qs.tiles.dialog.InternetDialogController.MAX_WIFI_ENTRY_COUNT;
@@ -72,7 +70,7 @@ import com.android.systemui.accessibility.floatingmenu.AnnotationLinkSpan;
 import com.android.systemui.animation.DialogTransitionAnimator;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 import com.android.systemui.statusbar.policy.KeyguardStateController;

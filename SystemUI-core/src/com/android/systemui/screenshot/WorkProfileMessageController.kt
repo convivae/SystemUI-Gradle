@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot
 
-import com.android.systemui.R
-
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -30,6 +28,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 /**

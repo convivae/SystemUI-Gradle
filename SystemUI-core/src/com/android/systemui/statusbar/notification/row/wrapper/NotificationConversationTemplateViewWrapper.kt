@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper
 
-import com.android.systemui.R
-
 import android.app.Flags
 import android.content.Context
 import android.graphics.drawable.AnimatedImageDrawable
@@ -29,6 +27,7 @@ import com.android.internal.widget.MessagingGroup
 import com.android.internal.widget.MessagingImageMessage
 import com.android.internal.widget.MessagingLinearLayout
 import com.android.internal.widget.NotificationRowIconView
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.notification.NotificationFadeAware
 import com.android.systemui.statusbar.notification.NotificationUtils
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow

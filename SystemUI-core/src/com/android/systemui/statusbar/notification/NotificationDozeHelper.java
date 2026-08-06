@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
@@ -29,6 +27,7 @@ import android.widget.ImageView;
 import androidx.annotation.Nullable;
 
 import com.android.app.animation.Interpolators;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.stack.StackStateAnimator;
 
 import java.util.function.Consumer;

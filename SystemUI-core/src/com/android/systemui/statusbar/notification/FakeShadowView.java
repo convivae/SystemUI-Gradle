@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification;
 
-import com.android.systemui.R
-
 import android.annotation.Nullable;
 import android.content.Context;
 import android.graphics.Outline;
@@ -27,6 +25,7 @@ import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.widget.LinearLayout;
 
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.AlphaOptimizedFrameLayout;
 
 /**

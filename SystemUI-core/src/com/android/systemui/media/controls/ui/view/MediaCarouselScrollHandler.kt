@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.view
 
-import com.android.systemui.R
-
 import android.graphics.Outline
 import android.util.MathUtils
 import android.view.GestureDetector
@@ -36,6 +34,7 @@ import com.android.systemui.classifier.Classifier.NOTIFICATION_DISMISS
 import com.android.systemui.media.controls.util.MediaUiEventLogger
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.qs.PageIndicator
+import com.android.systemui.res.R
 import com.android.systemui.util.animation.TransitionLayout
 import com.android.systemui.util.concurrency.DelayableExecutor
 import com.android.wm.shell.shared.animation.PhysicsAnimator

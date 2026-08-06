@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import static com.android.internal.jank.InteractionJankMonitor.CUJ_LOCKSCREEN_TRANSITION_FROM_AOD;
 import static com.android.internal.jank.InteractionJankMonitor.CUJ_LOCKSCREEN_TRANSITION_TO_AOD;
 import static com.android.systemui.keyguard.shared.model.KeyguardState.GONE;
@@ -57,6 +55,7 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor;
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor;
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor;
 import com.android.systemui.plugins.statusbar.StatusBarStateController.StateListener;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.data.model.SceneStack;
 import com.android.systemui.scene.data.model.SceneStackKt;
 import com.android.systemui.scene.domain.interactor.SceneBackInteractor;

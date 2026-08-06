@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.media.AudioManager
 import android.media.AudioManager.STREAM_ALARM
@@ -34,6 +32,7 @@ import com.android.systemui.Flags
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
 import com.android.systemui.modes.shared.ModesUiIcons
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.domain.interactor.ZenModeInteractor
 import com.android.systemui.statusbar.policy.domain.model.ActiveZenModes
 import com.android.systemui.util.kotlin.combine

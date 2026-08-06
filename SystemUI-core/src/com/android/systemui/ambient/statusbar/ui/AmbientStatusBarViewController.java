@@ -16,8 +16,6 @@
 
 package com.android.systemui.ambient.statusbar.ui;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.kotlin.JavaAdapterKt.collectFlow;
 
 import android.app.AlarmManager;
@@ -45,6 +43,7 @@ import com.android.systemui.log.dagger.DreamLog;
 import com.android.systemui.privacy.PrivacyItem;
 import com.android.systemui.privacy.PrivacyItemController;
 import com.android.systemui.privacy.PrivacyType;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.statusbar.pipeline.wifi.domain.interactor.WifiInteractor;

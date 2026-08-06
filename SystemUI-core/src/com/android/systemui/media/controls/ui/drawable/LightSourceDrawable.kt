@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.drawable
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
@@ -39,6 +37,7 @@ import android.util.MathUtils.lerp
 import androidx.annotation.Keep
 import com.android.app.animation.Interpolators
 import com.android.internal.graphics.ColorUtils
+import com.android.systemui.res.R
 import org.xmlpull.v1.XmlPullParser
 
 private const val RIPPLE_ANIM_DURATION = 800L

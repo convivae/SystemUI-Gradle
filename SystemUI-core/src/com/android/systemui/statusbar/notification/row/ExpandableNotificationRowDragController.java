@@ -17,8 +17,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static android.widget.Toast.LENGTH_SHORT;
 
 import android.animation.Animator;
@@ -50,6 +48,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.app.animation.Interpolators;
 import com.android.internal.logging.InstanceId;
 import com.android.internal.logging.InstanceIdSequence;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.ShadeController;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.statusbar.CommandQueue;

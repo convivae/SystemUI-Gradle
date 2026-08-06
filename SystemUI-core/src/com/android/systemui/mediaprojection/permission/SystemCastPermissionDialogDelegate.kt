@@ -15,14 +15,13 @@
  */
 package com.android.systemui.mediaprojection.permission
 
-import com.android.systemui.R
-
 import android.app.AlertDialog
 import android.content.Context
 import android.media.projection.MediaProjectionConfig
 import android.os.Bundle
 import com.android.systemui.mediaprojection.MediaProjectionMetricsLogger
 import com.android.systemui.mediaprojection.permission.MediaProjectionPermissionUtils.getSingleAppDisabledText
+import com.android.systemui.res.R
 import java.util.function.Consumer
 
 /** Dialog to select screen recording options for casting the screen to a different device. */

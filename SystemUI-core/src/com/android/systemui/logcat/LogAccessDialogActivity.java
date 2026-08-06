@@ -16,8 +16,6 @@
 
 package com.android.systemui.logcat;
 
-import com.android.systemui.R
-
 import android.annotation.StyleRes;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -45,6 +43,7 @@ import android.widget.TextView;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.app.ILogAccessDialogCallback;
+import com.android.systemui.res.R;
 
 /**
  * Dialog responsible for obtaining user consent per-use log access

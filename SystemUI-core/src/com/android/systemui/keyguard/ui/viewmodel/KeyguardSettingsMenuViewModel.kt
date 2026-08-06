@@ -17,11 +17,10 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
-import com.android.systemui.R
-
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.common.shared.model.Text
 import com.android.systemui.keyguard.domain.interactor.KeyguardTouchHandlingInteractor
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 

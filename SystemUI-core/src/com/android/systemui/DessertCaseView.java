@@ -16,8 +16,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -45,6 +43,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import com.android.systemui.res.R;
 
 import java.util.HashSet;
 import java.util.Set;

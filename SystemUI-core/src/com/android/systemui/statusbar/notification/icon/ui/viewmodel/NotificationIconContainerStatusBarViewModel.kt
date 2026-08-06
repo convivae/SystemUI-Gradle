@@ -15,14 +15,13 @@
  */
 package com.android.systemui.statusbar.notification.icon.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.graphics.Rect
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
 import com.android.systemui.plugins.DarkIconDispatcher
+import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.notification.domain.interactor.HeadsUpNotificationIconInteractor
 import com.android.systemui.statusbar.notification.icon.domain.interactor.StatusBarNotificationIconsInteractor

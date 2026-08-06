@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 
@@ -87,7 +85,7 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardDismissTransition
 import com.android.systemui.log.SessionTracker;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.FalsingManager;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shared.system.SysUiStatsLog;
 import com.android.systemui.statusbar.policy.ConfigurationController;

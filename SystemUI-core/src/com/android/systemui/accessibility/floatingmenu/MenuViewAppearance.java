@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
-import com.android.systemui.R
-
 import static android.view.View.OVER_SCROLL_ALWAYS;
 import static android.view.View.OVER_SCROLL_NEVER;
 
@@ -36,6 +34,7 @@ import android.view.WindowMetrics;
 
 import androidx.annotation.DimenRes;
 
+import com.android.systemui.res.R;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

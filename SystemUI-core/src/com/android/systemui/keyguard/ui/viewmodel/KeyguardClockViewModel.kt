@@ -16,13 +16,12 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Resources
 import androidx.annotation.VisibleForTesting
 import androidx.constraintlayout.helper.widget.Layer
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
+import com.android.systemui.customization.R as customR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
@@ -183,15 +182,15 @@ constructor(
     /** Calculates the top margin for the large clock. */
     fun getLargeClockTopMargin(): Int {
         return systemBarUtils.getStatusBarHeight() +
-            resources.getDimensionPixelSize(R.dimen.small_clock_padding_top) +
-            resources.getDimensionPixelSize(R.dimen.keyguard_smartspace_top_offset)
+            resources.getDimensionPixelSize(customR.dimen.small_clock_padding_top) +
+            resources.getDimensionPixelSize(customR.dimen.keyguard_smartspace_top_offset)
     }
 
     val largeClockTopMargin: Flow<Int> =
         configurationInteractor.onAnyConfigurationChange.map { getLargeClockTopMargin() }
 
     val largeClockTextSize: Flow<Int> =
-        configurationInteractor.dimensionPixelSize(R.dimen.large_clock_text_size)
+        configurationInteractor.dimensionPixelSize(customR.dimen.large_clock_text_size)
 
     enum class ClockLayout {
         LARGE_CLOCK,

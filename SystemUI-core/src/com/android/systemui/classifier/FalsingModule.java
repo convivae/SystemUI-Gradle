@@ -16,14 +16,13 @@
 
 package com.android.systemui.classifier;
 
-import com.android.systemui.R
-
 import android.content.res.Resources;
 import android.hardware.devicestate.DeviceStateManager;
 import android.view.ViewConfiguration;
 
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.statusbar.phone.NotificationTapHelper;
 import com.android.systemui.util.Utils;

@@ -14,8 +14,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import android.annotation.Nullable;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
@@ -26,6 +24,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.drawable
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -39,6 +37,7 @@ import androidx.annotation.Keep
 import com.android.app.animation.Interpolators
 import com.android.internal.graphics.ColorUtils
 import com.android.internal.graphics.ColorUtils.blendARGB
+import com.android.systemui.res.R
 import org.xmlpull.v1.XmlPullParser
 
 private const val BACKGROUND_ANIM_DURATION = 370L

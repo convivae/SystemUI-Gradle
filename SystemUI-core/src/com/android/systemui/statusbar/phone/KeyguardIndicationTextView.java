@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -35,6 +33,7 @@ import androidx.annotation.StyleRes;
 import com.android.app.animation.Interpolators;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.keyguard.KeyguardIndication;
+import com.android.systemui.res.R;
 
 /**
  * A view to show hints on Keyguard ("Swipe up to unlock", "Tap again to open").
@@ -306,6 +305,6 @@ public class KeyguardIndicationTextView extends TextView {
 
     private int getYTranslationPixels() {
         return mContext.getResources().getDimensionPixelSize(
-                R.dimen.keyguard_indication_y_translation);
+                com.android.systemui.res.R.dimen.keyguard_indication_y_translation);
     }
 }

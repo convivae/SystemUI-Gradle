@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot;
 
-import com.android.systemui.R
-
 import android.app.NotificationManager;
 import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
@@ -25,6 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.view.Display;
 
+import com.android.systemui.res.R;
 
 /**
  * Receives errors related to screenshot.

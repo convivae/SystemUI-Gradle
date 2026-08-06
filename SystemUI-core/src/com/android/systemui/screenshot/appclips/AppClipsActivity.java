@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot.appclips;
 
-import com.android.systemui.R
-
 import static android.app.ActivityTaskManager.INVALID_TASK_ID;
 
 import static com.android.systemui.screenshot.appclips.AppClipsEvent.SCREENSHOT_FOR_NOTE_ACCEPTED;
@@ -69,6 +67,7 @@ import com.android.internal.logging.UiEventLogger.UiEventEnum;
 import com.android.settingslib.Utils;
 import com.android.systemui.Flags;
 import com.android.systemui.log.DebugLogger;
+import com.android.systemui.res.R;
 import com.android.systemui.screenshot.appclips.InternalBacklinksData.BacklinksData;
 import com.android.systemui.screenshot.appclips.InternalBacklinksData.CrossProfileError;
 import com.android.systemui.screenshot.scroll.CropView;

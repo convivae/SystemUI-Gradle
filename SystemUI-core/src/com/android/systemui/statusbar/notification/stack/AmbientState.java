@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
-import com.android.systemui.R
-
 import static com.android.systemui.statusbar.notification.NotificationUtils.logKey;
 
 import android.annotation.NonNull;
@@ -30,6 +28,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.systemui.Dumpable;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dump.DumpManager;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.shade.transition.LargeScreenShadeInterpolator;

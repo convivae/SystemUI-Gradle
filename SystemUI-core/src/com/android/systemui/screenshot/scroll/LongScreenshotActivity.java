@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot.scroll;
 
-import com.android.systemui.R
-
 import android.app.Activity;
 import android.app.ActivityOptions;
 import android.content.ComponentName;
@@ -52,6 +50,7 @@ import com.android.internal.logging.UiEventLogger;
 import com.android.internal.view.OneShotPreDrawListener;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 import com.android.systemui.screenshot.ActionIntentCreator;
 import com.android.systemui.screenshot.ActionIntentExecutor;
 import com.android.systemui.screenshot.ImageExporter;

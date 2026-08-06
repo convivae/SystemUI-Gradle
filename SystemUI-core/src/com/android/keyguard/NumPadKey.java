@@ -15,8 +15,6 @@
  */
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.gsfBouncer;
 import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_KEY;
 
@@ -41,7 +39,7 @@ import androidx.annotation.Nullable;
 
 import com.android.settingslib.Utils;
 import com.android.systemui.bouncer.ui.helper.BouncerHapticPlayer;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Viewgroup for the bouncer numpad button, specifically for digits.

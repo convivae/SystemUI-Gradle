@@ -16,8 +16,6 @@
 
 package com.android.systemui.mediaprojection.appselector.view
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.BitmapShader
 import android.graphics.Canvas
@@ -30,6 +28,7 @@ import android.view.View
 import android.view.WindowManager
 import androidx.core.content.getSystemService
 import androidx.core.content.res.use
+import com.android.systemui.res.R
 import com.android.systemui.mediaprojection.appselector.data.RecentTask
 import com.android.systemui.shared.recents.model.ThumbnailData
 import com.android.systemui.shared.recents.utilities.PreviewPositionHelper

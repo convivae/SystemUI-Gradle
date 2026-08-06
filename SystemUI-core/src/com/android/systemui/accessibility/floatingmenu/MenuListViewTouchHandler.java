@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
-import com.android.systemui.R
-
 import static android.R.id.empty;
 
 import android.graphics.PointF;

@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.gsfBouncer;
 
 import android.content.Context;

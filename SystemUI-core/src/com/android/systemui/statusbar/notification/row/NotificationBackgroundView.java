@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.ColorUtilKt.hexColorString;
 
 import android.content.Context;
@@ -39,6 +37,7 @@ import androidx.annotation.Nullable;
 import com.android.internal.util.ContrastColorUtil;
 import com.android.settingslib.Utils;
 import com.android.systemui.Dumpable;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.shared.NotificationAddXOnHoverToDismiss;
 import com.android.systemui.util.DrawableDumpKt;
 

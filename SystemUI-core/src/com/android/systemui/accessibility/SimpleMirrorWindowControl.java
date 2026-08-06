@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility;
 
-import com.android.systemui.R
-
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -30,6 +28,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.android.systemui.res.R;
 
 /**
  * A basic control to move the mirror window.

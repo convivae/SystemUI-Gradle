@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot.ui
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Insets
@@ -34,6 +32,7 @@ import android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_GESTURAL
 import android.view.accessibility.AccessibilityEvent
 import android.widget.FrameLayout
 import android.widget.ImageView
+import com.android.systemui.res.R
 import com.android.systemui.screenshot.FloatingWindowUtil
 
 class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :

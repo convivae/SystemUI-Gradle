@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.management
 
-import com.android.systemui.R
-
 import android.content.ComponentName
 import android.content.res.Configuration
 import android.content.res.Resources
@@ -38,6 +36,7 @@ import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.android.systemui.res.R
 import com.android.systemui.controls.ControlInterface
 import com.android.systemui.controls.ui.CanUseIconPredicate
 import com.android.systemui.controls.ui.RenderInfo

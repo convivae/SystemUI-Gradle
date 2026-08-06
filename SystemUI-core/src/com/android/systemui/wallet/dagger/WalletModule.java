@@ -16,8 +16,6 @@
 
 package com.android.systemui.wallet.dagger;
 
-import com.android.systemui.R
-
 import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
@@ -33,6 +31,7 @@ import com.android.systemui.qs.tiles.QuickAccessWalletTile;
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig;
 import com.android.systemui.qs.tiles.viewmodel.QSTilePolicy;
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig;
+import com.android.systemui.res.R;
 import com.android.systemui.wallet.controller.WalletContextualLocationsService;
 import com.android.systemui.wallet.ui.WalletActivity;
 

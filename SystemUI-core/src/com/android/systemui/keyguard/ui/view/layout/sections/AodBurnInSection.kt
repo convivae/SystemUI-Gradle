@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
@@ -30,6 +28,7 @@ import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.keyguard.ui.view.KeyguardRootView
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 

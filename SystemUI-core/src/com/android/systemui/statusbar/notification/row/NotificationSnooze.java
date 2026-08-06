@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;
 
 import android.animation.Animator;
@@ -55,6 +53,7 @@ import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.plugins.statusbar.NotificationSwipeActionHelper;
 import com.android.systemui.plugins.statusbar.NotificationSwipeActionHelper.SnoozeOption;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.List;

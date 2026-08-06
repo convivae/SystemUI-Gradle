@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -32,7 +30,7 @@ import android.view.ViewHierarchyEncoder;
 import android.widget.FrameLayout;
 import android.widget.ViewFlipper;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Subclass of the current view flipper that allows us to overload dispatchTouchEvent() so

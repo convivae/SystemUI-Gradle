@@ -16,7 +16,6 @@
 
 package com.android.systemui.screenshot
 
-
 import android.R
 import android.annotation.MainThread
 import android.content.Context

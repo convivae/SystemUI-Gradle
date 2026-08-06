@@ -16,8 +16,6 @@
 
 package com.android.systemui.assist.ui;
 
-import com.android.systemui.R
-
 import android.animation.ArgbEvaluator;
 import android.annotation.ColorInt;
 import android.annotation.Nullable;
@@ -36,6 +34,7 @@ import com.android.settingslib.Utils;
 import com.android.systemui.navigationbar.NavigationBarController;
 import com.android.systemui.navigationbar.views.NavigationBar;
 import com.android.systemui.navigationbar.views.NavigationBarTransitions;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 

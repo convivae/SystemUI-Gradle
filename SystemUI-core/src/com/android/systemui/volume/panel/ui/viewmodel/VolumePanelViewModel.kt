@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume.panel.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.IntentFilter
 import android.content.res.Resources
@@ -25,6 +23,7 @@ import com.android.systemui.Dumpable
 import com.android.systemui.broadcast.BroadcastDispatcher
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dump.DumpManager
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.statusbar.policy.onConfigChanged
 import com.android.systemui.util.kotlin.launchAndDispose

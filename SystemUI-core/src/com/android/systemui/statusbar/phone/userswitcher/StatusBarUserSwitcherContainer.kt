@@ -16,12 +16,11 @@
 
 package com.android.systemui.statusbar.phone.userswitcher
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.util.AttributeSet
 import android.widget.ImageView
 import android.widget.TextView
+import com.android.systemui.res.R
 import com.android.systemui.animation.view.LaunchableLinearLayout
 
 class StatusBarUserSwitcherContainer(

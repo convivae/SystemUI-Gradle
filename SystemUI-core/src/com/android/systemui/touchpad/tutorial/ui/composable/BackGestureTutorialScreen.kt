@@ -16,8 +16,6 @@
 
 package com.android.systemui.touchpad.tutorial.ui.composable
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -27,6 +25,7 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialScreenConfig
 import com.android.systemui.inputdevice.tutorial.ui.composable.rememberColorFilterProperty
+import com.android.systemui.res.R
 import com.android.systemui.touchpad.tutorial.ui.gesture.BackGestureRecognizer
 import com.android.systemui.touchpad.tutorial.ui.gesture.GestureDirection
 import com.android.systemui.touchpad.tutorial.ui.gesture.GestureFlowAdapter

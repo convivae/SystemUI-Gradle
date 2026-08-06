@@ -16,8 +16,6 @@
 
 package com.android.systemui.clipboardoverlay;
 
-import com.android.systemui.R
-
 import static android.content.Intent.ACTION_CLOSE_SYSTEM_DIALOGS;
 
 import static com.android.internal.config.sysui.SystemUiDeviceConfigFlags.CLIPBOARD_OVERLAY_SHOW_ACTIONS;
@@ -68,7 +66,7 @@ import com.android.systemui.broadcast.BroadcastSender;
 import com.android.systemui.clipboardoverlay.dagger.ClipboardOverlayModule.OverlayWindowContext;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.flags.FeatureFlags;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.screenshot.TimeoutHandler;
 
 import java.util.Optional;

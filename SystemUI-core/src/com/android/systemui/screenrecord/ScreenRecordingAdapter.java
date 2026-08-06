@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenrecord;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Resources;
 import android.view.LayoutInflater;
@@ -27,6 +25,7 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.android.systemui.res.R;
 
 import java.util.List;
 

@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.pm.PackageManager.NameNotFoundException
@@ -41,6 +39,7 @@ import com.android.systemui.keyboard.shortcut.shared.model.ShortcutSubCategory
 import com.android.systemui.keyboard.shortcut.ui.model.IconSource
 import com.android.systemui.keyboard.shortcut.ui.model.ShortcutCategoryUi
 import com.android.systemui.keyboard.shortcut.ui.model.ShortcutsUiState
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

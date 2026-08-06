@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.footer.ui.view;
 
-import com.android.systemui.R
-
 import static android.graphics.PorterDuff.Mode.SRC_ATOP;
 
 import static com.android.systemui.Flags.notificationFooterBackgroundTintOptimization;
@@ -42,6 +40,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 
 import com.android.settingslib.Utils;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.ColorUpdateLogger;
 import com.android.systemui.statusbar.notification.footer.shared.FooterViewRefactor;
 import com.android.systemui.statusbar.notification.footer.shared.NotifRedesignFooter;

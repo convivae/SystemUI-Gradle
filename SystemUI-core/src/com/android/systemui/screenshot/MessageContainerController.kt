@@ -1,7 +1,5 @@
 package com.android.systemui.screenshot
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -12,6 +10,7 @@ import android.view.ViewTreeObserver
 import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.constraintlayout.widget.Guideline
 import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.res.R
 import com.android.systemui.screenshot.message.ProfileMessageController
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope

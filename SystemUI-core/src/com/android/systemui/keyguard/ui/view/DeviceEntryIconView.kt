@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.ui.view
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.drawable.AnimatedStateListDrawable
 import android.graphics.drawable.AnimatedVectorDrawable
@@ -35,6 +33,7 @@ import com.airbnb.lottie.LottieCompositionFactory
 import com.airbnb.lottie.LottieDrawable
 import com.android.systemui.common.ui.view.LongPressHandlingView
 import com.android.systemui.log.LongPressHandlingViewLogger
+import com.android.systemui.res.R
 
 class DeviceEntryIconView
 @JvmOverloads

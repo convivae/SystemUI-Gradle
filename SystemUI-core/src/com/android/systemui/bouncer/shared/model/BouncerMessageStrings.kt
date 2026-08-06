@@ -16,12 +16,11 @@
 
 package com.android.systemui.bouncer.shared.model
 
-import com.android.systemui.R
-
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Password
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Pattern
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Pin
+import com.android.systemui.res.R
 
 typealias BouncerMessagePair = Pair<Int, Int>
 

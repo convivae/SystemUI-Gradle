@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.Color;
 import android.util.AttributeSet;
@@ -29,6 +27,7 @@ import androidx.core.graphics.ColorUtils;
 import com.android.app.animation.Interpolators;
 import com.android.keyguard.KeyguardConstants;
 import com.android.systemui.qs.tiles.UserDetailItemView;
+import com.android.systemui.res.R;
 
 /**
  * Displays a user on the keyguard user switcher.

@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewmodel
 
-import com.android.systemui.R
-
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -30,6 +28,7 @@ import com.android.systemui.dump.DumpManager
 import com.android.systemui.lifecycle.ExclusiveActivatable
 import com.android.systemui.lifecycle.Hydrator
 import com.android.systemui.notifications.ui.composable.Notifications
+import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.shade.shared.model.ShadeMode
 import com.android.systemui.shade.ui.composable.Shade

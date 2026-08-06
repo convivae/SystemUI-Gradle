@@ -16,8 +16,6 @@
 
 package com.android.systemui.recents;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.enableViewCaptureTracing;
 import static com.android.systemui.shared.recents.utilities.Utilities.isLargeScreen;
 import static com.android.systemui.util.ConvenienceExtensionsKt.toKotlinLazy;
@@ -65,6 +63,7 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.navigationbar.NavigationBarController;
 import com.android.systemui.navigationbar.NavigationModeController;
 import com.android.systemui.navigationbar.views.NavigationBarView;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shared.system.QuickStepContract;
 import com.android.systemui.statusbar.policy.ConfigurationController;

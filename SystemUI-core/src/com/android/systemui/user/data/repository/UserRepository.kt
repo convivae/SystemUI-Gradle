@@ -17,8 +17,6 @@
 
 package com.android.systemui.user.data.repository
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.annotation.UserIdInt
 import android.app.admin.DevicePolicyManager
@@ -39,6 +37,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.user.data.model.SelectedUserModel
 import com.android.systemui.user.data.model.SelectionStatus

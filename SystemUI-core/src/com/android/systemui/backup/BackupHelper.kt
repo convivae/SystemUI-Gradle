@@ -16,8 +16,6 @@
 
 package com.android.systemui.backup
 
-import com.android.systemui.R
-
 import android.app.backup.BackupAgentHelper
 import android.app.backup.BackupDataInputStream
 import android.app.backup.BackupDataOutput
@@ -39,6 +37,7 @@ import com.android.systemui.controls.controller.ControlsFavoritePersistenceWrapp
 import com.android.systemui.keyguard.domain.backup.KeyguardQuickAffordanceBackupHelper
 import com.android.systemui.people.widget.PeopleBackupHelper
 import com.android.systemui.qs.panels.domain.backup.QSPreferencesBackupHelper
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserFileManagerImpl
 
 /**

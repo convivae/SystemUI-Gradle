@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.text.TextUtils;
@@ -29,7 +27,7 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 
 import com.android.internal.policy.SystemBarUtils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /***
  * Manages a number of views inside of the given layout. See below for a list of widgets.

@@ -15,8 +15,6 @@
  */
 package com.android.systemui.statusbar.phone
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Configuration
 import android.util.AttributeSet
@@ -30,6 +28,7 @@ import com.android.systemui.keyguard.ui.binder.KeyguardBottomAreaViewBinder.bind
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardBottomAreaViewModel
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.FalsingManager
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 
 /**

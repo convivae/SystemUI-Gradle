@@ -16,14 +16,13 @@
 
 package com.android.systemui.settings.brightness.ui.binder
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
+import com.android.systemui.res.R
 import com.android.systemui.settings.brightness.BrightnessSliderController
 
 object BrightnessMirrorInflater {

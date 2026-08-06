@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.annotation.IntDef;
@@ -32,6 +30,7 @@ import android.view.accessibility.IRemoteMagnificationAnimationCallback;
 import android.view.animation.AccelerateInterpolator;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.systemui.res.R;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

@@ -15,8 +15,6 @@
  */
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static com.android.systemui.statusbar.phone.HeadsUpAppearanceController.CONTENT_FADE_DELAY;
 import static com.android.systemui.statusbar.phone.HeadsUpAppearanceController.CONTENT_FADE_DURATION;
 
@@ -41,6 +39,7 @@ import androidx.collection.ArrayMap;
 import com.android.app.animation.Interpolators;
 import com.android.internal.statusbar.StatusBarIcon;
 import com.android.settingslib.Utils;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.StatusBarIconView;
 import com.android.systemui.statusbar.notification.stack.AnimationFilter;
 import com.android.systemui.statusbar.notification.stack.AnimationProperties;

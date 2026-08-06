@@ -1,10 +1,9 @@
 package com.android.systemui.statusbar
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.util.IndentingPrintWriter
 import android.util.MathUtils
+import com.android.systemui.res.R
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.statusbar.phone.ScrimController
 import com.android.systemui.statusbar.policy.ConfigurationController

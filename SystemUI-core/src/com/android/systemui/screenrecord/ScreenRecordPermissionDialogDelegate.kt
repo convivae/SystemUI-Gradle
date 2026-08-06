@@ -15,8 +15,6 @@
  */
 package com.android.systemui.screenrecord
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PendingIntent
@@ -48,6 +46,7 @@ import com.android.systemui.mediaprojection.permission.ENTIRE_SCREEN
 import com.android.systemui.mediaprojection.permission.SINGLE_APP
 import com.android.systemui.mediaprojection.permission.ScreenShareMode
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserContextProvider
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import dagger.assisted.Assisted

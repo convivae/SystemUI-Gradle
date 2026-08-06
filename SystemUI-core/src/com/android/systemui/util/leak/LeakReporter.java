@@ -16,8 +16,6 @@
 
 package com.android.systemui.util.leak;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Dependency.LEAK_REPORT_EMAIL_NAME;
 
 import android.app.Notification;

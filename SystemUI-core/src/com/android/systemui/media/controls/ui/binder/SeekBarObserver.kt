@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.binder
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.text.format.DateUtils
@@ -29,6 +27,7 @@ import com.android.internal.annotations.VisibleForTesting
 import com.android.systemui.media.controls.ui.drawable.SquigglyProgress
 import com.android.systemui.media.controls.ui.view.MediaViewHolder
 import com.android.systemui.media.controls.ui.viewmodel.SeekBarViewModel
+import com.android.systemui.res.R
 
 private const val TAG = "SeekBarObserver"
 

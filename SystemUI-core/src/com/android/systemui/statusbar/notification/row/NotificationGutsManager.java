@@ -15,8 +15,6 @@
  */
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static android.app.AppOpsManager.OP_CAMERA;
 import static android.app.AppOpsManager.OP_RECORD_AUDIO;
 import static android.app.AppOpsManager.OP_SYSTEM_ALERT_WINDOW;
@@ -57,6 +55,7 @@ import com.android.systemui.people.widget.PeopleSpaceWidgetManager;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.statusbar.NotificationMenuRowPlugin;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.domain.interactor.WindowRootViewVisibilityInteractor;
 import com.android.systemui.settings.UserContextProvider;
 import com.android.systemui.shade.ShadeController;

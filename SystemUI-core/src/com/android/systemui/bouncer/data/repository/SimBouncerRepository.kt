@@ -16,8 +16,6 @@
 
 package com.android.systemui.bouncer.data.repository
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.content.IntentFilter
 import android.content.res.Resources
@@ -35,6 +33,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.pipeline.mobile.util.SubscriptionManagerProxy
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher

@@ -15,8 +15,6 @@
  */
 package com.android.systemui.tuner;
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +32,7 @@ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.demomode.DemoMode;
 import com.android.systemui.demomode.DemoModeAvailabilityTracker;
 import com.android.systemui.demomode.DemoModeController;
+import com.android.systemui.res.R;
 import com.android.systemui.util.settings.GlobalSettings;
 
 public class DemoModeFragment extends PreferenceFragment implements OnPreferenceChangeListener {

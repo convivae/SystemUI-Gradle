@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row
 
-import com.android.systemui.R
-
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.app.NotificationChannel
@@ -40,6 +38,7 @@ import android.widget.Switch
 import android.widget.TextView
 import com.android.settingslib.Utils
 
+import com.android.systemui.res.R
 import com.android.systemui.util.Assert
 
 /**

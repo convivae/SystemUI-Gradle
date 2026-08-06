@@ -16,8 +16,6 @@
 
 package com.android.systemui.globalactions;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -27,6 +25,7 @@ import android.view.ViewGroup;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.HardwareBgDrawable;
 import com.android.systemui.MultiListLayout;
+import com.android.systemui.res.R;
 import com.android.systemui.util.leak.RotationUtils;
 
 import java.util.Locale;

@@ -1,7 +1,5 @@
 package com.android.systemui.assist;
 
-import com.android.systemui.R
-
 import static com.android.systemui.DejankUtils.whitelistIpcs;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_ASSIST_GESTURE_CONSTRAINED;
 
@@ -40,6 +38,7 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.model.SysUiState;
 import com.android.systemui.recents.OverviewProxyService;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.CommandQueue;

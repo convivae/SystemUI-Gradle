@@ -14,8 +14,6 @@
 
 package com.android.systemui.tuner;
 
-import com.android.systemui.R
-
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -40,6 +38,7 @@ import com.android.internal.util.ArrayUtils;
 import com.android.systemui.Dependency;
 import com.android.systemui.plugins.PluginEnablerImpl;
 import com.android.systemui.plugins.PluginManager;
+import com.android.systemui.res.R;
 import com.android.systemui.shared.plugins.PluginActionManager;
 import com.android.systemui.shared.plugins.PluginEnabler;
 import com.android.systemui.shared.plugins.PluginPrefs;

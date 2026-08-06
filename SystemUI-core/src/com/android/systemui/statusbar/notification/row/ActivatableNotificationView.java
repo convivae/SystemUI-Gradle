@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.notificationBackgroundTintOptimization;
 import static com.android.systemui.statusbar.notification.row.ExpandableView.ClipSide.BOTTOM;
 import static com.android.systemui.statusbar.notification.row.ExpandableView.ClipSide.TOP;
@@ -41,6 +39,7 @@ import com.android.internal.jank.InteractionJankMonitor;
 import com.android.internal.jank.InteractionJankMonitor.Configuration;
 import com.android.settingslib.Utils;
 import com.android.systemui.Gefingerpoken;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.TouchLogger;
 import com.android.systemui.statusbar.NotificationShelf;
 import com.android.systemui.statusbar.notification.FakeShadowView;

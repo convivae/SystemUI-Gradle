@@ -16,11 +16,10 @@
 
 package com.android.systemui.volume.dialog.ui
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Resources
 import com.android.systemui.dagger.qualifiers.UiBackground
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.statusbar.policy.onConfigChanged
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog

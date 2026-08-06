@@ -16,8 +16,6 @@
 
 package com.android.systemui.navigationbar.views.buttons;
 
-import com.android.systemui.R
-
 import android.animation.ArgbEvaluator;
 import android.annotation.ColorInt;
 import android.annotation.DrawableRes;
@@ -42,6 +40,7 @@ import android.util.FloatProperty;
 import android.view.View;
 
 import com.android.settingslib.Utils;
+import com.android.systemui.res.R;
 
 /**
  * Drawable for {@link KeyButtonView}s that supports tinting between two colors, rotation and shows

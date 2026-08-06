@@ -16,10 +16,9 @@
 
 package com.android.systemui.statusbar.window
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.LayoutInflater
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 /**

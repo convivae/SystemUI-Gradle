@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles;
 
-import com.android.systemui.R
-
 import static com.android.settingslib.satellite.SatelliteDialogUtils.TYPE_IS_BLUETOOTH;
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;
 
@@ -58,7 +56,7 @@ import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.BluetoothController;
 
 import kotlinx.coroutines.Job;

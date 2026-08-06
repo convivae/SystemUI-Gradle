@@ -16,13 +16,12 @@
 
 package com.android.systemui
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.util.PathParser
+import com.android.systemui.res.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

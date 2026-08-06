@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot;
 
-import com.android.systemui.R
-
 import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 import static android.view.WindowManager.LayoutParams.TYPE_SCREENSHOT;
 
@@ -70,6 +68,7 @@ import com.android.systemui.broadcast.BroadcastSender;
 import com.android.systemui.clipboardoverlay.ClipboardOverlayController;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.flags.FeatureFlags;
+import com.android.systemui.res.R;
 import com.android.systemui.screenshot.TakeScreenshotService.RequestCallback;
 import com.android.systemui.screenshot.scroll.ScrollCaptureExecutor;
 import com.android.systemui.util.Assert;

@@ -16,14 +16,13 @@
 
 package com.android.systemui.usb;
 
-import com.android.systemui.R
-
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import android.annotation.IntDef;
 import android.content.res.Resources;
 import android.util.Log;
 
+import com.android.systemui.res.R;
 
 import java.lang.annotation.Retention;
 

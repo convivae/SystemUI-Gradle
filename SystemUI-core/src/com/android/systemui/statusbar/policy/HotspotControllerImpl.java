@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import static android.net.TetheringManager.TETHERING_WIFI;
 
 import android.content.Context;
@@ -38,6 +36,7 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 
 import java.io.PrintWriter;

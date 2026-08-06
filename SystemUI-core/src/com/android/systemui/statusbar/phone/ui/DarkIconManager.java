@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone.ui;
 
-import com.android.systemui.R
-
 import android.widget.LinearLayout;
 
 import com.android.internal.statusbar.StatusBarIcon;
@@ -51,7 +49,7 @@ public class DarkIconManager extends IconManager {
         mIconHorizontalMargin =
                 mContext.getResources()
                         .getDimensionPixelSize(
-                                R.dimen.status_bar_icon_horizontal_margin);
+                                com.android.systemui.res.R.dimen.status_bar_icon_horizontal_margin);
         mDarkIconDispatcher = darkIconDispatcher;
     }
 

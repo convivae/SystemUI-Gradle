@@ -14,8 +14,6 @@
 
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import static android.app.StatusBarManager.DISABLE2_QUICK_SETTINGS;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
@@ -28,7 +26,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.LargeScreenHeaderHelper;
 import com.android.systemui.util.LargeScreenUtils;
 

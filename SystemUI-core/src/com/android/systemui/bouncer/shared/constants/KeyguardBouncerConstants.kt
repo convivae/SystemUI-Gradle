@@ -16,8 +16,6 @@
 
 package com.android.systemui.bouncer.shared.constants
 
-import com.android.systemui.R
-
 object KeyguardBouncerConstants {
     /**
      * Values for the bouncer expansion represented as the panel expansion. Panel expansion 1f =

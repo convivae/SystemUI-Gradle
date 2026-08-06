@@ -16,7 +16,6 @@
 
 package com.android.systemui.accessibility.floatingmenu
 
-
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Color
@@ -168,14 +167,14 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
         addSpace(linearLayout)
         addCircle(
             config,
-            R.id.action_remove_menu,
+            com.android.systemui.res.R.id.action_remove_menu,
             R.drawable.pip_ic_close_white,
             linearLayout
         )
         addCircle(
             config,
-            R.id.action_edit,
-            com.android.internal.R.drawable.ic_screenshot_edit,
+            com.android.systemui.res.R.id.action_edit,
+            com.android.systemui.res.R.drawable.ic_screenshot_edit,
             linearLayout
         )
         // END DragToInteractView modification

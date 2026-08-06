@@ -16,8 +16,6 @@
 
 package com.android.systemui.settings.brightness;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
@@ -34,6 +32,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.systemui.Gefingerpoken;
+import com.android.systemui.res.R;
 
 import java.util.Collections;
 

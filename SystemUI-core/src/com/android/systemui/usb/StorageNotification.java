@@ -16,8 +16,6 @@
 
 package com.android.systemui.usb;
 
-import com.android.systemui.R
-
 import android.annotation.NonNull;
 import android.app.Notification;
 import android.app.Notification.Action;

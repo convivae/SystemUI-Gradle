@@ -14,8 +14,6 @@
 
 package com.android.systemui.util;
 
-import com.android.systemui.R
-
 import static android.hardware.devicestate.DeviceState.PROPERTY_FOLDABLE_DISPLAY_CONFIGURATION_INNER_PRIMARY;
 import static android.hardware.devicestate.DeviceState.PROPERTY_FOLDABLE_DISPLAY_CONFIGURATION_OUTER_PRIMARY;
 
@@ -31,6 +29,7 @@ import android.provider.Settings;
 import android.view.DisplayCutout;
 
 import com.android.internal.policy.SystemBarUtils;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.shared.system.QuickStepContract;
 

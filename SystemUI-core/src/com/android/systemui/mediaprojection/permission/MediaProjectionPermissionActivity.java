@@ -16,8 +16,6 @@
 
 package com.android.systemui.mediaprojection.permission;
 
-import com.android.systemui.R
-
 import static android.Manifest.permission.LOG_COMPAT_CHANGE;
 import static android.Manifest.permission.READ_COMPAT_CHANGE_CONFIG;
 import static android.media.projection.IMediaProjectionManager.EXTRA_PACKAGE_REUSING_GRANTED_CONSENT;
@@ -66,6 +64,7 @@ import com.android.systemui.mediaprojection.SessionCreationSource;
 import com.android.systemui.mediaprojection.appselector.MediaProjectionAppSelectorActivity;
 import com.android.systemui.mediaprojection.devicepolicy.ScreenCaptureDevicePolicyResolver;
 import com.android.systemui.mediaprojection.devicepolicy.ScreenCaptureDisabledDialogDelegate;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.AlertDialogWithDelegate;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 

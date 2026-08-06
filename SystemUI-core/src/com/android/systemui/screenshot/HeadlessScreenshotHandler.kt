@@ -16,13 +16,12 @@
 
 package com.android.systemui.screenshot
 
-import com.android.systemui.R
-
 import android.net.Uri
 import android.os.UserManager
 import android.util.Log
 import com.android.internal.logging.UiEventLogger
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import com.google.common.util.concurrent.ListenableFuture
 import java.util.UUID
 import java.util.concurrent.Executor

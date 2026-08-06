@@ -14,8 +14,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import static android.view.DisplayCutout.BOUNDS_POSITION_BOTTOM;
 import static android.view.DisplayCutout.BOUNDS_POSITION_LEFT;
 import static android.view.DisplayCutout.BOUNDS_POSITION_LENGTH;
@@ -87,6 +85,7 @@ import com.android.systemui.decor.RoundedCornerResDelegateImpl;
 import com.android.systemui.decor.ScreenDecorCommand;
 import com.android.systemui.log.ScreenDecorationsLogger;
 import com.android.systemui.qs.UserSettingObserver;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.commandline.CommandRegistry;
@@ -350,7 +349,7 @@ public class ScreenDecorations implements
         mDotFactory = dotFactory;
         mFaceScanningFactory = faceScanningFactory;
         mCameraProtectionLoader = cameraProtectionLoader;
-        mFaceScanningViewId = R.id.face_scanning_anim;
+        mFaceScanningViewId = com.android.systemui.res.R.id.face_scanning_anim;
         mLogger = logger;
         mFacePropertyRepository = facePropertyRepository;
         mJavaAdapter = javaAdapter;
@@ -1231,7 +1230,7 @@ public class ScreenDecorations implements
         if (faceScanningOverlay != null) {
             faceScanningOverlay.setFaceScanningAnimColor(
                     Utils.getColorAttrDefaultColor(faceScanningOverlay.getContext(),
-                            R.attr.wallpaperTextColorAccent));
+                            com.android.systemui.res.R.attr.wallpaperTextColorAccent));
         }
     }
 

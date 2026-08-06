@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.external
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.app.IUriGrantsManager
 import android.app.StatusBarManager
@@ -32,6 +30,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.qs.QSHost
 import com.android.systemui.qs.external.ui.dialog.TileRequestDialogComposeDelegate
 import com.android.systemui.qs.flags.QsInCompose
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.CommandQueue
 import com.android.systemui.statusbar.commandline.Command
 import com.android.systemui.statusbar.commandline.CommandRegistry

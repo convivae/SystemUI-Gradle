@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -32,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.settingslib.Utils;
+import com.android.systemui.res.R;
 import com.android.wm.shell.shared.animation.Interpolators;
 
 /**
@@ -87,7 +86,7 @@ public class TapAgainView extends TextView {
     public void animateOut() {
         long fadeOutDuration = 167L;  // From KeyguardIndicationTextView#getFadeOutDuration
         int yTranslation = mContext.getResources().getDimensionPixelSize(
-                R.dimen.keyguard_indication_y_translation);
+                com.android.systemui.res.R.dimen.keyguard_indication_y_translation);
 
         AnimatorSet animatorSet = new AnimatorSet();
         ObjectAnimator fadeOut = ObjectAnimator.ofFloat(this, View.ALPHA, 0f);

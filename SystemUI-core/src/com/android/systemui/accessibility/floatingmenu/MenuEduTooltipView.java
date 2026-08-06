@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
-import com.android.systemui.R
-
 import static android.util.TypedValue.COMPLEX_UNIT_PX;
 import static android.view.View.MeasureSpec.AT_MOST;
 import static android.view.View.MeasureSpec.UNSPECIFIED;
@@ -44,6 +42,7 @@ import androidx.annotation.NonNull;
 
 import com.android.settingslib.Utils;
 import com.android.systemui.recents.TriangleShape;
+import com.android.systemui.res.R;
 
 /**
  * The tooltip view shows the information about the operation of the anchor view {@link MenuView}

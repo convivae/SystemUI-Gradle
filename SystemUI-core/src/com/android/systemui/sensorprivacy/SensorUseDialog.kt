@@ -1,7 +1,5 @@
 package com.android.systemui.sensorprivacy
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.DialogInterface
 import android.content.res.Resources
@@ -11,6 +9,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
 import com.android.internal.widget.DialogTitle
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 
 class SensorUseDialog(

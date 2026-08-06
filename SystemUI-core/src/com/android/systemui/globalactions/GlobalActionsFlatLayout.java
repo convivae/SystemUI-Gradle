@@ -16,8 +16,6 @@
 
 package com.android.systemui.globalactions;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_LANDSCAPE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_NONE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_SEASCAPE;
@@ -29,6 +27,7 @@ import android.view.ViewGroup;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.HardwareBgDrawable;
+import com.android.systemui.res.R;
 
 /**
  * Flat, single-row implementation of the button layout created by the global actions dialog.
@@ -56,7 +55,7 @@ public class GlobalActionsFlatLayout extends GlobalActionsLayout {
     }
 
     private View getOverflowButton() {
-        return findViewById(R.id.global_actions_overflow_button);
+        return findViewById(com.android.systemui.res.R.id.global_actions_overflow_button);
     }
 
     @Override

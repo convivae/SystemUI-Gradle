@@ -17,8 +17,6 @@
 
 package com.android.systemui.communal.widgets
 
-import com.android.systemui.R
-
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.res.Resources
@@ -29,6 +27,7 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.dagger.CommunalLog
+import com.android.systemui.res.R
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor
 import dagger.Module
 import dagger.Provides

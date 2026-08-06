@@ -16,8 +16,6 @@
 
 package com.android.systemui.reardisplay;
 
-import com.android.systemui.R
-
 import static android.hardware.devicestate.DeviceState.PROPERTY_FOLDABLE_DISPLAY_CONFIGURATION_OUTER_PRIMARY;
 
 import android.annotation.NonNull;
@@ -39,6 +37,7 @@ import android.widget.LinearLayout;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CommandQueue;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 import com.android.systemui.statusbar.policy.ConfigurationController;

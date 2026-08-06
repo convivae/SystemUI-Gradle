@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.text.TextUtils;
@@ -26,7 +24,7 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.widget.TextView;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.Locale;
 

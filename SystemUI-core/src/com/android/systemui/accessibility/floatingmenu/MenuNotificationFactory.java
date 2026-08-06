@@ -16,14 +16,13 @@
 
 package com.android.systemui.accessibility.floatingmenu;
 
-import com.android.systemui.R
-
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.UserHandle;
 
+import com.android.systemui.res.R;
 import com.android.systemui.util.NotificationChannels;
 
 class MenuNotificationFactory {

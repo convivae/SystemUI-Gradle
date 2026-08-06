@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.drawable.ClipDrawable
@@ -28,6 +26,7 @@ import android.service.controls.templates.TemperatureControlTemplate
 import android.service.controls.templates.ThumbnailTemplate
 import android.util.TypedValue
 
+import com.android.systemui.res.R
 import com.android.systemui.controls.ui.ControlViewHolder.Companion.MAX_LEVEL
 import com.android.systemui.controls.ui.ControlViewHolder.Companion.MIN_LEVEL
 

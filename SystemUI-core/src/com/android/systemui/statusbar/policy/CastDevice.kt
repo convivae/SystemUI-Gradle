@@ -15,14 +15,13 @@
  */
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaRouter
 import android.media.projection.MediaProjectionInfo
 import android.text.TextUtils
 import com.android.systemui.log.core.LogLevel
+import com.android.systemui.res.R
 import com.android.systemui.util.Utils
 
 /** Represents a specific cast session. */

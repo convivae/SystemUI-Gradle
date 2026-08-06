@@ -16,8 +16,6 @@
 
 package com.android.systemui.globalactions;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.text.Layout;
 import android.text.TextUtils;

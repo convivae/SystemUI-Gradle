@@ -16,8 +16,6 @@
 
 package com.android.systemui.dreams;
 
-import com.android.systemui.R
-
 import android.annotation.ColorInt;
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -34,6 +32,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.systemui.ambient.statusbar.ui.AmbientStatusBarView;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.AlphaOptimizedImageView;
 
 /**

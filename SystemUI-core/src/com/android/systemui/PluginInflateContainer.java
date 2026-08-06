@@ -13,8 +13,6 @@
  */
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import android.annotation.Nullable;
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -25,6 +23,7 @@ import android.view.View;
 import com.android.systemui.plugins.PluginListener;
 import com.android.systemui.plugins.PluginManager;
 import com.android.systemui.plugins.ViewProvider;
+import com.android.systemui.res.R;
 
 /**
  * Define an interface or abstract class as follows that includes the

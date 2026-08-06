@@ -16,8 +16,6 @@
 
 package com.android.systemui.bluetooth;
 
-import com.android.systemui.R
-
 import android.annotation.CallbackExecutor;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -45,6 +43,7 @@ import com.android.systemui.broadcast.BroadcastSender;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.media.controls.util.MediaDataUtils;
 import com.android.systemui.media.dialog.MediaOutputDialogManager;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 
 import dagger.assisted.Assisted;

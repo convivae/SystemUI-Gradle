@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.pipeline.wifi.ui.binder
 
-import com.android.systemui.R
-
 import android.content.res.ColorStateList
 import android.view.View
 import android.view.ViewGroup
@@ -28,6 +26,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.android.systemui.Flags.statusBarStaticInoutIndicators
 import com.android.systemui.common.ui.binder.IconViewBinder
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.StatusBarIconView
 import com.android.systemui.statusbar.StatusBarIconView.STATE_HIDDEN
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewBinding

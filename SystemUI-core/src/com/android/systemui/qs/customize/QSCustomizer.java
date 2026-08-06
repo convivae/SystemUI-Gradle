@@ -15,8 +15,6 @@
  */
 package com.android.systemui.qs.customize;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.gsfQuickSettings;
 
 import android.animation.Animator;
@@ -41,7 +39,7 @@ import com.android.systemui.plugins.qs.QS;
 import com.android.systemui.plugins.qs.QSContainerController;
 import com.android.systemui.qs.QSDetailClipper;
 import com.android.systemui.qs.QSUtils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.LightBarController;
 
 /**

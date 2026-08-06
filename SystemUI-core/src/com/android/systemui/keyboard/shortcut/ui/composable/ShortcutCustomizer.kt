@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.ui.composable
 
-import com.android.systemui.R
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -60,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import com.android.compose.ui.graphics.painter.rememberDrawablePainter
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutKey
 import com.android.systemui.keyboard.shortcut.ui.model.ShortcutCustomizationUiState
+import com.android.systemui.res.R
 
 @Composable
 fun ShortcutCustomizationDialog(

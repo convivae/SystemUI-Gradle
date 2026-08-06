@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
-
 import android.app.ActivityOptions
 import android.app.Notification
 import android.app.PendingIntent
@@ -33,6 +31,7 @@ import android.util.Log
 import android.view.View
 import com.android.internal.logging.UiEventLogger
 import com.android.systemui.flags.FeatureFlags
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.NotificationRemoteInputManager
 import com.android.systemui.statusbar.RemoteInputController
 import com.android.systemui.statusbar.notification.collection.NotificationEntry

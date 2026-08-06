@@ -16,8 +16,6 @@
  */
 package com.android.systemui.keyguard.data.quickaffordance
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -39,6 +37,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.keyguard.shared.quickaffordance.ActivationState
 import com.android.systemui.modes.shared.ModesUi
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.policy.ZenModeController

@@ -16,12 +16,11 @@
 
 package com.android.systemui
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.Path
 import android.graphics.Rect
 import android.hardware.camera2.CameraManager
+import com.android.systemui.res.R
 import java.util.concurrent.Executor
 
 /**

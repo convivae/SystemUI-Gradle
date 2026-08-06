@@ -16,8 +16,6 @@
 
 package com.android.systemui.dreams;
 
-import com.android.systemui.R
-
 import static android.service.dreams.Flags.dreamHandlesBeingObscured;
 
 import static com.android.keyguard.BouncerPanelExpansionCalculator.aboutToShowBouncerProgress;
@@ -52,6 +50,7 @@ import com.android.systemui.dreams.dagger.DreamOverlayComponent;
 import com.android.systemui.dreams.dagger.DreamOverlayModule;
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor;
 import com.android.systemui.keyguard.shared.model.KeyguardState;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.model.Scenes;
 import com.android.systemui.shade.ShadeExpansionChangeEvent;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;

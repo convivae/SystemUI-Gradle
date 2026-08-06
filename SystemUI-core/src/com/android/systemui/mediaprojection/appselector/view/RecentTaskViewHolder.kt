@@ -16,8 +16,6 @@
 
 package com.android.systemui.mediaprojection.appselector.view
 
-import com.android.systemui.R
-
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
@@ -28,6 +26,7 @@ import com.android.systemui.mediaprojection.appselector.data.BadgedAppIconLoader
 import com.android.systemui.mediaprojection.appselector.data.RecentTask
 import com.android.systemui.mediaprojection.appselector.data.RecentTaskLabelLoader
 import com.android.systemui.mediaprojection.appselector.data.RecentTaskThumbnailLoader
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.ConfigurationController.ConfigurationListener
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory

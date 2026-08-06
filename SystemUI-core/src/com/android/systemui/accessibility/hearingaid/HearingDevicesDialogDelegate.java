@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.hearingaid;
 
-import com.android.systemui.R
-
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 
@@ -70,6 +68,7 @@ import com.android.systemui.bluetooth.qsdialog.DeviceItemType;
 import com.android.systemui.bluetooth.qsdialog.SavedHearingDeviceItemFactory;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 
 import dagger.assisted.Assisted;

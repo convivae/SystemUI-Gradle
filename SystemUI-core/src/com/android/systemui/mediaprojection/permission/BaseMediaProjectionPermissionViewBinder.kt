@@ -16,12 +16,11 @@
 
 package com.android.systemui.mediaprojection.permission
 
-import com.android.systemui.R
-
 import android.app.AlertDialog
 import android.view.View
 import android.widget.TextView
 import com.android.systemui.mediaprojection.MediaProjectionMetricsLogger
+import com.android.systemui.res.R
 
 open class BaseMediaProjectionPermissionViewBinder(
     private val screenShareOptions: List<ScreenShareOption>,

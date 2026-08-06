@@ -16,8 +16,6 @@
 
 package com.android.systemui.people;
 
-import com.android.systemui.R
-
 import static com.android.systemui.people.NotificationHelper.getContactUri;
 import static com.android.systemui.people.NotificationHelper.getMessagingStyleMessages;
 import static com.android.systemui.people.NotificationHelper.getSenderIfGroupConversation;
@@ -59,6 +57,7 @@ import com.android.internal.widget.MessagingMessage;
 import com.android.settingslib.utils.ThreadUtils;
 import com.android.systemui.people.widget.PeopleSpaceWidgetManager;
 import com.android.systemui.people.widget.PeopleTileKey;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 
 import java.text.SimpleDateFormat;

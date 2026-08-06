@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.pipeline.wifi.ui.model
 
-import com.android.systemui.R
-
 import android.annotation.DrawableRes
 import android.content.Context
 import androidx.annotation.StringRes
@@ -29,6 +27,7 @@ import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.log.table.Diffable
 import com.android.systemui.log.table.TableRowLogger
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.connectivity.WifiIcons
 import com.android.systemui.statusbar.pipeline.wifi.shared.model.WifiNetworkModel
 

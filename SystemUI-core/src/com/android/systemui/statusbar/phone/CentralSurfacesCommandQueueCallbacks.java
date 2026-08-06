@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_AWAKE;
 import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_WAKING;
 
@@ -57,6 +55,7 @@ import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QSPanelController;
 import com.android.systemui.qs.flags.QsInCompose;
 import com.android.systemui.recents.ScreenPinningRequest;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shade.CameraLauncher;

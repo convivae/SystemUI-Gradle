@@ -16,8 +16,6 @@
 
 package com.android.systemui.wallet.ui;
 
-import com.android.systemui.R
-
 import static com.android.systemui.wallet.util.WalletCardUtilsKt.getPaymentCards;
 
 import android.app.PendingIntent;
@@ -47,6 +45,7 @@ import com.android.internal.logging.UiEventLogger;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.FalsingManager;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 

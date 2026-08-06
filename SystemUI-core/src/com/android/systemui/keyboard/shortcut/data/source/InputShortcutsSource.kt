@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.data.source
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.hardware.input.InputManager
 import android.view.KeyEvent.KEYCODE_EMOJI_PICKER
@@ -31,6 +29,7 @@ import android.view.WindowManager.KeyboardShortcutsReceiver
 import com.android.systemui.Flags.shortcutHelperKeyGlyph
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyboard.shortcut.data.model.shortcutInfo
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.suspendCancellableCoroutine
 

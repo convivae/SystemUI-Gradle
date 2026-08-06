@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
-import com.android.systemui.R
-
 import android.annotation.MainThread
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -91,6 +89,7 @@ import com.android.systemui.media.controls.util.MediaUiEventLogger
 import com.android.systemui.media.controls.util.SmallHash
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.BcSmartspaceDataPlugin
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.statusbar.NotificationMediaManager.isPlayingState
 import com.android.systemui.statusbar.notification.row.HybridGroupManager

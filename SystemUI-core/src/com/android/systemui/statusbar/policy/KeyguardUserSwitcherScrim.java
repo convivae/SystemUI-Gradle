@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -30,6 +28,7 @@ import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 
+import com.android.systemui.res.R;
 
 /**
  * Gradient background for the user switcher on Keyguard.

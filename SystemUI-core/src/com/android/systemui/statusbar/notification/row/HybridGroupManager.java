@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;
 
 import android.annotation.Nullable;
@@ -33,6 +31,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.android.internal.widget.ConversationLayout;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.row.shared.AsyncHybridViewInflation;
 
 /**

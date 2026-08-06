@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
@@ -43,6 +41,7 @@ import com.android.systemui.media.controls.shared.model.MediaAction
 import com.android.systemui.media.controls.shared.model.MediaButton
 import com.android.systemui.media.controls.util.MediaControllerFactory
 import com.android.systemui.media.controls.util.SessionTokenFactory
+import com.android.systemui.res.R
 import com.android.systemui.util.concurrency.Execution
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope

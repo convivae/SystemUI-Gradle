@@ -16,8 +16,6 @@
 
 package com.android.systemui.complication;
 
-import com.android.systemui.R
-
 import static com.android.systemui.complication.ComplicationLayoutParams.DIRECTION_DOWN;
 import static com.android.systemui.complication.ComplicationLayoutParams.DIRECTION_END;
 import static com.android.systemui.complication.ComplicationLayoutParams.DIRECTION_START;
@@ -45,6 +43,7 @@ import androidx.constraintlayout.widget.Constraints;
 import com.android.systemui.complication.ComplicationLayoutParams.Direction;
 import com.android.systemui.complication.ComplicationLayoutParams.Position;
 import com.android.systemui.complication.dagger.ComplicationModule;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.touch.TouchInsetManager;
 

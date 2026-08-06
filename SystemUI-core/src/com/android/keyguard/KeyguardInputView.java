@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
@@ -30,7 +28,7 @@ import androidx.annotation.CallSuper;
 import androidx.annotation.Nullable;
 
 import com.android.internal.jank.InteractionJankMonitor;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * A Base class for all Keyguard password/pattern/pin related inputs.

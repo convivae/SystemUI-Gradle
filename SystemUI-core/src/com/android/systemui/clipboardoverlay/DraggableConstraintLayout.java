@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot;
 
-import com.android.systemui.R
-
 import static com.android.systemui.screenshot.LogConfig.DEBUG_ANIM;
 import static com.android.systemui.screenshot.LogConfig.DEBUG_DISMISS;
 
@@ -38,7 +36,7 @@ import android.view.ViewTreeObserver;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * ConstraintLayout that is draggable when touched in a specific region

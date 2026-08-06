@@ -24,12 +24,12 @@ import android.view.LayoutInflater
 import android.widget.Switch
 import android.widget.TextView
 import com.android.systemui.recordissue.IssueRecordingState.Companion.TAG_TITLE_DELIMITER
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import com.android.traceur.PresetTraceConfigs
 import com.android.traceur.TraceConfig
 import com.android.traceur.res.R as T
 import java.util.function.Consumer
-import com.android.systemui.R
 
 class CustomTraceSettingsDialogDelegate(
     private val factory: SystemUIDialog.Factory,

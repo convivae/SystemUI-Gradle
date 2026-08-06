@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import static android.service.notification.NotificationAssistantService.FEEDBACK_RATING;
 
 import static com.android.systemui.statusbar.notification.AssistantFeedbackController.STATUS_ALERTED;
@@ -45,6 +43,7 @@ import android.widget.TextView;
 
 import com.android.internal.statusbar.IStatusBarService;
 import com.android.systemui.plugins.statusbar.NotificationMenuRowPlugin;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.AssistantFeedbackController;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.util.Compile;

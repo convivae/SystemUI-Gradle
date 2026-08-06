@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static com.android.systemui.keyguard.shared.model.KeyguardState.ALTERNATE_BOUNCER;
 import static com.android.systemui.keyguard.shared.model.KeyguardState.GLANCEABLE_HUB;
 import static com.android.systemui.keyguard.shared.model.KeyguardState.GONE;
@@ -70,6 +68,7 @@ import com.android.systemui.keyguard.shared.model.TransitionState;
 import com.android.systemui.keyguard.shared.model.TransitionStep;
 import com.android.systemui.keyguard.ui.viewmodel.AlternateBouncerToGoneTransitionViewModel;
 import com.android.systemui.keyguard.ui.viewmodel.PrimaryBouncerToGoneTransitionViewModel;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.scene.shared.model.Scenes;
 import com.android.systemui.scrim.ScrimView;

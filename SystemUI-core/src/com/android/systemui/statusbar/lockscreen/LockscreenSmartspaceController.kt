@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.lockscreen
 
-import com.android.systemui.R
-
 import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.app.smartspace.SmartspaceConfig
@@ -61,6 +59,7 @@ import com.android.systemui.plugins.BcSmartspaceDataPlugin.TimeChangedDelegate
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.plugins.clocks.WeatherData
 import com.android.systemui.plugins.statusbar.StatusBarStateController
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.shared.regionsampling.RegionSampler
 import com.android.systemui.smartspace.dagger.SmartspaceModule.Companion.DATE_SMARTSPACE_DATA_PLUGIN

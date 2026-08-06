@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.management
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.app.Activity
@@ -47,6 +45,7 @@ import com.android.systemui.controls.controller.ControlsControllerImpl
 import com.android.systemui.controls.controller.StructureInfo
 import com.android.systemui.controls.ui.ControlsActivity
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import java.text.Collator
 import java.util.concurrent.Executor

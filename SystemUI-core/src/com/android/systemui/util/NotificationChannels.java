@@ -14,8 +14,6 @@
 
 package com.android.systemui.util;
 
-import com.android.systemui.R
-
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
@@ -26,6 +24,7 @@ import android.provider.Settings;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.CoreStartable;
+import com.android.systemui.res.R;
 import com.android.wm.shell.pip.tv.TvPipNotificationController;
 
 import java.util.Arrays;

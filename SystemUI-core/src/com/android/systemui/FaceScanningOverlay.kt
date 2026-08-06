@@ -16,8 +16,6 @@
 
 package com.android.systemui
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet

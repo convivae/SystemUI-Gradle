@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper;
 
-import com.android.systemui.R
-
 import android.annotation.ColorInt;
 import android.annotation.Nullable;
 import android.app.Notification;

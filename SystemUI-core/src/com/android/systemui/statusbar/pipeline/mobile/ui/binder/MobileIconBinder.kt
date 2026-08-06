@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.pipeline.mobile.ui.binder
 
-import com.android.systemui.R
-
 import android.annotation.ColorInt
 import android.content.res.ColorStateList
 import android.view.View
@@ -37,6 +35,7 @@ import com.android.systemui.common.ui.binder.ContentDescriptionViewBinder
 import com.android.systemui.common.ui.binder.IconViewBinder
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.DarkIconDispatcher
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.StatusBarIconView
 import com.android.systemui.statusbar.StatusBarIconView.STATE_HIDDEN
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel

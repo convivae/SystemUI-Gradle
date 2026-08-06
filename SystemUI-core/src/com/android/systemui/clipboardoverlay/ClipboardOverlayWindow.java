@@ -16,8 +16,6 @@
 
 package com.android.systemui.clipboardoverlay;
 
-import com.android.systemui.R
-
 import android.annotation.MainThread;
 import android.annotation.NonNull;
 import android.content.Context;

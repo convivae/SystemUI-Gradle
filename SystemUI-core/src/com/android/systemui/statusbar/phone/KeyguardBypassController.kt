@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone
 
-import com.android.systemui.R
-
 import android.annotation.IntDef
 import android.content.pm.PackageManager
 import android.content.res.Resources
@@ -33,6 +31,7 @@ import com.android.systemui.dump.DumpManager
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.plugins.statusbar.StatusBarStateController
+import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.NotificationLockscreenUserManager
 import com.android.systemui.statusbar.StatusBarState

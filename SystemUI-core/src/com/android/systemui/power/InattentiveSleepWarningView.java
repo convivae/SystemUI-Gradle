@@ -16,8 +16,6 @@
 
 package com.android.systemui.power;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.enableViewCaptureTracing;
 
 import android.animation.Animator;
@@ -35,6 +33,7 @@ import android.widget.FrameLayout;
 
 import com.android.app.viewcapture.ViewCapture;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
+import com.android.systemui.res.R;
 
 import kotlin.Lazy;
 

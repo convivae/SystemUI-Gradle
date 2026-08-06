@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone.ui;
 
-import com.android.systemui.R
-
 import android.annotation.Nullable;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
@@ -27,6 +25,7 @@ import android.util.ArraySet;
 import androidx.annotation.DrawableRes;
 
 import com.android.internal.statusbar.StatusBarIcon;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.StatusBarSignalPolicy.CallIndicatorIconState;
 
 import java.util.List;

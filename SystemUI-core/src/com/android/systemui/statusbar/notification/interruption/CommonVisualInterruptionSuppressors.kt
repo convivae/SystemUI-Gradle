@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.interruption
 
-import com.android.systemui.R
-
 import android.Manifest.permission.RECEIVE_EMERGENCY_BROADCAST
 import android.app.Notification
 import android.app.Notification.BubbleMetadata
@@ -384,11 +382,11 @@ class AvalancheSuppressor(
     private fun showEdu() {
         val res = context.resources
         val titleStr =
-            res.getString(R.string.adaptive_notification_edu_hun_title)
+            res.getString(com.android.systemui.res.R.string.adaptive_notification_edu_hun_title)
         val textStr =
-            res.getString(R.string.adaptive_notification_edu_hun_text)
+            res.getString(com.android.systemui.res.R.string.adaptive_notification_edu_hun_text)
         val actionStr =
-            res.getString(R.string.go_to_adaptive_notification_settings)
+            res.getString(com.android.systemui.res.R.string.go_to_adaptive_notification_settings)
 
         val intent = Intent(Settings.ACTION_MANAGE_ADAPTIVE_NOTIFICATIONS)
         val pendingIntent =
@@ -407,7 +405,7 @@ class AvalancheSuppressor(
                 .setContentTitle(titleStr)
                 .setContentText(textStr)
                 .setStyle(Notification.BigTextStyle().bigText(textStr))
-                .setSmallIcon(R.drawable.ic_settings)
+                .setSmallIcon(com.android.systemui.res.R.drawable.ic_settings)
                 .setCategory(Notification.CATEGORY_SYSTEM)
                 .setTimeoutAfter(/* one day in ms */ 24 * 60 * 60 * 1000L)
                 .setAutoCancel(true)

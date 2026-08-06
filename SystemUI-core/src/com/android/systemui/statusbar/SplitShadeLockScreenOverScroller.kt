@@ -1,7 +1,5 @@
 package com.android.systemui.statusbar
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.content.Context
@@ -9,6 +7,7 @@ import android.content.res.Configuration
 import android.util.MathUtils
 import android.view.animation.PathInterpolator
 import com.android.internal.annotations.VisibleForTesting
+import com.android.systemui.res.R
 import com.android.app.animation.Interpolators
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.plugins.qs.QS

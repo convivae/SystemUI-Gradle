@@ -16,8 +16,6 @@
 
 package com.android.systemui.assist;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -36,6 +34,7 @@ import android.view.accessibility.AccessibilityEvent;
 
 import com.android.app.animation.Interpolators;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
+import com.android.systemui.res.R;
 
 /**
  * Visually discloses that contextual data was provided to an assistant.

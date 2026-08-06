@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls
 
-import com.android.systemui.R
-
 import android.annotation.StringRes
 import android.content.Context
 import android.graphics.CornerPathEffect
@@ -30,6 +28,7 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import com.android.systemui.Prefs
+import com.android.systemui.res.R
 import com.android.systemui.recents.TriangleShape
 
 /**

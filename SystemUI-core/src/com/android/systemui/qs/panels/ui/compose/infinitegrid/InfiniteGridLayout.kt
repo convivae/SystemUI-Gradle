@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.panels.ui.compose.infinitegrid
 
-import com.android.systemui.R
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +43,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.InfiniteGridViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.ui.ElementKeys.toElementKey
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 @SysUISingleton

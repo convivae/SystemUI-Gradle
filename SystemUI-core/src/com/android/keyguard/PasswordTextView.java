@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.notifyPasswordTextViewUserActivityInBackground;
 
 import android.animation.Animator;
@@ -41,7 +39,7 @@ import android.view.animation.AnimationUtils;
 import android.view.animation.Interpolator;
 
 import com.android.settingslib.Utils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 

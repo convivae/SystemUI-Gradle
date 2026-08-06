@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.systemsounds;
 
-import com.android.systemui.R
-
 import android.Manifest;
 import android.app.ActivityManager;
 import android.app.WindowConfiguration;
@@ -29,6 +27,7 @@ import android.util.Slog;
 
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.res.R;
 import com.android.systemui.shared.system.ActivityManagerWrapper;
 import com.android.systemui.shared.system.TaskStackChangeListener;
 import com.android.systemui.shared.system.TaskStackChangeListeners;

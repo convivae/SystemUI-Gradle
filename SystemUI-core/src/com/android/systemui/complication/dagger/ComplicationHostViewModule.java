@@ -16,8 +16,6 @@
 
 package com.android.systemui.complication.dagger;
 
-import com.android.systemui.R
-
 import android.content.res.Resources;
 import android.view.LayoutInflater;
 
@@ -25,6 +23,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.android.internal.util.Preconditions;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 
 import dagger.Module;
 import dagger.Provides;

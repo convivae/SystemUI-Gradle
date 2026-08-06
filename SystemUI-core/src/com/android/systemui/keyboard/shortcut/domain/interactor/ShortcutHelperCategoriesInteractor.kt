@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.domain.interactor
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.KeyEvent.META_META_ON
 import com.android.systemui.Flags.keyboardShortcutHelperShortcutCustomizer
@@ -33,6 +31,7 @@ import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategory
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCommand
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutKey
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutSubCategory
+import com.android.systemui.res.R
 import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow

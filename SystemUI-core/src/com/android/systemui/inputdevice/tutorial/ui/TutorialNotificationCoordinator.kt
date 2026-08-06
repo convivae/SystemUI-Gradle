@@ -16,8 +16,6 @@
 
 package com.android.systemui.inputdevice.tutorial.ui
 
-import com.android.systemui.R
-
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -40,6 +38,7 @@ import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutoria
 import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity.Companion.INTENT_TUTORIAL_SCOPE_KEY
 import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity.Companion.INTENT_TUTORIAL_SCOPE_KEYBOARD
 import com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity.Companion.INTENT_TUTORIAL_SCOPE_TOUCHPAD
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope

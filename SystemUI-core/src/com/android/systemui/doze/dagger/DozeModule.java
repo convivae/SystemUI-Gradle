@@ -16,8 +16,6 @@
 
 package com.android.systemui.doze.dagger;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.hardware.Sensor;
 
@@ -38,6 +36,7 @@ import com.android.systemui.doze.DozeTransitionListener;
 import com.android.systemui.doze.DozeTriggers;
 import com.android.systemui.doze.DozeUi;
 import com.android.systemui.doze.DozeWallpaperState;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.DozeParameters;
 import com.android.systemui.statusbar.policy.DevicePostureController;
 import com.android.systemui.util.sensors.AsyncSensorManager;

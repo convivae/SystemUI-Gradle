@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
@@ -51,7 +49,7 @@ import com.android.systemui.log.core.LogLevel;
 import com.android.systemui.log.dagger.KeyguardClockLog;
 import com.android.systemui.plugins.clocks.ClockController;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.shared.clocks.ClockRegistry;
 import com.android.systemui.shared.regionsampling.RegionSampler;
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController;
@@ -226,9 +224,9 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
 
         if (!MigrateClocksToBlueprint.isEnabled()) {
             mSmallClockFrame = mView
-                .findViewById(com.android.systemui.R.id.lockscreen_clock_view);
+                .findViewById(com.android.systemui.customization.R.id.lockscreen_clock_view);
             mLargeClockFrame = mView
-                .findViewById(com.android.systemui.R.id.lockscreen_clock_view_large);
+                .findViewById(com.android.systemui.customization.R.id.lockscreen_clock_view_large);
         }
 
         if (!mOnlyClock) {
@@ -263,7 +261,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
                 mView.getResources().getDimensionPixelSize(R.dimen.keyguard_clock_top_margin);
         mKeyguardLargeClockTopMargin =
                 mView.getResources().getDimensionPixelSize(
-                        com.android.systemui.R.dimen.keyguard_large_clock_top_margin);
+                        com.android.systemui.customization.R.dimen.keyguard_large_clock_top_margin);
         mKeyguardDateWeatherViewInvisibility =
                 mView.getResources().getInteger(R.integer.keyguard_date_weather_view_invisibility);
 
@@ -429,7 +427,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
                 mView.getResources().getDimensionPixelSize(R.dimen.keyguard_clock_top_margin);
         mKeyguardLargeClockTopMargin =
                 mView.getResources().getDimensionPixelSize(
-                        com.android.systemui.R.dimen.keyguard_large_clock_top_margin);
+                        com.android.systemui.customization.R.dimen.keyguard_large_clock_top_margin);
         mKeyguardDateWeatherViewInvisibility =
                 mView.getResources().getInteger(R.integer.keyguard_date_weather_view_invisibility);
         mView.updateClockTargetRegions();
@@ -575,7 +573,7 @@ public class KeyguardClockSwitchController extends ViewController<KeyguardClockS
         if (!MigrateClocksToBlueprint.isEnabled()) {
             NotificationIconContainer nic = (NotificationIconContainer)
                     mView.findViewById(
-                            com.android.systemui.R.id.left_aligned_notification_icon_container);
+                            com.android.systemui.res.R.id.left_aligned_notification_icon_container);
             if (mAodIconsBindHandle != null) {
                 mAodIconsBindHandle.dispose();
             }

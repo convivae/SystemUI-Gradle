@@ -15,8 +15,6 @@
  */
 package com.android.systemui.accessibility.extradim
 
-import com.android.systemui.R
-
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent

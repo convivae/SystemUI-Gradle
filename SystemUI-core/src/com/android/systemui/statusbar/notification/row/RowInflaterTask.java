@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -31,6 +29,7 @@ import androidx.annotation.VisibleForTesting;
 import androidx.asynclayoutinflater.view.AsyncLayoutFactory;
 import androidx.asynclayoutinflater.view.AsyncLayoutInflater;
 
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.InflationTask;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.util.time.SystemClock;

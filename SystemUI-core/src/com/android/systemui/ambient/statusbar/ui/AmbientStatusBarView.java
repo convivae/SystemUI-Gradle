@@ -16,8 +16,6 @@
 
 package com.android.systemui.ambient.statusbar.ui;
 
-import com.android.systemui.R
-
 import android.annotation.IntDef;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -28,6 +26,7 @@ import android.view.ViewGroup;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
 
+import com.android.systemui.res.R;
 import com.android.systemui.shared.shadow.DoubleShadowIconDrawable;
 import com.android.systemui.shared.shadow.DoubleShadowTextHelper.ShadowInfo;
 import com.android.systemui.statusbar.AlphaOptimizedImageView;

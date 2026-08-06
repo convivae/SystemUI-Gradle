@@ -16,12 +16,11 @@
 
 package com.android.systemui.qs
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.util.AttributeSet
 import com.android.systemui.flags.Flags
 import com.android.systemui.flags.RefactorFlag
+import com.android.systemui.res.R
 
 open class SideLabelTileLayout(
     context: Context,

@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyboard.backlight.ui.view
 
-import com.android.systemui.R
-
 import android.annotation.AttrRes
 import android.annotation.ColorInt
 import android.app.Dialog
@@ -41,6 +39,7 @@ import android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
 import androidx.annotation.IdRes
 import androidx.core.view.setPadding
 import com.android.settingslib.Utils
+import com.android.systemui.res.R
 
 class KeyboardBacklightDialog(
     context: Context,

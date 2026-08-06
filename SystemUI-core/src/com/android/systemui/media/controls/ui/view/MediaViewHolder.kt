@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.view
 
-import com.android.systemui.R
-
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +25,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.constraintlayout.widget.Barrier
 import com.android.internal.widget.CachingIconView
+import com.android.systemui.res.R
 import com.android.systemui.surfaceeffects.loadingeffect.LoadingEffectView
 import com.android.systemui.surfaceeffects.ripple.MultiRippleView
 import com.android.systemui.surfaceeffects.turbulencenoise.TurbulenceNoiseView

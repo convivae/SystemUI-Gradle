@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.annotation.ColorRes
 import android.annotation.MainThread
 import android.content.ComponentName
@@ -28,6 +26,7 @@ import android.service.controls.templates.TemperatureControlTemplate
 import android.util.ArrayMap
 import android.util.SparseArray
 
+import com.android.systemui.res.R
 
 data class RenderInfo(
     val icon: Drawable,

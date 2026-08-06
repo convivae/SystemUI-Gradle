@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -34,6 +32,7 @@ import com.android.systemui.flags.FeatureFlags
 import com.android.systemui.flags.Flags
 import com.android.systemui.keyguard.data.repository.KeyguardRepository
 import com.android.systemui.keyguard.shared.model.KeyguardState
+import com.android.systemui.res.R
 import com.android.systemui.shade.PulsingGestureListener
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.policy.AccessibilityManagerWrapper

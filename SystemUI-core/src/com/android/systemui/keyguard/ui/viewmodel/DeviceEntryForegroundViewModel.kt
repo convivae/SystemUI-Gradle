@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import com.android.settingslib.Utils
 import com.android.systemui.biometrics.domain.interactor.UdfpsOverlayInteractor
@@ -28,6 +26,7 @@ import com.android.systemui.deviceentry.domain.interactor.DeviceEntryUdfpsIntera
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.keyguard.ui.view.DeviceEntryIconView
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 import kotlin.math.roundToInt

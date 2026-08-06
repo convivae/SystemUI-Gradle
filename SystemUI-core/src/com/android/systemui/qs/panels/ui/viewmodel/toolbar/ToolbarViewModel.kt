@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.panels.ui.viewmodel.toolbar
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.ContextThemeWrapper
 import androidx.compose.runtime.getValue
@@ -34,6 +32,7 @@ import com.android.systemui.qs.footer.ui.viewmodel.FooterActionsButtonViewModel
 import com.android.systemui.qs.footer.ui.viewmodel.powerButtonViewModel
 import com.android.systemui.qs.footer.ui.viewmodel.settingsButtonViewModel
 import com.android.systemui.qs.footer.ui.viewmodel.userSwitcherViewModel
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

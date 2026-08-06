@@ -16,8 +16,6 @@
 
 package com.android.systemui.shade.carrier;
 
-import com.android.systemui.R
-
 import static android.telephony.SubscriptionManager.INVALID_SIM_SLOT_INDEX;
 import static android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES;
 
@@ -45,7 +43,7 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.statusbar.connectivity.MobileDataIndicators;
 import com.android.systemui.statusbar.connectivity.NetworkController;

@@ -16,8 +16,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -29,6 +27,7 @@ import android.os.UserHandle;
 import android.provider.Settings;
 
 import com.android.internal.messages.nano.SystemMessageProto;
+import com.android.systemui.res.R;
 import com.android.systemui.util.NotificationChannels;
 
 import javax.inject.Inject;

@@ -14,8 +14,6 @@
 
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -30,7 +28,7 @@ import androidx.core.widget.NestedScrollView;
 
 import com.android.systemui.qs.touch.OverScroll;
 import com.android.systemui.qs.touch.SwipeDetector;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Quick setting scroll view containing the brightness slider and the QS tiles.

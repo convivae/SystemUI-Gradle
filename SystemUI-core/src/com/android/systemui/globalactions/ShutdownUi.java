@@ -16,8 +16,6 @@
 
 package com.android.systemui.globalactions;
 
-import com.android.systemui.R
-
 import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
 
 import android.annotation.Nullable;
@@ -66,10 +64,10 @@ public class ShutdownUi {
         ScrimDrawable background = new ScrimDrawable();
 
         final Dialog d = new Dialog(mContext,
-                R.style.Theme_SystemUI_Dialog_GlobalActions);
+                com.android.systemui.res.R.style.Theme_SystemUI_Dialog_GlobalActions);
 
         float backgroundAlpha = mContext.getResources().getFloat(
-                R.dimen.shutdown_scrim_behind_alpha);
+                com.android.systemui.res.R.dimen.shutdown_scrim_behind_alpha);
         background.setAlpha((int) (backgroundAlpha * 255));
 
         // Window initialization
@@ -94,13 +92,13 @@ public class ShutdownUi {
                         | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
                         | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         window.setBackgroundDrawable(background);
-        window.setWindowAnimations(R.style.Animation_ShutdownUi);
+        window.setWindowAnimations(com.android.systemui.res.R.style.Animation_ShutdownUi);
 
         d.setContentView(getShutdownDialogContent(isReboot));
         d.setCancelable(false);
 
         int color = mContext.getResources().getColor(
-                R.color.global_actions_shutdown_ui_text,
+                com.android.systemui.res.R.color.global_actions_shutdown_ui_text,
                 mContext.getTheme());
 
         ProgressBar bar = d.findViewById(R.id.progress);
@@ -140,7 +138,7 @@ public class ShutdownUi {
         } else if (finderActive == NearbyManager.POWERED_OFF_FINDING_MODE_ENABLED) {
             // active, use dialog with finder info if shutting down
             return isReboot ? R.layout.shutdown_dialog :
-                    R.layout.shutdown_dialog_finder_active;
+                    com.android.systemui.res.R.layout.shutdown_dialog_finder_active;
         } else {
             // that's weird? default to regular dialog
             Log.w("ShutdownUi", "Unexpected value for finder active: " + finderActive);

@@ -14,8 +14,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import static android.view.WindowManager.LayoutParams.SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
 
 import android.annotation.Nullable;
@@ -37,6 +35,7 @@ import android.util.Log;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
+import com.android.systemui.res.R;
 
 public class SlicePermissionActivity extends Activity implements OnClickListener,
         OnDismissListener {

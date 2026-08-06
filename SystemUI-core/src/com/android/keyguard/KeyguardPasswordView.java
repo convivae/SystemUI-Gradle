@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 import static android.view.WindowInsets.Type.ime;
 
@@ -57,7 +55,7 @@ import com.android.app.animation.Interpolators;
 import com.android.internal.widget.LockscreenCredential;
 import com.android.internal.widget.TextViewInputDisabler;
 import com.android.systemui.DejankUtils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.DevicePostureController;
 
 /**

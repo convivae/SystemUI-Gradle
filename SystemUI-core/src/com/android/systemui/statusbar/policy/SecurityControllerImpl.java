@@ -15,8 +15,6 @@
  */
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static android.net.NetworkCapabilities.TRANSPORT_VPN;
 
@@ -62,6 +60,7 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 
 import org.xmlpull.v1.XmlPullParserException;

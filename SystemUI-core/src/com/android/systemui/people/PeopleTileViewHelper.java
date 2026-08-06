@@ -15,8 +15,6 @@
  */
 package com.android.systemui.people;
 
-import com.android.systemui.R
-
 import static android.app.Notification.CATEGORY_MISSED_CALL;
 import static android.app.people.ConversationStatus.ACTIVITY_ANNIVERSARY;
 import static android.app.people.ConversationStatus.ACTIVITY_AUDIO;
@@ -80,6 +78,7 @@ import com.android.systemui.people.data.model.PeopleTileModel;
 import com.android.systemui.people.widget.LaunchConversationActivity;
 import com.android.systemui.people.widget.PeopleSpaceWidgetProvider;
 import com.android.systemui.people.widget.PeopleTileKey;
+import com.android.systemui.res.R;
 
 import java.io.IOException;
 import java.text.NumberFormat;

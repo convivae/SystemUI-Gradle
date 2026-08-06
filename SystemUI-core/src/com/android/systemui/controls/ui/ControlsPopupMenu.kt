@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.drawable.ColorDrawable
@@ -32,6 +30,7 @@ import android.view.ViewGroup
 import android.widget.ListPopupWindow
 import android.widget.ListView
 import android.widget.PopupWindow
+import com.android.systemui.res.R
 import kotlin.math.max
 
 class ControlsPopupMenu(context: Context) : ListPopupWindow(context) {

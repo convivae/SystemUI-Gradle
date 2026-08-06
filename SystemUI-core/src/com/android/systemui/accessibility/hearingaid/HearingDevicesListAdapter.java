@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.hearingaid;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
@@ -31,6 +29,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.settingslib.Utils;
 import com.android.systemui.bluetooth.qsdialog.DeviceItem;
+import com.android.systemui.res.R;
 
 import kotlin.Pair;
 

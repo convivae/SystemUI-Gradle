@@ -16,8 +16,6 @@
 
 package com.android.systemui.bouncer.ui
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.Typeface
 import android.util.AttributeSet
@@ -26,6 +24,7 @@ import com.android.keyguard.BouncerKeyguardMessageArea
 import com.android.keyguard.KeyguardMessageArea
 import com.android.keyguard.KeyguardMessageAreaController
 import com.android.systemui.Flags
+import com.android.systemui.res.R
 
 class BouncerMessageView : LinearLayout {
     constructor(context: Context?) : super(context)

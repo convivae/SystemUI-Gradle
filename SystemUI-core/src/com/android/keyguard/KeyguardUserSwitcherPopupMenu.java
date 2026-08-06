@@ -15,8 +15,6 @@
  */
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.res.Resources;
@@ -28,7 +26,7 @@ import android.widget.ListPopupWindow;
 import android.widget.ListView;
 
 import com.android.systemui.plugins.FalsingManager;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Custom user-switcher for use on the bouncer.

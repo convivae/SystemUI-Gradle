@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.pipeline.shared.data.repository
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
@@ -38,6 +36,7 @@ import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dump.DumpManager
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.ui.StatusBarIconController
 import com.android.systemui.statusbar.pipeline.shared.ConnectivityInputLogger
 import com.android.systemui.statusbar.pipeline.shared.data.model.ConnectivitySlot

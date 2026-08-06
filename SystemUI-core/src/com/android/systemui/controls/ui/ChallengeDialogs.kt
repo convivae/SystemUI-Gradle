@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.DialogInterface
@@ -34,6 +32,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.CheckBox
 import android.widget.EditText
 
+import com.android.systemui.res.R
 
 /**
  * Creates all dialogs for challengeValues that can occur from a call to

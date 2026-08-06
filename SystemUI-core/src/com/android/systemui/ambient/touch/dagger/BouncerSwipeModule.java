@@ -16,8 +16,6 @@
 
 package com.android.systemui.ambient.touch.dagger;
 
-import com.android.systemui.R
-
 import android.animation.ValueAnimator;
 import android.content.res.Resources;
 import android.util.TypedValue;
@@ -26,6 +24,7 @@ import android.view.VelocityTracker;
 import com.android.systemui.ambient.touch.BouncerSwipeTouchHandler;
 import com.android.systemui.ambient.touch.TouchHandler;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.ShadeViewController;
 import com.android.wm.shell.animation.FlingAnimationUtils;
 

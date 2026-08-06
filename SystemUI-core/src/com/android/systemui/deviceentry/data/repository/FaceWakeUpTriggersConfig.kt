@@ -16,8 +16,6 @@
 
 package com.android.systemui.deviceentry.data.repository
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.os.Build
 import android.os.PowerManager
@@ -26,6 +24,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.power.shared.model.WakeSleepReason
+import com.android.systemui.res.R
 import com.android.systemui.util.settings.GlobalSettings
 import dagger.Binds
 import dagger.Module

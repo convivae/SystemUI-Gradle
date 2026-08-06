@@ -16,13 +16,12 @@
 
 package com.android.systemui.assist.ui;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Surface;
 
+import com.android.systemui.res.R;
 
 /**
  * Utility class for determining screen and corner dimensions.

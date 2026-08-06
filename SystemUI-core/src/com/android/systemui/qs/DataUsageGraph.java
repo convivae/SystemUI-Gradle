@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
@@ -27,7 +25,7 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import com.android.settingslib.Utils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 public class DataUsageGraph extends View {
 

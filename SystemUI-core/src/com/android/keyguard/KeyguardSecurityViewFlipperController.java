@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 
 import static com.android.systemui.flags.Flags.LOCKSCREEN_ENABLE_LANDSCAPE;
@@ -33,7 +31,7 @@ import com.android.keyguard.KeyguardInputViewController.Factory;
 import com.android.keyguard.KeyguardSecurityModel.SecurityMode;
 import com.android.keyguard.dagger.KeyguardBouncerScope;
 import com.android.systemui.flags.FeatureFlags;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.util.ViewController;
 
 import java.util.ArrayList;

@@ -16,10 +16,9 @@
 
 package com.android.systemui.statusbar.pipeline.wifi.shared
 
-import com.android.systemui.R
-
 import android.content.Context
 import com.android.systemui.Dumpable
+import com.android.systemui.res.R
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dump.DumpManager
 import java.io.PrintWriter

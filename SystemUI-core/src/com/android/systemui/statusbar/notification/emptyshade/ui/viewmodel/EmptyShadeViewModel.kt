@@ -16,13 +16,12 @@
 
 package com.android.systemui.statusbar.notification.emptyshade.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.icu.text.MessageFormat
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.modes.shared.ModesUi
+import com.android.systemui.res.R
 import com.android.systemui.shared.notifications.domain.interactor.NotificationSettingsInteractor
 import com.android.systemui.statusbar.notification.NotificationActivityStarter.SettingsIntent
 import com.android.systemui.statusbar.notification.domain.interactor.SeenNotificationsInteractor

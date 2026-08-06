@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.controller
 
-import com.android.systemui.R
-
 import android.annotation.WorkerThread
 import android.app.PendingIntent
 import android.content.Context
@@ -79,6 +77,7 @@ import com.android.systemui.media.controls.util.SmallHash
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.qs.PageIndicator
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shared.system.SysUiStatsLog

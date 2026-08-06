@@ -16,8 +16,6 @@
 
 package com.android.systemui.inputdevice.tutorial.ui.composable
 
-import com.android.systemui.R
-
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -41,6 +39,7 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialActionState.Finished
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialActionState.NotStarted
+import com.android.systemui.res.R
 
 @Composable
 fun ActionKeyTutorialScreen(onDoneButtonClicked: () -> Unit, onBack: () -> Unit) {

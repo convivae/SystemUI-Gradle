@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy.dagger;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Resources;
 import android.os.UserManager;

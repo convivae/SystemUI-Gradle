@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.data.quickaffordance
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -32,6 +30,7 @@ import com.android.systemui.communal.shared.model.CommunalScenes
 import com.android.systemui.communal.shared.model.CommunalTransitionKeys
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.res.R
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes

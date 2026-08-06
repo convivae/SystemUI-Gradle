@@ -1,7 +1,5 @@
 package com.android.systemui.user.ui.dialog
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -12,6 +10,7 @@ import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.qs.QSUserSwitcherEvent
 import com.android.systemui.qs.tiles.UserDetailView
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 
 /**

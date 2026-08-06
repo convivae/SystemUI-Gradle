@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
-import com.android.systemui.R
-
 import com.android.app.animation.Interpolators.EMPHASIZED_DECELERATE
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton
@@ -30,6 +28,7 @@ import com.android.systemui.keyguard.shared.model.KeyguardState.LOCKSCREEN
 import com.android.systemui.keyguard.shared.model.KeyguardState.OCCLUDED
 import com.android.systemui.keyguard.ui.KeyguardTransitionAnimationFlow
 import com.android.systemui.keyguard.ui.transitions.DeviceEntryIconTransition
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.util.kotlin.pairwise
 import javax.inject.Inject

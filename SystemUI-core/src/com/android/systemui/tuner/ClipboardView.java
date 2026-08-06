@@ -14,8 +14,6 @@
 
 package com.android.systemui.tuner;
 
-import com.android.systemui.R
-
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ClipboardManager.OnPrimaryClipChangedListener;
@@ -26,6 +24,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.android.systemui.res.R;
 
 public class ClipboardView extends ImageView implements OnPrimaryClipChangedListener {
 

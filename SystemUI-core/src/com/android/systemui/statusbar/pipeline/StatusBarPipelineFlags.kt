@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.pipeline
 
-import com.android.systemui.R
-
 import android.content.Context
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.flags.FeatureFlags

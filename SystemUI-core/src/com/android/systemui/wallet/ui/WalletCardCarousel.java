@@ -16,8 +16,6 @@
 
 package com.android.systemui.wallet.ui;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Rect;
@@ -40,6 +38,7 @@ import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.RecyclerViewAccessibilityDelegate;
 
+import com.android.systemui.res.R;
 
 import java.util.Collections;
 import java.util.List;

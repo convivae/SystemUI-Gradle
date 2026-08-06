@@ -16,8 +16,6 @@
 
 package com.android.systemui.bouncer.data.repository
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.provider.Settings.Global.ONE_HANDED_KEYGUARD_SIDE
 import com.android.systemui.authentication.shared.model.BouncerInputSide
@@ -26,6 +24,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.flags.FeatureFlagsClassic
 import com.android.systemui.flags.Flags
+import com.android.systemui.res.R
 import com.android.systemui.util.settings.GlobalSettings
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow

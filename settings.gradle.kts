@@ -35,22 +35,7 @@ include(":SystemUI-common")
 include(":SystemUI-unfold")
 
 // AOSP bp 1:1 新增子模块 (Phase A 脚手架)
-// utils/kairos/ → kairos
-include(":SystemUI-utils-kairos")
 // compose/core + compose/scene → SystemUI-compose（合并）
 include(":SystemUI-compose")
 // shared/biometrics/ → BiometricsSharedLib
 include(":SystemUI-shared-biometrics")
-// shared/keyguard/ → SystemUISharedLib-Keyguard
-// SystemUI-proto (顶层 bp java_library)
-include(":SystemUI-proto")
-// pods/com/android/systemui/dagger/ (api)
-include(":SystemUI-pods-dagger")
-// pods/com/android/systemui/retail/ (impl)
-include(":SystemUI-pods-retail")
-// pods/com/android/systemui/retail/data/ (api+impl 合并)
-include(":SystemUI-pods-data")
-// pods/com/android/systemui/retail/domain/ (api+impl 合并)
-include(":SystemUI-pods-domain")
-// pods/com/android/systemui/util/settings/ (api)
-include(":SystemUI-pods-settings")

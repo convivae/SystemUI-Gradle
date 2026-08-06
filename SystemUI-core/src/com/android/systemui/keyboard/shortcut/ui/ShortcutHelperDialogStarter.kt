@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.ui
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -39,6 +37,7 @@ import com.android.systemui.keyboard.shortcut.ui.composable.ShortcutHelperBottom
 import com.android.systemui.keyboard.shortcut.ui.composable.getWidth
 import com.android.systemui.keyboard.shortcut.ui.viewmodel.ShortcutHelperViewModel
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialogFactory
 import com.android.systemui.statusbar.phone.createBottomSheet
 import javax.inject.Inject

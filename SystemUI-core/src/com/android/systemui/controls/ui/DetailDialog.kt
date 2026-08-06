@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.app.Activity
 import android.app.ActivityOptions
 import android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
@@ -34,6 +32,7 @@ import android.view.WindowManager
 import android.widget.ImageView
 import androidx.annotation.VisibleForTesting
 import com.android.internal.policy.ScreenDecorationsUtils
+import com.android.systemui.res.R
 import com.android.systemui.broadcast.BroadcastSender
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.statusbar.policy.KeyguardStateController

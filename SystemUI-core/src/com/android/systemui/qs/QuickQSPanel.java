@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.content.res.Configuration;
 import android.util.AttributeSet;
@@ -28,7 +26,7 @@ import android.widget.LinearLayout;
 import com.android.internal.logging.UiEventLogger;
 import com.android.systemui.FontSizeUtils;
 import com.android.systemui.plugins.qs.QSTile;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Version of QSPanel that only shows N Quick Tiles in the QS Header.

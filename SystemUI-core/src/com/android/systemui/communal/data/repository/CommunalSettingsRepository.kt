@@ -16,8 +16,6 @@
 
 package com.android.systemui.communal.data.repository
 
-import com.android.systemui.R
-
 import android.app.admin.DevicePolicyManager
 import android.app.admin.DevicePolicyManager.KEYGUARD_DISABLE_WIDGETS_ALL
 import android.content.IntentFilter

@@ -16,12 +16,11 @@
 
 package com.android.keyguard
 
-import com.android.systemui.R
-
 import android.view.MotionEvent
 import android.view.View
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.ui.view.KeyguardRootView
+import com.android.systemui.res.R
 import dagger.Lazy
 import javax.inject.Inject
 

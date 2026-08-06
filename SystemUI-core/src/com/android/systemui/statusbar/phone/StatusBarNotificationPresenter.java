@@ -14,8 +14,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static com.android.systemui.statusbar.notification.interruption.VisualInterruptionType.BUBBLE;
 import static com.android.systemui.statusbar.notification.interruption.VisualInterruptionType.PEEK;
 import static com.android.systemui.statusbar.notification.interruption.VisualInterruptionType.PULSE;
@@ -42,6 +40,7 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.ActivityStarter.OnDismissAction;
 import com.android.systemui.power.domain.interactor.PowerInteractor;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.NotificationShadeWindowView;
 import com.android.systemui.shade.QuickSettingsController;
 import com.android.systemui.shade.ShadeViewController;

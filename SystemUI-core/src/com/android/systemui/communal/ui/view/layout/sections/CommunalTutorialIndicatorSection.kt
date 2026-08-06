@@ -17,8 +17,6 @@
 
 package com.android.systemui.communal.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.graphics.Typeface
 import android.graphics.Typeface.NORMAL
@@ -35,6 +33,7 @@ import com.android.systemui.communal.ui.viewmodel.CommunalTutorialIndicatorViewM
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.keyguard.ui.view.layout.sections.removeView
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.DisposableHandle
 

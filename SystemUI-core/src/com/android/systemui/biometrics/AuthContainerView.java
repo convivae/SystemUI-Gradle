@@ -16,8 +16,6 @@
 
 package com.android.systemui.biometrics;
 
-import com.android.systemui.R
-
 import static android.hardware.biometrics.BiometricAuthenticator.TYPE_FACE;
 import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
 
@@ -76,7 +74,7 @@ import com.android.systemui.biometrics.ui.viewmodel.CredentialViewModel;
 import com.android.systemui.biometrics.ui.viewmodel.PromptViewModel;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.VibratorHelper;
 import com.android.systemui.util.concurrency.DelayableExecutor;
 

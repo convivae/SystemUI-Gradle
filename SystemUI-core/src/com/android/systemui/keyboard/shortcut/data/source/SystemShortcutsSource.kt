@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.data.source
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.hardware.input.InputManager
 import android.hardware.input.KeyGlyphMap
@@ -44,6 +42,7 @@ import com.android.systemui.Flags.shortcutHelperKeyGlyph
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyboard.shortcut.data.model.shortcutInfo
 import com.android.systemui.keyboard.shortcut.data.repository.ShortcutHelperKeys
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 class SystemShortcutsSource

@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard;
 
-import com.android.systemui.R
-
 import android.annotation.AnyThread;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -54,6 +52,7 @@ import com.android.keyguard.KeyguardUpdateMonitorCallback;
 import com.android.systemui.SystemUIAppComponentFactoryBase;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.NotificationMediaManager;
 import com.android.systemui.statusbar.StatusBarState;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import android.annotation.IntDef;
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -35,6 +33,7 @@ import android.view.ViewTreeObserver.OnPreDrawListener;
 
 import com.android.app.animation.Interpolators;
 import com.android.internal.graphics.ColorUtils;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.KeyguardAffordanceView;
 
 import java.lang.annotation.Retention;

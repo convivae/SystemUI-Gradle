@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.View
 import android.view.View.GONE
@@ -31,9 +29,11 @@ import androidx.constraintlayout.widget.ConstraintSet.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintSet.START
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import com.android.systemui.common.ui.ConfigurationState
+import com.android.systemui.customization.R as customR
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardRootViewModel
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.notification.icon.ui.viewbinder.AlwaysOnDisplayNotificationIconViewStore
 import com.android.systemui.statusbar.notification.icon.ui.viewbinder.NotificationIconContainerViewBinder
@@ -115,14 +115,14 @@ constructor(
                 START,
                 PARENT_ID,
                 START,
-                context.resources.getDimensionPixelSize(R.dimen.status_view_margin_horizontal),
+                context.resources.getDimensionPixelSize(customR.dimen.status_view_margin_horizontal),
             )
             connect(
                 nicId,
                 END,
                 PARENT_ID,
                 END,
-                context.resources.getDimensionPixelSize(R.dimen.status_view_margin_horizontal),
+                context.resources.getDimensionPixelSize(customR.dimen.status_view_margin_horizontal),
             )
             constrainHeight(
                 nicId,

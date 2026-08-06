@@ -15,8 +15,6 @@
  */
 package com.android.systemui.user
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.drawable.ShapeDrawable
@@ -25,6 +23,7 @@ import android.view.View.MeasureSpec
 import android.widget.ListAdapter
 import android.widget.ListPopupWindow
 import android.widget.ListView
+import com.android.systemui.res.R
 
 /**
  * Popup menu for displaying items on the fullscreen user switcher.

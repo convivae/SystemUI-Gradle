@@ -19,8 +19,6 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.android.app.tracing.coroutines.flow.flowName
@@ -71,6 +69,7 @@ import com.android.systemui.keyguard.ui.viewmodel.OffToLockscreenTransitionViewM
 import com.android.systemui.keyguard.ui.viewmodel.PrimaryBouncerToGoneTransitionViewModel
 import com.android.systemui.keyguard.ui.viewmodel.PrimaryBouncerToLockscreenTransitionViewModel
 import com.android.systemui.keyguard.ui.viewmodel.ViewStateAccessor
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.LargeScreenHeaderHelper

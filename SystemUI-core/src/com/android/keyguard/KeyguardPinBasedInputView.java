@@ -16,8 +16,6 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_ADAPTIVE_AUTH_REQUEST;
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_DEVICE_ADMIN;
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_NONE;
@@ -43,7 +41,7 @@ import androidx.annotation.CallSuper;
 
 import com.android.app.animation.Interpolators;
 import com.android.internal.widget.LockscreenCredential;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.List;

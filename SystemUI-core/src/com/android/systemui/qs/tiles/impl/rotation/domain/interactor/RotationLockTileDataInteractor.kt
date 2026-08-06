@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles.impl.rotation.domain.interactor
 
-import com.android.systemui.R
-
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.res.Resources

@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -30,6 +28,7 @@ import androidx.constraintlayout.widget.ConstraintSet.START
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import com.android.keyguard.dagger.KeyguardStatusBarViewComponent
 import com.android.systemui.keyguard.shared.model.KeyguardSection
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.NotificationPanelView
 import com.android.systemui.shade.ShadeDisplayAware

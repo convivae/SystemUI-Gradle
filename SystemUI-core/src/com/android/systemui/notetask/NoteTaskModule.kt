@@ -18,8 +18,6 @@
 
 package com.android.systemui.notetask
 
-import com.android.systemui.R
-
 import android.app.Activity
 import android.app.Service
 import android.app.role.RoleManager
@@ -44,6 +42,7 @@ import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileViewModel
 import com.android.systemui.qs.tiles.viewmodel.StubQSTileViewModel
+import com.android.systemui.res.R
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

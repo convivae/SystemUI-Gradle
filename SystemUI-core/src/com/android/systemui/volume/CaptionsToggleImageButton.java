@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.os.Handler;
 import android.util.AttributeSet;
@@ -28,6 +26,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat;
 
 import com.android.keyguard.AlphaOptimizedImageButton;
+import com.android.systemui.res.R;
 
 /** Toggle button in Volume Dialog for controlling system captions state */
 public class CaptionsToggleImageButton extends AlphaOptimizedImageButton {

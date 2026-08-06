@@ -16,14 +16,13 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.res.Resources;
 import android.view.View;
 
+import com.android.systemui.res.R;
 import com.android.systemui.shared.statusbar.phone.BarTransitions;
 
 public final class PhoneStatusBarTransitions extends BarTransitions {

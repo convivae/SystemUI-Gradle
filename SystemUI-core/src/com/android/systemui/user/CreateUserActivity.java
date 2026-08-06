@@ -16,8 +16,6 @@
 
 package com.android.systemui.user;
 
-import com.android.systemui.R
-
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.IActivityManager;
@@ -36,6 +34,7 @@ import androidx.annotation.Nullable;
 import com.android.internal.logging.UiEventLogger;
 import com.android.settingslib.users.CreateUserDialogController;
 import com.android.systemui.plugins.ActivityStarter;
+import com.android.systemui.res.R;
 
 import javax.inject.Inject;
 

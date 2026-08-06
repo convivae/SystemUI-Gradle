@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.data.quickaffordance
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.media.AudioManager
 import androidx.lifecycle.LiveData
@@ -32,6 +30,7 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.shared.quickaffordance.ActivationState
+import com.android.systemui.res.R
 import com.android.systemui.settings.UserFileManager
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.shade.ShadeDisplayAware

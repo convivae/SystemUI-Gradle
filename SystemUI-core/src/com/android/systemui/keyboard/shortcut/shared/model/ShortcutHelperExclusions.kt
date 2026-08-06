@@ -16,9 +16,8 @@
 
 package com.android.systemui.keyboard.shortcut.shared.model
 
-import com.android.systemui.R
-
 import android.content.Context
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 class ShortcutHelperExclusions @Inject constructor(private val context: Context) {

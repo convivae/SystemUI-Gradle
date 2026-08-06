@@ -16,12 +16,11 @@
 
 package com.android.systemui.screenshot.ui.binder
 
-import com.android.systemui.R
-
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.android.systemui.res.R
 import com.android.systemui.screenshot.ui.TransitioningIconDrawable
 import com.android.systemui.screenshot.ui.viewmodel.ActionButtonViewModel
 import javax.inject.Inject

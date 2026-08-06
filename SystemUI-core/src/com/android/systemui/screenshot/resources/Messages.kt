@@ -16,11 +16,10 @@
 
 package com.android.systemui.screenshot.resources
 
-import com.android.systemui.R
-
 import android.content.Context
 import androidx.annotation.OpenForTesting
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 /** String values from resources, for easy injection. */

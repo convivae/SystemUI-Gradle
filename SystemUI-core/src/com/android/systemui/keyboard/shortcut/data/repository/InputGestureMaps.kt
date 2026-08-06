@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.data.repository
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.hardware.input.KeyGestureEvent.KEY_GESTURE_TYPE_ALL_APPS
 import android.hardware.input.KeyGestureEvent.KEY_GESTURE_TYPE_BACK
@@ -41,6 +39,7 @@ import android.hardware.input.KeyGestureEvent.KEY_GESTURE_TYPE_TOGGLE_NOTIFICATI
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.AppCategories
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.MultiTasking
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.System
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 class InputGestureMaps @Inject constructor(private val context: Context) {

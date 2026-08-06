@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone.ongoingcall
 
-import com.android.systemui.R
-
 import android.app.ActivityManager
 import android.app.IActivityManager
 import android.app.Notification
@@ -40,6 +38,7 @@ import com.android.systemui.dump.DumpManager
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.LogLevel
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.StatusBarIconView
 import com.android.systemui.statusbar.chips.ui.view.ChipBackgroundContainer
 import com.android.systemui.statusbar.chips.ui.view.ChipChronometer

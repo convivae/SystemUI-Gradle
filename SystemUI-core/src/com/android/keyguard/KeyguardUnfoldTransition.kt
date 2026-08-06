@@ -16,13 +16,14 @@
 
 package com.android.keyguard
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.View
+import com.android.systemui.customization.R as customR
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.ui.view.KeyguardRootView
 import com.android.systemui.plugins.statusbar.StatusBarStateController
+import com.android.systemui.res.R
+import com.android.systemui.shared.R as sharedR
 import com.android.systemui.shade.NotificationShadeWindowView
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.animation.UnfoldConstantTranslateAnimator
@@ -66,19 +67,19 @@ constructor(
 
             setOf(
                 ViewIdToTranslate(
-                    viewId = R.id.date_smartspace_view,
+                    viewId = sharedR.id.date_smartspace_view,
                     direction = START,
                     shouldBeAnimated = filterKeyguard,
                     translateFunc = scrollXTranslation,
                 ),
                 ViewIdToTranslate(
-                    viewId = R.id.bc_smartspace_view,
+                    viewId = sharedR.id.bc_smartspace_view,
                     direction = START,
                     shouldBeAnimated = filterKeyguard,
                     translateFunc = scrollXTranslation,
                 ),
                 ViewIdToTranslate(
-                    viewId = R.id.weather_smartspace_view,
+                    viewId = sharedR.id.weather_smartspace_view,
                     direction = START,
                     shouldBeAnimated = filterKeyguard,
                     translateFunc = scrollXTranslation,
@@ -99,12 +100,12 @@ constructor(
             viewsIdToTranslate =
                 setOf(
                     ViewIdToTranslate(
-                        viewId = R.id.lockscreen_clock_view_large,
+                        viewId = customR.id.lockscreen_clock_view_large,
                         direction = START,
                         shouldBeAnimated = filterKeyguardAndSplitShadeOnly
                     ),
                     ViewIdToTranslate(
-                        viewId = R.id.lockscreen_clock_view,
+                        viewId = customR.id.lockscreen_clock_view,
                         direction = START,
                         shouldBeAnimated = filterKeyguard
                     ),

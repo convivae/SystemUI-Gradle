@@ -16,8 +16,6 @@
 
 package com.android.systemui.decor
 
-import com.android.systemui.R
-
 import android.annotation.ArrayRes
 import android.annotation.DrawableRes
 import android.content.res.Resources
@@ -26,6 +24,7 @@ import android.util.DisplayUtils
 import android.util.Size
 import android.view.RoundedCorners
 import com.android.systemui.Dumpable
+import com.android.systemui.res.R
 import java.io.PrintWriter
 
 interface RoundedCornerResDelegate {

@@ -16,8 +16,6 @@
 
 package com.android.systemui.assist.ui;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.Matrix;
 import android.graphics.Path;
@@ -25,6 +23,7 @@ import android.graphics.RectF;
 import android.util.Log;
 import android.util.PathParser;
 
+import com.android.systemui.res.R;
 
 /**
  * Parses a path describing rounded corners from a string.

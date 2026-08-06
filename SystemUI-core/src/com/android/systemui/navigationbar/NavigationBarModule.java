@@ -16,8 +16,6 @@
 
 package com.android.systemui.navigationbar;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.enableViewCaptureTracing;
 import static com.android.systemui.util.ConvenienceExtensionsKt.toKotlinLazy;
 
@@ -32,6 +30,7 @@ import com.android.systemui.dagger.qualifiers.DisplayId;
 import com.android.systemui.navigationbar.NavigationBarComponent.NavigationBarScope;
 import com.android.systemui.navigationbar.views.NavigationBarFrame;
 import com.android.systemui.navigationbar.views.NavigationBarView;
+import com.android.systemui.res.R;
 
 import dagger.Lazy;
 import dagger.Module;

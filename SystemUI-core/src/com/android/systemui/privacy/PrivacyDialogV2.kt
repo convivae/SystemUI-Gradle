@@ -16,8 +16,6 @@
 
 package com.android.systemui.privacy
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageItemInfo
@@ -42,6 +40,7 @@ import androidx.annotation.WorkerThread
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import com.android.settingslib.Utils
+import com.android.systemui.res.R
 import com.android.systemui.animation.ViewHierarchyAnimator
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import com.android.systemui.util.maybeForceFullscreen

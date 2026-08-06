@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.session.MediaController
@@ -40,6 +38,7 @@ import com.android.systemui.media.controls.ui.controller.MediaLocation
 import com.android.systemui.media.controls.util.MediaSmartspaceLogger.Companion.SMARTSPACE_CARD_CLICK_EVENT
 import com.android.systemui.media.controls.util.MediaSmartspaceLogger.Companion.SMARTSPACE_CARD_DISMISS_EVENT
 import com.android.systemui.media.controls.util.MediaUiEventLogger
+import com.android.systemui.res.R
 import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow

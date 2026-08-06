@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.ui.binder
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.annotation.DrawableRes
@@ -54,6 +52,7 @@ import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.common.ui.view.onApplyWindowInsets
 import com.android.systemui.common.ui.view.onLayoutChanged
 import com.android.systemui.common.ui.view.onTouchListener
+import com.android.systemui.customization.R as customR
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryHapticsInteractor
 import com.android.systemui.keyguard.KeyguardBottomAreaRefactor
 import com.android.systemui.keyguard.KeyguardViewMediator
@@ -70,6 +69,7 @@ import com.android.systemui.keyguard.ui.viewmodel.TransitionData
 import com.android.systemui.keyguard.ui.viewmodel.ViewStateAccessor
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.FalsingManager
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.CrossFadeHelper
@@ -617,8 +617,8 @@ object KeyguardRootViewBinder {
     private val statusViewId = R.id.keyguard_status_view
     private val burnInLayerId = R.id.burn_in_layer
     private val aodNotificationIconContainerId = R.id.aod_notification_icon_container
-    private val largeClockId = R.id.lockscreen_clock_view_large
-    private val smallClockId = R.id.lockscreen_clock_view
+    private val largeClockId = customR.id.lockscreen_clock_view_large
+    private val smallClockId = customR.id.lockscreen_clock_view
     private val indicationArea = R.id.keyguard_indication_area
     private val startButton = R.id.start_button
     private val endButton = R.id.end_button

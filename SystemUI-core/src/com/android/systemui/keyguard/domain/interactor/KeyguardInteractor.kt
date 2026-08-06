@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
-import com.android.systemui.R
-
 import android.app.StatusBarManager
 import android.graphics.Point
 import android.util.Log
@@ -47,6 +45,7 @@ import com.android.systemui.keyguard.shared.model.KeyguardState.LOCKSCREEN
 import com.android.systemui.keyguard.shared.model.KeyguardState.OCCLUDED
 import com.android.systemui.keyguard.shared.model.StatusBarState
 import com.android.systemui.power.domain.interactor.PowerInteractor
+import com.android.systemui.res.R
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes

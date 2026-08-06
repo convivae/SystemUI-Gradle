@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper;
 
-import com.android.systemui.R
-
 import static android.view.View.VISIBLE;
 
 import static com.android.systemui.statusbar.notification.row.ExpandableNotificationRow.DEFAULT_HEADER_VISIBLE_AMOUNT;
@@ -44,6 +42,7 @@ import com.android.internal.util.ContrastColorUtil;
 import com.android.internal.widget.NotificationActionListLayout;
 import com.android.systemui.Dependency;
 import com.android.systemui.UiOffloadThread;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.statusbar.TransformableView;
 import com.android.systemui.statusbar.ViewTransformationHelper;

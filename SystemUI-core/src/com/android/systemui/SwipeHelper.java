@@ -16,8 +16,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import static androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_X;
 import static androidx.dynamicanimation.animation.FloatPropertyCompat.createFloatPropertyCompat;
 
@@ -53,6 +51,7 @@ import com.android.systemui.flags.FeatureFlags;
 import com.android.systemui.flags.Flags;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.statusbar.NotificationMenuRowPlugin;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 import com.android.systemui.statusbar.notification.shared.NotificationContentAlphaOptimization;
 import com.android.wm.shell.animation.FlingAnimationUtils;

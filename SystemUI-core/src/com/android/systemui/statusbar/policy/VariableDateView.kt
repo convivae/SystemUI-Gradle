@@ -16,12 +16,11 @@
 
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.text.StaticLayout
 import android.util.AttributeSet
 import android.widget.TextView
+import com.android.systemui.res.R
 
 /**
  * View for showing a date that can toggle between two different formats depending on size.

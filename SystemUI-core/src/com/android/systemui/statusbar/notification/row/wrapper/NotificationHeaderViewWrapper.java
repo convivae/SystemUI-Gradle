@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper;
 
-import com.android.systemui.R
-
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 
@@ -43,6 +41,7 @@ import com.android.app.animation.Interpolators;
 import com.android.internal.widget.CachingIconView;
 import com.android.internal.widget.NotificationCloseButton;
 import com.android.internal.widget.NotificationExpandButton;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.TransformableView;
 import com.android.systemui.statusbar.ViewTransformationHelper;
 import com.android.systemui.statusbar.notification.CustomInterpolatorTransformation;

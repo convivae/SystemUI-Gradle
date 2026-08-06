@@ -15,11 +15,10 @@
  */
 package com.android.systemui.statusbar.phone.fragment
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.os.UserHandle
 import android.provider.Settings
+import com.android.internal.R
 import com.android.systemui.util.settings.SecureSettings
 
 /**
@@ -38,9 +37,9 @@ fun getStatusBarIconBlocklist(
 ): List<String> {
     // Load the default blocklist from res
     val blocklist = res.getStringArray(
-            R.array.config_collapsed_statusbar_icon_blocklist).toList()
+            com.android.systemui.res.R.array.config_collapsed_statusbar_icon_blocklist).toList()
 
-    val vibrateIconSlot: String = res.getString(com.android.internal.R.string.status_bar_volume)
+    val vibrateIconSlot: String = res.getString(R.string.status_bar_volume)
     val showVibrateIcon = settings.getIntForUser(
             Settings.Secure.STATUS_BAR_SHOW_VIBRATE_ICON,
             0,

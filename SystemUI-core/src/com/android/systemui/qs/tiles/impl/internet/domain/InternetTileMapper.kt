@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles.impl.internet.domain
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.Resources
 import android.os.Handler
@@ -31,6 +29,7 @@ import com.android.systemui.qs.tiles.base.interactor.QSTileDataToStateMapper
 import com.android.systemui.qs.tiles.impl.internet.domain.model.InternetTileModel
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.pipeline.shared.ui.model.InternetTileIconModel
 import javax.inject.Inject

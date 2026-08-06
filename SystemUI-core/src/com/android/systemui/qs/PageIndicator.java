@@ -1,7 +1,5 @@
 package com.android.systemui.qs;
 
-import com.android.systemui.R
-
 import static com.android.systemui.qs.PageIndicator.PageScrollActionListener.LEFT;
 import static com.android.systemui.qs.PageIndicator.PageScrollActionListener.RIGHT;
 
@@ -24,7 +22,7 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.android.settingslib.Utils;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 

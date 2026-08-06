@@ -16,8 +16,6 @@
 
 package com.android.systemui.deviceentry.domain.interactor
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.hardware.biometrics.BiometricFaceConstants
 import com.android.systemui.biometrics.FaceHelpMessageDebouncer
@@ -28,6 +26,7 @@ import com.android.systemui.deviceentry.data.repository.DeviceEntryFaceAuthRepos
 import com.android.systemui.deviceentry.shared.model.AcquiredFaceAuthenticationStatus
 import com.android.systemui.deviceentry.shared.model.FaceAuthenticationStatus
 import com.android.systemui.deviceentry.shared.model.HelpFaceAuthenticationStatus
+import com.android.systemui.res.R
 import java.util.Arrays
 import java.util.stream.Collectors
 import javax.inject.Inject

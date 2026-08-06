@@ -14,8 +14,6 @@
 
 package com.android.systemui.tuner;
 
-import com.android.systemui.R
-
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.content.ComponentName;
@@ -44,6 +42,7 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder;
 
 import com.android.systemui.Dependency;
 import com.android.systemui.plugins.IntentButtonProvider.IntentButton;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.ScalingDrawableWrapper;
 import com.android.systemui.statusbar.phone.ExpandableIndicator;
 import com.android.systemui.statusbar.policy.ExtensionController.TunerFactory;

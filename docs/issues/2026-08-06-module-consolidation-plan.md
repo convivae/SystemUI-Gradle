@@ -132,3 +132,19 @@
 - core 移除 res.srcDirs，加 implementation(:SystemUI-res)
 - **验证**：res/res-keyguard/res-product 字节级与 AOSP 一致
 - 对齐：RES-MISS 2195 → 0，RES-EXTRA 0，RES-MODIFIED 0
+
+## Task 8: pods 合入 core + 删除非生产模块
+
+- 重新同步 core 全部源码根：src(4231)/src-debug(4)/src-release(4)/compose/features/src(153)/
+  compose/facade/enabled/src(9)/pods(18, rsync 仅 java/kt/aidl)
+  - 自动移除非 SystemUI 的 Compile.java（AOSP src 无此文件）
+- 新增 tools/package_compilelib_jars.py：javac --release 21 编译 compilelib debug/release
+  - libs/compilelib-debug.jar (IS_DEBUG=1)、libs/compilelib-release.jar (IS_DEBUG=0)
+- core sourceSets：java.srcDirs(src, compose/features/src, compose/facade/enabled/src, pods)
+- core 变体依赖：debugImplementation/releaseImplementation compilelib jar
+- core 项目依赖精简为 7 个：res/animation/common/customization/plugin/shared/compose
+- 保留单一 SystemUI-proto.jar（移除 project(:SystemUI-proto)）
+- 删除 9 个废弃模块：utils-kairos/proto/pods-{dagger,retail,data,domain,settings,retail-data-impl,retail-domain-impl}
+- 移除 root build 的 Kairos ExperimentalFrpApi opt-in flag
+- **验证**：./gradlew projects BUILD SUCCESSFUL（12 模块）
+- 对齐：MISPLACED 162→0、MODIFIED 1046→0、MISSING 84→66（plugin 源码待 Task 9 同步）

@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.view.View
@@ -25,6 +23,7 @@ import android.service.controls.Control
 import android.service.controls.templates.ControlTemplate
 import android.service.controls.templates.StatelessTemplate
 
+import com.android.systemui.res.R
 import com.android.systemui.controls.ui.ControlViewHolder.Companion.MAX_LEVEL
 import com.android.systemui.controls.ui.ControlViewHolder.Companion.MIN_LEVEL
 

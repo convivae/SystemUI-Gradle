@@ -16,8 +16,6 @@
 
 package com.android.systemui.communal.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.ComponentName
 import android.content.res.Resources
 import android.os.Bundle
@@ -46,6 +44,7 @@ import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager
 import com.android.systemui.media.controls.ui.view.MediaHost
 import com.android.systemui.media.controls.ui.view.MediaHostState
 import com.android.systemui.media.dagger.MediaModule
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.KeyguardIndicationController

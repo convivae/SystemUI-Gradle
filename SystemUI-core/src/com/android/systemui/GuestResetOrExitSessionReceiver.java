@@ -16,8 +16,6 @@
 
 package com.android.systemui;
 
-import com.android.systemui.R
-
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.app.AlertDialog;

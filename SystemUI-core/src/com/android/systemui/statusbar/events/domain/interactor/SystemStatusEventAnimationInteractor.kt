@@ -16,13 +16,12 @@
 
 package com.android.systemui.statusbar.events.domain.interactor
 
-import com.android.systemui.R
-
 import android.view.View
 import androidx.core.animation.Animator
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.events.data.repository.SystemStatusEventAnimationRepository
 import com.android.systemui.statusbar.phone.fragment.StatusBarSystemEventDefaultAnimator
 import javax.inject.Inject

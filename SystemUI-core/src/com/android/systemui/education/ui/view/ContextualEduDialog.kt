@@ -16,8 +16,6 @@
 
 package com.android.systemui.education.ui.view
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
@@ -29,6 +27,7 @@ import android.view.accessibility.AccessibilityManager
 import android.widget.ImageView
 import android.widget.TextView
 import com.android.systemui.education.ui.viewmodel.ContextualEduToastViewModel
+import com.android.systemui.res.R
 
 class ContextualEduDialog(
     context: Context,

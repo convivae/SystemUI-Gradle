@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles
 
-import com.android.systemui.R
-
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Handler
@@ -43,6 +41,7 @@ import com.android.systemui.qs.QSHost
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.logging.QSLogger
 import com.android.systemui.qs.tileimpl.QSTileImpl
+import com.android.systemui.res.R
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 

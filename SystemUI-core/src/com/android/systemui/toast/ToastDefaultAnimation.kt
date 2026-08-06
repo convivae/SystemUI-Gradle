@@ -16,8 +16,6 @@
 
 package com.android.systemui.toast
 
-import com.android.systemui.R
-
 import android.animation.ObjectAnimator
 import android.view.View
 import android.view.animation.LinearInterpolator
@@ -33,8 +31,8 @@ class ToastDefaultAnimation {
     companion object {
         // total duration shouldn't exceed NotificationManagerService's delay for "in" animation
         fun toastIn(view: View): AnimatorSet? {
-            val icon: View? = view.findViewById(R.id.icon)
-            val text: View? = view.findViewById(R.id.text)
+            val icon: View? = view.findViewById(com.android.systemui.res.R.id.icon)
+            val text: View? = view.findViewById(com.android.systemui.res.R.id.text)
             if (icon == null || text == null) {
                 return null
             }
@@ -71,8 +69,8 @@ class ToastDefaultAnimation {
 
         fun toastOut(view: View): AnimatorSet? {
             // total duration shouldn't exceed NotificationManagerService's delay for "out" anim
-            val icon: View? = view.findViewById(R.id.icon)
-            val text: View? = view.findViewById(R.id.text)
+            val icon: View? = view.findViewById(com.android.systemui.res.R.id.icon)
+            val text: View? = view.findViewById(com.android.systemui.res.R.id.text)
             if (icon == null || text == null) {
                 return null
             }

@@ -15,13 +15,12 @@
  */
 package com.android.systemui.mediaprojection.devicepolicy
 
-import com.android.systemui.R
-
 import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface.BUTTON_POSITIVE
 import android.content.res.Resources
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import javax.inject.Inject
 

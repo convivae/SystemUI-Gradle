@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot
 
-import com.android.systemui.R
-
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ComponentName
@@ -26,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.UserHandle
+import com.android.systemui.res.R
 import com.android.systemui.screenshot.scroll.LongScreenshotActivity
 
 object ActionIntentCreator {

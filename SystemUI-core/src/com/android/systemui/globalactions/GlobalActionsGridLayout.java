@@ -16,8 +16,6 @@
 
 package com.android.systemui.globalactions;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_LANDSCAPE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_NONE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_SEASCAPE;
@@ -150,7 +148,7 @@ public class GlobalActionsGridLayout extends GlobalActionsLayout {
     protected float getAnimationDistance() {
         int rows = getListView().getRowCount();
         float gridItemSize = getContext().getResources().getDimension(
-                R.dimen.global_actions_grid_item_height);
+                com.android.systemui.res.R.dimen.global_actions_grid_item_height);
         return rows * gridItemSize / 2;
     }
 

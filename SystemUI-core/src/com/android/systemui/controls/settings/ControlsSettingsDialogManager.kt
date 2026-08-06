@@ -17,8 +17,6 @@
 
 package com.android.systemui.controls.settings
 
-import com.android.systemui.R
-
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
@@ -26,6 +24,7 @@ import android.content.DialogInterface
 import android.content.SharedPreferences
 import android.provider.Settings
 import androidx.annotation.VisibleForTesting
+import com.android.systemui.res.R
 import com.android.systemui.controls.settings.ControlsSettingsDialogManager.Companion.MAX_NUMBER_ATTEMPTS_CONTROLS_DIALOG
 import com.android.systemui.controls.settings.ControlsSettingsDialogManager.Companion.PREFS_SETTINGS_DIALOG_ATTEMPTS
 import com.android.systemui.dagger.SysUISingleton

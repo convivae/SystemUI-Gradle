@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -37,6 +35,7 @@ import com.android.systemui.controls.management.ControlsManagementActivity
 import com.android.systemui.controls.management.applyInsets
 import com.android.systemui.controls.settings.ControlsSettingsDialogManager
 import com.android.systemui.flags.FeatureFlags
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.policy.KeyguardStateController
 import javax.inject.Inject
 

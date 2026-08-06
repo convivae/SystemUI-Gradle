@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static com.android.systemui.statusbar.StatusBarIconView.STATE_DOT;
 import static com.android.systemui.statusbar.StatusBarIconView.STATE_HIDDEN;
 import static com.android.systemui.statusbar.StatusBarIconView.STATE_ICON;
@@ -35,6 +33,7 @@ import android.util.Log;
 import android.view.View;
 
 import com.android.keyguard.AlphaOptimizedLinearLayout;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.StatusIconDisplayable;
 import com.android.systemui.statusbar.notification.stack.AnimationFilter;
 import com.android.systemui.statusbar.notification.stack.AnimationProperties;

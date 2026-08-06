@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification;
 
-import com.android.systemui.R
-
 import android.util.Pools;
 import android.view.View;
 import android.view.animation.Interpolator;
@@ -29,6 +27,7 @@ import com.android.app.animation.Interpolators;
 import com.android.internal.widget.MessagingImageMessage;
 import com.android.internal.widget.MessagingPropertyAnimator;
 import com.android.internal.widget.ViewClippingUtil;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.statusbar.TransformableView;
 import com.android.systemui.statusbar.ViewTransformationHelper;

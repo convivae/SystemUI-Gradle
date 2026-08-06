@@ -16,15 +16,13 @@
 
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;
 
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 /**
  * Displays a PIN pad for entering a PUK (Pin Unlock Kode) provided by a carrier.

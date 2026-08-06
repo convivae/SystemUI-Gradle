@@ -1,7 +1,5 @@
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import static java.lang.Float.NaN;
 
 import android.annotation.ColorInt;
@@ -34,6 +32,7 @@ import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.ContrastColorUtil;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.NotificationUtils;
 
 import java.text.BreakIterator;

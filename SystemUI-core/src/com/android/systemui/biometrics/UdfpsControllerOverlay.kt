@@ -16,8 +16,6 @@
 
 package com.android.systemui.biometrics
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.annotation.UiThread
 import android.content.Context
@@ -61,6 +59,7 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInterac
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.power.domain.interactor.PowerInteractor
+import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager
 import com.android.systemui.statusbar.phone.SystemUIDialogManager

@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility;
 
-import com.android.systemui.R
-
 import static android.provider.Settings.Secure.ACCESSIBILITY_MAGNIFICATION_MODE_NONE;
 import static android.provider.Settings.Secure.ACCESSIBILITY_MAGNIFICATION_MODE_WINDOW;
 import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
@@ -51,6 +49,7 @@ import android.widget.ImageView;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.graphics.SfVsyncFrameCallbackProvider;
+import com.android.systemui.res.R;
 
 import java.util.Collections;
 import java.util.Optional;

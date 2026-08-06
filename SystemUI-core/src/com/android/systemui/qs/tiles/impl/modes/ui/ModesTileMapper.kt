@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles.impl.modes.ui
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.icu.text.MessageFormat
 import android.widget.Button
@@ -25,6 +23,7 @@ import com.android.systemui.qs.tiles.base.interactor.QSTileDataToStateMapper
 import com.android.systemui.qs.tiles.impl.modes.domain.model.ModesTileModel
 import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileState
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import java.util.Locale
 import javax.inject.Inject

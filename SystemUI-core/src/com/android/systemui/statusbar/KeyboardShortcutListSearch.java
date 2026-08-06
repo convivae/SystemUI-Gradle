@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import static android.view.View.IMPORTANT_FOR_ACCESSIBILITY_YES;
 import static android.view.WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG;
 
@@ -80,6 +78,7 @@ import com.android.internal.app.AssistUtils;
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto;
 import com.android.settingslib.Utils;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.CentralSurfaces;
 
 import com.google.android.material.bottomsheet.BottomSheetBehavior;

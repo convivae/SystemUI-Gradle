@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
@@ -27,6 +25,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.android.systemui.res.R;
 
 import java.util.Objects;
 

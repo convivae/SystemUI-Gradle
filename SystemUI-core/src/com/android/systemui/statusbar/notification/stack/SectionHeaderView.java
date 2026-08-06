@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
-import com.android.systemui.R
-
 import static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK;
 
 import android.annotation.ColorInt;
@@ -34,6 +32,7 @@ import android.widget.TextView;
 
 import androidx.core.view.ViewCompat;
 
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.row.StackScrollerDecorView;
 
 /**

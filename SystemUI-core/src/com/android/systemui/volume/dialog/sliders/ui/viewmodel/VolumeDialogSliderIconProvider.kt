@@ -16,14 +16,13 @@
 
 package com.android.systemui.volume.dialog.sliders.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.media.AudioManager
 import androidx.annotation.DrawableRes
 import com.android.settingslib.notification.domain.interactor.NotificationsSoundPolicyInteractor
 import com.android.settingslib.volume.domain.interactor.AudioVolumeInteractor
 import com.android.settingslib.volume.shared.model.AudioStream
 import com.android.settingslib.volume.shared.model.RingerMode
+import com.android.systemui.res.R
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

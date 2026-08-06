@@ -15,8 +15,6 @@
  */
 package com.android.systemui.battery;
 
-import com.android.systemui.R
-
 import static android.provider.Settings.System.SHOW_BATTERY_PERCENT;
 
 import static com.android.settingslib.flags.Flags.newStatusBarIcons;
@@ -60,6 +58,7 @@ import com.android.systemui.battery.unified.BatteryLayersDrawable;
 import com.android.systemui.battery.unified.ColorProfile;
 import com.android.systemui.plugins.DarkIconDispatcher;
 import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.BatteryController;
 
 import java.io.PrintWriter;

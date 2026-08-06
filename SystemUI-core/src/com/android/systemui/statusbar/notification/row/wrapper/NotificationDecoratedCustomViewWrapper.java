@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.ui.binder
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.graphics.drawable.Animatable2
@@ -53,6 +51,7 @@ import com.android.systemui.keyguard.util.WallpaperPickerIntentUtils.LAUNCH_SOUR
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.FalsingManager
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.util.doOnEnd
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.tiles;
 
-import com.android.systemui.R
-
 import static android.hardware.SensorPrivacyManager.Sensors.MICROPHONE;
 import static android.os.UserManager.DISALLOW_MICROPHONE_TOGGLE;
 
@@ -41,7 +39,7 @@ import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.logging.QSLogger;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.IndividualSensorPrivacyController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 

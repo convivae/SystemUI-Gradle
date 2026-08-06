@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume.dialog.ui.binder
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.graphics.Rect
 import android.graphics.Region
@@ -27,6 +25,7 @@ import android.view.ViewTreeObserver
 import android.view.ViewTreeObserver.InternalInsetsInfo
 import androidx.constraintlayout.motion.widget.MotionLayout
 import com.android.internal.view.RotationPolicy
+import com.android.systemui.res.R
 import com.android.systemui.util.children
 import com.android.systemui.volume.SystemUIInterpolators
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope

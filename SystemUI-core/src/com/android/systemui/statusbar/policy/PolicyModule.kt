@@ -14,8 +14,6 @@
 
 package com.android.systemui.statusbar.policy
 
-import com.android.systemui.R
-
 import android.hardware.SensorPrivacyManager.Sensors.CAMERA
 import android.hardware.SensorPrivacyManager.Sensors.MICROPHONE
 import android.os.UserManager.DISALLOW_CAMERA_TOGGLE
@@ -73,6 +71,7 @@ import com.android.systemui.qs.tiles.viewmodel.QSTilePolicy
 import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig
 import com.android.systemui.qs.tiles.viewmodel.QSTileViewModel
 import com.android.systemui.qs.tiles.viewmodel.StubQSTileViewModel
+import com.android.systemui.res.R
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

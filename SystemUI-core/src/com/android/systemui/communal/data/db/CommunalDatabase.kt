@@ -16,8 +16,6 @@
 
 package com.android.systemui.communal.data.db
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.os.Process
 import android.util.Log
@@ -30,6 +28,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.android.systemui.communal.shared.model.GlanceableHubMultiUserHelperImpl
 import com.android.systemui.communal.shared.model.SpanValue
 import com.android.systemui.communal.shared.model.toResponsive
+import com.android.systemui.res.R
 
 @Database(entities = [CommunalWidgetItem::class, CommunalItemRank::class], version = 5)
 abstract class CommunalDatabase : RoomDatabase() {

@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.ui.binder
 
-import com.android.systemui.R
-
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -43,6 +41,7 @@ import com.android.systemui.keyguard.ui.viewmodel.AlternateBouncerUdfpsIconViewM
 import com.android.systemui.keyguard.ui.viewmodel.AlternateBouncerWindowViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.log.LongPressHandlingViewLogger
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scrim.ScrimView
 import dagger.Lazy

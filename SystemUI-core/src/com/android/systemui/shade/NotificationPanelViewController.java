@@ -16,8 +16,6 @@
 
 package com.android.systemui.shade;
 
-import com.android.systemui.R
-
 import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 
@@ -167,7 +165,7 @@ import com.android.systemui.plugins.statusbar.StatusBarStateController.StateList
 import com.android.systemui.power.domain.interactor.PowerInteractor;
 import com.android.systemui.power.shared.model.WakefulnessModel;
 import com.android.systemui.qs.flags.QSComposeFragment;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.scene.shared.model.Scenes;
 import com.android.systemui.settings.brightness.domain.interactor.BrightnessMirrorShowingInteractor;

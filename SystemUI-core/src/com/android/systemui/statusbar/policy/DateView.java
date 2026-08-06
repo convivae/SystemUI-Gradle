@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.policy;
 
-import com.android.systemui.R
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -32,6 +30,7 @@ import android.widget.TextView;
 
 import com.android.systemui.Dependency;
 import com.android.systemui.broadcast.BroadcastDispatcher;
+import com.android.systemui.res.R;
 
 import java.util.Date;
 import java.util.Locale;

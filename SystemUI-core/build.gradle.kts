@@ -37,10 +37,15 @@ android {
     // 它们依赖大量 Compose Scene 框架和 AOSP 内部依赖。
     // 排除它们能让 SystemUI-core 主流程（flags/log/settings/dagger/lifecycle）编译通过
     // 而保留所有源代码在目录中，便于将来改进。
-    // 采用源代码放到单独子目录的策略：保留所有源码，但额外创建一个编译专用目录
     sourceSets {
         getByName("main") {
-            java.srcDir("src")
+            // AOSP SystemUI-core 源码根：src + compose/features + compose/facade/enabled + pods
+            java.srcDirs(
+                "src",
+                "compose/features/src",
+                "compose/facade/enabled/src",
+                "pods",
+            )
             // AOSP 源码里的 .aidl 参与源码编译（规则 S：AIDL 是 SystemUI 自有代码，不用 jar）
             // framework 隐藏接口（android.os.IRemoteCallback）由 SysUISdk 的 framework.aidl 补齐，
             // 见 tools/install_sdk.py（规则 F：非 SystemUI 代码不源码复制）
@@ -54,8 +59,6 @@ android {
         getByName("release") {
             java.srcDirs("src-release")
         }
-        // 通过 Groovy apply 块访问 SourceDirectorySet 接口（AGP 9 中 java 暴露的是新接口）
-        // 实际上需要预先通过额外 task 来移除源文件
     }
 
     compileOptions {
@@ -87,37 +90,18 @@ android {
 // }
 
 dependencies {
-    // SystemUILogLib / SystemUICommon 已改为源码模块（Phase B），替代原 SystemUI-log.jar
-
-    // 项目模块
-    implementation(project(":SystemUI-plugin"))
-    implementation(project(":SystemUI-plugin-core"))
-    implementation(project(":SystemUI-animation"))
-    implementation(project(":SystemUI-customization"))
-    implementation(project(":SystemUI-common"))
-    // SystemUI 资源 namespace（com.android.systemui.res.R）
+    // 项目模块（对齐 AOSP SystemUI-core static_libs）
     implementation(project(":SystemUI-res"))
-
-    // SystemUI-shared 已源码化（Phase C），替代原 SystemUISharedLib.jar（AAR）
+    implementation(project(":SystemUI-animation"))
+    implementation(project(":SystemUI-common"))
+    implementation(project(":SystemUI-customization"))
+    implementation(project(":SystemUI-plugin"))
     implementation(project(":SystemUI-shared"))
-
-    // AOSP bp 1:1 新增子模块 (Phase A/B) — 对齐 frameworks/base/packages/SystemUI/
-    // static_libs in AOSP SystemUI-core Android.bp:
-    //   kairos → SystemUI-utils-kairos
-    implementation(project(":SystemUI-utils-kairos"))
-    //   PlatformComposeCore + SceneTransitionLayout → SystemUI-compose（合并）
     implementation(project(":SystemUI-compose"))
-    //   BiometricsSharedLib / SystemUISharedLib-Keyguard 通过 :SystemUI-shared 透传
-    //   SystemUI-proto → SystemUI-proto (顶层 java_library, 含 protobuf.nano 生成类)
-    implementation(project(":SystemUI-proto"))
-    //   pods/.../dagger:api → SystemUI-pods-dagger
-    implementation(project(":SystemUI-pods-dagger"))
-    //   pods/.../retail:impl → SystemUI-pods-retail
-    implementation(project(":SystemUI-pods-retail"))
-    implementation(project(":SystemUI-pods-data"))
-    implementation(project(":SystemUI-pods-domain"))
-    //   pods/.../util/settings:api → SystemUI-pods-settings
-    implementation(project(":SystemUI-pods-settings"))
+
+    // compilelib 变体（非 SystemUI 代码，tier② jar；debug/release 仅 IS_DEBUG 常量不同）
+    debugImplementation(files("${rootProject.projectDir}/libs/compilelib-debug.jar"))
+    releaseImplementation(files("${rootProject.projectDir}/libs/compilelib-release.jar"))
 
     // msdl / view_capture（frameworks/libs/systemui，tier② prebuilt jar）
     // 原先由 SystemUISharedLib.jar（fat turbine-combined）透传，shared 源码化后需 core 直接依赖
@@ -137,10 +121,8 @@ dependencies {
 
     // AOSP bp：java_library "SystemUI-proto" (srcs: ["src/**/*.proto"], proto.type: "nano")
     // AOSP 一等产物 SystemUI-proto.jar（含 15 个 .proto 生成类如 CommunalHubState / QsTileState）。
-    // 我们另建 :SystemUI-proto 模块提供少量 Flags stub（framework 不可见部分）。
     // protobuf.nano 运行时由 compileOnly framework.jar 提供。
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))
-    implementation(project(":SystemUI-proto"))
     // SystemUIUnfoldLib 通过 :SystemUI-shared / :SystemUI-customization 透传
     // androidx.window：FoldingFeature / WindowLayoutInfo 等
     implementation("androidx.window:window:1.3.0")

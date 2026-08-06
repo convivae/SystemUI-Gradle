@@ -16,8 +16,6 @@
 
 package com.android.systemui.assist.ui;
 
-import com.android.systemui.R
-
 import static com.android.systemui.assist.AssistManager.DISMISS_REASON_INVOCATION_CANCELLED;
 import static com.android.systemui.assist.AssistManager.INVOCATION_TYPE_GESTURE;
 
@@ -43,6 +41,7 @@ import com.android.systemui.assist.AssistManager;
 import com.android.systemui.assist.AssistantSessionEvent;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.navigationbar.NavigationBarController;
+import com.android.systemui.res.R;
 
 import dagger.Lazy;
 

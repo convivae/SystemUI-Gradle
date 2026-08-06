@@ -15,8 +15,6 @@
  */
 package com.android.systemui.mediaprojection.permission
 
-import com.android.systemui.R
-
 import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
@@ -38,6 +36,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import androidx.annotation.StringRes
 import com.android.systemui.mediaprojection.MediaProjectionMetricsLogger
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.DialogDelegate
 
 /** Base permission dialog for screen share and recording */

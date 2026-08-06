@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume;
 
-import com.android.systemui.R
-
 import static android.media.AudioManager.RINGER_MODE_NORMAL;
 
 import android.app.ActivityManager;
@@ -71,6 +69,7 @@ import com.android.systemui.dump.DumpManager;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
 import com.android.systemui.plugins.VolumeDialogController;
 import com.android.systemui.qs.tiles.DndTile;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.VibratorHelper;
 import com.android.systemui.util.RingerModeLiveData;

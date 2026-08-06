@@ -16,12 +16,11 @@
 
 package com.android.systemui.statusbar.chips.ui.model
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.ColorStateList
 import androidx.annotation.ColorInt
 import com.android.settingslib.Utils
+import com.android.systemui.res.R
 
 /** Model representing how the chip in the status bar should be colored. */
 sealed interface ColorsModel {

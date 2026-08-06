@@ -16,8 +16,6 @@
 
 package com.android.systemui.common.ui.view;
 
-import com.android.systemui.R
-
 import android.annotation.IntDef;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -31,6 +29,7 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.systemui.res.R;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

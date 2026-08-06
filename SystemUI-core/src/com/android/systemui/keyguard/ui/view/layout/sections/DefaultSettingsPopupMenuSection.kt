@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import android.view.LayoutInflater
 import android.view.View
@@ -40,6 +38,7 @@ import com.android.systemui.keyguard.ui.viewmodel.KeyguardRootViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardSettingsMenuViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardTouchHandlingViewModel
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import javax.inject.Inject
 import kotlinx.coroutines.DisposableHandle

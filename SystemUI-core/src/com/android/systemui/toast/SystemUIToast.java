@@ -16,8 +16,6 @@
 
 package com.android.systemui.toast;
 
-import com.android.systemui.R
-
 import static android.content.pm.ApplicationInfo.FLAG_SYSTEM;
 import static android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP;
 
@@ -174,9 +172,9 @@ public class SystemUIToast implements ToastPlugin.Toast {
         }
 
         final View toastView = mLayoutInflater.inflate(
-                    R.layout.text_toast, null);
-        final TextView textView = toastView.findViewById(R.id.text);
-        final ImageView iconView = toastView.findViewById(R.id.icon);
+                    com.android.systemui.res.R.layout.text_toast, null);
+        final TextView textView = toastView.findViewById(com.android.systemui.res.R.id.text);
+        final ImageView iconView = toastView.findViewById(com.android.systemui.res.R.id.icon);
         textView.setText(mText);
 
         ApplicationInfo appInfo = null;
@@ -193,7 +191,7 @@ public class SystemUIToast implements ToastPlugin.Toast {
             textView.setMaxLines(Integer.MAX_VALUE);
 
             // no app icon
-            toastView.findViewById(R.id.icon).setVisibility(View.GONE);
+            toastView.findViewById(com.android.systemui.res.R.id.icon).setVisibility(View.GONE);
         } else {
             Drawable icon = getBadgedIcon(mContext, mPackageName, mUserId);
             if (icon == null) {

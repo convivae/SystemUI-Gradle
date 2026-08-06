@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row
 
-import com.android.systemui.R
-
 import android.app.Flags
 import android.app.Notification
 import android.app.Notification.MessagingStyle
@@ -27,6 +25,7 @@ import android.graphics.drawable.Icon
 import android.util.Log
 import android.view.LayoutInflater
 import com.android.app.tracing.traceSection
+import com.android.internal.R
 import com.android.internal.widget.MessagingMessage
 import com.android.internal.widget.PeopleHelper
 import com.android.systemui.statusbar.notification.collection.NotificationEntry
@@ -120,7 +119,7 @@ internal object SingleLineViewInflater {
                     null,
                     SingleIcon(
                         context.getDrawable(
-                            R.drawable
+                            com.android.systemui.res.R.drawable
                                 .ic_redacted_notification_single_line_icon
                         )
                     ),
@@ -130,10 +129,10 @@ internal object SingleLineViewInflater {
             }
         return SingleLineViewModel(
             context.getString(
-                R.string.redacted_notification_single_line_title
+                com.android.systemui.res.R.string.redacted_notification_single_line_title
             ),
             context.getString(
-                R.string.redacted_notification_single_line_text
+                com.android.systemui.res.R.string.redacted_notification_single_line_text
             ),
             conversationData,
         )
@@ -165,7 +164,7 @@ internal object SingleLineViewInflater {
 
         val senderName =
             systemUiContext.resources.getString(
-                com.android.internal.R.string.conversation_single_line_name_display,
+                R.string.conversation_single_line_name_display,
                 if (Flags.cleanUpSpansAndNewLines()) name?.toString() else name,
             )
 
@@ -189,13 +188,13 @@ internal object SingleLineViewInflater {
             return ""
         }
         return if (isGroupConversation) {
-            systemUiContext.resources.getString(com.android.internal.R.string.conversation_title_fallback_group_chat)
+            systemUiContext.resources.getString(R.string.conversation_title_fallback_group_chat)
         } else {
             // Is one-to-one, let's try to use the last sender's name
             // The last back-up is the value of resource: conversation_title_fallback_one_to_one
             senderName
                 ?: systemUiContext.resources.getString(
-                    com.android.internal.R.string.conversation_title_fallback_one_to_one
+                    R.string.conversation_title_fallback_one_to_one
                 )
         }
     }
@@ -214,7 +213,7 @@ internal object SingleLineViewInflater {
         // will be SingleLineViewModel.contentText
         if (!message.isImageMessage()) return null
         // If is image message, return a placeholder
-        return context.resources.getString(com.android.internal.R.string.conversation_single_line_image_placeholder)
+        return context.resources.getString(R.string.conversation_single_line_image_placeholder)
     }
 
     /**

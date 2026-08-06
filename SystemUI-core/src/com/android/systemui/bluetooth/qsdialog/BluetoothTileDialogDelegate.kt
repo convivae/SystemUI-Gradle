@@ -16,8 +16,6 @@
 
 package com.android.systemui.bluetooth.qsdialog
 
-import com.android.systemui.R
-
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -39,8 +37,10 @@ import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.android.internal.R as InternalR
 import com.android.internal.logging.UiEventLogger
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import com.android.systemui.util.time.SystemClock
 import dagger.assisted.Assisted
@@ -408,8 +408,8 @@ internal constructor(
                     val tintColor =
                         com.android.settingslib.Utils.getColorAttr(
                                 context,
-                                if (item.isActive) com.android.internal.R.attr.materialColorOnPrimaryContainer
-                                else com.android.internal.R.attr.materialColorOnSurface,
+                                if (item.isActive) InternalR.attr.materialColorOnPrimaryContainer
+                                else InternalR.attr.materialColorOnSurface,
                             )
                             .defaultColor
 

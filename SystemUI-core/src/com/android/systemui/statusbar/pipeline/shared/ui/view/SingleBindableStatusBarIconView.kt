@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.pipeline.shared.ui.view
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -31,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.internal.annotations.VisibleForTesting
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.StatusBarIconView
 import com.android.systemui.statusbar.StatusBarIconView.STATE_HIDDEN
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewBinding

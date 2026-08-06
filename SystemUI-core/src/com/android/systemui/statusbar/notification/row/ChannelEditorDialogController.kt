@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.row
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.app.INotificationManager
 import android.app.NotificationChannel
@@ -40,6 +38,7 @@ import android.view.WindowInsets.Type.statusBars
 import android.view.WindowManager
 import android.widget.TextView
 import com.android.internal.annotations.VisibleForTesting
+import com.android.systemui.res.R
 import com.android.systemui.dagger.SysUISingleton
 import javax.inject.Inject
 

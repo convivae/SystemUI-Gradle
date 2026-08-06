@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard;
 
-import com.android.systemui.R
-
 import android.annotation.IntDef;
 import android.app.IWallpaperManager;
 import android.content.Context;
@@ -35,6 +33,7 @@ import com.android.systemui.Dumpable;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.power.domain.interactor.PowerInteractor;
+import com.android.systemui.res.R;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.util.time.SystemClock;
 

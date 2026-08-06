@@ -17,15 +17,15 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.view.View
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
+import com.android.systemui.customization.R as customR
 import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.shared.model.KeyguardSection
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
 import javax.inject.Inject
 
@@ -68,7 +68,7 @@ constructor(
             connect(
                 R.id.keyguard_slice_view,
                 ConstraintSet.TOP,
-                R.id.lockscreen_clock_view,
+                customR.id.lockscreen_clock_view,
                 ConstraintSet.BOTTOM
             )
 

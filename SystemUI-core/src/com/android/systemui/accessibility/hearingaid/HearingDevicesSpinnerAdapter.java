@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility.hearingaid;
 
-import com.android.systemui.R
-
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 
@@ -31,6 +29,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.settingslib.Utils;
+import com.android.systemui.res.R;
 
 /**
  * An ArrayAdapter which was used by Spinner in hearing devices dialog.

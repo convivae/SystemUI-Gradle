@@ -16,8 +16,6 @@
 
 package com.android.systemui.theme;
 
-import com.android.systemui.R
-
 import static android.util.TypedValue.TYPE_INT_COLOR_ARGB8;
 
 import static com.android.systemui.Flags.themeOverlayControllerWakefulnessDeprecation;

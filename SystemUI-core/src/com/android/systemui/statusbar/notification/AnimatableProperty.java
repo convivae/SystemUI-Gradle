@@ -16,12 +16,11 @@
 
 package com.android.systemui.statusbar.notification;
 
-import com.android.systemui.R
-
 import android.util.FloatProperty;
 import android.util.Property;
 import android.view.View;
 
+import com.android.systemui.res.R;
 
 import java.util.function.BiConsumer;
 import java.util.function.Function;

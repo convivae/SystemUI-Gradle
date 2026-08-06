@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot;
 
-import com.android.systemui.R
-
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.SCREENSHOT_BLOCKED_BY_ADMIN;
 import static android.content.Intent.ACTION_CLOSE_SYSTEM_DIALOGS;
 
@@ -53,6 +51,7 @@ import android.widget.Toast;
 import com.android.internal.logging.UiEventLogger;
 import com.android.internal.util.ScreenshotRequest;
 import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.res.R;
 
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;

@@ -14,8 +14,6 @@
 
 package com.android.systemui.tuner;
 
-import com.android.systemui.R
-
 import static com.android.systemui.tuner.LockscreenFragment.LOCKSCREEN_LEFT_BUTTON;
 
 import android.content.Context;
@@ -32,6 +30,7 @@ import androidx.preference.PreferenceScreen;
 import androidx.preference.PreferenceViewHolder;
 
 import com.android.systemui.Dependency;
+import com.android.systemui.res.R;
 import com.android.systemui.tuner.ShortcutParser.Shortcut;
 import com.android.systemui.tuner.TunerService.Tunable;
 

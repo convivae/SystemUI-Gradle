@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
-import com.android.systemui.R
-
 import android.annotation.WorkerThread
 import android.app.Notification
 import android.app.Notification.EXTRA_SUBSTITUTE_APP_NAME
@@ -59,6 +57,7 @@ import com.android.systemui.media.controls.shared.model.MediaNotificationAction
 import com.android.systemui.media.controls.util.MediaControllerFactory
 import com.android.systemui.media.controls.util.MediaDataUtils
 import com.android.systemui.media.controls.util.MediaFlags
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.NotificationMediaManager.isPlayingState
 import com.android.systemui.statusbar.notification.row.HybridGroupManager
 import com.android.systemui.util.kotlin.logD

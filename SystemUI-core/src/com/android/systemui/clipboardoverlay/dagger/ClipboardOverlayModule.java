@@ -16,8 +16,6 @@
 
 package com.android.systemui.clipboardoverlay.dagger;
 
-import com.android.systemui.R
-
 import static android.view.WindowManager.LayoutParams.TYPE_SCREENSHOT;
 
 import static com.android.systemui.Flags.enableViewCaptureTracing;
@@ -34,7 +32,7 @@ import android.view.WindowManager;
 import com.android.app.viewcapture.ViewCapture;
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
 import com.android.systemui.clipboardoverlay.ClipboardOverlayView;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.DisplayTracker;
 
 import dagger.Lazy;

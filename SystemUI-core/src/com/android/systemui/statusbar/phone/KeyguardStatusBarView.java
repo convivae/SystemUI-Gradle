@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import com.android.systemui.R
-
 import static com.android.systemui.ScreenDecorations.DisplayCutoutView.boundsFromDirection;
 import static com.android.systemui.util.Utils.getStatusBarHeaderHeightKeyguard;
 
@@ -48,6 +46,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.settingslib.Utils;
 import com.android.systemui.battery.BatteryMeterView;
 import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.phone.SysuiDarkIconDispatcher.DarkChange;
 import com.android.systemui.statusbar.phone.ui.TintedIconManager;
 import com.android.systemui.statusbar.phone.userswitcher.StatusBarUserSwitcherContainer;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.controls.ui.view
 
-import com.android.systemui.R
-
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +24,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import com.android.internal.widget.CachingIconView
 import com.android.systemui.media.controls.ui.drawable.IlluminationDrawable
+import com.android.systemui.res.R
 import com.android.systemui.util.animation.TransitionLayout
 
 private const val TAG = "RecommendationViewHolder"

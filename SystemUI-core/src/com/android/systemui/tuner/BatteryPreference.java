@@ -14,8 +14,6 @@
 
 package com.android.systemui.tuner;
 
-import com.android.systemui.R
-
 import static android.provider.Settings.System.SHOW_BATTERY_PERCENT;
 
 import android.content.Context;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.qs.panels.ui.compose.toolbar
 
-import com.android.systemui.R
-
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.EditModeButtonViewModel
 import com.android.systemui.qs.ui.compose.borderOnFocus
+import com.android.systemui.res.R
 
 @Composable
 fun EditModeButton(

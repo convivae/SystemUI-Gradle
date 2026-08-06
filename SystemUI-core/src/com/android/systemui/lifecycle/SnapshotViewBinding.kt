@@ -16,8 +16,6 @@
 
 package com.android.systemui.lifecycle
 
-import com.android.systemui.R
-
 import android.os.Handler
 import android.os.Looper
 import android.view.Choreographer
@@ -26,6 +24,7 @@ import androidx.collection.MutableScatterSet
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import androidx.core.os.HandlerCompat
+import com.android.systemui.res.R
 
 /**
  * [SnapshotViewBindingRoot] is installed on the root view of an attached view hierarchy and

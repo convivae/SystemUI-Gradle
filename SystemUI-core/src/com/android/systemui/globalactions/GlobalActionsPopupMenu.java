@@ -15,8 +15,6 @@
  */
 package com.android.systemui.globalactions;
 
-import com.android.systemui.R
-
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
@@ -29,6 +27,7 @@ import android.widget.ListAdapter;
 import android.widget.ListPopupWindow;
 import android.widget.ListView;
 
+import com.android.systemui.res.R;
 
 /**
  * Customized widget for use in the GlobalActionsDialog. Ensures common positioning and user

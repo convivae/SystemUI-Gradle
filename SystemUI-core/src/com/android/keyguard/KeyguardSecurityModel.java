@@ -15,8 +15,6 @@
  */
 package com.android.keyguard;
 
-import com.android.systemui.R
-
 import static com.android.systemui.DejankUtils.whitelistIpcs;
 
 import android.app.admin.DevicePolicyManager;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.display.data.repository
 
-import com.android.systemui.R
-
 import android.annotation.SuppressLint
 import android.content.Context
 import android.view.Display
@@ -28,6 +26,7 @@ import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.display.shared.model.DisplayWindowProperties
+import com.android.systemui.res.R
 import com.android.systemui.shade.shared.flag.ShadeWindowGoesAround
 import com.android.systemui.statusbar.core.StatusBarConnectedDisplays
 import com.google.common.collect.HashBasedTable

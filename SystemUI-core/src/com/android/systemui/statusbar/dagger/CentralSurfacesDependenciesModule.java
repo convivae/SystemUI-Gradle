@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.dagger;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.predictiveBackAnimateDialogs;
 
 import android.content.Context;

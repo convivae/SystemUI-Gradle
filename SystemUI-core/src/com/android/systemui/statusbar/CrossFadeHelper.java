@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import android.animation.Animator;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
@@ -25,6 +23,7 @@ import android.view.ViewPropertyAnimator;
 import androidx.annotation.Nullable;
 
 import com.android.app.animation.Interpolators;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.stack.StackStateAnimator;
 
 /**

@@ -17,11 +17,10 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import java.util.function.Consumer
 import javax.inject.Inject

@@ -17,8 +17,6 @@
 
 package com.android.systemui.user.ui.viewmodel
 
-import com.android.systemui.R
-
 import com.android.systemui.common.shared.model.Text
 import com.android.systemui.common.ui.drawable.CircularDrawable
 import com.android.systemui.dagger.SysUISingleton

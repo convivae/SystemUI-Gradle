@@ -16,8 +16,6 @@
 
 package com.android.systemui.media.dialog;
 
-import com.android.systemui.R
-
 import static android.media.RouteListingPreference.ACTION_TRANSFER_MEDIA;
 import static android.media.RouteListingPreference.EXTRA_ROUTE_ID;
 import static android.provider.Settings.ACTION_BLUETOOTH_SETTINGS;
@@ -93,6 +91,7 @@ import com.android.systemui.media.dialog.MediaItem.MediaItemType;
 import com.android.systemui.media.nearby.NearbyMediaDevicesManager;
 import com.android.systemui.monet.ColorScheme;
 import com.android.systemui.plugins.ActivityStarter;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.notification.collection.notifcollection.CommonNotifCollection;

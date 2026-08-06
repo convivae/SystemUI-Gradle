@@ -15,8 +15,6 @@
  */
 package com.android.systemui.statusbar.connectivity;
 
-import com.android.systemui.R
-
 import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
 import static android.net.wifi.WifiManager.TrafficStateCallback.DATA_ACTIVITY_IN;
@@ -37,6 +35,7 @@ import com.android.settingslib.graph.SignalDrawable;
 import com.android.settingslib.mobile.TelephonyIcons;
 import com.android.settingslib.wifi.WifiStatusTracker;
 import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.res.R;
 
 import java.io.PrintWriter;
 import java.util.BitSet;

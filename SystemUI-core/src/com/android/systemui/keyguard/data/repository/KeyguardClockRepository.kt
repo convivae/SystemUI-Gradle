@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.data.repository
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.os.UserHandle
 import android.provider.Settings
@@ -31,6 +29,7 @@ import com.android.systemui.keyguard.shared.model.ClockSize
 import com.android.systemui.keyguard.shared.model.ClockSizeSetting
 import com.android.systemui.plugins.clocks.ClockController
 import com.android.systemui.plugins.clocks.ClockId
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.clocks.ClockRegistry

@@ -16,8 +16,6 @@
 
 package com.android.systemui.mediaprojection.appselector.view
 
-import com.android.systemui.R
-
 import android.app.ActivityOptions
 import android.app.ActivityOptions.LaunchCookie
 import android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
@@ -36,6 +34,7 @@ import com.android.systemui.mediaprojection.appselector.MediaProjectionAppSelect
 import com.android.systemui.mediaprojection.appselector.data.RecentTask
 import com.android.systemui.mediaprojection.appselector.view.RecentTasksAdapter.RecentTaskClickListener
 import com.android.systemui.mediaprojection.appselector.view.TaskPreviewSizeProvider.TaskPreviewSizeListener
+import com.android.systemui.res.R
 import com.android.systemui.util.recycler.HorizontalSpacerItemDecoration
 import com.android.wm.shell.shared.split.SplitBounds
 import com.android.wm.shell.shared.split.SplitScreenConstants.SPLIT_POSITION_BOTTOM_OR_RIGHT

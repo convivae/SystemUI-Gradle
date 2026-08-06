@@ -16,8 +16,6 @@
 
 package com.android.systemui.globalactions;
 
-import com.android.systemui.R
-
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_LANDSCAPE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_NONE;
 import static com.android.systemui.util.leak.RotationUtils.ROTATION_SEASCAPE;
@@ -28,6 +26,7 @@ import android.view.Gravity;
 import android.view.View;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.systemui.res.R;
 
 /**
  * Grid-based implementation of the button layout created by the global actions dialog.

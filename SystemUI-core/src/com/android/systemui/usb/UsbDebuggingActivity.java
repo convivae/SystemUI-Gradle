@@ -16,8 +16,6 @@
 
 package com.android.systemui.usb;
 
-import com.android.systemui.R
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -42,6 +40,7 @@ import android.widget.CheckBox;
 import com.android.internal.app.AlertActivity;
 import com.android.internal.app.AlertController;
 import com.android.systemui.broadcast.BroadcastDispatcher;
+import com.android.systemui.res.R;
 
 import javax.inject.Inject;
 

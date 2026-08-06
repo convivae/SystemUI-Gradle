@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.ui
 
-import com.android.systemui.R
-
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -39,6 +37,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.android.systemui.res.R
 import com.android.app.animation.Interpolators
 import com.android.systemui.controls.ui.ControlViewHolder.Companion.MAX_LEVEL
 import com.android.systemui.controls.ui.ControlViewHolder.Companion.MIN_LEVEL

@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.data.repository
 
-import com.android.systemui.R
-
 import android.annotation.IntDef
 import android.content.res.Resources
 import android.provider.Settings
@@ -27,6 +25,7 @@ import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.keyguard.shared.model.DevicePosture
 import com.android.systemui.keyguard.shared.model.DevicePosture.UNKNOWN
+import com.android.systemui.res.R
 import com.android.systemui.util.kotlin.FlowDumperImpl
 import com.android.systemui.util.settings.repository.UserAwareSecureSettingsRepository
 import javax.inject.Inject

@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility;
 
-import com.android.systemui.R
-
 import static android.view.WindowInsets.Type.systemGestures;
 import static android.view.WindowManager.LayoutParams;
 
@@ -83,6 +81,7 @@ import com.android.internal.accessibility.common.MagnificationConstants;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.Flags;
 import com.android.systemui.model.SysUiState;
+import com.android.systemui.res.R;
 import com.android.systemui.util.settings.SecureSettings;
 
 import java.io.PrintWriter;

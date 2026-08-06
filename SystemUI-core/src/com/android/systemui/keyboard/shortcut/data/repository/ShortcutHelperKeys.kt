@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyboard.shortcut.data.repository
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.KeyEvent.KEYCODE_ALT_LEFT
 import android.view.KeyEvent.KEYCODE_ALT_RIGHT
@@ -115,6 +113,7 @@ import android.view.KeyEvent.META_FUNCTION_ON
 import android.view.KeyEvent.META_META_ON
 import android.view.KeyEvent.META_SHIFT_ON
 import android.view.KeyEvent.META_SYM_ON
+import com.android.systemui.res.R
 
 object ShortcutHelperKeys {
 

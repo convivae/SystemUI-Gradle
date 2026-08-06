@@ -16,8 +16,6 @@
 
 package com.android.systemui.wallet.ui;
 
-import com.android.systemui.R
-
 import static com.android.systemui.wallet.ui.WalletCardCarousel.CARD_ANIM_ALPHA_DELAY;
 import static com.android.systemui.wallet.ui.WalletCardCarousel.CARD_ANIM_ALPHA_DURATION;
 
@@ -44,6 +42,7 @@ import android.widget.TextView;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.settingslib.Utils;
 import com.android.systemui.classifier.FalsingCollector;
+import com.android.systemui.res.R;
 
 import java.util.List;
 

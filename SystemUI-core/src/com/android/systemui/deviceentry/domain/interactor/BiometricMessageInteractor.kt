@@ -16,8 +16,6 @@
 
 package com.android.systemui.deviceentry.domain.interactor
 
-import com.android.systemui.R
-
 import android.content.res.Resources
 import com.android.systemui.biometrics.domain.interactor.FingerprintPropertyInteractor
 import com.android.systemui.dagger.SysUISingleton
@@ -35,6 +33,7 @@ import com.android.systemui.deviceentry.shared.model.HelpFaceAuthenticationStatu
 import com.android.systemui.keyguard.domain.interactor.DevicePostureInteractor
 import com.android.systemui.keyguard.shared.model.DevicePosture
 import com.android.systemui.keyguard.shared.model.ErrorFingerprintAuthenticationStatus
+import com.android.systemui.res.R
 import com.android.systemui.util.kotlin.sample
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi

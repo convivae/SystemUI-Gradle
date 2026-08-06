@@ -16,13 +16,12 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper;
 
-import com.android.systemui.R
-
 import android.content.Context;
 import android.graphics.Color;
 import android.view.View;
 
 import com.android.internal.graphics.ColorUtils;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.NotificationFadeAware;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 

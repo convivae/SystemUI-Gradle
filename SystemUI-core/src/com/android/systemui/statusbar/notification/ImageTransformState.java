@@ -16,14 +16,13 @@
 
 package com.android.systemui.statusbar.notification;
 
-import com.android.systemui.R
-
 import android.graphics.drawable.Icon;
 import android.util.Pools;
 import android.view.View;
 import android.widget.ImageView;
 
 import com.android.app.animation.Interpolators;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.statusbar.TransformableView;
 import com.android.systemui.statusbar.notification.row.HybridNotificationView;

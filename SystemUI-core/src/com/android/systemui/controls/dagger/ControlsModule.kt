@@ -16,8 +16,6 @@
 
 package com.android.systemui.controls.dagger
 
-import com.android.systemui.R
-
 import android.app.Activity
 import android.content.pm.PackageManager
 import com.android.systemui.controls.ControlsMetricsLogger
@@ -93,8 +91,8 @@ abstract class ControlsModule {
                 tileSpec = TileSpec.create(DEVICE_CONTROLS_SPEC),
                 uiConfig =
                     QSTileUIConfig.Resource(
-                        iconRes = R.drawable.controls_icon,
-                        labelRes = R.string.quick_controls_title
+                        iconRes = com.android.systemui.res.R.drawable.controls_icon,
+                        labelRes = com.android.systemui.res.R.string.quick_controls_title
                     ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,

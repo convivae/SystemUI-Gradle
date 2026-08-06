@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -27,6 +25,7 @@ import com.android.systemui.communal.domain.interactor.CommunalSettingsInteracto
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.keyguard.ui.binder.AccessibilityActionsViewBinder
 import com.android.systemui.keyguard.ui.viewmodel.AccessibilityActionsViewModel
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.util.Utils
 import javax.inject.Inject

@@ -14,8 +14,6 @@
 
 package com.android.systemui.qs.customize;
 
-import com.android.systemui.R
-
 import static com.android.systemui.Flags.gsfQuickSettings;
 
 import android.content.ComponentName;
@@ -61,7 +59,7 @@ import com.android.systemui.qs.dagger.QSScope;
 import com.android.systemui.qs.dagger.QSThemedContext;
 import com.android.systemui.qs.external.CustomTile;
 import com.android.systemui.qs.tileimpl.QSTileViewImpl;
-import com.android.systemui.R;
+import com.android.systemui.res.R;
 
 import java.util.ArrayList;
 import java.util.List;

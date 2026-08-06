@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.window;
 
-import com.android.systemui.R
-
 import static android.view.WindowInsets.Type.mandatorySystemGestures;
 import static android.view.WindowInsets.Type.statusBars;
 import static android.view.WindowInsets.Type.tappableElement;
@@ -56,6 +54,7 @@ import com.android.systemui.animation.DelegateTransitionAnimatorController;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.fragments.FragmentHostManager;
 import com.android.systemui.fragments.FragmentService;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.core.StatusBarConnectedDisplays;
 import com.android.systemui.statusbar.core.StatusBarRootModernization;
 import com.android.systemui.statusbar.data.repository.StatusBarConfigurationController;

@@ -16,7 +16,6 @@
  */
 package com.android.systemui.user.ui.dialog
 
-
 import android.app.ActivityManager
 import android.content.Context
 import android.content.DialogInterface
@@ -83,7 +82,7 @@ class AddUserDialog(
             context.getString(R.string.user_add_user_message_short) +
                 if (showEphemeralMessage) {
                     context.getString(
-                        R.string.user_add_user_message_guest_remove
+                        com.android.systemui.res.R.string.user_add_user_message_guest_remove
                     )
                 } else {
                     ""

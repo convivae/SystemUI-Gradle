@@ -18,8 +18,6 @@
 
 package com.android.systemui.bouncer.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent.KEYCODE_0
@@ -37,6 +35,7 @@ import com.android.systemui.bouncer.domain.interactor.BouncerInteractor
 import com.android.systemui.bouncer.domain.interactor.SimBouncerInteractor
 import com.android.systemui.bouncer.shared.flag.ComposeBouncerFlags
 import com.android.systemui.bouncer.ui.helper.BouncerHapticPlayer
+import com.android.systemui.res.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

@@ -16,8 +16,6 @@
 
 package com.android.systemui.net;
 
-import com.android.systemui.R
-
 import static android.net.NetworkPolicyManager.EXTRA_NETWORK_TEMPLATE;
 import static android.net.NetworkTemplate.MATCH_MOBILE;
 
@@ -35,6 +33,7 @@ import android.os.ServiceManager;
 import android.util.Log;
 import android.view.WindowManager;
 
+import com.android.systemui.res.R;
 
 /**
  * Notify user that a {@link NetworkTemplate} is over its

@@ -16,8 +16,6 @@
 
 package com.android.systemui.usb;
 
-import com.android.systemui.R
-
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
@@ -32,6 +30,7 @@ import android.view.WindowManager;
 
 import com.android.internal.app.AlertActivity;
 import com.android.internal.app.AlertController;
+import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController;
 
 import javax.inject.Inject;

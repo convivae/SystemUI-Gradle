@@ -16,8 +16,6 @@
 
 package com.android.systemui.volume;
 
-import com.android.systemui.R
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;

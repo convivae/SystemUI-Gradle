@@ -16,12 +16,11 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.view.View
 import com.android.internal.widget.CachingIconView
 import com.android.internal.widget.CallLayout
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.notification.NotificationFadeAware
 import com.android.systemui.statusbar.notification.NotificationUtils
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow

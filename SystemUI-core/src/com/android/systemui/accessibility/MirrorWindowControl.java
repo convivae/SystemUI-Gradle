@@ -16,8 +16,6 @@
 
 package com.android.systemui.accessibility;
 
-import com.android.systemui.R
-
 import static android.view.WindowManager.LayoutParams;
 
 import static com.android.app.viewcapture.ViewCaptureFactory.getViewCaptureAwareWindowManagerInstance;
@@ -36,6 +34,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 
 import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
+import com.android.systemui.res.R;
 
 /**
  * Contains a movable control UI to manipulate mirrored window's position, size and scale. The

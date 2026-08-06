@@ -16,11 +16,10 @@
 
 package com.android.systemui.media.controls.shared
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.graphics.drawable.Drawable
 import com.android.systemui.Flags.mediaControlsDrawablesReuse
+import com.android.systemui.res.R
 
 object MediaControlDrawables {
 

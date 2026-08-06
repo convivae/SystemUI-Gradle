@@ -16,8 +16,6 @@
 
 package com.android.systemui.emergency
 
-import com.android.systemui.R
-
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -29,6 +27,7 @@ import dagger.Module
 import dagger.Provides
 
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.res.R
 
 /** Module for providing emergency gesture objects. */
 @Module

@@ -16,10 +16,9 @@
 
 package com.android.systemui.mediaprojection.permission
 
-import com.android.systemui.R
-
 import android.content.Context
 import android.media.projection.MediaProjectionConfig
+import com.android.systemui.res.R
 
 /** Various utility methods related to media projection permissions. */
 object MediaProjectionPermissionUtils {

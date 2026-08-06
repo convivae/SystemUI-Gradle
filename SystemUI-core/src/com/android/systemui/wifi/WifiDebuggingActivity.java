@@ -16,8 +16,6 @@
 
 package com.android.systemui.wifi;
 
-import com.android.systemui.R
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -45,6 +43,7 @@ import android.widget.Toast;
 
 import com.android.internal.app.AlertActivity;
 import com.android.internal.app.AlertController;
+import com.android.systemui.res.R;
 
 /**
  * Alerts the user of an untrusted network when enabling wireless debugging.

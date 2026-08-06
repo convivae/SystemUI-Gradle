@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.chips.call.ui.viewmodel
 
-import com.android.systemui.R
-
 import android.view.View
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.systemui.Flags
@@ -29,6 +27,7 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.LogLevel
 import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.res.R
 import com.android.systemui.statusbar.chips.StatusBarChipLogTags.pad
 import com.android.systemui.statusbar.chips.StatusBarChipsLog
 import com.android.systemui.statusbar.chips.call.domain.interactor.CallChipInteractor

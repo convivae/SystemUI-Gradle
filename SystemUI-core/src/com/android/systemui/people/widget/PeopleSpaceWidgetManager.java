@@ -16,8 +16,6 @@
 
 package com.android.systemui.people.widget;
 
-import com.android.systemui.R
-
 import static android.Manifest.permission.READ_CONTACTS;
 import static android.app.NotificationManager.INTERRUPTION_FILTER_ALARMS;
 import static android.app.NotificationManager.INTERRUPTION_FILTER_ALL;
@@ -105,6 +103,7 @@ import com.android.systemui.people.PeopleBackupFollowUpJob;
 import com.android.systemui.people.PeopleSpaceUtils;
 import com.android.systemui.people.PeopleTileViewHelper;
 import com.android.systemui.people.SharedPreferencesHelper;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.NotificationListener;
 import com.android.systemui.statusbar.NotificationListener.NotificationHandler;

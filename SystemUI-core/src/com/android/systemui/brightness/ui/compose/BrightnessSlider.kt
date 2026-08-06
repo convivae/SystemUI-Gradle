@@ -16,8 +16,6 @@
 
 package com.android.systemui.brightness.ui.compose
 
-import com.android.systemui.R
-
 import android.view.MotionEvent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
@@ -67,6 +65,7 @@ import com.android.systemui.haptics.slider.SliderHapticFeedbackConfig
 import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.ui.compose.borderOnFocus
+import com.android.systemui.res.R
 import com.android.systemui.utils.PolicyRestriction
 
 @Composable

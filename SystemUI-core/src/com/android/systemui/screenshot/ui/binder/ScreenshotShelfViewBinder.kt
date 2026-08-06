@@ -16,8 +16,6 @@
 
 package com.android.systemui.screenshot.ui.binder
 
-import com.android.systemui.R
-
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Matrix
@@ -33,6 +31,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.res.R
 import com.android.systemui.screenshot.ScreenshotEvent
 import com.android.systemui.screenshot.ui.ScreenshotAnimationController
 import com.android.systemui.screenshot.ui.ScreenshotShelfView

@@ -17,11 +17,10 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import com.android.systemui.R
-
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.constraintlayout.widget.ConstraintSet.VERTICAL
+import com.android.systemui.res.R
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import javax.inject.Inject
 

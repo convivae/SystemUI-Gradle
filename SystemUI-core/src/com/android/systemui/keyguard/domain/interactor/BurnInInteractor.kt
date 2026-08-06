@@ -17,8 +17,6 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
-import com.android.systemui.R
-
 import android.content.Context
 import androidx.annotation.DimenRes
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
@@ -26,6 +24,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.doze.util.BurnInHelperWrapper
 import com.android.systemui.keyguard.shared.model.BurnInModel
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope

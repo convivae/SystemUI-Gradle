@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar;
 
-import com.android.systemui.R
-
 import static android.adaptiveauth.Flags.enableAdaptiveAuth;
 import static android.app.admin.DevicePolicyManager.DEVICE_OWNER_TYPE_FINANCED;
 import static android.app.admin.DevicePolicyResources.Strings.SystemUi.KEYGUARD_MANAGEMENT_DISCLOSURE;
@@ -112,6 +110,7 @@ import com.android.systemui.keyguard.util.IndicationHelper;
 import com.android.systemui.log.core.LogLevel;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.phone.KeyguardBypassController;
 import com.android.systemui.statusbar.phone.KeyguardIndicationTextView;
@@ -512,7 +511,7 @@ public class KeyguardIndicationController {
                     INDICATION_IS_DISMISSIBLE,
                     new KeyguardIndication.Builder()
                             .setMessage(mContext.getResources().getString(
-                                    R.string.dismissible_keyguard_swipe)
+                                    com.android.systemui.res.R.string.dismissible_keyguard_swipe)
                             )
                             .setTextColor(mInitialTextColorState)
                             .build(),
@@ -770,7 +769,7 @@ public class KeyguardIndicationController {
                             .setTextColor(Utils.getColorAttr(
                                     mContext, com.android.internal.R.attr.textColorOnAccent))
                             .setBackground(mContext.getDrawable(
-                                    R.drawable.logout_button_background))
+                                    com.android.systemui.res.R.drawable.logout_button_background))
                             .setClickListener((view) -> {
                                 if (mFalsingManager.isFalseTap(LOW_PENALTY)) {
                                     return;

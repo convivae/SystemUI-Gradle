@@ -16,8 +16,6 @@
 
 package com.android.systemui.compose
 
-import com.android.systemui.R
-
 import android.view.View
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.findViewTreeLifecycleOwner

@@ -16,8 +16,6 @@
 
 package com.android.systemui.navigationbar.views;
 
-import com.android.systemui.R
-
 import static android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_3BUTTON;
 
 import static com.android.systemui.util.Utils.isGesturalModeOnDefaultDisplay;
@@ -28,6 +26,7 @@ import android.view.View;
 
 import com.android.systemui.navigationbar.NavigationBarComponent.NavigationBarScope;
 import com.android.systemui.navigationbar.views.buttons.ButtonDispatcher;
+import com.android.systemui.res.R;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.shared.statusbar.phone.BarTransitions;
 import com.android.systemui.statusbar.phone.LightBarTransitionsController;

@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewbinder
 
-import com.android.systemui.R
-
 import android.util.Log
 import com.android.app.tracing.coroutines.flow.collectTraced
 import com.android.app.tracing.coroutines.launchTraced as launch
@@ -29,6 +27,7 @@ import com.android.systemui.dump.DumpManager
 import com.android.systemui.lifecycle.WindowLifecycleState
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.lifecycle.viewModel
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.notification.stack.ui.view.NotificationScrollView
 import com.android.systemui.statusbar.notification.stack.ui.viewmodel.NotificationScrollViewModel
