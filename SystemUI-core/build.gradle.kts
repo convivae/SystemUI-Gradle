@@ -170,6 +170,12 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
     // motion_tool_lib (com.android.app.motiontool.*，来自 AOSP frameworks/libs/systemui/motiontoollib)
     compileOnly(files("${rootProject.projectDir}/libs/motion_tool_lib.jar"))
+    // contextualeducationlib (com.android.systemui.contextualeducation.GestureType 等，
+    // 来自 frameworks/libs/systemui/contextualeducationlib，tier② jar)
+    implementation(files("${rootProject.projectDir}/libs/contextualeducationlib.jar"))
+    // PlatformMotionTestingComposeValues (platform.test.motion.compose.values.*，
+    // 来自 platform_testing/libraries/motion/compose/values，tier② jar；BouncerContent 等用 motionTestValues)
+    implementation(files("${rootProject.projectDir}/libs/PlatformMotionTestingComposeValues.jar"))
     // Traceur (record issue 用 PresetTraceConfigs/TraceConfig + com.android.traceur.res.R)
     compileOnly(files("${rootProject.projectDir}/libs/TraceurCommon.jar"))
     compileOnly(files("${rootProject.projectDir}/libs/traceur-res-R.jar"))

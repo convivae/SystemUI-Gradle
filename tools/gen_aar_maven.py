@@ -2,6 +2,9 @@
 """
 gen_aar_maven.py - 生成 AAR 并安装到本地 Maven 仓库
 
+警告（2026-08-06）：当前工作树中的 R.jar 合并逻辑是已确认会制造重复 R.class 的
+失败实验，仅为 checkpoint 保留，暂勿运行。下一步必须先撤销该逻辑并恢复直接 AAR 验证。
+
 解决 flatDir 方式 AAR 资源无法正确合并的问题。
 从 AOSP 编译产物中提取 JAR 和资源，打包成 AAR，安装到本地 Maven 仓库。
 
@@ -72,34 +75,6 @@ AAR_CONFIGS = [
         source_path="frameworks/opt/net/wifi/libs/WifiTrackerLib",
         packages_to_remove=["com/android/settingslib"],  # 由 SettingsLib AAR 提供
     ),
-    AarConfig(
-        name="car-ui-lib",
-        intermediate_path="packages/apps/Car/libs/car-ui-lib/car-ui-lib",
-        source_path="packages/apps/Car/libs/car-ui-lib",
-    ),
-    AarConfig(
-        name="car-uxr-client-lib",
-        intermediate_path="packages/apps/Car/libs/car-uxr-client-lib/car-uxr-client-lib",
-        source_path="packages/apps/Car/libs/car-uxr-client-lib",
-        packages_to_remove=["com/android/car/ui"],  # 由 car-ui-lib AAR 提供
-    ),
-    AarConfig(
-        name="car-assist-client-lib",
-        intermediate_path="packages/apps/Car/systemlibs/car-assist-client-lib/car-assist-client-lib",
-        source_path="packages/apps/Car/systemlibs/car-assist-client-lib",
-    ),
-    AarConfig(
-        name="CarNotificationLib",
-        intermediate_path="packages/apps/Car/Notification/CarNotificationLib",
-        source_path="packages/apps/Car/Notification",
-        packages_to_remove=["com/android/car/ui", "com/android/car/uxr", "com/android/car/assist", "com/android/car/messenger"],  # 由其他 AAR 提供
-    ),
-    AarConfig(
-        name="car-qc-lib",
-        intermediate_path="packages/apps/Car/systemlibs/car-qc-lib/car-qc-lib",
-        source_path="packages/apps/Car/systemlibs/car-qc-lib",
-        packages_to_remove=["com/android/car/ui"],  # 由 car-ui-lib AAR 提供
-    ),
 ]
 
 # 通用：需要从所有 JAR 中删除的包（与 Gradle Maven 依赖冲突）
@@ -131,25 +106,34 @@ COMMON_PACKAGES_TO_REMOVE = [
 
 # 工具函数
 def find_jar_source(config: AarConfig) -> Optional[Path]:
-    """查找 JAR 文件源"""
+    """查找主 JAR 文件（业务代码，不含 R 类）"""
     if config.jar_source:
         jar_path = Path(config.jar_source)
         if jar_path.exists():
             return jar_path
         return None
-    
+
     base_path = AOSP_ROOT / "out/soong/.intermediates" / config.intermediate_path / "android_common"
-    
+
     # 优先使用 combined JAR
     combined_jar = base_path / "combined" / f"{config.name}.jar"
     if combined_jar.exists():
         return combined_jar
-    
-    # 其次使用 javac JAR
+
+    # 其次使用 javac JAR（注意：javac 产物不含 R 类，R 类在 busybox/R.jar）
     javac_jar = base_path / "javac" / f"{config.name}.jar"
     if javac_jar.exists():
         return javac_jar
-    
+
+    return None
+
+
+def find_r_jar(config: AarConfig) -> Optional[Path]:
+    """查找 R 类 JAR（AOSP soong 把 R 类生成在 busybox/R.jar，主 jar 不含 R 类）"""
+    base_path = AOSP_ROOT / "out/soong/.intermediates" / config.intermediate_path / "android_common"
+    r_jar = base_path / "busybox" / "R.jar"
+    if r_jar.exists():
+        return r_jar
     return None
 
 
@@ -298,22 +282,35 @@ def remove_duplicate_resources(res_dir: Path):
     print(f"  [OK] Deduplicated {len(values_files)} values XML files across {len(dir_groups)} directories")
 
 
-def clean_jar(jar_path: Path, work_dir: Path, config: AarConfig) -> Path:
-    """清理 JAR 文件，删除冲突的类"""
+def clean_jar(jar_path: Path, r_jar_path: Optional[Path], work_dir: Path, config: AarConfig) -> Path:
+    """清理 JAR 文件：合并 R 类 + 删除冲突包（保留 R 类）"""
     extract_dir = work_dir / "jar_extract"
     extract_dir.mkdir(parents=True, exist_ok=True)
-    
-    # 解压 JAR
+
+    # 1. 解压主 JAR（业务代码）
     with zipfile.ZipFile(jar_path, 'r') as zf:
         zf.extractall(extract_dir)
-    
-    # 删除 R.class 和 R$*.class
-    for r_class in extract_dir.rglob("R.class"):
-        r_class.unlink()
-    for r_inner in extract_dir.rglob("R$*.class"):
-        r_inner.unlink()
-    
-    # 删除通用冲突包
+
+    # 2. 合并 busybox/R.jar 中的 R 类（AOSP soong 把 R 类单独生成在此）
+    #    消费方写 `import com.android.<lib>.R` 时，prebuilt aar 必须自带 R 类
+    r_class_count = 0
+    if r_jar_path and r_jar_path.exists():
+        with zipfile.ZipFile(r_jar_path, 'r') as zf:
+            for name in zf.namelist():
+                if name.endswith("/"):
+                    continue
+                if not name.endswith(".class"):
+                    continue
+                # 只合并 R.class / R$*.class（位于库自己的 namespace 下）
+                base = name.rsplit("/", 1)[-1]
+                if base == "R.class" or base.startswith("R$"):
+                    # 覆盖写：主 jar 通常不含 R 类，直接写入即可
+                    target = extract_dir / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(zf.read(name))
+                    r_class_count += 1
+
+    # 3. 删除通用冲突包（注意：不删 R 类——R 位于 com/android/<lib>/，不在删除列表）
     for pkg in COMMON_PACKAGES_TO_REMOVE:
         pkg_path = extract_dir / pkg
         if pkg_path.exists():
@@ -326,8 +323,8 @@ def clean_jar(jar_path: Path, work_dir: Path, config: AarConfig) -> Path:
                         shutil.rmtree(p)
                     else:
                         p.unlink()
-    
-    # 删除特定配置中指定的包
+
+    # 4. 删除特定配置中指定的包
     if config.packages_to_remove:
         for pkg in config.packages_to_remove:
             pkg_path = extract_dir / pkg
@@ -336,16 +333,16 @@ def clean_jar(jar_path: Path, work_dir: Path, config: AarConfig) -> Path:
                     shutil.rmtree(pkg_path)
                 else:
                     pkg_path.unlink()
-    
+
     # iconloader 特殊处理：保留 com/android/launcher3
     if config.name != "iconloader":
         launcher3_path = extract_dir / "com/android/launcher3"
         if launcher3_path.exists():
             shutil.rmtree(launcher3_path)
-    
+
     # 统计类数量
     class_count = len(list(extract_dir.rglob("*.class")))
-    
+
     # 重新打包
     classes_jar = work_dir / "classes.jar"
     with zipfile.ZipFile(classes_jar, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -353,8 +350,8 @@ def clean_jar(jar_path: Path, work_dir: Path, config: AarConfig) -> Path:
             if file_path.is_file():
                 arcname = file_path.relative_to(extract_dir)
                 zf.write(file_path, arcname)
-    
-    print(f"  [OK] classes.jar ({class_count} classes)")
+
+    print(f"  [OK] classes.jar ({class_count} classes, {r_class_count} R-classes merged)")
     return classes_jar
 
 
@@ -368,9 +365,12 @@ def generate_aar(config: AarConfig):
     try:
         # 1. 处理 classes.jar
         jar_source = find_jar_source(config)
+        r_jar_source = find_r_jar(config)
         if jar_source:
             print(f"  [INFO] Using JAR: {jar_source}")
-            classes_jar = clean_jar(jar_source, work_dir, config)
+            if r_jar_source:
+                print(f"  [INFO] Using R JAR: {r_jar_source}")
+            classes_jar = clean_jar(jar_source, r_jar_source, work_dir, config)
         else:
             print(f"  [WARN] No JAR source found, creating empty classes.jar")
             classes_jar = work_dir / "classes.jar"
@@ -539,10 +539,14 @@ def main():
     print(f"Version: {VERSION}")
     print()
     
-    # 清空并重建 Maven 仓库
-    if MAVEN_REPO.exists():
-        shutil.rmtree(MAVEN_REPO)
-    MAVEN_REPO.mkdir(parents=True)
+    # 仅清空本次要重新生成的 aar 目录（保留其他手动维护的产物：
+    # 如 systemui.flags/flags、server.notification/Flags、SystemUISharedLib 等）
+    group_path = GROUP_ID.replace(".", "/")
+    for config in AAR_CONFIGS:
+        artifact_dir = MAVEN_REPO / group_path / config.name / VERSION
+        if artifact_dir.exists():
+            shutil.rmtree(artifact_dir)
+    MAVEN_REPO.mkdir(parents=True, exist_ok=True)
     
     # 生成所有 AAR
     all_warnings = []
