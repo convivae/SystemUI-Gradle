@@ -314,15 +314,15 @@ KX: kotlinx-coroutines-core-jvm-1.10.2.jar  # 在 Gradle wrapper lib
 
 **原因**: KAPT/Gradle 缓存、并行编译顺序
 
-**应对**: 决策前跑 2-3 次取平均
+**应对**: 错误数只作诊断；需要比较同一问题时再保持相同参数重跑，不把数量变化作为提交或回滚门槛。
 
 ---
 
 ## 8. 文档陷阱
 
-### 8.1 文档写"0 错误"但实际还有
+### 8.1 文档写"0 错误"或"构建成功"但没有证据
 
-**避免**: 每次 commit 立即跑一次 FULL build，不只 `compileDebugKotlin`
+**避免**: 只有在需要作出对应结论时才运行能够证明该结论的命令，并记录退出码/结果。**不要求每次 commit 都跑 FULL build**；未运行时明确写“未运行”。
 
 ### 8.2 文档没记录 false positive
 
@@ -330,7 +330,7 @@ KX: kotlinx-coroutines-core-jvm-1.10.2.jar  # 在 Gradle wrapper lib
 
 ### 8.3 计划文档 vs 实际状态不同步
 
-**避免**: 每次 commit 同步 `docs/PLAN.md` 状态
+**避免**: 在阶段里程碑、架构决策、交接或状态发生实质变化时同步文档；不要求每个 commit 机械更新所有计划文件。
 
 ---
 

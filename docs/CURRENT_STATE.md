@@ -1,14 +1,18 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **最后更新**: 2026-07-29（ADR 增订）
-> **当前错误数**: 70（Stage 2 已解 + 完整性审查完成）；当前 build 失败（`SystemUI-animationlib` 配置不完整，见 §4）
-> **当前阶段**: Stage 3 推进中（animationlib 收尾 + app 模块按 bp 重构）
+> ⚠️ **历史快照警告（2026-08-06）**：本文件主体停留在 2026-07-29，错误数、待办和 app 入口类计划已过时。当前规则与优先级以 `AGENTS.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md` 为准。
+>
+> 当前阶段是**框架校准/依赖清理**：先做 AOSP SystemUI 源码不漏不多审查、删除非 SystemUI 违规源码、清理无用/违规/旧 jar/AAR。错误数在任何阶段都只作为诊断数据，不是提交门槛；AAR 先直接引入，确认冲突后才使用本地 Maven AAR。入口类保留在 `:SystemUI-core`，不是 `:app`。
+
+> **历史最后更新**: 2026-07-29（ADR 增订）
+> **历史错误数**: 70（Stage 2 已解 + 完整性审查完成）；此数字不代表 2026-08-06 当前构建状态
+> **历史阶段**: Stage 3 推进中（animationlib 收尾 + app 模块按 bp 重构）
 
 > ✅ **Stage 2 已解决 (2026-07-28)**: server-notification-flags 的根因是源码 stub 遮蔽 jar，
 > `git rm` 后 2000 → 1979。详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
 
 > 🆕 **2026-07-29 ADR**: 项目引入 3 份架构决策记录，详见 `docs/adr/`：
-> - **ADR 0001** `aosp-res-via-local-maven.md` — res 处理优先级 + local maven 根因
+> - **ADR 0001** `aosp-res-via-local-maven.md` — AAR 先直接引入，确认冲突后才用 local Maven
 > - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 脚本一律 Python
 > - **ADR 0003** `app-module-aligns-aosp-bp.md` — 项目结构对齐 AOSP `Android.bp`
 
@@ -18,7 +22,7 @@
 
 | 规则 | 触发场景 | 行动 |
 |------|---------|------|
-| **R** (§1.8) | res 缺失编译报错 | AOSP 源码 → maven-aar → maven；**禁止**凭空生成 |
+| **R** (§1.8) | res 缺失编译报错 | AOSP SystemUI 源码 → 直接 AAR → 确认冲突后本地 Maven AAR → 公网上游官方依赖；**禁止**凭空生成 |
 | **B** (§1.9) | 想加模块/调依赖 | 按 AOSP `Android.bp` 校准（ADR 0003） |
 | ADR 0002 | 想写脚本 | Python；除非纯 CLI 调用才可 .sh |
 
@@ -265,14 +269,15 @@ SystemUI-plugin/src/main/java/.../* (移动过)
 
 ## 7. 验证清单
 
-每次 commit 前确认：
+提交前确认：
 
-- [ ] 错误数下降
-- [ ] docs/GRADLE_MIGRATION_LOG.md 写入新行
-- [ ] docs/issues/YYYY-MM-DD-*.md 更新
+- [ ] 改动是否让模块结构、依赖来源、源码/资源对齐或最终可构建性向前推进
+- [ ] 来源和决策已记录；中间态的已知问题没有被隐瞒
 - [ ] 没引入新 stub
-- [ ] 没改 res/ 资源
-- [ ] build.gradle.kts 只在 dependencies 块改
+- [ ] 没有凭空生成或擅自修改 res/ 资源
+- [ ] 已如实记录本次是否运行编译/验证及实际结果（不要求每次都编译）
+
+> 错误数可以记录到 `docs/GRADLE_MIGRATION_LOG.md` 供诊断，但不是提交条件。
 
 ---
 

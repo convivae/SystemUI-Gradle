@@ -1,5 +1,7 @@
 # ADR 0003: 项目结构对齐 AOSP `frameworks/base/packages/SystemUI/Android.bp`
 
+**状态**：已接受；2026-07-31 修正入口类归属，2026-08-06 修正 manifest 归属和 APK 打包解释
+
 ## 上下文
 
 AOSP 用 soong (`Android.bp`) 定义 SystemUI 的模块图：
@@ -8,13 +10,14 @@ AOSP 用 soong (`Android.bp`) 定义 SystemUI 的模块图：
 - `android_library "SystemUI-core"` (Android.bp:421) 是核心库，`srcs: [src/**, compose/**]`，`static_libs` 含 **所有子模块**（shared/animation/customization/unfold/log/common/plugin 等）
 - 其它子模块（shared/animation/customization/unfold/log/common/plugin/plugin-core）是独立 `android_library`
 
-**当前项目结构问题**：
+**历史问题与更正**：
 
-1. `app/build.gradle.kts` 多余地 `implementation(project(":SystemUI-shared"))` 等 —— `SystemUI-core` 已通过 static_libs 引入，重复
-2. `SystemUI-core/src/com/android/systemui/SystemUIApplication.java` 和 `SystemUIService.java` 是 AOSP `android_app` 的入口，但放在 `android_library` (core) 里 —— 与 AOSP 不对齐
-3. `app/src/main/AndroidManifest.xml` 仅 4 行，AOSP 原版 1158 行（service、permission、receiver 大量）
-4. AOSP `android_app "SystemUI"` 还引用 `proguard.flags` / `proguard_common.flags` / `proguard_kotlin.flags` / `AndroidManifest-res.xml` / `privapp_whitelist_com.android.systemui` —— 当前 `:app` 都没有
-5. 模块命名/边界虽然大体对齐，但**判断标准未明确文档化**：哪些按源码模块、哪些按 jar、哪些按 aar → 用户给的新规则：按 bp 文件定义
+1. `app/build.gradle.kts` 曾多余地直接依赖 `:SystemUI-shared` 等；目标是由 `SystemUI-core` 的依赖链传递
+2. 早期误以为 `SystemUIApplication.java` / `SystemUIService.java` 应迁到 app；2026-07-31 已确认它们被 core 的 `src/**/*.java` 包含，必须留在 core
+3. `app/src/main/AndroidManifest.xml` 曾只有 4 行；现已复制完整 AOSP manifest
+4. AOSP app 还涉及 platform signing、ProGuard、privileged/system_ext 等打包属性，需要在 Gradle 中翻译或明确记录无直接等价项
+5. AOSP `SystemUI-res`、`SystemUI-core` 和 `SystemUI` app 的 manifest/资源传播关系曾被误读；2026-08-06 根据 bp 和 Soong 源码重新说明
+6. 模块命名/边界和源码、jar、AAR 的判定标准必须由 bp 和来源规则共同决定
 
 ## 决策
 
@@ -31,7 +34,7 @@ AOSP 用 soong (`Android.bp`) 定义 SystemUI 的模块图：
 - `android_library "SystemUIPluginLib"` → 项目 `:SystemUI-plugin`（运行时接口）
 - `android_library "PluginCoreLib"` + `PluginAnnotationLib` → 项目 `:SystemUI-plugin-core`（编译时注解）
 
-→ 已基本对齐，唯一例外 `:SystemUI-animationlib`（来自 `animation/lib/`，AOSP 也有独立 soong 模块）
+→ 主体模块已基本对齐；当前明确缺口是 AOSP `SystemUI-res` 尚未成为独立 Gradle module，资源仍直接挂在 `:SystemUI-core`。后续必须按 bp 校准，不能把现状误写为最终 1:1 结构。
 
 ### 决策 2：依赖关系严格按 bp 的 static_libs / libs 顺序
 
@@ -44,12 +47,12 @@ tier① 源码子模块（按 bp static_libs 顺序）：
   :SystemUI-shared, :SystemUI-animation, :SystemUI-customization,
   :SystemUI-common, :SystemUI-log, :SystemUI-unfold,
   :SystemUI-plugin, :SystemUI-plugin-core
-tier② AOSP 特有 jar/aar：
-  framework.jar, framework-statsd.jar, monet.jar,
-  android.car.jar, WindowManager-Shell.jar, WifiTrackerLib,
-  SettingsLib (maven-aar), iconloader (maven-aar),
+tier② AOSP 特有 jar/AAR：
+  framework.jar, framework-statsd.jar,
+  android.car.jar, WindowManager-Shell, WifiTrackerLib,
+  SettingsLib、iconloader（含资源时先直接 AAR，确认冲突后才用本地 Maven AAR），
   systemui-flags, settingslib-flags, notification-flags,
-  SystemUI-{proto,statsd,tags} (生成物 jar)
+  SystemUI-{proto,statsd,tags}（生成物 jar）
 tier③ 公网 maven（按 bp 顺序）：
   androidx.core-ktx, viewpager2, legacy-support-v4,
   recyclerview, preference, appcompat,
@@ -64,37 +67,51 @@ tier③ 公网 maven（按 bp 顺序）：
   dagger2, jsr305, jsr330, lottie, lottie-compose
 ```
 
-### 决策 3：`android_app "SystemUI"` 引用文件 → 全部迁到 `:app`
+### 决策 3：manifest 与 app 打包文件按 bp 职责映射到 Gradle
 
-AOSP Android.bp 表明 `android_app "SystemUI"` 涉及以下文件/属性，必须从 AOSP 复制/移动到 `:app/`，**不能漏**：
+AOSP 的文件归属必须按对应 module 理解，而不是看到文件名后全部归入 `android_app`：
 
-| AOSP 路径（相对 `frameworks/base/packages/SystemUI/`） | 行数/类型 | 在 `:app` 中的目标位置 | 状态 |
+| AOSP 文件/属性 | AOSP 归属 | Gradle 映射 | 状态 |
 |------|------|------|------|
-| `AndroidManifest.xml` | 1158 行（service/permission/receiver/activity 声明） | `:app/src/main/AndroidManifest.xml` | 缺失（当前 4 行） |
-| `AndroidManifest-res.xml` | 16 行（空壳 manifest `package="com.android.systemui.res"`，用于 aapt2 资源处理） | `:app/src/main/AndroidManifest-res.xml` | 缺失 |
-| `src/com/android/systemui/SystemUIApplication.java` | 入口类 | `:app/src/main/java/com/android/systemui/SystemUIApplication.java` | 在 `:SystemUI-core/src/`，需移 |
-| `src/com/android/systemui/SystemUIService.java` | 服务入口 | `:app/src/main/java/com/android/systemui/SystemUIService.java` | 在 `:SystemUI-core/src/`，需移 |
-| `proguard.flags` | 7 行（include 公共/kotlin flags + keep 规则） | `:app/proguard.flags` | 缺失 |
-| `proguard_common.flags` | 72 行（反射保护、回调字段等） | `:app/proguard_common.flags` | 缺失 |
-| `proguard_kotlin.flags` | 37 行（Kotlin 反射/Metadata） | `:app/proguard_kotlin.flags` | 缺失 |
-| `privapp_whitelist_com.android.systemui` | 系统权限白名单（OEM 设备配置，**只在真机签名时校验**，本项目编译不必） | **不复制**（注释标记） | 不复制 |
+| `AndroidManifest.xml` | `SystemUI-core` 显式使用；`SystemUI` app 在同一 package 中完成最终应用链接 | `:app/src/main/AndroidManifest.xml` 保留完整最终 manifest；`:SystemUI-core/AndroidManifest.xml` 保留 permission/protected-broadcast 部分，避免 AGP 重复合并 application 组件 | ✅ Gradle 适配 |
+| `AndroidManifest-res.xml` | **`SystemUI-res`** 的 manifest，不是 `android_app` 的专属输入 | 当前副本位于 `:app/src/main/` 但未被 app Gradle 配置消费；后续建立独立 `:SystemUI-res` module 时归位 | ⚠️ 待校准 |
+| `proguard.flags` / `proguard_common.flags` / `proguard_kotlin.flags` | `SystemUI` app 优化配置 | `:app/` 对应文件 | ✅ 已复制 |
+| `privapp_whitelist_com.android.systemui` | `required` 的系统镜像权限白名单 | 不属于普通 APK 编译输入；由目标系统镜像/设备配置提供 | 不复制 |
 
-### 决策 4：SystemUIApplication / SystemUIService 迁移动作
+> Gradle 与 Soong 的 manifest 传播机制不同，不能机械要求 app/core 两个 Gradle module 都持有同一份完整 application 组件声明。最终标准是 APK merged manifest 与 AOSP 语义一致，同时保留入口类在 core。
+>
+> **入口类更正（2026-07-31）**：原决策 3 将 `SystemUIApplication.java` / `SystemUIService.java`
+> 列为 "android_app 入口，需迁到 `:app`"——这是对 bp 的误读。实际 AOSP bp 中：
+> - `SystemUI-core` (Android.bp:425) `srcs: ["src/**/*.java", ...]` **包含**这两个入口类
+>   （它们位于 `src/com/android/systemui/`）
+> - `android_app "SystemUI"` (Android.bp:958) **无独立 `srcs`**，仅 `static_libs: ["SystemUI-core"]`
+>
+> 故按规则 B（bp 对齐），入口类**本来就属于 `:SystemUI-core`**，不应迁到 `:app`。
+> `:app` 无源码（与 bp 的 android_app 无 srcs 一致）。
 
-- `:SystemUI-core/src/com/android/systemui/SystemUIApplication.java` → `:app/src/main/java/com/android/systemui/SystemUIApplication.java`
-- `:SystemUI-core/src/com/android/systemui/SystemUIService.java` → `:app/src/main/java/com/android/systemui/SystemUIService.java`
-- `:SystemUI-core/build.gradle.kts` 的 `sourceSets.main.java.srcDirs` 不需要排除（Gradle 编译时按 `java.srcDirs("src")` 包含所有，移走即不参与编译）
+### 决策 4：入口类保留在 `:SystemUI-core`（方案 A，2026-07-31 更正）
 
-### 决策 5：resource_dirs 在 `:app` 与 `:SystemUI-core` 之间的分配
+- `SystemUIApplication.java` / `SystemUIService.java` **保留在** `:SystemUI-core/src/com/android/systemui/`
+  （匹配 bp `src/**/*.java` glob）
+- `:app/src/main/java/` **无源码**（匹配 bp android_app 无 srcs），仅 `static_libs: ["SystemUI-core"]`
+- 曾在 `:app/src/main/java/` 创建的入口类副本已删除（避免与 core 重复）
+- core 的 6 个文件（KeyguardService 等）直接 import `SystemUIApplication`/`SystemUIService`，
+  入口类留在 core 保证这些引用可解析（library 无法依赖 app）
+- R import 更正：AOSP 原版用 `import com.android.systemui.res.R;`，但项目 core 的 namespace 为
+  `com.android.systemui`，R 类生成在 `com.android.systemui.R`。入口类 `package com.android.systemui`
+  与 R 同包，用 bare `R.` 即可解析（与 core 其他 119 个同包文件一致），无需 import
 
-- `:SystemUI-core/res{,-keyguard,-product}/` 持有所有 AOSP 资源（规则 C：1:1 完整复制）
-- `:app` 不再持有 res；apk 打包时由 aapt2 收集 `:SystemUI-core` 的所有 res
+### 决策 5：资源传播的当前适配与待校准目标
+
+- 当前 `:SystemUI-core/res{,-keyguard,-product}/` 持有 AOSP SystemUI 资源，`:app` 无 res；APK 打包时由 AAPT2 从 core 依赖链收集资源
+- AOSP bp 实际由独立 `SystemUI-res` module 持有这些资源，再由 `SystemUI-core` static link；项目尚未建立等价 module，这是待解决的结构缺口
+- 在完成该模块校准前，现有资源文件仍必须与 AOSP 1:1，不得为了当前 Gradle 布局修改、去重或补造资源
 
 ### 决策 6：build.gradle.kts 配置项按 bp 转换
 
 | AOSP bp 属性 | Gradle 翻译 | `:app/build.gradle.kts` 写法 |
 |------|------|------|
-| `static_libs: ["SystemUI-core"]` | `implementation(project(":SystemUI-core"))` | 仅这一行 + framework 等 jar |
+| `static_libs: ["SystemUI-core"]` | `implementation(project(":SystemUI-core"))` | project module 仅直接依赖 core；当前额外外部依赖待审计是否应由 core 传递 |
 | `platform_apis: true` | 隐含（compileSdkPreview = "SysUISdk"） | 已有 |
 | `system_ext_specific: true` | 注释标记（Gradle 无对应） | 注释 `// AOSP: system_ext_specific: true` |
 | `privileged: true` | 注释标记 | 注释 `// AOSP: privileged: true` |
@@ -117,11 +134,12 @@ is also present at [:SystemUI-core] AndroidManifest.xml value=(com.android.syste
 **AOSP 无此问题**——soong 用 `package=` 区分，namespace 是 AGP 强加概念。
 
 **决策**：
-- `:app` namespace 改为 `com.android.systemui.app`（独立 namespace，区别于 core）
+- `:app` namespace 为 `com.android.systemui.app`（独立 namespace，区别于 core）
 - `:app` 的 `applicationId` 仍为 `com.android.systemui`（AOSP 真实 APK id）
-- `:app` 与 `:SystemUI-core` 的 manifest 删除 `package=` 属性（AGP 9 要求 module namespace 与 manifest package 一致，否则直接报错；AOSP 1:1 优先保留其他属性，但这一项必须变通，参见规则 C 例外说明）
-- `:SystemUI-core` manifest 删除 `<application>` 整块（library 模块不应有 `<application>`；按 AOSP `Android.bp:421` `SystemUI-core` 是 `android_library` 不含 manifest 字段，本项目之前留下的 application 块是历史遗留，违反决策 1 "按 bp 定义"）
-- reference: `CarSystemUIGradle/app/build.gradle.kts:22` 用 `namespace = "com.android.systemui.car"` + `applicationId = "com.android.systemui"`（车载版等价处理）
+- app/core manifest 删除 `package=` 属性，由 AGP namespace/applicationId 管理
+- AOSP `SystemUI-core` **确实显式设置** `manifest: "AndroidManifest.xml"`；旧文档称其“不含 manifest 字段”是错误的
+- Gradle 当前让 app 持有完整 manifest，让 core 保留 permission/protected-broadcast 部分而不重复 `<application>` 组件。这是为适配 AGP manifest merger 的明确差异，不是把入口类迁到 app
+- reference: `CarSystemUIGradle/app/build.gradle.kts:22` 使用独立 namespace + `applicationId = "com.android.systemui"` 的等价处理
 
 ### 决策 8：AGP 8+ `buildToolsVersion` 与 `compileSdkPreview` 用法
 
@@ -130,16 +148,18 @@ is also present at [:SystemUI-core] AndroidManifest.xml value=(com.android.syste
 
 ## 副作用 / 约束
 
-- 移动入口类时需更新 :SystemUI-core/build.gradle.kts 不再 include 这两个文件；`:app/build.gradle.kts` 加 `aidl.srcDirs("src/main/aidl")`（如果有 aidl）
-- 当前 4 行 manifest 不够：缺失 `uses-permission`（RECEIVE_BOOT_COMPLETED、READ_EXTERNAL_STORAGE 等 50+）和 `service` / `receiver` / `activity` 声明
-- 删除 `app/build.gradle.kts` 中冗余的 `implementation(project(":SystemUI-shared"))` 等
+- 入口类保留在 `:SystemUI-core`，无需调整 `sourceSets`（与 bp `src/**/*.java` 一致）
+- `:app/src/main/AndroidManifest.xml` 已从 AOSP 完整复制（1158 行，service/receiver/activity 声明齐全）
+- `:app/build.gradle.kts` 的 project module 依赖仅 `:SystemUI-core`，但仍有 framework/WMShell compileOnly 和少量上游 implementation；后续按 bp 检查是否应全部由 core 传递
 - `proguard.flags` 引用 `proguard_common.flags`（`include`），后者引用 `proguard_kotlin.flags`，路径相对：需按相对 `:app/` 根
-- **不解决编译错误**（本 ADR 只解决"结构不对齐"，编译错误是后续 commit 解决，符合规则 I 增量）
+- 本 ADR 解决模块边界和打包职责，不以单次编译错误数衡量；结构更接近 AOSP 即属于有效推进
+- 是否运行编译按当前问题需要决定；未运行或失败时必须如实记录，不得声称 APK 已成功产出
 
 ## 决策状态
 
-- **结构对齐阶段**（本 ADR）：复制 + 移动文件 + 配置项翻译，**预期可能编译失败**（规则 I 例外适用 — 结构对齐属于"基准对齐"）
-- **错误修复阶段**（后续 commit）：在结构对齐基础上，**逐个** 解决编译错误
+- **结构对齐**：入口类归属和 app/core 边界已确定
+- **依赖/资源校准**：继续审查 app 直接依赖、`SystemUI-res` 映射和 manifest merge 结果
+- **APK 里程碑验证**：依赖校准完成后运行 `:app:assembleDebug`；在命令退出 0 前只说明打包链路已配置，不宣称 APK 构建成功
 
 ## 参考
 
@@ -152,3 +172,4 @@ is also present at [:SystemUI-core] AndroidManifest.xml value=(com.android.syste
 - AOSP `out/soong/.intermediates/frameworks/base/data/etc/privapp_whitelist_com.android.systemui`（OEM 配置，不复制）
 - AGENTS.md §1.5 规则 S（Source-first）+ §1.6 规则 C（不漏不多）+ §1.9 规则 B（bp 对齐）
 - `CarSystemUIGradle/app/build.gradle.kts` 参考实现
+- `docs/architecture/2026-08-06-soong-android-app-vs-gradle-app.md` — Soong APK 生成流程与 Gradle 对应关系

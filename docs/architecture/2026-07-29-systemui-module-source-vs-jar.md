@@ -1,4 +1,6 @@
-# SystemUI 依赖策略：自有代码用源码，外部依赖用 jar/aar/maven (2026-07-29)
+# SystemUI 依赖策略：自有代码用源码，外部依赖用 jar/AAR，上游库走官方仓库 (2026-07-29；2026-08-06 更正)
+
+> ⚠️ **2026-08-06 更正**：Maven 不是与 AAR 并列的第四种产物。`libs/maven/` 是 AAR 的本地交付仓库；含资源的 AOSP 库应先直接引入 AAR，确认冲突后才用脚本生成本地 Maven AAR。androidx/Compose 等直接使用 Google Maven/Maven Central 官方坐标。当前规则以 `AGENTS.md` §1.1/§1.5 和 `2026-08-06-reference-project-rationale.md` 为准。
 
 > **用户明确原则 (2026-07-29)**：AOSP `packages/SystemUI/` 下 **SystemUI 自有的代码**
 > 一律**源码复制**过来做**源码依赖**，不用 jar；**SystemUI 之外的模块**尽量用
@@ -112,7 +114,7 @@ compose/facade/enabled/src/**/*.kt
 2. kairos：加 `-opt-in=com.android.systemui.kairos.ExperimentalFrpApi` 编译 flag
    （AOSP `utils/kairos/Android.bp:25` 就是这么写的）→ 一次清掉 779 个 opt-in 错误。
 3. 补齐 SystemUI-shared-utils、animation/lib、compose/scene 等缺失源码。
-4. 每步遵守规则 I（增量、记录错误数演变）。
+4. 按 AOSP 模块图推进并记录来源；错误数变化只用于诊断，不作为迁移步骤的提交门槛。
 
 ## 七、注意：源码 vs jar 冲突
 

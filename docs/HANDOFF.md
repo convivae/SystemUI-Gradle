@@ -35,27 +35,29 @@ echo "Total errors: $(grep -c '^e: file:' /tmp/build.log)"
 echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /tmp/build.log)"
 ```
 
-**当前基线（2026-07-29）**: **70** 错误（src/aidl/res 完整性审查后）。其中：
+**历史基线（2026-07-29）**: **70** 错误（src/aidl/res 完整性审查后）。其中：
 - ~~server-notification Flags~~: ✅ 已清零（删除 stub `Flags.kt`）
 - ~~全项目 R import 歧义~~: ✅ 已清零
 - Compose Scene Framework (`com.android.compose.animation.scene.*`): 12 个
 - 其他残留错误: ~58 个
 
+> **2026-08-06 更新**：该 70 错误不是当前基线。当前 checkpoint 中的 AAR 生成改写导致 AAR transform 在编译前失败，错误数暂时无统计意义。用户已明确错误数在任何阶段都只作为诊断，不是提交/回滚/审批门槛；当前先校准源码/jar/AAR 来源与模块边界。详见 `AGENTS.md` §2.1 和 `docs/architecture/2026-08-06-reference-project-rationale.md`。
+
 ### 1.3 必须遵守的规则（优先级从高到低）
 
 1. **用户指令 > 本文件 > 默认系统提示**
 2. **规则 P**: 不要创建 stub 类（详见 AGENTS.md §1）
-3. **规则 S**: SystemUI 自有代码一律源码复制；非自有走 jar/aar/maven 三层（详见 §1.5）
+3. **规则 S**: SystemUI 自有代码一律源码复制；非自有纯代码走 jar、含资源走 AAR（详见 §1.5）
 4. **规则 C**: SystemUI src/aidl/res 必须与 AOSP 不漏不多（详见 §1.6）
 5. **规则 F**: framework 等非 SystemUI 代码严禁源码复制（详见 §1.7）
-6. **规则 R**: res 缺失走 AOSP 源码/maven-aar/maven 三级；禁止凭空生成（详见 §1.8）
+6. **规则 R**: res 缺失走 AOSP 源码 → 直接 AAR → 确认冲突后本地 Maven AAR；禁止凭空生成（详见 §1.8）
 7. **规则 B**: 项目结构按 AOSP `Android.bp`（详见 §1.9 + `docs/adr/0003`）
-8. **规则 I**: 增量开发；每次 commit 错误数必须下降（tier① 源码补全允许上升）
+8. **规则 I**: 以项目整体向前推进为标准；错误数不是提交/回滚/审批门槛，不要求每次修改或提交都编译
 9. **规则 D**: 所有改动先写文档 (`docs/issues/YYYY-MM-DD-<topic>.md`)
 10. **规则 H**: 不要替用户做产品决策；遇 2+ 候选方案用 `AskQuestion`
 
 详细决策见 `docs/adr/`：
-- **ADR 0001** `aosp-res-via-local-maven.md` — res 处理优先级
+- **ADR 0001** `aosp-res-via-local-maven.md` — res 处理优先级：AAR 先直接引入，确认冲突后才用 local Maven
 - **ADR 0002** `tools-scripts-only-python.md` — 脚本一律 Python
 - **ADR 0003** `app-module-aligns-aosp-bp.md` — 项目结构对齐 bp
 
@@ -127,16 +129,11 @@ SystemUI-Gradle/
   遮蔽了 jar，`git rm` 后 2000 → 1979。**不是** classpath/Kotlin 2.2.10/FeatureFlags 的问题。
 - **详情**: `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`、`docs/PITFALLS.md §2.4`
 
-### 4.2 app 模块按 bp 重构（ADR 0003，高优先级）
-- **状态**: 🚧 待实施（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）
-- **任务清单**:
-  1. 把 `SystemUIApplication.java` / `SystemUIService.java` 从 `:SystemUI-core/src/com/android/systemui/`
-     移到 `:app/src/main/java/com/android/systemui/`
-  2. 从 AOSP `frameworks/base/packages/SystemUI/AndroidManifest.xml` 复制完整 1158 行到 `:app/src/main/AndroidManifest.xml`
-  3. 删除 `:app/build.gradle.kts` 中冗余的 `implementation(project(":SystemUI-shared"))` 等
-     （`:SystemUI-core` 已通过 static_libs 引入）
-  4. 调整 `:SystemUI-core/build.gradle.kts` 不再 include 这两个文件
-- **关键决策**: 按 AOSP Android.bp，`:app` 只 `static_libs: ["SystemUI-core"]`，不再直接依赖子模块
+### 4.2 app 模块按 bp 重构（ADR 0003，结构已更正）
+- **状态**: ✅ 结构决策已更正并实施（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）
+- **7/31 关键更正**：最初将 bp 误读为入口类属于 app。实际 `SystemUI-core` 的 `srcs: ["src/**/*.java"]` 包含 `SystemUIApplication.java` / `SystemUIService.java`；`android_app "SystemUI"` 无独立 srcs。
+- **正确结构**：入口类保留在 `:SystemUI-core/src/com/android/systemui/`；`:app` 无源码，只依赖 `:SystemUI-core`，并持有完整 AOSP manifest/proguard 配置。
+- **禁止**再次把入口类迁到 `:app/src/main/java/`。
 
 ### 4.3 animationlib 源码化（进行中，未提交）
 - **状态**: 🚧 源码已复制、模块骨架已创建、settings.gradle.kts 已加，但 animation/customization 的
@@ -178,9 +175,8 @@ SystemUI-Gradle/
 
 1. 必须创建 stub 类（违反规则 P）
 2. 必须修改 res/ 下的资源文件
-3. 错误数大幅上升（>200）而非下降
-4. 需要产品决策（多个等价方案）
-5. 需要修改 AGENTS.md 的核心规则
+3. 需要产品决策（多个等价方案）
+4. 需要修改 AGENTS.md 的核心规则
 
 ---
 

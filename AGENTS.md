@@ -20,7 +20,7 @@
 
 项目所有**架构级决策**写在 [`docs/adr/`](./docs/adr/)。引用文件：
 
-- **ADR 0001** `aosp-res-via-local-maven.md` — AOSP res 缺失处理优先级 + local maven 而非 flatDir 的根因
+- **ADR 0001** `aosp-res-via-local-maven.md` — AOSP res 缺失处理优先级：AAR 先直接引入，确认冲突后才用 local Maven
 - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 下脚本一律 Python，禁止 .sh
 - **ADR 0003** `app-module-aligns-aosp-bp.md` — 模块划分/依赖/入口类位置严格按 AOSP `Android.bp`
 
@@ -32,61 +32,68 @@
 
 > **规则 P (Project Rule)**: 不允许使用 stub 技术。
 
-### 1.1 允许的四种依赖形式
+### 1.1 允许的三种依赖形态（用户明确更正，2026-08-06）
 
-| 形式 | 何时用 | 示例 |
+> **Maven 不是第四种依赖产物。**
+> 本项目 `libs/maven/` 是 **AAR 的本地 Maven 交付仓库**；仓内应是 AAR + POM，
+> 目的是在直接引入 AAR 发生资源/依赖冲突时，借 Gradle/AAPT2 的标准依赖解析完成资源合并。
+> 公网 Maven（Google Maven / Maven Central）则是上游库的获取渠道，也不是新的产物类型。
+
+| 形态 | 何时用 | 示例 |
 |------|--------|------|
-| 源码复制 | AOSP 完整模块的源码 | `implementation(project(":SystemUI-shared"))` |
-| jar | AOSP 编译产物、对 `aconfig` Flag、单类 | `compileOnly(files("libs/framework.jar"))` |
-| aar | 含资源的 AOSP 库 | `implementation(libs.systemui.settingslib)` |
-| maven | 上游 AndroidX / Compose | `implementation("androidx.compose.ui:ui:1.7.5")` |
+| 源码依赖 | **仅** AOSP `frameworks/base/packages/SystemUI/` 内的 SystemUI 自有代码 | `implementation(project(":SystemUI-shared"))` |
+| jar | SystemUI 之外的纯代码 AOSP 产物、aconfig 生成类、无资源库 | `compileOnly(files("libs/framework.jar"))` |
+| aar | SystemUI 之外且包含资源的 AOSP 库；**先直接引入**，出现冲突后才放入本地 Maven 仓 | `implementation(files("libs/<name>.aar"))`；冲突后 `implementation(libs.systemui.settingslib)` |
 
 ### 1.2 禁止
 
 - ❌ **不允许创建 *.java stub 类**只为让 IDE/编译器满意
 - ❌ **不允许私自创建资源文件** (res/ 下的任何 .xml/.png/.9.png 等)
 - ❌ **不允许创建 *.kt stub 文件**（同 Java）
-- ❌ 所有资源文件必须来自：AOSP 源码、aar 包、maven 依赖
+- ❌ 所有资源文件必须来自：AOSP 源码、AAR（直接或由本地 Maven 仓交付）、或 Google/MavenCentral 上游依赖的原始产物
 - ⚠️ 退路：如果所有方案都失败，**临时**用 stub 必须明显标注 `// TODO: temporary stub, replace with real impl` 并记录到 `docs/issues/`
 
 ### 1.3 允许
 
-- ✅ 复制 AOSP 源码目录作为 module (例如 `:SystemUI-monet`)
+- ✅ 复制 AOSP SystemUI 源码目录作为 module（例如 `:SystemUI-monet`）
 - ✅ 从 AOSP 编译产物提取 *.class 打包为 jar
-- ✅ 从 AOSP 编译产物提取 jar/aar 放到 `libs/` 或 `libs/maven/`
-- ✅ 复制 AOSP 的 res 目录 (例如 `res-keyguard/`, `res-product/`)
-- ✅ 对 res 目录做必要的去重/合并 (AAPT2 不支持 product 属性)
+- ✅ AOSP 非 SystemUI 纯代码产物以 jar 放入 `libs/`
+- ✅ 含资源的 AOSP 库先以 AAR 直接引入；确认发生资源/依赖冲突后，再经脚本安装为 `libs/maven/` 下的本地 Maven AAR
+- ✅ 复制 AOSP SystemUI 的 res 目录（例如 `res-keyguard/`, `res-product/`），保持文件集与内容 1:1
+- ✅ 通过 Gradle `sourceSets`/模块配置消费原始资源；**不得**为适配 AAPT2 擅自修改、去重、合并或重写 AOSP SystemUI 资源文件。若构建系统无法直接消费，按规则 H 停止并询问用户
 
 ### 1.4 参考实现
 
-- `CarSystemUIGradle` 项目 (同用户私有项目) 是参考实现
-- 关键脚本：`tools/gen_aar_maven.py` （已从 CarSystemUIGradle 复制）
+- `CarSystemUIGradle` 项目（同用户私有项目）是参考实现
+- 参考文档：`CarSystemUIGradle/docs/GRADLE_MIGRATION.md`、`DEPENDENCIES.md`、`README.md`
+- `tools/gen_aar_maven.py` 来自参考项目，**仅用于已经确认的 AAR 资源/类冲突**；当前阶段先直接引入 AAR 验证冲突，不默认运行脚本
 - 关键资源：参考 `CarSystemUIGradle/SystemUI-core/build.gradle.kts` 的依赖引入方式
+- 本项目对参考项目机制的“为什么”记录：`docs/architecture/2026-08-06-reference-project-rationale.md`
 
 ### 1.5 源码 vs jar 判定原则 (用户明确要求，2026-07-29)
 
 > **规则 S (Source-first for SystemUI)**: AOSP `packages/SystemUI/` 下 **SystemUI 自有的代码**
 > 一律**源码复制**做**源码依赖**（不用 jar）；**SystemUI 之外的模块**按下面三层策略引入。
 
-依赖分三层（2026-07-29 用户细化）：
+依赖分三层（2026-07-29 初定，2026-08-06 用户细化交付方式）：
 
 | 层 | 是什么 | 引入方式 | 例子 |
 |---|---|---|---|
-| ① SystemUI 自有代码 | soong 模块定义在 `packages/SystemUI/**/Android.bp` 内 | **源码复制**（source module） | shared、animation、customization、log、common、unfold、kairos、compose/core、compose/scene、plugin |
-| ② AOSP 特有产物 | 公网 Maven 上没有 / 被 AOSP 改过 / aconfig 生成 | **jar / aar**（从 AOSP 编译产物提取） | framework.jar、android.car.jar、SettingsLib、WindowManager-Shell、WifiTrackerLib、monet/libmonet、iconloader、systemui/notification/settingslib flags |
-| ③ 标准第三方上游库 | 公网 Maven 直接有的通用库 | **正常 Gradle Maven 版本依赖**（像普通 app 一样，不要用 jar/aar） | androidx.*、kotlinx_coroutines、dagger2、com.google.android.material、lottie、jsr305/jsr330 |
+| ① SystemUI 自有代码 | soong 模块定义在 `frameworks/base/packages/SystemUI/**/Android.bp` 内 | **源码复制**（source module） | shared、animation、customization、log、common、unfold、kairos、compose/core、compose/scene、plugin、monet |
+| ② AOSP 特有产物（非 SystemUI 源码） | 公网 Maven 没有 / 被 AOSP 改过 / aconfig 生成 | 无资源用 **jar**；含资源用 **AAR，先直接引入**；确认冲突后才改成本地 Maven AAR | framework.jar、android.car.jar、SettingsLib、WindowManager-Shell、WifiTrackerLib、iconloader、systemui/notification/settingslib flags |
+| ③ 标准第三方上游库 | Google Maven / Maven Central 直接提供的通用库 | **直接使用官方坐标**，像普通 Android app 一样；不要下载后再手工打 jar/aar | androidx.*、Compose、kotlinx-coroutines、dagger2、material、lottie、jsr305/jsr330 |
 
 - 判定 ①：看 soong 模块定义是否位于 `frameworks/base/packages/SystemUI/**/Android.bp`
-- 判定 ②/③：能在公网 Maven 找到且未被 AOSP fork → ③ Maven 版本依赖；否则 → ② jar/aar
-- **② 里 jar vs maven-aar 的区别 = 资源冲突（用户 2026-07-29 说明）**：
-  jar 无资源，纯代码依赖用 jar；带资源的 AOSP 库直接生成 aar 会 res 重复/冲突，
-  故用 `tools/gen_aar_maven.py` 打成**本地 maven 仓 aar**（`libs/maven/`），
-  借 Gradle/AAPT2 的标准资源合并去重化解冲突。
-  → 纯代码=jar；带资源会冲突=maven-aar；标准三方=Maven 版本依赖。
-- ⚠️ 若某模块同时有源码和 prebuilt jar 会重复类：改源码时**必须移除对应 jar**
-- 完整调研见 `docs/architecture/2026-07-29-systemui-module-source-vs-jar.md`
-- **允许批量源码复制导致错误数上升**（用户 2026-07-29 明确）：SystemUI 自有源码可先整体复制过来，
-  错误后续再解决——此时**规则 I 的"错误上升>50 回滚"不适用**于源码补全操作。
+- 判定 ②/③：能在 Google Maven / Maven Central 找到且未被 AOSP fork → ③ 官方坐标；否则 → ② AOSP jar/aar
+- **Maven 是仓库/交付渠道，不是第四种产物形式**：
+  - `libs/maven/` = 本项目的**本地 AAR 仓库**，仓内应是 AAR + POM；
+  - `google()` / `mavenCentral()` = 上游第三方库的公网获取渠道。
+- **② 里 jar vs AAR 的区别是是否含资源**：无资源用 jar；含资源用 AAR。
+- **AAR 先直接引入**：先验证 AAR-AAR、AAR-jar 及传递依赖是否冲突；只有确认冲突后，才记录问题并用 `tools/gen_aar_maven.py` 生成本地 Maven AAR，借 Gradle/AAPT2 标准资源合并解决。
+- **③ 上游库优先官方依赖**：androidx/Compose 等尽量不使用本地 jar/aar；如果官方版本无法满足 AOSP 源码，先记录问题、核对 `Android.bp` 的解决方式，再与用户讨论，禁止擅自打包替代。
+- ⚠️ 若某模块同时有源码和 prebuilt jar/aar 会重复类：源码化时**必须移除对应 prebuilt**
+- 完整调研见 `docs/architecture/2026-07-29-systemui-module-source-vs-jar.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md`
+- SystemUI 自有源码应按 AOSP 完整复制；源码补全、依赖切换或结构校准造成的错误数变化只作为诊断信息，不构成回滚或审批条件。
 
 ### 1.6 SystemUI 源码/aidl/res 必须"不漏不多"（用户明确要求，2026-07-29）
 
@@ -100,29 +107,31 @@
 ### 1.7 framework（非 SystemUI）代码严禁源码复制（用户明确要求，2026-07-29）
 
 > **规则 F (Framework via SDK/jar only)**: **只要不是 SystemUI 内部的代码，一律不许源码复制**，
-> 只能通过 **jar / aar(maven)** 引入；若 **SysUISdk 里缺**（如 framework 隐藏 aidl 接口），
-> **重新生成 / 补 SysUISdk**，而不是把 framework 源码拷进 SystemUI 模块。
+> 只能通过 **jar / AAR** 引入（AAR 先直接引入，确认冲突后才放本地 Maven 仓）；若 **SysUISdk 里缺**
+> framework 隐藏类、资源或 AIDL 声明，应**重新生成 / 补 SysUISdk 或更新 framework.jar**，
+> 而不是把 framework 源码拷进 SystemUI 模块。
 
 - 典型：SystemUI aidl `import android.os.IRemoteCallback`（framework @hide 接口），
   public `framework.aidl` 缺 → **在 SysUISdk 的 `framework.aidl` 追加 `interface X;` 声明**
   （由 `tools/install_sdk.py` 幂等完成），**不是**把 `IRemoteCallback.aidl` 拷进 `SystemUI-core/`。
-- SysUISdk 生成/补丁方法参考 `CarSystemUIGradle`（自定义 SDK platform，见其 `docs/GRADLE_MIGRATION.md`）。
+- SysUISdk 不是不可变 SDK：可使用 AOSP `framework.jar` 补代码 API、使用 `framework-res.apk` 补私有资源、修改 `framework.aidl` 补 AIDL 声明；详见 §2.4。
+- SysUISdk 生成/补丁方法参考 `CarSystemUIGradle/docs/GRADLE_MIGRATION.md` 问题二十四至二十六，以及 `docs/architecture/2026-08-06-reference-project-rationale.md`。
 - 反面教训（2026-07-29）：一度把 framework `IRemoteCallback.aidl` 源码复制进 core → 被用户否决，
   改为补 SysUISdk。
 
 ### 1.8 res 缺失处理优先级（用户明确要求，2026-07-29）
 
-> **规则 R (Res provenance)**: 资源文件 (res/) 一律来自 **AOSP 源码 / aar / maven**，禁止凭空生成。
+> **规则 R (Res provenance)**: 资源文件 (res/) 一律来自 **AOSP 源码 / AAR（直接或本地 Maven 仓交付）/ Google 或 MavenCentral 上游原始依赖**，禁止凭空生成。
 
 res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-maven.md`）：
 
 1. **AOSP 源码**（规则 S 优先）：SystemUI 自有的 res 在 `SystemUI-core/res{, -keyguard, -product}/`，
    必须与 AOSP 1:1 对齐（规则 C 不漏不多）
-2. **AOSP 编译产物**：
+2. **AOSP 编译产物（非 SystemUI）**：
    - 无 res 的纯代码库 → `libs/<name>.jar`
-   - 有 res 的库 → 经 `tools/gen_aar_maven.py` 打包成本地 maven aar 到 `libs/maven/`，
-     在 `settings.gradle.kts` 通过 `maven { url = uri("${rootProject.projectDir}/libs/maven") }` 引入
-3. **公网 maven**（规则 ③）：androidx/material/lottie 等
+   - 有 res 的库 → **先直接引入 AAR**，验证 AAR-AAR、AAR-jar 和传递依赖是否冲突
+   - 只有确认直接 AAR 存在资源/类/依赖冲突后，才经 `tools/gen_aar_maven.py` 打包成本地 Maven AAR 到 `libs/maven/`，并在 `settings.gradle.kts` 配置本地仓库
+3. **公网官方依赖**（规则 ③）：androidx/Compose/material/lottie 等直接使用 `google()` / `mavenCentral()` 官方坐标
 
 ❌ **绝对禁止** Agent 在 res/ 下生成同名资源绕过编译错误。
 
@@ -136,20 +145,29 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 - `android_app "SystemUI"` → `:app`（APK 入口，仅 `static_libs: ["SystemUI-core"]`）
 - `android_library "SystemUI-core"` → `:SystemUI-core`（含 src + compose + 所有子模块 static_libs）
 - 各子模块（shared/animation/customization/common/log/unfold/plugin/plugin-core）独立 android_library
-- `SystemUIApplication.java` / `SystemUIService.java` 是 `android_app` 入口，**必须放在 `:app/src/main/java/`**，不能放在 `:SystemUI-core`
+- `SystemUIApplication.java` / `SystemUIService.java` 位于 AOSP `SystemUI-core` 的 `src/**/*.java` glob 内，**必须保留在 `:SystemUI-core/src/com/android/systemui/`**；`:app` 按 bp 无独立源码
 - `:app/src/main/AndroidManifest.xml` 从 AOSP 完整复制（1158 行），不允许最小化
 
 ---
 
 ## 二、本项目开发原则
 
-### 2.1 增量开发
+### 2.1 项目向前推进原则
 
-> **规则 I (Incremental)**: 每次 commit 必须: (1) 改动小而聚焦 (2) 编译错误数下降 (3) 记录在文档
+> **规则 I (Forward Progress)**：衡量改动的标准是项目是否在向正确、可维护、最终可构建的方向推进，而不是单次编译错误数上升或下降。
 
-- 错误数演变表必须维护 (`docs/GRADLE_MIGRATION_LOG.md`)
-- 不要跨大步、一次做太多事
-- 如果一次改动让错误数上升 >50，立即回滚并重新设计
+- 编译错误数是诊断信息，**不是提交门槛、回滚阈值或审批条件**；项目任何阶段都不要求“每次 commit 错误数必须下降”
+- 源码补齐、违规源码删除、jar/AAR 切换、资源对齐和模块重构可能让错误数暂时上升、下降或让构建暂时中断，只要整体结构更接近 AOSP 且来源更合规，均可接受
+- 优先保证：
+  1. AOSP SystemUI 源码/AIDL/res 不漏不多
+  2. SystemUI 自有模块使用源码依赖，非 SystemUI 代码不违规源码复制
+  3. jar/AAR/官方 Maven 依赖的来源、边界和资源归属正确
+  4. 不伪造、不遗漏、不擅改资源
+  5. 模块图和 APK 打包边界对齐 AOSP `Android.bp`
+- commit 应尽量聚焦且有明确意义；允许为保存真实进度提交已记录的中间态，不要求中间态能够完整编译
+- **不要求每次修改或每次提交都运行编译**：编译是回答具体问题或验证阶段性里程碑的工具，只在它能提供有效证据时运行
+- 文档必须如实记录本次是否运行构建、运行了什么命令及实际结果；未运行时直接写“未运行”，不得暗示构建成功
+- `docs/GRADLE_MIGRATION_LOG.md` 保留错误数历史，但仅用于观察和诊断，不再作为开发规则
 
 ### 2.2 文档先行
 
@@ -170,12 +188,18 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 参考 AOSP 的 `Android.bp` 文件了解模块依赖关系。
 
-### 2.4 SDK 与 framework.jar 关系
+### 2.4 自定义 SDK、framework.jar 与 framework-res.apk 的职责
 
-- 我们的 SDK: `compileSdkPreview = "SysUISdk"` (位于 `/home/conv/Android/Sdk/platforms/android-SysUISdk/`)
-- AOSP `framework.jar` 提供 SDK 不含的 @hide API 和内部类
-- `build.gradle.kts` 通过 `allprojects { ... }` 注入 framework.jar 到所有 Kotlin/Java 编译
-- 关键技巧：内部 flags jar 必须放在 framework.jar 之前，否则 framework.jar 的同名 stub 会遮蔽
+- 我们的自定义 SDK：`compileSdkPreview = "SysUISdk"`，位于 `/home/conv/Android/Sdk/platforms/android-SysUISdk/`
+- **自定义 SDK 不是不可变黑盒，可以从 AOSP/设备产物重新生成或补丁**（用户 2026-08-06 明确）：
+  1. 将 AOSP `framework.jar` 的类合并/暴露到 SysUISdk `android.jar`，或作为 compileOnly/bootclasspath → 补标准 SDK 缺失的 @hide API、内部类和常量
+  2. 将设备/AOSP `framework-res.apk` 的 `resources.arsc` + `res/` 写入 SysUISdk `android.jar` → 解决 `@*android:` 私有资源 ID 与设备 framework 不匹配
+  3. 修改 SysUISdk `framework.aidl` → 补 framework @hide AIDL interface/parcelable 声明（`tools/install_sdk.py` 当前负责此项）
+- **framework.jar 与自定义 SDK 资源不是一回事**：framework.jar 主要提供代码签名；单独把它放到 bootclasspath 不能解决 framework 私有资源 ID（参考项目问题二十五已证伪），资源 ID 必须由自定义 SDK 的 android.jar 资源部分解决
+- 本项目根 `build.gradle.kts` 当前只把 framework.jar 注入 `JavaCompile.bootstrapClasspath/classpath`，**不注入 KotlinCompile**；后者会污染 Compose inline metadata，触发 `Couldn't inline method call` 等 IR 错误
+- Kotlin 所需隐藏 API 由合并后的 SysUISdk/AGP classpath 提供
+- 内部 flags jar 必须放在 framework.jar 之前，否则 framework.jar 的同名 stub 会遮蔽真实 flags 类
+- 参考：`CarSystemUIGradle/docs/GRADLE_MIGRATION.md` 问题二十四至二十六；`docs/architecture/2026-08-06-reference-project-rationale.md`
 
 ### 2.5 求助于用户
 
@@ -185,10 +209,9 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 2. 必须修改 res/ 下的资源文件（违反规则 R）
 3. 必须凭空生成同名 res 资源解决编译错误（违反规则 R）
 4. 必须创建 .sh 脚本（违反规则 R/ADR 0002，scripts must be Python）
-5. 错误数大幅上升（>200）而非下降
-6. 需要产品决策（多个等价方案）
-7. 需要修改 AGENTS.md 的核心规则
-8. 所有尝试过的方案都失败，需要决策下一步方向
+5. 需要产品决策（多个等价方案）
+6. 需要修改 AGENTS.md 的核心规则
+7. 所有尝试过的方案都失败，需要决策下一步方向
 
 ---
 
@@ -196,7 +219,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 参考 `docs/adr/`：
 
-- **ADR 0001** — AOSP res 缺失处理优先级 + local maven 而非 flatDir 的根因（双层去重）
+- **ADR 0001** — AOSP res 缺失处理优先级：AAR 先直接引入，确认冲突后才用 local Maven（不用 flatDir）
 - **ADR 0002** — `tools/` 下脚本一律 Python，禁止 .sh（除非纯系统 CLI 调用）
 - **ADR 0003** — 项目结构/模块命名/依赖严格按 AOSP `Android.bp`
 
@@ -209,8 +232,9 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 按 AOSP `frameworks/base/packages/SystemUI/Android.bp`（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）：
 
 ```
-:app                          # android_app "SystemUI"（APK 入口，SystemUIApplication/SystemUIService 在此）
-:SystemUI-core                # android_library "SystemUI-core"（主模块，src + compose + 所有子模块 static_libs）
+:app                          # android_app "SystemUI"（无独立源码；负责 manifest、签名和最终 APK 打包）
+:SystemUI-core                # android_library "SystemUI-core"（主模块，含入口类、src + compose + 所有子模块 static_libs）
+:SystemUI-res                 # AOSP 资源库目标模块；当前尚未独立建立，资源暂挂 core（结构缺口，待校准）
 :SystemUI-shared              # android_library "SystemUISharedLib"（源码，含 aidl）
 :SystemUI-animation           # android_library "PlatformAnimationLib"（源码）
 :SystemUI-animationlib        # android_library "PlatformAnimationLib-core/server"（插值器/动画工具库，源码）
@@ -276,7 +300,7 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 
 ---
 
-## 四、当前进度状态 (2026-07-29)
+## 四、当前进度状态（历史记录至 2026-07-29；现状更新于 2026-08-06）
 
 ### 4.1 已完成
 
@@ -294,33 +318,22 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 | 2026-07-29 | 73 | Phase D：AIDL 源码编译删 systemui-aidl.jar（communal/widgets 29→0） |
 | 2026-07-29 | 70 | 规则 C 审查：删 5 个伪造 stub + 18 处伪造 import（回归 AOSP 原貌） |
 
-### 4.2 当前错误数
+### 4.2 当前构建状态
 
-- **70** (截至 2026-07-29，src/aidl/res 完整性审查后)
-- 详细分类见 `docs/architecture/2026-07-29-dependency-audit.md` §6
-- 完整性审查结论见 `docs/issues/2026-07-29-completeness-audit.md`
+- 2026-07-29 的 **70** 是历史 Kotlin 错误数，不是当前基线
+- 当前构建在 Kotlin 编译前被 SettingsLib/iconloader/WindowManager-Shell AAR 的重复 R 类 transform 错误阻塞
+- 在恢复 AAR transform 前，没有可信的当前 Kotlin 错误数；`grep` 得到 0 条 `e: file:` 不代表无错误
+- 错误数只作诊断，不构成提交、回滚或审批条件
+- 详见 `docs/CURRENT_STATE.md`、`docs/issues/2026-07-31-gen_aar_maven-rewrite.md`
 
-### 4.3 待解决 (按优先级)
+### 4.3 待解决（按结构校准顺序）
 
-#### 高优先级 (阻塞主流程)
-1. **app 模块按 bp 重构**（ADR 0003）：
-   - 移动 `SystemUIApplication.java` / `SystemUIService.java` 从 `:SystemUI-core` 到 `:app/src/main/java/`
-   - 复制 AOSP 完整 `AndroidManifest.xml`（1158 行）到 `:app/src/main/`
-   - 删除 `:app/build.gradle.kts` 中冗余的子模块依赖（:SystemUI-shared 等由 :SystemUI-core 通过 static_libs 引入）
-   - 详情: `docs/adr/0003-app-module-aligns-aosp-bp.md`、`docs/issues/2026-07-29-aidl-animationlib-app.md §四`
-
-2. **animationlib 源码化收尾**：源码已复制、模块骨架已创建，但 animation/customization 的
-   `build.gradle.kts` 还没改（还在用 `compileOnly(animationlib.jar)`），`libs/animationlib.jar` 也还没删
-   - 详情: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
-   - 注意: WMShell.jar 也有 6 个 `com.android.app.animation.*` 重叠类，需检查冲突
-
-#### 中优先级 (Compose)
-3. **Compose Scene Framework** (`com.android.compose.animation.scene.*`) — 12 错误
-4. **Compose Theme** (`AndroidColorScheme.kt`) — R 冲突（已大幅减少）
-
-#### 低优先级 (功能模块)
-5. 业务模块编译错误（分散在多个包）
-6. 测试代码编译
+1. 审查并完善 `tools/check_source_alignment.py`，校准 AOSP SystemUI src/AIDL/res 不漏不多
+2. 删除非 SystemUI 违规源码；审计 SystemUI 自有源码是否仍被 prebuilt jar/AAR 重复提供
+3. 审计 `libs/`、`libs/maven/` 和 Gradle 依赖，清理无用、违规、历史生成产物
+4. 撤销/修正 `gen_aar_maven.py` 将 R 类合入 `classes.jar` 的错误中间逻辑；恢复直接 AAR 验证并诊断原始 R 可见性问题
+5. 审查 `:app` 的额外直接依赖、manifest merge 和 `SystemUI-res` 映射；入口类继续保留在 `:SystemUI-core`
+6. AAR transform 恢复后按需取得新的 Kotlin 基线；依赖结构稳定后以 `:app:assembleDebug` 验证 APK 里程碑
 
 ### 4.4 已解决
 
@@ -447,6 +460,7 @@ javap -p <ClassName>
 | 2026-07-23 增订 | 加入当前进度和待解决 |
 | 2026-07-28 重写 | 配合 docs/HANDOFF.md 重组结构，新增 §0 优先级、§1.4 参考、§2.5 求助规则、§3.2 libs 警告、§4.1 错误数演变表 |
 | 2026-07-29 增订 | 新增 §0.二 ADR 索引、§1.5 规则 S、§1.6 规则 C、§1.7 规则 F、§1.8 规则 R、§1.9 规则 B（bp 对齐）；同步 ADR 0001/0002/0003 |
+| 2026-08-06 更正 | Maven 不再列为第四种产物；AAR 先直接引入、确认冲突后才用本地 Maven；补充自定义 SDK/framework.jar/framework-res 原理；删除错误数下降/阈值和逐次编译要求，改为“项目整体向前推进”原则 |
 
 ---
 

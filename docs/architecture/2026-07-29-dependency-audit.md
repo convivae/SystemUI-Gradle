@@ -1,5 +1,7 @@
 # 依赖合规性全面审查 (2026-07-29)
 
+> ⚠️ **2026-08-06 更正**：本文件是历史审查；其中“maven-aar”表示 AAR 经本地 Maven 仓交付，不是第四种依赖产物。新策略为：AOSP 含资源库先直接 AAR，确认冲突后才使用本地 Maven；androidx/Compose 等使用官方公网坐标。当前清理目标和规则以 `AGENTS.md` 与 `2026-08-06-reference-project-rationale.md` 为准。
+
 > 目标：按三层规则（源码 / jar-aar / maven）审查项目**所有**依赖，标出不合规项，
 > 给出正确做法与迁移顺序，并列出**技术困难**供共同决策。参照 `CarSystemUIGradle`。
 
@@ -83,7 +85,7 @@ com.google.android.material、androidx.window、lottie(maven)。
 
 ---
 
-## 三、迁移方案（按依赖图顺序，遵守规则 I 增量）
+## 三、迁移方案（按依赖图顺序，以结构和来源正确为准）
 
 **Phase A — 清理（零风险，错误数不变）**
 1. 删死依赖（2.4）。
@@ -95,7 +97,7 @@ com.google.android.material、androidx.window、lottie(maven)。
 5. 新增 `:SystemUI-log`（log/src 10）；删 SystemUI-log.jar；
    plugin 的 MessageBuffer 由 `compileOnly(shared.jar)` 改 `project(":SystemUI-log")`。
 
-**Phase C — jar→源码 迁移（大改，逐模块，错误会飙升，已获授权）**
+**Phase C — jar→源码 迁移（大改，按模块边界推进）**
 6. `:SystemUI-shared`：删 jar → `shared/src`+aidl 源码；同步删 SystemUISharedLib ×3。
 7. `:SystemUI-animation`：删 jar → `animation/src`+`lib/src`+res 源码。
 8. `:SystemUI-customization`：删 jar → `customization/src` 源码。
@@ -135,9 +137,8 @@ maven 已在 core 引入。全量 `--rerun-tasks` 重编 0 报错。原"通过 s
 本轮清理。→ compose/scene ≠ androidx.compose：前者 SystemUI 自有、构建于后者之上。
 
 **困难④ shared/animation/customization jar→源码 是大迁移**
-各自有独立依赖链，去 jar 会触发大量 duplicate-class 与 unresolved，错误数将明显上升
-（用户已授权源码补全可升错误）。需按依赖图顺序、逐模块提交。
-→ 确认按 Phase C 顺序推进。
+各自有独立依赖链，去 jar 会触发大量 duplicate-class 与 unresolved，错误数可能明显变化。
+判断标准是模块边界和来源是否更接近 AOSP，而不是单次错误数；按依赖图顺序推进并记录实际状态。
 
 **困难⑤ KAPT/Dagger 注解处理已禁用**
 KAPT 与 Gradle 9.5 不兼容（IR 内部错误），Dagger 注解处理关闭。当前 116 错误里

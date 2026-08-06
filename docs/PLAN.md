@@ -1,9 +1,13 @@
 # SystemUI-Gradle 详细开发计划 (PLAN.md)
 
-> **最后更新**: 2026-07-29
-> **当前错误数**: 509
-> **目标错误数**: 0 → 可编译
-> **当前阶段**: Stage 3/4 推进中（animationlib 源码化 + app 模块构建）
+> ⚠️ **历史计划警告（2026-08-06）**：本文件主体停留在 2026-07-29，旧的错误数目标和“把 SystemUIApplication/SystemUIService 移到 app”计划已失效。入口类必须保留在 `:SystemUI-core`（见 ADR 0003 更正）。
+>
+> 当前优先级以 `AGENTS.md`、`docs/architecture/2026-08-06-reference-project-rationale.md` 和 `docs/architecture/2026-08-06-soong-android-app-vs-gradle-app.md` 为准：先完成源码 1:1 审查、非 SystemUI 违规源码清理、无用/违规/旧 jar/AAR 清理和依赖边界校准；AAR 先直接引入，确认冲突后才使用本地 Maven。错误数始终只作诊断，不作为提交门槛；编译按问题和阶段性里程碑需要执行，不要求每次修改都运行。
+
+> **历史最后更新**: 2026-07-29
+> **历史错误数**: 509
+> **最终目标**: 0 → 可编译
+> **历史阶段**: Stage 3/4 推进中（animationlib 源码化 + app 模块构建）
 
 ---
 
@@ -98,42 +102,23 @@
 
 **详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
 
-### 3.2 app 模块按 AOSP `Android.bp` 重构 (ADR 0003)
+### 3.2 app 模块按 AOSP `Android.bp` 重构 (ADR 0003) ✅ 结构已更正
 
-按规则 B（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`），项目结构必须对齐 AOSP bp：
+按规则 B（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`），项目结构必须对齐 AOSP bp。
 
-**当前问题**：
-- `app/` 几乎为空（4 行 manifest）
-- `SystemUIApplication.java` / `SystemUIService.java` 是 `android_app` 入口但放在 `:SystemUI-core/`
-- `:app/build.gradle.kts` 冗余地依赖 `:SystemUI-shared/-animation/-customization/-plugin/-plugin-core`
+**2026-07-31 更正**：旧计划误以为 `SystemUIApplication.java` / `SystemUIService.java` 属于 `android_app` 源码。实际：
 
-**AOSP Android.bp 关键定义**：
-- `android_app "SystemUI"` (line 958)：只 `static_libs: ["SystemUI-core"]`
-- `android_library "SystemUI-core"` (line 421)：自身 `srcs`，`static_libs` 含所有子模块
-- srcs 不含 manifest（manifest 由 `android_app` 持有）
+- `android_library "SystemUI-core"` 的 `srcs: ["src/**/*.java", ...]` **包含**这两个入口类
+- `android_app "SystemUI"` 无独立 `srcs`，只 `static_libs: ["SystemUI-core"]`
+- 因此入口类必须保留在 `:SystemUI-core/src/com/android/systemui/`，`:app` 无源码
 
-**实施步骤**：
+**正确结构**：
 
-```
-Phase 1: 移动入口类（系统结构对齐）
-  1. 把 :SystemUI-core/src/com/android/systemui/SystemUIApplication.java
-     移到 :app/src/main/java/com/android/systemui/
-  2. 同样移动 SystemUIService.java
-  3. 调整 :SystemUI-core/build.gradle.kts 不再 include 这两个文件
-
-Phase 2: 复制 AOSP 完整 manifest
-  1. 复制 /home/conv/myspace/aosp/frameworks/base/packages/SystemUI/AndroidManifest.xml (1158 行)
-     到 :app/src/main/AndroidManifest.xml
-
-Phase 3: 清理冗余依赖
-  1. :app/build.gradle.kts 只保留 implementation(project(":SystemUI-core"))
-  2. 删除 :SystemUI-shared/-animation/-customization/-plugin/-plugin-core 的直接依赖
-
-Phase 4: 验证
-  1. ./gradlew :app:assembleDebug
-  2. 检查 APK 含 SystemUIApplication/SystemUIService
-  3. 检查资源合并无冲突
-```
+1. `:app` 的 project module 依赖只保留 `implementation(project(":SystemUI-core"))`；当前额外 compileOnly/上游 implementation 需继续审查是否应由 core 传递
+2. `:app/src/main/AndroidManifest.xml` 使用 AOSP 完整 manifest
+3. `:app` 持有最终 APK 的 proguard 配置；`AndroidManifest-res.xml` 实际属于 AOSP `SystemUI-res`，当前 app 中未被消费的副本应在建立 `:SystemUI-res` module 时归位
+4. `:SystemUI-core` 持有入口类和 AOSP SystemUI 源码/资源
+5. 禁止再次把入口类迁到 `:app/src/main/java/`
 
 **详情**: `docs/adr/0003-app-module-aligns-aosp-bp.md`
 
