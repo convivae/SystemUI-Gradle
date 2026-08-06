@@ -31,7 +31,6 @@ include(":SystemUI-customization")
 include(":SystemUI-plugin")
 include(":SystemUI-plugin-core")
 include(":SystemUI-common")
-include(":SystemUI-log")
 include(":SystemUI-unfold")
 include(":SystemUI-animationlib")
 

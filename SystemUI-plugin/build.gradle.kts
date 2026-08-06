@@ -39,8 +39,8 @@ dependencies {
 
     // Framework APIs - provided by system at runtime
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-    // clocks 插件用 com.android.systemui.log.core.MessageBuffer → 依赖源码模块 :SystemUI-log（Phase B）
-    implementation(project(":SystemUI-log"))
+    // clocks 插件用 com.android.systemui.log.core.MessageBuffer → 依赖合并后的 :SystemUI-common
+    api(project(":SystemUI-common"))
 
     // AndroidX
     implementation(libs.androidx.annotation)

@@ -1,48 +1,37 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    `java-library`
+    alias(libs.plugins.kotlin.jvm)
 }
 
-android {
-    namespace = "com.android.systemui.common"
-    compileSdkPreview = "SysUISdk"
+// SystemUI-common: Common + Log + shared-utils 合并为单一 JVM 源码模块
+// （对齐 AOSP SystemUICommon + SystemUILogLib + SystemUI-shared-utils 的 static_libs 语义）
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
 
-    defaultConfig {
-        minSdk = 32
-    }
+kotlin {
+    jvmToolchain(21)
+}
 
-    sourceSets {
-        getByName("main") {
-            java.srcDirs("src/main/java")
-            manifest.srcFile("src/main/AndroidManifest.xml")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    kotlin {
-        jvmToolchain(21)
-    }
-
-    lint {
-        abortOnError = false
+sourceSets {
+    getByName("main") {
+        java.setSrcDirs(listOf("common/src", "log/src", "utils/src"))
+        kotlin.setSrcDirs(listOf("common/src", "log/src", "utils/src"))
     }
 }
 
 dependencies {
     // Framework APIs - provided by system at runtime
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-    // Tracing.kt 用 com.android.app.tracing.coroutines.createCoroutineTracingContext（tier② tracinglib）
+    // Tracing.kt 用 com.android.app.tracing.coroutines（tier② tracinglib）
     compileOnly(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
 
-    // AndroidX
-    implementation(libs.androidx.annotation)
-
     // Kotlin
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.kotlin.stdlib)
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.android)
+
+    // AndroidX（compileOnly：JVM 模块不打包 android 资源）
+    compileOnly(libs.androidx.annotation)
+    implementation(libs.errorprone.annotations)
 }

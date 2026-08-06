@@ -62,3 +62,22 @@
 - 红色基线（迁移未发生，`--strict` 退出 1）：
   - [MISSING] 212 / [MISPLACED] 162 / [EXTRA] 107 / [MODIFIED] 1046 / [RES-MISS] 2196
   - MODIFIED 1046 反映历史对 core/src 的 R import 规范化等改动，Task 8 重新同步 AOSP 后将归零
+
+## Task 3: 合并 Common + Log + shared-utils
+
+- 同步 AOSP `common/src`、`log/src`、`utils/src` → `SystemUI-common/{common,log,utils}/src`
+  - common 3 文件、log 10 文件、utils 2 文件
+- `SystemUI-common/build.gradle.kts` 改为 `java-library` + `kotlin.jvm`（JVM 21），
+  三个 source root 合入 main sourceSet
+- 依赖块按计划：`compileOnly(framework.jar)` + `tracinglib` + `api(kotlinx-coroutines-core)`
+  + `implementation(kotlin.stdlib)` + `compileOnly(androidx.annotation)` + `implementation(errorprone)`
+- 消费者重连：plugin `:SystemUI-log` → `api(:SystemUI-common)`；core 删除 `:SystemUI-log`；
+  customization `:SystemUI-log` → `:SystemUI-common`（Task 5 再精简）
+- `settings.gradle.kts` 移除 `include(":SystemUI-log")`，删除 `SystemUI-log/` 目录
+- **验证结果（用户裁决：保留错误，继续）**：
+  - `:SystemUI-common:compileKotlin` FAILED
+  - `e: LogMessage.kt:19 Unresolved reference 'icu'`
+  - `e: LogMessage.kt:101 Unresolved reference 'SimpleDateFormat'`
+  - 根因：JVM 模块无 AGP android.jar；`android.icu.text.SimpleDateFormat` 只在 SysUISdk
+    android.jar，不在 framework.jar。计划依赖块未列 android.jar。
+  - 用户明确：严格按计划执行，此错误先保留，不修复，继续后续任务。

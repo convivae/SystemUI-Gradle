@@ -100,7 +100,6 @@ dependencies {
     implementation(project(":SystemUI-animation"))
     implementation(project(":SystemUI-customization"))
     implementation(project(":SystemUI-common"))
-    implementation(project(":SystemUI-log"))
 
     // SystemUI-shared 已源码化（Phase C），替代原 SystemUISharedLib.jar（AAR）
     implementation(project(":SystemUI-shared"))

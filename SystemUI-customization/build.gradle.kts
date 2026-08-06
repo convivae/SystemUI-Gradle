@@ -47,7 +47,7 @@ dependencies {
     // tier① SystemUI 自有源码模块（对齐 bp 的 static_libs）
     implementation(project(":SystemUI-plugin"))
     implementation(project(":SystemUI-plugin-core"))
-    implementation(project(":SystemUI-log"))
+    implementation(project(":SystemUI-common"))
     implementation(project(":SystemUI-shared"))
     implementation(project(":SystemUI-animation"))
 
