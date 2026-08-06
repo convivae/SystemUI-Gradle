@@ -94,3 +94,18 @@
 - 清理 AGENTS.md §3.2、README.md、scripts/scaffold 中的旧引用
 - **验证**：`:SystemUI-animation:compileDebugKotlin` BUILD SUCCESSFUL（仅警告）
 - 对齐：MISSING 175（↓37）、MISPLACED 162、EXTRA 107、MODIFIED 1046
+
+## Task 5: 合并 Shared + Keyguard，保留 Biometrics 独立 R
+
+- 同步 AOSP shared/src(81)+res(4)、keyguard/src(2)、biometrics/src(11)+res(1)、
+  customization/src(36)+res(100)、unfold/src(38)
+- shared: sourceSets 加 keyguard/src；内部边改为 api(biometrics/animation/plugin-core/plugin/unfold)
+- biometrics: 独立 R namespace，空 manifest，src+res sourceSets
+- customization: 加 aidl srcDirs + buildFeatures.aidl；边改为 api(animation/plugin-core/plugin/unfold)，
+  移除旧 :SystemUI-common/:SystemUI-shared 边
+- 删除 :SystemUI-shared-keyguard 模块 + libs/shared-uncaught-handler.jar
+- core 移除对 biometrics/keyguard/unfold 的直接依赖（经 shared/customization 透传）
+- **验证**：:SystemUI-shared-biometrics:compileDebugKotlin BUILD SUCCESSFUL
+- 对齐：MISSING 161（↓14）、EXTRA 96（↓11）、RES-MISS 2195（↓1）
+- 已知保留：shared 全量编译可能暴露 Thread.setUncaughtExceptionPreHandler 隐藏 API 与
+  Dagger 依赖问题（计划明确：记录不恢复 stub）

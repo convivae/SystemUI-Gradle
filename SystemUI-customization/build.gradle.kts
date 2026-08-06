@@ -11,14 +11,19 @@ android {
         minSdk = 32
     }
 
-    // 对齐 AOSP SystemUICustomizationLib：src 含 java/kotlin，res 目录
+    // 对齐 AOSP SystemUICustomizationLib：src 含 java/kotlin/aidl，res 目录
     sourceSets {
         getByName("main") {
             java.srcDirs("src")
             kotlin.srcDirs("src")
+            aidl.srcDirs("src")
             res.srcDirs("res")
             manifest.srcFile("AndroidManifest.xml")
         }
+    }
+
+    buildFeatures {
+        aidl = true
     }
 
     compileOptions {
@@ -44,12 +49,11 @@ dependencies {
     // Framework APIs（allprojects 已注入，此处显式声明便于阅读）
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
 
-    // tier① SystemUI 自有源码模块（对齐 bp 的 static_libs）
-    implementation(project(":SystemUI-plugin"))
-    implementation(project(":SystemUI-plugin-core"))
-    implementation(project(":SystemUI-common"))
-    implementation(project(":SystemUI-shared"))
-    implementation(project(":SystemUI-animation"))
+    // tier① SystemUI 自有源码模块（对齐 bp static_libs）
+    api(project(":SystemUI-animation"))
+    api(project(":SystemUI-plugin-core"))
+    api(project(":SystemUI-plugin"))
+    api(project(":SystemUI-unfold"))
 
     // tier② AOSP 特有产物 jar
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))

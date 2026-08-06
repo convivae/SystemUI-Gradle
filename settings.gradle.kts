@@ -43,7 +43,6 @@ include(":SystemUI-compose-scene")
 // shared/biometrics/ → BiometricsSharedLib
 include(":SystemUI-shared-biometrics")
 // shared/keyguard/ → SystemUISharedLib-Keyguard
-include(":SystemUI-shared-keyguard")
 // SystemUI-proto (顶层 bp java_library)
 include(":SystemUI-proto")
 // pods/com/android/systemui/dagger/ (api)

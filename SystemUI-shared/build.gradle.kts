@@ -11,12 +11,12 @@ android {
         minSdk = 32
     }
 
-    // 对齐 AOSP SystemUISharedLib：src 下同时含 java/kotlin/aidl
+    // 对齐 AOSP SystemUISharedLib：src 下同时含 java/kotlin/aidl；keyguard child 合入
     sourceSets {
         getByName("main") {
-            java.srcDirs("src")
-            kotlin.srcDirs("src")
-            aidl.srcDirs("src")
+            java.srcDirs("src", "keyguard/src")
+            kotlin.srcDirs("src", "keyguard/src")
+            aidl.srcDirs("src", "keyguard/src")
             res.srcDirs("res")
             manifest.srcFile("AndroidManifest.xml")
         }
@@ -48,20 +48,16 @@ android {
 dependencies {
     // Framework APIs - provided by system at runtime（allprojects 已注入，此处显式声明便于阅读）
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-    // UncaughtExceptionPreHandlerManager 依赖 libcore 隐藏 API Thread.setUncaughtExceptionPreHandler，
-    // Kotlin/JDK21 工具链的 java.lang.Thread 无此隐藏方法（AOSP 走 core-for-system-modules bootclasspath），
-    // 无法从源码编译。故其 .kt 源码已排除，改由 AOSP 编译产物提取的 class 提供（§1.3 允许）。
-    // 详见 docs/issues/2026-07-29-shared-source-migration.md
-    compileOnly(files("${rootProject.projectDir}/libs/shared-uncaught-handler.jar"))
 
-    // tier① SystemUI 自有源码模块（对齐 shared/Android.bp 的 SystemUIPluginLib / PluginCoreLib）
-    implementation(project(":SystemUI-plugin"))
-    implementation(project(":SystemUI-plugin-core"))
+    // tier① SystemUI 自有源码模块（对齐 shared/Android.bp 的 static_libs）
+    api(project(":SystemUI-shared-biometrics"))
+    api(project(":SystemUI-animation"))
+    api(project(":SystemUI-plugin-core"))
+    api(project(":SystemUI-plugin"))
+    api(project(":SystemUI-unfold"))
 
     // tier② AOSP 特有产物 jar（含资源/内部类，非源码模块）
     compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
-    // SystemUIUnfoldLib 暂以 jar 引入（后续 Phase C 再源码化）
-    compileOnly(project(":SystemUI-unfold"))
     // tracinglib（frameworks/libs/systemui，tier② prebuilt jar）
     compileOnly(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
     // view_capture（frameworks/libs/systemui/viewcapturelib，tier② prebuilt jar）

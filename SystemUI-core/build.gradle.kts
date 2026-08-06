@@ -112,10 +112,7 @@ dependencies {
     implementation(project(":SystemUI-compose-core"))
     //   PlatformComposeSceneTransitionLayout → SystemUI-compose-scene
     implementation(project(":SystemUI-compose-scene"))
-    //   BiometricsSharedLib → SystemUI-shared-biometrics
-    implementation(project(":SystemUI-shared-biometrics"))
-    //   SystemUISharedLib-Keyguard → SystemUI-shared-keyguard
-    implementation(project(":SystemUI-shared-keyguard"))
+    //   BiometricsSharedLib / SystemUISharedLib-Keyguard 通过 :SystemUI-shared 透传
     //   SystemUI-proto → SystemUI-proto (顶层 java_library, 含 protobuf.nano 生成类)
     implementation(project(":SystemUI-proto"))
     //   pods/.../dagger:api → SystemUI-pods-dagger
@@ -126,10 +123,6 @@ dependencies {
     implementation(project(":SystemUI-pods-domain"))
     //   pods/.../util/settings:api → SystemUI-pods-settings
     implementation(project(":SystemUI-pods-settings"))
-
-    // UncaughtExceptionPreHandlerManager：shared 内该类因 libcore 隐藏 API 无法源码编译，
-    // 由 AOSP 编译产物提取的 class 提供（core 的 SystemUIService/PluginsModule 引用它）
-    compileOnly(files("${rootProject.projectDir}/libs/shared-uncaught-handler.jar"))
 
     // msdl / view_capture（frameworks/libs/systemui，tier② prebuilt jar）
     // 原先由 SystemUISharedLib.jar（fat turbine-combined）透传，shared 源码化后需 core 直接依赖
@@ -153,8 +146,7 @@ dependencies {
     // protobuf.nano 运行时由 compileOnly framework.jar 提供。
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))
     implementation(project(":SystemUI-proto"))
-    // SystemUIUnfoldLib：FOLD_UPDATE_* 常量 + FoldStateProvider 等（可折叠设备 unfold 动画）
-    implementation(project(":SystemUI-unfold"))
+    // SystemUIUnfoldLib 通过 :SystemUI-shared / :SystemUI-customization 透传
     // androidx.window：FoldingFeature / WindowLayoutInfo 等
     implementation("androidx.window:window:1.3.0")
     // Lottie 动画（com.airbnb.lottie.* / lottie.compose.*）→ tier③ 标准第三方，用 maven 版本依赖
