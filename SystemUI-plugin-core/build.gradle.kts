@@ -1,44 +1,27 @@
+// :SystemUI-plugin-core — PluginCoreLib runtime API（JVM 源码库，无 Android 资源/manifest）
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    `java-library`
+    alias(libs.plugins.kotlin.jvm)
 }
 
-android {
-    namespace = "com.android.systemui.plugin.core"
-    compileSdkPreview = "SysUISdk"
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
 
-    defaultConfig {
-        minSdk = 32
-    }
+kotlin {
+    jvmToolchain(21)
+}
 
-    sourceSets {
-        getByName("main") {
-            java.srcDirs("src/main/java")
-            manifest.srcFile("src/main/AndroidManifest.xml")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    kotlin {
-        jvmToolchain(21)
-    }
-
-    lint {
-        abortOnError = false
+sourceSets {
+    getByName("main") {
+        java.setSrcDirs(listOf("src"))
+        kotlin.setSrcDirs(listOf("src"))
     }
 }
 
 dependencies {
-    // Framework APIs - provided by system at runtime
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-
-    // AndroidX
-    implementation(libs.androidx.annotation)
-
-    // Kotlin
+    compileOnly(libs.androidx.annotation)
     implementation(libs.kotlin.stdlib)
 }

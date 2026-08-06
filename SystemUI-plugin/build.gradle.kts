@@ -1,6 +1,9 @@
+// :SystemUI-plugin — SystemUIPluginLib runtime（含 bcsmartspace）
+// KAPT 跑 :SystemUI-plugin-processor 生成 PluginProtector（BP 排除 PluginProtectorStub.kt）
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.kapt)
 }
 
 android {
@@ -13,8 +16,9 @@ android {
 
     sourceSets {
         getByName("main") {
-            java.srcDirs("src/main/java")
-            manifest.srcFile("src/main/AndroidManifest.xml")
+            java.srcDirs("src", "bcsmartspace/src")
+            kotlin.srcDirs("src", "bcsmartspace/src")
+            manifest.srcFile("AndroidManifest.xml")
         }
     }
 
@@ -33,13 +37,15 @@ android {
 }
 
 dependencies {
-    // Internal project modules
-    implementation(project(":SystemUI-plugin-core"))
-    implementation(project(":SystemUI-animation"))
-
     // Framework APIs - provided by system at runtime
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-    // clocks 插件用 com.android.systemui.log.core.MessageBuffer → 依赖合并后的 :SystemUI-common
+
+    // build-time 注解处理器（生成 PluginProtector）
+    kapt(project(":SystemUI-plugin-processor"))
+
+    // tier① SystemUI 自有源码模块
+    api(project(":SystemUI-plugin-core"))
+    api(project(":SystemUI-animation"))
     api(project(":SystemUI-common"))
 
     // AndroidX
@@ -47,12 +53,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.dynamicanimation)
     implementation(libs.androidx.recyclerview)
-    // clocks 插件 ClockFaceLayout 用 androidx.constraintlayout.widget.ConstraintSet（对齐 AOSP plugin/Android.bp）
     implementation(libs.androidx.constraintlayout)
-    // plugins/qs/TileDetailsViewModel 用 androidx.compose.runtime.Composable
-    implementation("androidx.compose.runtime:runtime:1.7.5")
-
-    // Kotlin
     implementation(libs.kotlin.stdlib)
-    implementation(libs.kotlinx.coroutines.core)
 }

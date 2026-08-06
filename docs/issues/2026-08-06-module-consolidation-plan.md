@@ -148,3 +148,50 @@
 - 移除 root build 的 Kairos ExperimentalFrpApi opt-in flag
 - **验证**：./gradlew projects BUILD SUCCESSFUL（12 模块）
 - 对齐：MISPLACED 162→0、MODIFIED 1046→0、MISSING 84→66（plugin 源码待 Task 9 同步）
+
+## Task 9: 恢复 Plugin 注解处理器边界（KAPT 失败，待用户裁决）
+
+### 已完成的结构改动
+- 同步 AOSP plugin_core/src(13)、plugin/src(49，删 PluginProtectorStub.kt)、
+  bcsmartspace/src(2)、plugin_core/processor/src(2)
+- plugin-core 转 JVM 源码库（java-library + kotlin.jvm，无 Android 资源/manifest）
+- 创建 :SystemUI-plugin-processor（JVM，含 src + resources/META-INF/services 描述符）
+- 创建 :SystemUI-plugin/AndroidManifest.xml（空 manifest）
+- 重写 :SystemUI-plugin/build.gradle.kts（KAPT + api(plugin-core/animation/common)）
+- libs.versions.toml 加 kotlin-kapt 别名
+- settings 加 :SystemUI-plugin-processor（13 个 include，目标达成）
+- app 移除 id("kotlin-kapt")
+
+### KAPT 失败（计划 Step 5 停止条件触发）
+
+命令：`./gradlew :SystemUI-plugin:compileDebugKotlin --stacktrace`
+
+错误：
+```
+Error resolving plugin [id: 'org.jetbrains.kotlin.kapt', version: '2.1.0']
+> The request for this plugin could not be satisfied because the plugin is
+  already on the classpath with an unknown version, so compatibility cannot
+  be checked.
+```
+
+根因：root build.gradle.kts 已注释"KAPT 1.9+ 与 Gradle 9.5 不兼容，改用 KSP"。
+当前 Gradle 9.5.0 + Kotlin 2.1.0，KAPT 插件（org.jetbrains.kotlin.kapt）无法解析。
+项目此前已因 KAPT/Gradle 9 不兼容改用 KSP（见 unfold 模块）。
+
+完整 stack trace（196 行）见 /tmp/kapt-stack.txt，首行：
+```
+org.gradle.api.GradleException: Error resolving plugin [id: 'org.jetbrains.kotlin.kapt', version: '2.1.0']
+    at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator.resolvePluginRequest(...)
+```
+
+### 待用户裁决
+计划 Step 5 明确：KAPT 失败时停止、记录、询问用户后再选编译器/工具链；
+不得恢复 PluginProtectorStub.kt。
+
+可选方向：
+1. 改用 KSP 跑 ProtectedPluginProcessor（需确认该处理器是否 KSP 兼容）
+2. 升级/调整 Kotlin 版本以恢复 KAPT 兼容性
+3. 用 javac annotation processor（-processor）直接调用，绕过 KAPT/KSP Gradle 插件
+4. 其他用户指定方向
+
+当前未恢复 stub，等待裁决。
