@@ -36,10 +36,8 @@ include(":SystemUI-unfold")
 // AOSP bp 1:1 新增子模块 (Phase A 脚手架)
 // utils/kairos/ → kairos
 include(":SystemUI-utils-kairos")
-// compose/core/ → PlatformComposeCore
-include(":SystemUI-compose-core")
-// compose/scene/ → PlatformComposeSceneTransitionLayout
-include(":SystemUI-compose-scene")
+// compose/core + compose/scene → SystemUI-compose（合并）
+include(":SystemUI-compose")
 // shared/biometrics/ → BiometricsSharedLib
 include(":SystemUI-shared-biometrics")
 // shared/keyguard/ → SystemUISharedLib-Keyguard

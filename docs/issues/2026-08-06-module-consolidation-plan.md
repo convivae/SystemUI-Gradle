@@ -109,3 +109,16 @@
 - 对齐：MISSING 161（↓14）、EXTRA 96（↓11）、RES-MISS 2195（↓1）
 - 已知保留：shared 全量编译可能暴露 Thread.setUncaughtExceptionPreHandler 隐藏 API 与
   Dagger 依赖问题（计划明确：记录不恢复 stub）
+
+## Task 6: 合并 Compose Core + Scene
+
+- 创建 `:SystemUI-compose`：core/src(27) + scene/src(50)，namespace `com.android.compose`
+- 合并 core+scene 的 Maven 依赖（去重），单一 Compose 编译器配置
+- 内部边：`api(:SystemUI-animation)` + animationlib AAR + tracinglib
+- core 改为单一 `implementation(:SystemUI-compose)`；删除 compose-core/compose-scene 模块
+- **验证**：`:SystemUI-compose:compileDebugKotlin` FAILED
+  - `e: Easings.kt:21 Unresolved reference 'Interpolator'`（import androidx.core.animation.Interpolator）
+  - 根因：compose 依赖块只有 `androidx.core:core-ktx:1.13.1`，计划未列 `androidx.core:core`；
+    旧 compose-core 依赖相同，属预存问题非本次回归
+  - 用户既定方针：严格按计划执行，错误先保留，继续后续任务
+- 对齐：MISSING 84（↓77，compose 源码归位）、EXTRA 96、MODIFIED 1046

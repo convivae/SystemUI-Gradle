@@ -117,7 +117,7 @@ fun Modifier.nestedDraggable(
     overscrollEffect: OverscrollEffect? = null,
     enabled: Boolean = true,
 ): Modifier {
-    return this.thenIf(overscrollEffect != null) { Modifier.overscroll(overscrollEffect!!) }
+    return this.thenIf(overscrollEffect != null) { Modifier.overscroll(overscrollEffect) }
         .then(NestedDraggableElement(draggable, orientation, overscrollEffect, enabled))
 }
 

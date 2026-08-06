@@ -108,10 +108,8 @@ dependencies {
     // static_libs in AOSP SystemUI-core Android.bp:
     //   kairos → SystemUI-utils-kairos
     implementation(project(":SystemUI-utils-kairos"))
-    //   PlatformComposeCore → SystemUI-compose-core
-    implementation(project(":SystemUI-compose-core"))
-    //   PlatformComposeSceneTransitionLayout → SystemUI-compose-scene
-    implementation(project(":SystemUI-compose-scene"))
+    //   PlatformComposeCore + SceneTransitionLayout → SystemUI-compose（合并）
+    implementation(project(":SystemUI-compose"))
     //   BiometricsSharedLib / SystemUISharedLib-Keyguard 通过 :SystemUI-shared 透传
     //   SystemUI-proto → SystemUI-proto (顶层 java_library, 含 protobuf.nano 生成类)
     implementation(project(":SystemUI-proto"))
