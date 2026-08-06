@@ -1,8 +1,9 @@
 # SystemUI-Gradle 详细开发计划 (PLAN.md)
 
-> ⚠️ **历史计划警告（2026-08-06）**：本文件主体停留在 2026-07-29，旧的错误数目标和“把 SystemUIApplication/SystemUIService 移到 app”计划已失效。入口类必须保留在 `:SystemUI-core`（见 ADR 0003 更正）。
+> ⚠️ **历史计划警告（2026-08-06）**：本文件 §阶段 1–5 主体停留在 2026-07-29，旧的错误数目标、“把 SystemUIApplication/SystemUIService 移到 app”计划、以及“animationlib 源码化”方案均已失效。入口类必须保留在 `:SystemUI-core`（见 ADR 0003 更正）；animationlib 是非 SystemUI 代码，须改为直接 AAR。
 >
-> 当前优先级以 `AGENTS.md`、`docs/architecture/2026-08-06-reference-project-rationale.md` 和 `docs/architecture/2026-08-06-soong-android-app-vs-gradle-app.md` 为准：先完成源码 1:1 审查、非 SystemUI 违规源码清理、无用/违规/旧 jar/AAR 清理和依赖边界校准；AAR 先直接引入，确认冲突后才使用本地 Maven。错误数始终只作诊断，不作为提交门槛；编译按问题和阶段性里程碑需要执行，不要求每次修改都运行。
+> **当前优先级（2026-08-06）**：执行 13-module 拓扑实施计划
+> `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`（10 个 task）。该计划将 22 module 收敛为 13-module，语义对齐 BP（非 target 1:1）。错误数始终只作诊断，不作为提交门槛；当前构建被 AAR 重复 R transform 阻塞，无可信 Kotlin 基线。AAR transform 恢复拆为后续独立 artifact-recovery 计划。下文历史阶段保留供参考，不代表当前优先级。
 
 > **历史最后更新**: 2026-07-29
 > **历史错误数**: 509
@@ -16,11 +17,13 @@
 ```
 阶段 1 ✅ (2026-07-22): 文档 + 阶段性 commit
 阶段 2 ✅ (2026-07-28): server-notification-flags.jar — 已解决（删除 stub Flags.kt）
-阶段 2.5 ✅ (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509
-阶段 3 🚧 (2026-07-29): animationlib 源码化 + app 模块构建
-阶段 4 ⏳ (待启动): Compose Scene Framework + 业务模块错误
-阶段 5 ⏳ (待启动): 完整编译验证 + 打包
+阶段 2.5 ✅ (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509（历史，非当前基线）
+阶段 3 🚧 (2026-08-06): 13-module 拓扑实施（计划：docs/superpowers/plans/2026-08-06-13-module-source-topology.md）
+阶段 4 ⏳ (待启动): AAR artifact 恢复 + 重复 R transform 修复（独立计划）
+阶段 5 ⏳ (待启动): manifest merge + Kotlin 基线 + :app:assembleDebug
 ```
+
+> 旧的“阶段 3: animationlib 源码化”已废止——animationlib 属非 SystemUI 代码，改为直接 AAR。
 
 ---
 

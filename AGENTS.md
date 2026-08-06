@@ -135,16 +135,20 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ❌ **绝对禁止** Agent 在 res/ 下生成同名资源绕过编译错误。
 
-### 1.9 项目结构对齐 AOSP `Android.bp`（用户明确要求，2026-07-29）
+### 1.9 项目结构对齐 AOSP `Android.bp`（用户明确要求，2026-07-29；2026-08-06 修正为语义对齐）
 
-> **规则 B (bp-aligned structure)**: 整个项目结构、模块命名、依赖顺序严格按
-> AOSP `frameworks/base/packages/SystemUI/Android.bp` 定义。
+> **规则 B (bp-aligned structure)**: `Android.bp` 是生产 source roots、资源 owner、
+> static/libs/plugins **语义**的唯一依据；Gradle module 边界遵循真实 seam（R namespace、
+> 多消费者、外部 API、处理器/AIDL 工具链、防依赖环），**不要求每个 Soong target 对应一个 Gradle module**。
 
-详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`：
+详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1：
 
 - `android_app "SystemUI"` → `:app`（APK 入口，仅 `static_libs: ["SystemUI-core"]`）
 - `android_library "SystemUI-core"` → `:SystemUI-core`（含 src + compose + 所有子模块 static_libs）
-- 各子模块（shared/animation/customization/common/log/unfold/plugin/plugin-core）独立 android_library
+- 多个内部 Soong target 可合入一个 Gradle module（如 Log+Common+utils → `:SystemUI-common`，
+  Compose Core+Scene → `:SystemUI-compose`，全部 pods → `:SystemUI-core`）
+- 目标 13-module 清单见 `docs/architecture/2026-08-06-module-structure-audit.md`，实施计划见
+  `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`
 - `SystemUIApplication.java` / `SystemUIService.java` 位于 AOSP `SystemUI-core` 的 `src/**/*.java` glob 内，**必须保留在 `:SystemUI-core/src/com/android/systemui/`**；`:app` 按 bp 无独立源码
 - `:app/src/main/AndroidManifest.xml` 从 AOSP 完整复制（1158 行），不允许最小化
 
@@ -229,28 +233,31 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ### 3.1 模块结构
 
-按 AOSP `frameworks/base/packages/SystemUI/Android.bp`（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）：
+按 AOSP `frameworks/base/packages/SystemUI/Android.bp` 的**语义**对齐（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1）。目标 13-module 拓扑（实施中，见 `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`）：
 
 ```
 :app                          # android_app "SystemUI"（无独立源码；负责 manifest、签名和最终 APK 打包）
-:SystemUI-core                # android_library "SystemUI-core"（主模块，含入口类、src + compose + 所有子模块 static_libs）
-:SystemUI-res                 # AOSP 资源库目标模块；当前尚未独立建立，资源暂挂 core（结构缺口，待校准）
-:SystemUI-shared              # android_library "SystemUISharedLib"（源码，含 aidl）
-:SystemUI-animation           # android_library "PlatformAnimationLib"（源码）
-:SystemUI-animationlib        # android_library "PlatformAnimationLib-core/server"（插值器/动画工具库，源码）
-:SystemUI-customization       # android_library "SystemUICustomizationLib"（源码）
-:SystemUI-unfold              # android_library "SystemUIUnfoldLib"（源码，KSP 跑 Dagger）
-:SystemUI-common              # android_library "SystemUICommon"（源码，含 shared-utils）
-:SystemUI-log                 # android_library "SystemUILogLib"（源码）
-:SystemUI-plugin              # android_library "SystemUIPluginLib"（运行时接口，源码）
-:SystemUI-plugin-core         # android_library "PluginCoreLib/PluginAnnotationLib"（编译时注解，源码）
+:SystemUI-core                # android_library "SystemUI-core"（主模块，含入口类、src + compose + pods）
+:SystemUI-res                 # 独立资源 namespace（res/res-keyguard/res-product），生成 com.android.systemui.res.R
+:SystemUI-common              # Common + Log + shared-utils 合并（源码）
+:SystemUI-animation           # PlatformAnimationLib + Shader(surfaceeffects) 合并（源码，含 res）
+:SystemUI-plugin-core         # PluginCoreLib runtime API（JVM 源码）
+:SystemUI-plugin-processor    # PluginAnnotationProcessor（build-time，不进 APK implementation）
+:SystemUI-plugin              # SystemUIPluginLib runtime（源码，含 bcsmartspace）
+:SystemUI-unfold              # SystemUIUnfoldLib（源码，KSP 跑 Dagger）
+:SystemUI-customization       # SystemUICustomizationLib（源码，含 res）
+:SystemUI-shared              # SystemUISharedLib + keyguard child 合并（源码，含 aidl+res）
+:SystemUI-shared-biometrics   # biometrics（独立 R namespace，被 Settings 消费）
+:SystemUI-compose            # Compose Core + Scene 合并（源码）
 ```
 
-> **源码化里程碑（2026-07-29）**：tier① 自有代码 shared/animation/customization/unfold/log/common
-> 已全部由 jar 改为源码依赖（规则 S），core 错误稳定 102。unfold 引入 **KSP**
-> （`com.google.devtools.ksp 2.2.10-2.0.2`，对齐编译器 2.2.10）跑 Dagger 处理器在项目内生成组件，
-> 破解 KAPT 禁用难题；dagger 2.57.2 用 `implementation` 直接坐标限定在 unfold（不透传 core）。
-> 详见 `docs/architecture/2026-07-29-dependency-audit.md` §6。
+非 SystemUI 产物（不进源码 module）：`animationlib`（frameworks/libs/systemui）→ 直接 AAR；
+`compilelib` → debug/release JAR；`kairos` → test-only，不进本 APK 生产图。
+
+> **历史**：2026-07-29 源码化里程碑将 tier① 自有代码由 jar 改为源码依赖（规则 S）；
+> unfold 引入 KSP（`2.2.10-2.0.2`，对齐编译器 2.2.10）跑 Dagger。详见
+> `docs/architecture/2026-07-29-dependency-audit.md` §6。当前构建仍被 AAR 重复 R transform 阻塞，
+> 尚无可信 Kotlin 错误数基线。
 
 ### 3.2 libs/ 内容
 

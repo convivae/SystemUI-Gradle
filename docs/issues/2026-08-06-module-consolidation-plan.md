@@ -1,0 +1,51 @@
+# 13-module 架构实施计划
+
+**日期**：2026-08-06
+
+## 背景
+
+`docs/architecture/2026-08-06-module-structure-audit.md` 已重新审定：当前 22 个 Gradle module 应按真实资源 namespace、复用 seam、依赖方向和构建工具链收敛为 13 个目标 module。实施前需要把该架构拆为可独立审查、可验证、可增量提交的任务，避免再次使用 BP target 数量机械搭脚手架。
+
+## 操作步骤
+
+1. 核对当前 settings、各 module build script、sourceSets、源码目录和依赖图。
+2. 同步 ADR 0003、AGENTS/HANDOFF 等政策文档中的模块边界表述。
+3. 将实施拆分为政策/对齐工具、源码 module 收敛、外部 JAR/AAR 清理与最终构建恢复三个阶段。
+4. 为每个阶段列出精确文件、命令、预期证据和提交点。
+5. 保存到 `docs/superpowers/plans/`，实施前由用户选择执行方式。
+
+## 错误数演变
+
+- 计划开始前：构建仍阻塞于 SettingsLib/iconloader/WindowManager-Shell AAR transform 重复 R 类，没有可信 Kotlin 错误数。
+- 本阶段只编写计划，不修改 Gradle module、源码或资源，不运行源码编译。
+
+## 待解决问题
+
+1. 按实施计划执行政策同步、owner-aware 对齐工具和 13-module source topology。
+2. `SystemUI-plugin-processor` 的 KAPT 接入是 fail-fast 检查点；失败时禁止恢复 `PluginProtectorStub.kt`，需询问用户选择工具链方向。
+3. 13-module checkpoint 后另写 artifact recovery 计划，处理 SettingsLib/iconloader/WM Shell/WifiTrackerLib 直接 AAR 和重复 R transform。
+4. 最终阶段再验证 manifest merge、core Kotlin 基线和 `:app:assembleDebug`。
+
+## 计划产物
+
+已保存可执行计划：
+
+- `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`
+
+计划包含 10 个任务、58 个以上可追踪步骤和逐任务提交点。本计划只负责政策、源码/resource owner、animationlib AAR、compilelib JAR和 13-module 内部依赖图；既有四个大型 AAR 的恢复被明确拆为下一份独立计划。
+
+## 计划阶段验证
+
+- 未运行源码编译；本阶段只编写实施计划。
+- 已核对当前 22 个 include module、目标 13 个 module、AOSP source roots、参考项目模块数及 animationlib/compilelib 中间产物。
+- 计划占位符扫描和 Markdown code fence 检查通过。
+- `git diff --check`：通过。
+
+## 政策同步验证
+
+- 未运行源码编译；本任务仅同步架构政策。
+- `git diff --check`：通过。
+- 当前构建阻塞仍为既有 AAR transform 重复 R 类。
+- 目标 13-module 清单已写入 ADR 0003 决策 1、AGENTS.md §3.1、HANDOFF §2。
+- animationlib 确认为非 SystemUI 代码，"源码化"方案废止，改为直接 AAR。
+- kairos 确认为 test-only，不进本 APK 生产图。

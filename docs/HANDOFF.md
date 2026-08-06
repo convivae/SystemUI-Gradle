@@ -42,6 +42,8 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 - 其他残留错误: ~58 个
 
 > **2026-08-06 更新**：该 70 错误不是当前基线。当前 checkpoint 中的 AAR 生成改写导致 AAR transform 在编译前失败，错误数暂时无统计意义。用户已明确错误数在任何阶段都只作为诊断，不是提交/回滚/审批门槛；当前先校准源码/jar/AAR 来源与模块边界。详见 `AGENTS.md` §2.1 和 `docs/architecture/2026-08-06-reference-project-rationale.md`。
+>
+> **2026-08-06 模块拓扑更新**：已审定从当前 22 module 收敛为 13-module 拓扑（语义对齐 BP，非 target 1:1）。animationlib 是非 SystemUI 代码（`frameworks/libs/systemui`），须改为直接 AAR，不再“源码化”。实施计划见 `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`。
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
@@ -51,7 +53,7 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 4. **规则 C**: SystemUI src/aidl/res 必须与 AOSP 不漏不多（详见 §1.6）
 5. **规则 F**: framework 等非 SystemUI 代码严禁源码复制（详见 §1.7）
 6. **规则 R**: res 缺失走 AOSP 源码 → 直接 AAR → 确认冲突后本地 Maven AAR；禁止凭空生成（详见 §1.8）
-7. **规则 B**: 项目结构按 AOSP `Android.bp`（详见 §1.9 + `docs/adr/0003`）
+7. **规则 B**: 项目结构按 AOSP `Android.bp` **语义**对齐（Gradle module 不与 target 1:1；详见 §1.9 + `docs/adr/0003` 决策 1）
 8. **规则 I**: 以项目整体向前推进为标准；错误数不是提交/回滚/审批门槛，不要求每次修改或提交都编译
 9. **规则 D**: 所有改动先写文档 (`docs/issues/YYYY-MM-DD-<topic>.md`)
 10. **规则 H**: 不要替用户做产品决策；遇 2+ 候选方案用 `AskQuestion`
@@ -85,6 +87,7 @@ SystemUI-Gradle/
 │   ├── SystemUI-{proto,tags,statsd}.jar
 │   ├── monet.jar            # ColorScheme/Shades/Style
 │   ├── systemui-flags.jar   # com.android.systemui.Flags
+│   ├── animationlib.jar     # ⚠️ 非 SystemUI，待改为直接 AAR（libs/aars/animationlib.aar）
 │   ├── maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar
 │   ├── prebuilts/
 │   │   ├── SystemUISharedLib.jar
@@ -93,15 +96,25 @@ SystemUI-Gradle/
 │   │   ├── PlatformAnimationLib.jar
 │   │   └── tracinglib-platform.jar
 │   └── maven/com/android/systemui/{settingslib,iconloader,WindowManager-Shell,WifiTrackerLib,SystemUISharedLib}/1.0.0/
-├── SystemUI-core/            # 主模块 ~95% 代码
+├── SystemUI-core/            # 主模块 ~95% 代码（目标 13-module 拓扑实施中）
 │   ├── src/                  # = AOSP frameworks/base/packages/SystemUI/src/
-│   ├── res/                  # = AOSP SystemUI/res/
-│   ├── res-keyguard/         # = AOSP SystemUI/res-keyguard/
-│   ├── res-product/          # = AOSP SystemUI/res-product/
+│   ├── res/                  # ⚠️ 待迁出至独立 :SystemUI-res
+│   ├── res-keyguard/         # ⚠️ 待迁出至独立 :SystemUI-res
+│   ├── res-product/          # ⚠️ 待迁出至独立 :SystemUI-res
 │   ├── build.gradle.kts
 │   └── AndroidManifest.xml
-├── SystemUI-{shared,animation,customization,plugin,plugin-core}/
-├── app/                      # 主入口
+├── SystemUI-res/             # 独立资源 namespace
+├── SystemUI-common/           # Common+Log+utils 合并
+├── SystemUI-animation/       # PlatformAnimation+Shader 合并
+├── SystemUI-plugin-core/      # Plugin runtime API（JVM）
+├── SystemUI-plugin-processor/ # Plugin annotation processor（build-time，不进 APK）
+├── SystemUI-plugin/           # PluginLib runtime（含 bcsmartspace）
+├── SystemUI-unfold/           # Unfold（KSP Dagger）
+├── SystemUI-customization/    # Customization（含 res）
+├── SystemUI-shared/           # Shared+keyguard 合并
+├── SystemUI-shared-biometrics/# biometrics（独立 R namespace）
+├── SystemUI-compose/         # Compose Core+Scene 合并
+├── app/                      # 主入口（无源码，只依赖 :SystemUI-core）
 ├── build.gradle.kts          # 根项目（allprojects 注入 framework.jar）
 ├── settings.gradle.kts
 └── gradle/libs.versions.toml
@@ -135,19 +148,13 @@ SystemUI-Gradle/
 - **正确结构**：入口类保留在 `:SystemUI-core/src/com/android/systemui/`；`:app` 无源码，只依赖 `:SystemUI-core`，并持有完整 AOSP manifest/proguard 配置。
 - **禁止**再次把入口类迁到 `:app/src/main/java/`。
 
-### 4.3 animationlib 源码化（进行中，未提交）
-- **状态**: 🚧 源码已复制、模块骨架已创建、settings.gradle.kts 已加，但 animation/customization 的
-  `build.gradle.kts` 还没改（还在用 `compileOnly(animationlib.jar)`），`libs/animationlib.jar` 也还没删
-- **详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
-- **下一步**:
-  1. `:SystemUI-animation` / `:SystemUI-customization` 的 `compileOnly(animationlib.jar)` → `api(project(":SystemUI-animationlib"))`
-  2. 删除 `libs/animationlib.jar`
-  3. 检查 WMShell.jar 的 6 个重叠类是否冲突
+### 4.3 animationlib → 直接 AAR（原“源码化”方案已废止）
+- **状态**: 🚧 原计划将 animationlib 源码化为 `:SystemUI-animationlib` module；2026-08-06 确认 animationlib 位于 `frameworks/libs/systemui/animationlib`，属**非 SystemUI 代码**，违反规则 S/F，不得源码复制。
+- **新方案**: 用 `tools/package_aosp_aar.py` 从 AOSP Soong javac+Kotlin jar + res 生成直接 AAR `libs/aars/animationlib.aar`，由 animation/customization 直接 `api(files(...))` 引入。
+- **详情**: `docs/architecture/2026-08-06-module-structure-audit.md`、`docs/superpowers/plans/2026-08-06-13-module-source-topology.md` Task 4
 
 ### 4.4 Stage 3 (Compose Scene Framework)
-- **状态**: 12 个错误，全部在 `com.android.compose.animation.scene.*`
-- **错误种类**: `thenIf`, `drawInContainer`, Modifier 内部 API, `ContainerState`
-- **下次 Agent 行动**: 详查 `docs/CURRENT_STATE.md` §3
+- **状态**: 历史记录 12 个错误，全部在 `com.android.compose.animation.scene.*`；当前无可信基线（构建被 AAR transform 阻塞）。Compose Core+Scene 将合并为 `:SystemUI-compose`。
 
 ### 4.5 AIDL 编译知识（已解答）
 - **问题**: 为什么 framework.jar 不能满足 AIDL 编译需要？

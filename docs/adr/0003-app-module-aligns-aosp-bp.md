@@ -1,6 +1,6 @@
 # ADR 0003: 项目结构对齐 AOSP `frameworks/base/packages/SystemUI/Android.bp`
 
-**状态**：已接受；2026-07-31 修正入口类归属，2026-08-06 修正 manifest 归属和 APK 打包解释
+**状态**：已接受；2026-07-31 修正入口类归属，2026-08-06 修正 manifest 归属和 APK 打包解释，2026-08-06 修正决策 1 为“语义对齐而非 target 1:1”
 
 ## 上下文
 
@@ -21,20 +21,28 @@ AOSP 用 soong (`Android.bp`) 定义 SystemUI 的模块图：
 
 ## 决策
 
-### 决策 1：模块划分与命名以 AOSP `Android.bp` 为唯一标准
+### 决策 1：源码 owner 和依赖语义对齐 BP，Gradle module 不与 target 1:1
 
-- `android_app "SystemUI"` → 项目 `:app`（Kotlin `com.android.application` plugin）
-- `android_library "SystemUI-core"` → 项目 `:SystemUI-core`
-- `android_library "SystemUISharedLib"` → 项目 `:SystemUI-shared`
-- `android_library "PlatformAnimationLib"` → 项目 `:SystemUI-animation`
-- `android_library "SystemUICustomizationLib"` → 项目 `:SystemUI-customization`
-- `android_library "SystemUICommon"` → 项目 `:SystemUI-common`
-- `android_library "SystemUILogLib"` → 项目 `:SystemUI-log`
-- `android_library "SystemUIUnfoldLib"` → 项目 `:SystemUI-unfold`
-- `android_library "SystemUIPluginLib"` → 项目 `:SystemUI-plugin`（运行时接口）
-- `android_library "PluginCoreLib"` + `PluginAnnotationLib` → 项目 `:SystemUI-plugin-core`（编译时注解）
+- `Android.bp` 是生产 source roots、资源 owner、static/libs/plugins 语义的唯一依据。
+- Soong target 是编译图节点；多个内部 target 可合入一个 Gradle module。
+- 独立 Gradle module 只由 R namespace、多消费者、外部 API、处理器/AIDL 工具链或防止依赖环证明。
+- 目标模块图以 `docs/architecture/2026-08-06-module-structure-audit.md` 的 13-module 清单为准：
+  `:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、
+  `:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、
+  `:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
 
-→ 主体模块已基本对齐；当前明确缺口是 AOSP `SystemUI-res` 尚未成为独立 Gradle module，资源仍直接挂在 `:SystemUI-core`。后续必须按 bp 校准，不能把现状误写为最终 1:1 结构。
+**不再要求每个 Soong `android_library` 对应一个 Gradle module**。具体合并：
+
+- `SystemUILogLib` + `SystemUICommon` + `SystemUI-shared-utils` → `:SystemUI-common`
+- `PlatformAnimationLib` + `SystemUIShaderLib`（surfaceeffects）→ `:SystemUI-animation`
+- `SystemUISharedLib` + shared/keyguard child → `:SystemUI-shared`（biometrics 因独立 R namespace 和 Settings 消费者保留为 `:SystemUI-shared-biometrics`）
+- Compose Core + Scene → `:SystemUI-compose`
+- 全部 pods 生产源码 → `:SystemUI-core`
+- `PluginCoreLib` + `PluginAnnotationLib` runtime API → `:SystemUI-plugin-core`；
+  `PluginAnnotationProcessor` 独立为 `:SystemUI-plugin-processor`（build-time 工具，不进 APK implementation）
+- `SystemUI-res` 独立持有 `res`/`res-keyguard`/`res-product`，生成 `com.android.systemui.res.R`
+
+参考项目 `CarSystemUIGradle` 仅 7 个 module 即产出完整车载 SystemUI APK，证明无需 BP 1:1。
 
 ### 决策 2：依赖关系严格按 bp 的 static_libs / libs 顺序
 
@@ -43,10 +51,11 @@ AOSP 用 soong (`Android.bp`) 定义 SystemUI 的模块图：
 `:SystemUI-core` 的依赖按 AOSP bp 顺序：
 
 ```
-tier① 源码子模块（按 bp static_libs 顺序）：
-  :SystemUI-shared, :SystemUI-animation, :SystemUI-customization,
-  :SystemUI-common, :SystemUI-log, :SystemUI-unfold,
-  :SystemUI-plugin, :SystemUI-plugin-core
+tier① 源码子模块（按 bp static_libs 语义，合并为 13-module 图后 core 直接依赖）：
+  :SystemUI-res, :SystemUI-animation, :SystemUI-common,
+  :SystemUI-customization, :SystemUI-plugin, :SystemUI-shared,
+  :SystemUI-compose
+  （plugin-core/unfold/biometrics/keyguard 经 shared/customization/plugin 传递，不由 core 直接依赖）
 tier② AOSP 特有 jar/AAR：
   framework.jar, framework-statsd.jar,
   android.car.jar, WindowManager-Shell, WifiTrackerLib,

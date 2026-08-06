@@ -1,8 +1,12 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> ⚠️ **历史快照警告（2026-08-06）**：本文件主体停留在 2026-07-29，错误数、待办和 app 入口类计划已过时。当前规则与优先级以 `AGENTS.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md` 为准。
+> ⚠️ **历史快照警告（2026-08-06）**：本文件 §2–§6 主体停留在 2026-07-29，错误数、待办和 app 入口类计划已过时。当前规则与优先级以 `AGENTS.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md` 为准。
 >
-> 当前阶段是**框架校准/依赖清理**：先做 AOSP SystemUI 源码不漏不多审查、删除非 SystemUI 违规源码、清理无用/违规/旧 jar/AAR。错误数在任何阶段都只作为诊断数据，不是提交门槛；AAR 先直接引入，确认冲突后才使用本地 Maven AAR。入口类保留在 `:SystemUI-core`，不是 `:app`。
+> **当前阶段（2026-08-06）**：**13-module 拓扑实施**。已审定从当前 22 module 收敛为 13-module 目标架构（语义对齐 BP，非 target 1:1）。animationlib 是非 SystemUI 代码（`frameworks/libs/systemui`），须改为直接 AAR；kairos 为 test-only，不进本 APK 生产图。实施计划见 `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`，架构决策见 `docs/architecture/2026-08-06-module-structure-audit.md`。
+>
+> **构建状态**：当前构建仍被 AAR 重复 R transform 阻塞（SettingsLib/iconloader/WindowManager-Shell AAR），在 Kotlin 编译前失败，**无可信 Kotlin 错误数基线**。错误数在任何阶段都只作为诊断数据，不是提交门槛；入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复拆为后续独立 artifact-recovery 计划。
+>
+> 下文 §1–§8 为历史记录，保留供诊断参考，不代表当前优先级。
 
 > **历史最后更新**: 2026-07-29（ADR 增订）
 > **历史错误数**: 70（Stage 2 已解 + 完整性审查完成）；此数字不代表 2026-08-06 当前构建状态
