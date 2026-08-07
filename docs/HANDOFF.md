@@ -56,7 +56,7 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 > - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly）
 > - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0）
 >
-> **core 编译边界（Phase A.5 后）**：首个失败为 `:SystemUI-core:compileDebugKotlin` 的 AAR transform 阶段——SettingsLib/iconloader/WindowManager-Shell 的本地 Maven AAR 的 `classes.jar` 含 R.class，AGP 报 "already contains entry"。B1（product variant，CONV_DEL）、B2（processor stdlib）、B3（PluginProtector stub 恢复）已全部解决。core Kotlin 编译已启动但被 AAR transform 阻断。
+> **core 编译边界（Phase B 后）**：core Kotlin 编译已启动，708 个真实 Kotlin 错误（Compose experimental API、Unresolved reference Animator/ValueAnimator、MessageNano supertype 等）。无 PluginProtector 错误。AAR transform 阻塞全部消除。B1/B2/B3 已解决。四个 artifact（WifiTrackerLib/iconloader/SettingsLib/WM-Shell）已切换为直接 AAR，fat WM-Shell.jar 已删除，manifest merge 成功。
 >
 > **下一步**：先执行 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。该计划修复审查中无需产品裁决的问题并取得新的 core first-failure；随后按新证据校准并执行 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，逐个处理 SettingsLib/iconloader/WM Shell/WifiTrackerLib、manifest 和 APK 验收。
 

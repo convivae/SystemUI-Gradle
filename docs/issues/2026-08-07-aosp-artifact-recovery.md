@@ -64,9 +64,9 @@ WM-Shell 直接 AAR 的 javac JAR 不含 static_libs 代码，需额外恢复：
 ## 里程碑：core Kotlin 编译启动
 
 AAR transform 阻塞全部消除后，core Kotlin 编译跑了 24 秒，产生 **708 个真实 Kotlin 错误**——这是真正的编译期诊断信息（Compose experimental API、Unresolved reference 等），不是 build 配置 blocker。这是项目首次取得可信的 core Kotlin 错误基线。
-| Task 7 | 删废弃 Maven 坐标 | 待执行 |
-| Task 8 | manifest merge 验证 | 待执行 |
-| Task 9 | core + APK 证据 | 待执行 |
+| Task 7 | 删废弃 Maven 坐标 | ✅ 完成 |
+| Task 8 | manifest merge 验证 | ✅ 完成 |
+| Task 9 | core + APK 证据 | 🚧 core 708 错误，非 PluginProtector |
 
 ## 待解决问题
 

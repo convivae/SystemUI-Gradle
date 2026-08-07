@@ -390,10 +390,10 @@ git commit -m "build: replace fat WM Shell prebuilt with direct AAR"
 - Modify: `docs/PLAN.md`
 - Modify: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 
-- [ ] Run all Python tests and strict source alignment.
-- [ ] Run `./gradlew :SystemUI-core:compileDebugKotlin --rerun-tasks --console=plain` and save complete log.
-- [ ] If the first blocker is `PluginProtector`, stop and ask the user to choose the processor direction. Do not continue by adding a generated/stub file.
-- [ ] If core compiles, run:
+- [x] Run all Python tests and strict source alignment.
+- [x] Run `./gradlew :SystemUI-core:compileDebugKotlin --rerun-tasks --console=plain` and save complete log.
+- [x] If the first blocker is `PluginProtector`, stop and ask the user to choose the processor direction. Do not continue by adding a generated/stub file.
+- [x] If core compiles, run:
 
 ```bash
 ./gradlew :app:assembleDebug --rerun-tasks --console=plain \
