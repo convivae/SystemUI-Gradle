@@ -158,28 +158,28 @@ class TestArtifactConfigs(unittest.TestCase):
         cfg = paar.CONFIGS["WifiTrackerLib"]
         self.assertIn("WifiTrackerLib/android_common/javac/WifiTrackerLib.jar", str(cfg["code"]))
         self.assertIn("WifiTrackerLib/res", str(cfg["res"]))
-        self.assertIn("WifiTrackerLib/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertTrue(str(cfg["manifest"]).endswith("WifiTrackerLib/AndroidManifest.xml"))
         self.assertIn("WifiTrackerLibRes/android_common/R.txt", str(cfg["rtxt"]))
 
     def test_iconloader_config_paths(self):
         cfg = paar.CONFIGS["iconloader"]
         self.assertIn("iconloader/android_common/javac/iconloader.jar", str(cfg["code"]))
         self.assertIn("iconloaderlib/res", str(cfg["res"]))
-        self.assertIn("iconloader/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertTrue(str(cfg["manifest"]).endswith("iconloaderlib/AndroidManifest.xml"))
         self.assertIn("iconloader/android_common/R.txt", str(cfg["rtxt"]))
 
     def test_settingslib_config_paths(self):
         cfg = paar.CONFIGS["SettingsLib"]
         self.assertIn("SettingsLib/android_common/javac/SettingsLib.jar", str(cfg["code"]))
         self.assertIn("SettingsLib/res", str(cfg["res"]))
-        self.assertIn("SettingsLib/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertTrue(str(cfg["manifest"]).endswith("SettingsLib/AndroidManifest.xml"))
         self.assertIn("SettingsLib/android_common/R.txt", str(cfg["rtxt"]))
 
     def test_wmshell_config_paths(self):
         cfg = paar.CONFIGS["WindowManager-Shell"]
         self.assertIn("WindowManager-Shell/android_common/javac/WindowManager-Shell.jar", str(cfg["code"]))
         self.assertIn("WindowManager/Shell/res", str(cfg["res"]))
-        self.assertIn("WindowManager-Shell/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertTrue(str(cfg["manifest"]).endswith("WindowManager/Shell/AndroidManifest.xml"))
         self.assertIn("WindowManager-Shell/android_common/R.txt", str(cfg["rtxt"]))
 
     def test_wmshell_config_rejects_sysui(self):

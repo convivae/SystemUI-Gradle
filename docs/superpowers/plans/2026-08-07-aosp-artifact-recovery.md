@@ -366,19 +366,19 @@ git commit -m "build: replace fat WM Shell prebuilt with direct AAR"
 - Do not modify AOSP manifest content to suppress merge errors
 - Modify: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 
-- [ ] Run:
+- [x] Run:
 
 ```bash
 ./gradlew :app:processDebugMainManifest --rerun-tasks --console=plain \
   2>&1 | tee /tmp/systemui-manifest-merge.log
 ```
 
-- [ ] Locate the actual merged manifest under `app/build/intermediates/merged_manifest*/debug/**/AndroidManifest.xml`.
-- [ ] Compare semantic properties with AOSP `frameworks/base/packages/SystemUI/AndroidManifest.xml`: application name, sharedUserId, coreApp, persistent/directBootAware flags, SystemUIService components, permissions, providers/receivers/services and exported values.
-- [ ] Confirm `SystemUIApplication` and `SystemUIService` class files remain owned by `:SystemUI-core`; do not move them into app.
-- [ ] Treat the project source manifest's omitted `package=` as acceptable only if merged package/namespace is `com.android.systemui`.
-- [ ] Record merge report path and semantic differences. If consuming raw AOSP resources requires modifying an AOSP resource file, stop and ask the user.
-- [ ] Commit only evidence-backed Gradle wiring changes.
+- [x] Locate the actual merged manifest under `app/build/intermediates/merged_manifest*/debug/**/AndroidManifest.xml`.
+- [x] Compare semantic properties with AOSP `frameworks/base/packages/SystemUI/AndroidManifest.xml`: application name, sharedUserId, coreApp, persistent/directBootAware flags, SystemUIService components, permissions, providers/receivers/services and exported values.
+- [x] Confirm `SystemUIApplication` and `SystemUIService` class files remain owned by `:SystemUI-core`; do not move them into app.
+- [x] Treat the project source manifest's omitted `package=` as acceptable only if merged package/namespace is `com.android.systemui`.
+- [x] Record merge report path and semantic differences. If consuming raw AOSP resources requires modifying an AOSP resource file, stop and ask the user.
+- [x] Commit only evidence-backed Gradle wiring changes.
 
 ---
 
