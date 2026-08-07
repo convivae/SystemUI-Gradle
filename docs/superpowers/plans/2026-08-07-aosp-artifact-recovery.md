@@ -169,7 +169,7 @@ git commit -m "build: package strict AOSP direct AARs"
 - Modify: `SystemUI-core/build.gradle.kts`
 - Modify: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 
-- [ ] **Step 1: Replace only WifiTrackerLib coordinate**
+- [x] **Step 1: Replace only WifiTrackerLib coordinate**
 
 Replace:
 
@@ -185,7 +185,7 @@ implementation(files("${rootProject.projectDir}/libs/aars/WifiTrackerLib.aar"))
 
 Do not change the other three artifacts.
 
-- [ ] **Step 2: Run resource transform and core compile**
+- [x] **Step 2: Run resource transform and core compile**
 
 ```bash
 ./gradlew :SystemUI-core:processDebugResources --rerun-tasks --console=plain \
@@ -196,7 +196,7 @@ Do not change the other three artifacts.
 
 Success criterion: no WifiTrackerLib duplicate R transform/class error. A later unrelated failure is acceptable and must be recorded.
 
-- [ ] **Step 3: Handle only evidence-backed missing dependencies**
+- [x] **Step 3: Handle only evidence-backed missing dependencies**
 
 If compile reports a missing WifiTrackerLib static dependency, locate it in `WifiTrackerLib/Android.bp` and classify:
 
@@ -206,7 +206,7 @@ If compile reports a missing WifiTrackerLib static dependency, locate it in `Wif
 
 Do not use turbine-combined as the fix.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add SystemUI-core/build.gradle.kts \

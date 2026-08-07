@@ -161,7 +161,7 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-javac.jar"))
     implementation(libs.systemui.iconloader)
     implementation(libs.systemui.wmshell)
-    implementation(libs.systemui.wifitrackerlib)
+    implementation(files("${rootProject.projectDir}/libs/aars/WifiTrackerLib.aar"))
 
     // 注：prebuilt JAR 不再需要，所有子模块都包含完整源码
 
