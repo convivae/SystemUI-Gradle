@@ -215,6 +215,17 @@ missing=0, misplaced=0, extra=0, modified=0
     - compilelib-debug.jar: `9d12cbddf01e352485197646dcb794676738ee3ed1faf5d9490175cf920afbd3`
     - compilelib-release.jar: `ad605e3fc7bb80f563497983392fc193368d88c1042bdda22e28004df73ca022`
 
+#### Task 3：给 JVM Common 模块补 SysUISdk compile API ✅
+
+- 验证：`android.icu.text.SimpleDateFormat` 只在 SysUISdk `android.jar`，不在 `libs/framework.jar`。
+- 先确认红：`compileKotlin` 报 `Unresolved reference 'icu'` / `'SimpleDateFormat'`（`LogMessage.kt:19,101`）。
+- 修复：JVM 模块不自动获得 AGP 的 `compileSdkPreview`，添加 module-local
+  `compileOnly(files(sysUiAndroidJar))`（lazy `Provider`，默认 `/home/conv/Android/Sdk/platforms/android-SysUISdk/android.jar`）。
+  保留现有 `framework.jar`，未修改 root `KotlinCompile` classpath，未改成 Android library。
+- 验证：
+  - `./gradlew :SystemUI-common:compileKotlin --rerun-tasks` → BUILD SUCCESSFUL（exit 0）。
+  - 仅余一条 Kotlin annotation-target warning（`LogLevel.kt:22`），非 error。
+
 ### Phase B：独立 artifact-recovery 计划
 
 Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：
