@@ -350,12 +350,12 @@ git commit -m "build: replace fat WM Shell prebuilt with direct AAR"
 - Modify: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 - Delete when unreferenced: four obsolete `libs/maven/com/android/systemui/...` AAR/POM directories
 
-- [ ] Search the entire repository for the four catalog aliases and Maven coordinates.
-- [ ] Remove only aliases with zero Gradle consumers.
-- [ ] Confirm no POM transitive dependency is still relied upon by comparing before/after `debugCompileClasspath`; restore explicit official/AOSP dependencies rather than retaining an accidental POM edge.
-- [ ] Delete the four obsolete local-Maven artifact directories after direct AAR verification; do not delete unrelated flags or SystemUISharedLib entries in this Task.
-- [ ] Run `./gradlew projects`, `:SystemUI-res:processDebugResources`, and core compile.
-- [ ] Commit as `chore: remove obsolete local AOSP AAR coordinates`.
+- [x] Search the entire repository for the four catalog aliases and Maven coordinates.
+- [x] Remove only aliases with zero Gradle consumers.
+- [x] Confirm no POM transitive dependency is still relied upon by comparing before/after `debugCompileClasspath`; restore explicit official/AOSP dependencies rather than retaining an accidental POM edge.
+- [x] Delete the four obsolete local-Maven artifact directories after direct AAR verification; do not delete unrelated flags or SystemUISharedLib entries in this Task.
+- [x] Run `./gradlew projects`, `:SystemUI-res:processDebugResources`, and core compile.
+- [x] Commit as `chore: remove obsolete local AOSP AAR coordinates`.
 
 ---
 
