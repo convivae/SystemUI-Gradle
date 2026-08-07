@@ -1,0 +1,249 @@
+# 13-module 拓扑实施后审查结论与后续路线
+
+**日期**：2026-08-07
+**审查范围**：`40ffb2b9e132bc1b0c57397744d2e74bc1e5c00b...1e457cad`
+**当前 HEAD**：`1e457cad refactor: establish 13-module SystemUI topology`
+
+## 背景
+
+另一个 AI 已执行 `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`。本次审查按两条轴进行：
+
+1. **Standards**：是否符合 `AGENTS.md` 的 P/S/C/F/R/B/D/I 规则；
+2. **Spec**：是否满足 13-module 计划各 Task 的接口和验收条件。
+
+本文件记录审查结论、证据、遗留问题及下一个 AI 的执行顺序。详细可执行步骤见：
+
+- `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`
+
+## 总结结论
+
+### 可以验收的部分
+
+13-module 的**架构与 owner 里程碑基本符合预期**：
+
+- settings 已精确收敛为目标 13 module；
+- `:app` 无源码，只直接 `implementation(project(":SystemUI-core"))`；
+- 入口类仍属于 `:SystemUI-core`；
+- SystemUI src/AIDL/res 当前文件集已经归位；
+- animationlib 改为直接 AAR；compilelib 改为 debug/release JAR；
+- kairos 未进入生产依赖图；
+- `PluginProtectorStub.kt` 未恢复，也未新增其他源码 stub；
+- `./gradlew projects` 可配置成功；
+- `:SystemUI-animation` 和 `:SystemUI-shared-biometrics` 已有编译成功证据。
+
+### 不能宣称完成的部分
+
+13-module 计划的**完整编译与工具链验收尚未完成**：
+
+- Task 6：`:SystemUI-compose:compileDebugKotlin` 未通过；
+- Task 9：processor module/JAR/service descriptor 已建立，但 `PluginProtector` 没有生成；
+- Task 10：隔离模块编译仅部分通过；
+- `:SystemUI-core` 自身 Kotlin 编译尚未开始；
+- `:app:assembleDebug` 尚未成功运行；
+- SettingsLib/iconloader/WindowManager-Shell/WifiTrackerLib artifact recovery 尚未开始。
+
+准确状态应写为：
+
+> 13-module 拓扑迁移步骤已完成；源码/resource owner checkpoint 已建立；Task 6/9/10 的功能和编译验收仍为部分完成。
+
+不能笼统写成“Task 1–10 全部验收完成”或“APK 已可构建”。
+
+## 审查证据
+
+审查时确认：
+
+- 工作树在审查前后均干净；
+- `git diff --check 40ffb2b9...HEAD`：通过；
+- `python3 -m unittest discover -s tools/tests -v`：16 tests PASS；
+- `python3 -m py_compile tools/*.py tools/tests/*.py`：通过；
+- `python3 tools/check_source_alignment.py --strict`：exit 0；
+- `./gradlew projects --console=plain`：BUILD SUCCESSFUL；
+- `./gradlew :SystemUI-plugin-processor:jar --console=plain`：BUILD SUCCESSFUL；
+- processor JAR 的 `META-INF/services/javax.annotation.processing.Processor` 内容正确；
+- animationlib AAR 与 compilelib JAR 均通过 `unzip -t`。
+
+这些证据只证明当前拓扑、当前文件集和部分独立产物，不证明 core/APK 已构建。
+
+## Standards 发现
+
+### S1：Plugin 遗漏真实 Compose runtime 依赖
+
+`SystemUI-plugin/src/com/android/systemui/plugins/qs/TileDetailsViewModel.kt` 直接使用：
+
+```kotlin
+import androidx.compose.runtime.Composable
+```
+
+但 `SystemUI-plugin/build.gradle.kts` 当前没有 Compose runtime，且 `debugCompileClasspath` 中没有 `androidx.compose.runtime`。旧构建文件和 AOSP `plugin/Android.bp` 都声明过 Compose runtime。
+
+这是被 `:SystemUI-common` 更早失败遮住的下一个真实 blocker。
+
+**处理方向**：恢复与当前 Compose 模块一致的官方 Maven runtime 依赖，不复制源码、不打本地 JAR。
+
+### S2：WindowManager-Shell prebuilt 与源码 module 有重复类
+
+当前以下模块仍引用 `libs/WindowManager-Shell.jar`：
+
+- `:app`
+- `:SystemUI-core`
+- `:SystemUI-animation`
+- `:SystemUI-shared`
+
+扫描发现该 JAR 至少含 48 个与 `:SystemUI-animation` 源码重复的 `com.android.systemui.animation.*` 顶层类，例如 `ActivityTransitionAnimator`、`DialogTransitionAnimator`。
+
+这违反规则 S 的“源码与 prebuilt 不得重复提供同名类”。虽然当前依赖多为 `compileOnly`，仍可能造成编译期遮蔽。
+
+**处理方向**：纳入后续 artifact-recovery 计划；不能假定从 JAR 换成 AAR 会自动消除 fat artifact 中的重复类。
+
+### S3：当前交接文档存在过期和错误描述
+
+已发现：
+
+- HANDOFF 正文仍写 animationlib.jar 待改 AAR；
+- HANDOFF 正文仍写 core 资源待迁出；
+- Compose blocker 被写成缺 `androidx.core:core`。
+
+正确 artifact 是：
+
+```text
+androidx.core:core-animation:1.0.0
+```
+
+AOSP `animation/Android.bp` 对应依赖名为 `androidx.core_core-animation`。
+
+## Spec 发现
+
+### P1：Plugin processor 边界完成，但功能输出未恢复
+
+已完成：
+
+- `:SystemUI-plugin-processor` 独立 JVM module；
+- AOSP processor 源码归位；
+- service descriptor 正确；
+- processor JAR 可构建。
+
+未完成：
+
+- 8 个 `@ProtectedInterface` 都位于 Kotlin 源码；
+- javac `AbstractProcessor` 看不到 Kotlin 声明；
+- `PluginProtector.java` 不生成；
+- `SystemUI-shared` 仍引用 `PluginProtector`。
+
+用户已经裁决：不使用 KAPT，暂不授权 KSP processor 重写，不恢复 stub。因此该问题继续保留为显式 blocker，不能由后续 AI 擅自选择新方案。
+
+### P2：Common 与 Compose 的隔离编译验收未通过
+
+`:SystemUI-common`：
+
+```text
+android.icu.text.SimpleDateFormat unresolved
+```
+
+根因是纯 JVM module 不自动获得 AGP 的 SysUISdk android.jar；现有 `framework.jar` 不含 `android.icu`。
+
+`:SystemUI-compose`：
+
+```text
+androidx.core.animation.Interpolator unresolved
+```
+
+根因是缺 `androidx.core:core-animation:1.0.0`，不是缺普通 `androidx.core:core`。
+
+### P3：两个“确定性”打包器当前并不确定
+
+以下脚本使用 `ZipFile.writestr(name, data)`，没有固定 ZIP entry 时间、权限等 metadata：
+
+- `tools/package_aosp_aar.py`
+- `tools/package_compilelib_jars.py`
+
+重复生成会得到不同 SHA-256，与计划要求的 deterministic ZIP/JAR 不符。
+
+### P4：source alignment 对重复 tail 的多合法 root 会漏报
+
+`run_source_check()` 遇到目标 root 缺文件、但同 tail 存在于其他 root 时直接跳过 missing。对于同时合法存在于 `src-debug` 和 `src-release` 的四个文件，删除其中一个变体副本仍可能得到全 0。
+
+最小复现实证结果：
+
+```text
+missing=0, misplaced=0, extra=0, modified=0
+```
+
+当前项目的四组文件实际仍在，所以当前 checkpoint 文件集没有因此缺失；但检查器无法保证未来仍“不漏”。
+
+## 后续路线与边界
+
+### Phase A：先完成确定性、无产品决策的修复
+
+执行：
+
+- `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`
+
+内容包括：
+
+1. 修复 source alignment 多 root 漏报并加回归测试；
+2. 修复 AAR/JAR 确定性并加双次生成字节一致测试；
+3. 给 JVM `:SystemUI-common` 补 SysUISdk android.jar compile classpath；
+4. 给 `:SystemUI-compose` 补 `androidx.core:core-animation`；
+5. 给 `:SystemUI-plugin` 恢复 Compose runtime；
+6. 重新取得隔离模块和 core 的第一真实 blocker；
+7. 更新状态与交接文档。
+
+### Phase B：独立 artifact-recovery 计划
+
+Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：
+
+```text
+docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md
+```
+
+该计划已按以下要求编写：
+
+- SettingsLib、iconloader、WindowManager-Shell、WifiTrackerLib 逐个恢复；
+- 每个库先直接 AAR；只有实证直接 AAR 冲突后才使用本地 Maven；
+- 禁止把 R.jar 合入含资源 AAR 的 classes.jar；
+- 检查 AAR/JAR 与 13 个源码 module 的重复类；
+- 特别处理 WindowManager-Shell 中嵌入的 `com.android.systemui.animation.*`；
+- 每次只接入一个 artifact，记录首个 transform/resource/class 冲突；
+- 不修改任何 AOSP SystemUI res 文件来适配 AAPT2。
+
+该计划先以 Phase A 后的真实 first-failure 和 Soong 产物结构重新确认基线，再逐个执行；不能预设所有库都需要本地 Maven 或同一种重打包方式。
+
+### Phase C：Plugin processor 产品决策
+
+遇到 `PluginProtector` 后停止并询问用户。允许讨论但不得擅自执行：
+
+1. 授权实现 KSP `SymbolProcessor` 等价处理器；
+2. 找到并验证其他 Kotlin→javac bridge；
+3. 用户指定的新工具链方案。
+
+仍然禁止：
+
+- 恢复 `PluginProtectorStub.kt`；
+- 提交手写的生成结果冒充 processor 输出；
+- 未经授权恢复 KAPT。
+
+### Phase D：最终 APK 验收
+
+依次验证：
+
+1. `:SystemUI-core:compileDebugKotlin`；
+2. `:app:processDebugMainManifest`；
+3. merged manifest 的入口、权限、shared UID 和组件；
+4. `:app:assembleDebug`；
+5. 实际 APK 文件、类和资源内容；
+6. 最终 runtime/compile classpath 重复类检查。
+
+在 `:app:assembleDebug` exit 0 且 APK 实际存在前，禁止宣称项目构建成功。
+
+## 错误数演变
+
+- 审查开始前：无可信 Kotlin 总错误数；core 在上游 common/compose 失败前未开始。
+- 本次只做审查和文档计划：未修改生产代码，错误数不变。
+- 错误数始终只作为诊断信息，不是提交、回滚或审批条件。
+
+## 待解决问题
+
+1. 执行 Phase A 计划并取得新的 core first-failure。
+2. 基于新证据编写并执行 artifact-recovery 计划。
+3. PluginProtector 触发时请求用户裁决。
+4. 恢复 manifest merge 和 `:app:assembleDebug` 验收。

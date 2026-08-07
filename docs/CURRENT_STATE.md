@@ -2,7 +2,7 @@
 
 > ⚠️ **历史快照警告（2026-08-06）**：本文件 §2–§6 主体停留在 2026-07-29，错误数、待办和 app 入口类计划已过时。当前规则与优先级以 `AGENTS.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md` 为准。
 >
-> **当前阶段（2026-08-08）**：**13-module 拓扑已建立**。从 22 module 收敛为 13-module 目标架构（Task 1–10 全部完成）。语义对齐 BP，非 target 1:1。源码/res 对齐全绿（`check_source_alignment.py --strict` exit 0：MISSING/MISPLACED/EXTRA/MODIFIED/RES 全 0）。animationlib 改为直接 AAR；kairos 为 test-only 不进生产图。架构决策见 `docs/architecture/2026-08-06-module-structure-audit.md`，实施记录见 `docs/issues/2026-08-06-module-consolidation-plan.md`。
+> **当前阶段（2026-08-08 checkpoint；2026-08-07 审查）**：**13-module 拓扑迁移步骤已完成，编译/功能验收部分完成**。从 22 module 收敛为目标 13 module，语义对齐 BP，非 target 1:1。当前文件集的源码/res 对齐检查全绿（`check_source_alignment.py --strict` exit 0：MISSING/MISPLACED/EXTRA/MODIFIED/RES 全 0），但检查器仍有多合法 root 的漏报缺陷，已纳入下一计划。animationlib 已改为直接 AAR；kairos 为 test-only 不进生产图。审查结论见 `docs/issues/2026-08-07-post-topology-review.md`，下一执行计划见 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。
 >
 > **最终 13 个 Gradle module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
 >
@@ -10,12 +10,12 @@
 >
 > **保留错误（待办，未修复）**：
 > 1. `:SystemUI-common:compileKotlin` — `android.icu.text.SimpleDateFormat` unresolved（JVM 模块无 AGP android.jar）
-> 2. `:SystemUI-compose:compileDebugKotlin` — `androidx.core.animation.Interpolator` unresolved（缺 `androidx.core:core` 依赖）
+> 2. `:SystemUI-compose:compileDebugKotlin` — `androidx.core.animation.Interpolator` unresolved（缺官方依赖 `androidx.core:core-animation:1.0.0`）
 > 3. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注，见 Task 9 待办）
 >
 > **core 编译边界**：`./gradlew :SystemUI-core:compileDebugKotlin` 被上游保留错误 1/2 阻断，第一个失败 task 为 `:SystemUI-common:compileKotlin`。core 自身 Kotlin 未开始；AAR transform 错误未出现（被上游阻断）。
 >
-> **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复拆为后续独立 artifact-recovery 计划（尚未创建）。`./gradlew :app:assembleDebug` 未运行。
+> **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复计划已写入 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，必须在 post-topology correctness 完成并取得新 first-failure 后执行。`./gradlew :app:assembleDebug` 未运行。
 >
 > 下文 §1–§8 为历史记录，保留供诊断参考，不代表当前优先级。
 
@@ -51,7 +51,7 @@
 | AGP | 9.2.0 | `libs.plugins.android.library` |
 | Kotlin Plugin | 2.1.0 | 项目声明 |
 | Kotlin 编译器 | 2.2.10 | AGP 内部嵌入（比插件新） |
-| KAPT | 1.9+ | 临时禁用（IR 错误） |
+| KAPT | 禁止使用 | Plugin processor 当前 javac-only，无法看到 Kotlin 标注；后续工具链需用户裁决 |
 | JDK | 21 | 工具链 |
 | AGP target SDK | `SysUISdk` | preview, 非标准 |
 

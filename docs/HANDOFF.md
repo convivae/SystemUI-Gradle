@@ -43,18 +43,20 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 
 > **2026-08-06 更新**：该 70 错误不是当前基线。当前 checkpoint 中的 AAR 生成改写导致 AAR transform 在编译前失败，错误数暂时无统计意义。用户已明确错误数在任何阶段都只作为诊断，不是提交/回滚/审批门槛；当前先校准源码/jar/AAR 来源与模块边界。详见 `AGENTS.md` §2.1 和 `docs/architecture/2026-08-06-reference-project-rationale.md`。
 >
-> **2026-08-08 模块拓扑完成**：13-module 拓扑已建立（Task 1–10 全部完成），从 22 module 收敛为 13-module 目标架构。语义对齐 BP，非 target 1:1。`check_source_alignment.py --strict` exit 0（源码/res 全绿）。animationlib 改为直接 AAR；kairos 为 test-only 不进生产图。
+> **2026-08-08 模块拓扑 checkpoint**：13-module 拓扑迁移步骤已完成，从 22 module 收敛为目标 13 module；语义对齐 BP，非 target 1:1。`check_source_alignment.py --strict` 在当前文件集上 exit 0（源码/res 全绿）。animationlib 已改为直接 AAR；kairos 为 test-only 不进生产图。**但 Task 6/9/10 的编译和功能验收仅部分完成，不能宣称完整构建恢复。**
+>
+> **2026-08-07 审查结论与执行计划**：见 `docs/issues/2026-08-07-post-topology-review.md`。下一个 AI 先执行 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`，修复确定性工具、Common/Compose/Plugin classpath，并取得新的 core first-failure；之后再基于真实证据编写 artifact-recovery 计划。
 >
 > **最终 13 module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
 >
 > **保留错误（待办）**：
 > 1. `:SystemUI-common` — `android.icu.text.SimpleDateFormat`（JVM 模块无 AGP android.jar）
-> 2. `:SystemUI-compose` — `androidx.core.animation.Interpolator`（缺 `androidx.core:core`）
+> 2. `:SystemUI-compose` — `androidx.core.animation.Interpolator`（缺官方依赖 `androidx.core:core-animation:1.0.0`）
 > 3. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注）
 >
 > **core 编译被上游 1/2 阻断**，第一个失败 task 为 `:SystemUI-common:compileKotlin`。
 >
-> **下一步**：创建 artifact-recovery 计划（SettingsLib/iconloader/WM Shell/WifiTrackerLib 直接 AAR + 重复 R transform 修复），并解决上述 3 个保留错误。
+> **下一步**：先执行 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。该计划修复审查中无需产品裁决的问题并取得新的 core first-failure；随后按新证据校准并执行 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，逐个处理 SettingsLib/iconloader/WM Shell/WifiTrackerLib、manifest 和 APK 验收。
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
@@ -98,7 +100,7 @@ SystemUI-Gradle/
 │   ├── SystemUI-{proto,tags,statsd}.jar
 │   ├── monet.jar            # ColorScheme/Shades/Style
 │   ├── systemui-flags.jar   # com.android.systemui.Flags
-│   ├── animationlib.jar     # ⚠️ 非 SystemUI，待改为直接 AAR（libs/aars/animationlib.aar）
+│   ├── aars/animationlib.aar # frameworks/libs/systemui animationlib（直接 AAR）
 │   ├── maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar
 │   ├── prebuilts/
 │   │   ├── SystemUISharedLib.jar
@@ -107,14 +109,11 @@ SystemUI-Gradle/
 │   │   ├── PlatformAnimationLib.jar
 │   │   └── tracinglib-platform.jar
 │   └── maven/com/android/systemui/{settingslib,iconloader,WindowManager-Shell,WifiTrackerLib,SystemUISharedLib}/1.0.0/
-├── SystemUI-core/            # 主模块 ~95% 代码（目标 13-module 拓扑实施中）
+├── SystemUI-core/            # 主模块与入口类 owner（13-module 拓扑）
 │   ├── src/                  # = AOSP frameworks/base/packages/SystemUI/src/
-│   ├── res/                  # ⚠️ 待迁出至独立 :SystemUI-res
-│   ├── res-keyguard/         # ⚠️ 待迁出至独立 :SystemUI-res
-│   ├── res-product/          # ⚠️ 待迁出至独立 :SystemUI-res
 │   ├── build.gradle.kts
 │   └── AndroidManifest.xml
-├── SystemUI-res/             # 独立资源 namespace
+├── SystemUI-res/             # 独立资源 namespace，owner: res/res-keyguard/res-product
 ├── SystemUI-common/           # Common+Log+utils 合并
 ├── SystemUI-animation/       # PlatformAnimation+Shader 合并
 ├── SystemUI-plugin-core/      # Plugin runtime API（JVM）

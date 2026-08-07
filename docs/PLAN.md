@@ -2,8 +2,8 @@
 
 > ⚠️ **历史计划警告（2026-08-06）**：本文件 §阶段 1–5 主体停留在 2026-07-29，旧的错误数目标、“把 SystemUIApplication/SystemUIService 移到 app”计划、以及“animationlib 源码化”方案均已失效。入口类必须保留在 `:SystemUI-core`（见 ADR 0003 更正）；animationlib 是非 SystemUI 代码，须改为直接 AAR。
 >
-> **当前优先级（2026-08-06）**：执行 13-module 拓扑实施计划
-> `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`（10 个 task）。该计划将 22 module 收敛为 13-module，语义对齐 BP（非 target 1:1）。错误数始终只作诊断，不作为提交门槛；当前构建被 AAR 重复 R transform 阻塞，无可信 Kotlin 基线。AAR transform 恢复拆为后续独立 artifact-recovery 计划。下文历史阶段保留供参考，不代表当前优先级。
+> **当前优先级（2026-08-07 审查）**：先执行
+> `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。13-module 拓扑迁移步骤已经完成，但编译/功能验收仅部分完成。该计划修复 alignment 多 root 漏报、ZIP/JAR 确定性、Common 的 SysUISdk classpath、Compose 的 `androidx.core:core-animation:1.0.0` 和 Plugin Compose runtime，并取得新的 core first-failure。随后按该证据校准并执行 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`。错误数始终只作诊断，不作为提交门槛。下文历史阶段保留供参考，不代表当前优先级。
 
 > **历史最后更新**: 2026-07-29
 > **历史错误数**: 509
@@ -18,8 +18,9 @@
 阶段 1 ✅ (2026-07-22): 文档 + 阶段性 commit
 阶段 2 ✅ (2026-07-28): server-notification-flags.jar — 已解决（删除 stub Flags.kt）
 阶段 2.5 ✅ (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509（历史，非当前基线）
-阶段 3 🚧 (2026-08-06): 13-module 拓扑实施（计划：docs/superpowers/plans/2026-08-06-13-module-source-topology.md）
-阶段 4 ⏳ (待启动): AAR artifact 恢复 + 重复 R transform 修复（独立计划）
+阶段 3 ✅/⚠️ (2026-08-08 checkpoint): 13-module 拓扑与 owner 迁移完成；编译/processor 验收部分完成
+阶段 3.5 🚧 (下一步): post-topology correctness（工具确定性 + Common/Compose/Plugin classpath）
+阶段 4 ⏳ (已规划): AAR artifact 恢复 + 重复 R/源码-prebuilt 重复类修复（`docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`）
 阶段 5 ⏳ (待启动): manifest merge + Kotlin 基线 + :app:assembleDebug
 ```
 
@@ -86,44 +87,31 @@
 
 ---
 
-## 阶段 3: animationlib 源码化 + app 模块按 bp 重构 🚧 进行中
+## 阶段 3: 13-module 拓扑与 owner 迁移 ✅/⚠️ checkpoint
 
-### 3.1 animationlib 源码化
+已完成：
 
-根据规则 S，`animationlib` 属于 ① SystemUI 自有代码，应源码复制做源码依赖。
+1. settings 收敛为目标 13 module；
+2. `:app` 为空壳且只直接依赖 `:SystemUI-core`；
+3. 入口类保留在 core；
+4. SystemUI src/AIDL/res 归位到唯一 owner；
+5. animationlib 改为 `libs/aars/animationlib.aar` 直接 AAR；
+6. compilelib 改为 debug/release JAR；
+7. pods、Compose Scene、Shader、shared-keyguard 等内部切片合并到真实 seam。
 
-**已完成的操作**：
-1. 从 AOSP 复制 4 个 Java 源文件 + 4 个 res 资源文件到 `SystemUI-animationlib/`
-2. 创建 `SystemUI-animationlib/build.gradle.kts`（library 模块）
-3. `settings.gradle.kts` 添加 `include(":SystemUI-animationlib")`
+尚未完成：
 
-**待完成**：
-1. `:SystemUI-animation` / `:SystemUI-customization` 的 `compileOnly(animationlib.jar)` → `api(project(":SystemUI-animationlib"))`
-2. 删除 `libs/animationlib.jar`
-3. 检查 WMShell.jar 的 6 个重叠类是否冲突
-4. 编译验证
+1. Common/Compose/Plugin 的确定 classpath 修复；
+2. PluginProtector 的 Kotlin annotation processing；
+3. 四个大型 AOSP AAR 的 artifact recovery；
+4. core、manifest merge 与 APK 验收。
 
-**详情**: `docs/issues/2026-07-29-aidl-animationlib-app.md §三`
+准确结论与执行步骤见：
 
-### 3.2 app 模块按 AOSP `Android.bp` 重构 (ADR 0003) ✅ 结构已更正
+- `docs/issues/2026-08-07-post-topology-review.md`
+- `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`
 
-按规则 B（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`），项目结构必须对齐 AOSP bp。
-
-**2026-07-31 更正**：旧计划误以为 `SystemUIApplication.java` / `SystemUIService.java` 属于 `android_app` 源码。实际：
-
-- `android_library "SystemUI-core"` 的 `srcs: ["src/**/*.java", ...]` **包含**这两个入口类
-- `android_app "SystemUI"` 无独立 `srcs`，只 `static_libs: ["SystemUI-core"]`
-- 因此入口类必须保留在 `:SystemUI-core/src/com/android/systemui/`，`:app` 无源码
-
-**正确结构**：
-
-1. `:app` 的 project module 依赖只保留 `implementation(project(":SystemUI-core"))`；当前额外 compileOnly/上游 implementation 需继续审查是否应由 core 传递
-2. `:app/src/main/AndroidManifest.xml` 使用 AOSP 完整 manifest
-3. `:app` 持有最终 APK 的 proguard 配置；`AndroidManifest-res.xml` 实际属于 AOSP `SystemUI-res`，当前 app 中未被消费的副本应在建立 `:SystemUI-res` module 时归位
-4. `:SystemUI-core` 持有入口类和 AOSP SystemUI 源码/资源
-5. 禁止再次把入口类迁到 `:app/src/main/java/`
-
-**详情**: `docs/adr/0003-app-module-aligns-aosp-bp.md`
+**app/core 决策保持不变**：入口类必须位于 `:SystemUI-core/src/com/android/systemui/`，`:app` 无源码；禁止再次迁移入口类。
 
 ---
 

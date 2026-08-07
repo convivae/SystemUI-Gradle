@@ -118,7 +118,7 @@
 - core 改为单一 `implementation(:SystemUI-compose)`；删除 compose-core/compose-scene 模块
 - **验证**：`:SystemUI-compose:compileDebugKotlin` FAILED
   - `e: Easings.kt:21 Unresolved reference 'Interpolator'`（import androidx.core.animation.Interpolator）
-  - 根因：compose 依赖块只有 `androidx.core:core-ktx:1.13.1`，计划未列 `androidx.core:core`；
+  - 根因：compose 依赖块只有 `androidx.core:core-ktx:1.13.1`，缺少实际提供该类的官方 artifact `androidx.core:core-animation:1.0.0`；
     旧 compose-core 依赖相同，属预存问题非本次回归
   - 用户既定方针：严格按计划执行，错误先保留，继续后续任务
 - 对齐：MISSING 84（↓77，compose 源码归位）、EXTRA 96、MODIFIED 1046
