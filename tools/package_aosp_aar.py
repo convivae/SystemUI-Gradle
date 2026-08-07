@@ -23,15 +23,53 @@ from io import BytesIO
 from pathlib import Path
 
 AOSP_ROOT = Path("/home/conv/myspace/aosp")
-ANIMATIONLIB_DIR = AOSP_ROOT / "frameworks/libs/systemui/animationlib"
-SOONG_DIR = (AOSP_ROOT / "out/soong/.intermediates/frameworks/libs/systemui/animationlib"
-             "/animationlib/android_common")
+SOONG_DIR = AOSP_ROOT / "out/soong/.intermediates"
 
-ANIMATIONLIB_JAVAC_JAR = SOONG_DIR / "javac" / "animationlib.jar"
-ANIMATIONLIB_KOTLIN_JAR = SOONG_DIR / "kotlin" / "animationlib.jar"
-ANIMATIONLIB_R_TXT = SOONG_DIR / "R.txt"
+ANIMATIONLIB_DIR = AOSP_ROOT / "frameworks/libs/systemui/animationlib"
+ANIMATIONLIB_SOONG = SOONG_DIR / "frameworks/libs/systemui/animationlib/animationlib/android_common"
 
 DEFAULT_OUTPUT = Path("libs/aars/animationlib.aar")
+
+# Declarative artifact configs（canonical inputs，见 artifact-recovery 计划）
+CONFIGS = {
+    "animationlib": {
+        "code": [ANIMATIONLIB_SOONG / "javac" / "animationlib.jar",
+                 ANIMATIONLIB_SOONG / "kotlin" / "animationlib.jar"],
+        "res": [ANIMATIONLIB_DIR / "res"],
+        "manifest": ANIMATIONLIB_DIR / "AndroidManifest.xml",
+        "rtxt": ANIMATIONLIB_SOONG / "R.txt",
+        "output": "libs/aars/animationlib.aar",
+    },
+    "WifiTrackerLib": {
+        "code": [SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLib/android_common/javac/WifiTrackerLib.jar"],
+        "res": [AOSP_ROOT / "frameworks/opt/net/wifi/libs/WifiTrackerLib/res"],
+        "manifest": SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLib/android_common/manifest_fixer/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLibRes/android_common/R.txt",
+        "output": "libs/aars/WifiTrackerLib.aar",
+    },
+    "iconloader": {
+        "code": [SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/javac/iconloader.jar"],
+        "res": [AOSP_ROOT / "frameworks/libs/systemui/iconloaderlib/res"],
+        "manifest": SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/manifest_fixer/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/R.txt",
+        "output": "libs/aars/iconloader.aar",
+    },
+    "SettingsLib": {
+        "code": [SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/javac/SettingsLib.jar"],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/res"],
+        "manifest": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/manifest_fixer/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/R.txt",
+        "output": "libs/aars/SettingsLib.aar",
+    },
+    "WindowManager-Shell": {
+        "code": [SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/javac/WindowManager-Shell.jar"],
+        "res": [AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/res"],
+        "manifest": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/manifest_fixer/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/R.txt",
+        "output": "libs/aars/WindowManager-Shell.aar",
+        "reject_sysui": True,
+    },
+}
 
 
 class DuplicateEntryError(RuntimeError):
@@ -102,15 +140,25 @@ def copy_resource_tree(source: Path, destination: Path) -> None:
         dst.write_bytes(p.read_bytes())
 
 
-def assemble_aar(code_jars, res_dir: Path, manifest: Path, rtxt: Path, output: Path) -> None:
-    """组装最终 AAR：classes.jar（合并 code JAR）+ res/ + AndroidManifest.xml + R.txt。"""
+def assemble_aar(code_jars, res_dirs, manifest: Path, rtxt: Path, output: Path,
+                  reject_prefixes=None) -> None:
+    """组装最终 AAR：classes.jar（合并 code JAR）+ res/ + AndroidManifest.xml + R.txt。
+
+    :param code_jars: code JAR 路径列表
+    :param res_dirs: res root 路径或路径列表（多 root 时检测重复相对路径）
+    :param reject_prefixes: 额外拒绝的类名前缀列表（如 WM-Shell 拒绝 com/android/systemui/）
+    """
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    reject_prefixes = reject_prefixes or []
     # 合并 code JAR 到内存 classes.jar
     merged = BytesIO()
     seen = set()
     with zipfile.ZipFile(merged, "w", zipfile.ZIP_DEFLATED) as mw:
         for jar in code_jars:
+            jar = Path(jar)
+            if not jar.exists():
+                raise FileNotFoundError(f"缺少 code JAR: {jar}")
             with zipfile.ZipFile(jar) as z:
                 for info in z.infolist():
                     name = info.filename
@@ -119,6 +167,9 @@ def assemble_aar(code_jars, res_dir: Path, manifest: Path, rtxt: Path, output: P
                     if _is_r_class(name):
                         raise DuplicateEntryError(
                             f"拒绝 R 类 entry: {name}（来自 {jar}）")
+                    if any(name.startswith(p) for p in reject_prefixes):
+                        raise DuplicateEntryError(
+                            f"拒绝禁止前缀的类: {name}（来自 {jar}）；前缀 {reject_prefixes}")
                     if name == "META-INF/MANIFEST.MF":
                         if name in seen:
                             continue
@@ -131,41 +182,66 @@ def assemble_aar(code_jars, res_dir: Path, manifest: Path, rtxt: Path, output: P
                     _write_entry(mw, name, z.read(info))
     classes_bytes = merged.getvalue()
 
+    # 收集 res entries（多 root 时检测重复相对路径）
+    res_entries = []  # (name, data)
+    res_seen = set()
+    if isinstance(res_dirs, (str, Path)):
+        res_dirs = [res_dirs]
+    for res_dir in res_dirs:
+        res_dir = Path(res_dir)
+        if not res_dir.exists():
+            raise FileNotFoundError(f"缺少 res 目录: {res_dir}")
+        for p in sorted(res_dir.rglob("*")):
+            if not p.is_file():
+                continue
+            rel = str(p.relative_to(res_dir)).replace("\\", "/")
+            entry_name = f"res/{rel}"
+            if entry_name in res_seen:
+                raise DuplicateEntryError(
+                    f"重复 res entry: {entry_name}（来自 {res_dir}）")
+            res_seen.add(entry_name)
+            res_entries.append((entry_name, p.read_bytes()))
+
+    manifest = Path(manifest)
+    rtxt = Path(rtxt)
+    if not manifest.exists():
+        raise FileNotFoundError(f"缺少 manifest: {manifest}")
+    if not rtxt.exists():
+        raise FileNotFoundError(f"缺少 R.txt: {rtxt}")
+
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as aar:
         entries = [
             ("classes.jar", classes_bytes),
-            ("AndroidManifest.xml", Path(manifest).read_bytes()),
-            ("R.txt", Path(rtxt).read_bytes()),
-        ]
-        res_dir = Path(res_dir)
-        for p in sorted(res_dir.rglob("*")):
-            if p.is_file():
-                rel = p.relative_to(res_dir)
-                entries.append((f"res/{rel}".replace("\\", "/"), p.read_bytes()))
+            ("AndroidManifest.xml", manifest.read_bytes()),
+            ("R.txt", rtxt.read_bytes()),
+        ] + res_entries
         for name, data in sorted(entries, key=lambda e: e[0]):
             _write_entry(aar, name, data)
 
 
+def build_artifact(name: str, output: Path = None) -> None:
+    """按 CONFIGS 打包指定 artifact 为直接 AAR。"""
+    if name not in CONFIGS:
+        raise ValueError(f"未知 artifact: {name}；可选: {list(CONFIGS)}")
+    cfg = CONFIGS[name]
+    output = Path(output) if output else Path(cfg["output"])
+    reject_prefixes = ["com/android/systemui/"] if cfg.get("reject_sysui") else []
+    assemble_aar(cfg["code"], cfg["res"], cfg["manifest"], cfg["rtxt"], output,
+                 reject_prefixes=reject_prefixes)
+    print(f"{name} AAR → {output} ({output.stat().st_size} bytes)")
+
+
 def build_animationlib(output: Path = DEFAULT_OUTPUT) -> None:
-    """打包 animationlib AAR（AOSP javac + kotlin JAR + 原始 res + R.txt）。"""
-    jars = [ANIMATIONLIB_JAVAC_JAR, ANIMATIONLIB_KOTLIN_JAR]
-    for j in jars:
-        if not j.exists():
-            raise FileNotFoundError(f"缺少 Soong 产物: {j}")
-    res = ANIMATIONLIB_DIR / "res"
-    manifest = ANIMATIONLIB_DIR / "AndroidManifest.xml"
-    rtxt = ANIMATIONLIB_R_TXT
-    assemble_aar(jars, res, manifest, rtxt, output)
-    print(f"animationlib AAR → {output} ({output.stat().st_size} bytes)")
+    """打包 animationlib AAR（向后兼容）。"""
+    build_artifact("animationlib", output)
 
 
 def main():
     ap = argparse.ArgumentParser(description="打包 AOSP 库为直接 AAR")
-    ap.add_argument("lib", choices=["animationlib"], help="要打包的库")
-    ap.add_argument("--output", default=str(DEFAULT_OUTPUT), help="输出 AAR 路径")
+    ap.add_argument("lib", choices=list(CONFIGS), help="要打包的库")
+    ap.add_argument("--output", default=None, help="输出 AAR 路径（默认用 config）")
     args = ap.parse_args()
-    if args.lib == "animationlib":
-        build_animationlib(Path(args.output))
+    build_artifact(args.lib, Path(args.output) if args.output else None)
     return 0
 
 

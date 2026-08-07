@@ -151,5 +151,143 @@ class TestAssembleAar(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
 
 
+class TestArtifactConfigs(unittest.TestCase):
+    """Step 1: 每个 artifact 的 config 路径匹配 canonical inputs table。"""
+
+    def test_wifitrackerlib_config_paths(self):
+        cfg = paar.CONFIGS["WifiTrackerLib"]
+        self.assertIn("WifiTrackerLib/android_common/javac/WifiTrackerLib.jar", str(cfg["code"]))
+        self.assertIn("WifiTrackerLib/res", str(cfg["res"]))
+        self.assertIn("WifiTrackerLib/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertIn("WifiTrackerLibRes/android_common/R.txt", str(cfg["rtxt"]))
+
+    def test_iconloader_config_paths(self):
+        cfg = paar.CONFIGS["iconloader"]
+        self.assertIn("iconloader/android_common/javac/iconloader.jar", str(cfg["code"]))
+        self.assertIn("iconloaderlib/res", str(cfg["res"]))
+        self.assertIn("iconloader/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertIn("iconloader/android_common/R.txt", str(cfg["rtxt"]))
+
+    def test_settingslib_config_paths(self):
+        cfg = paar.CONFIGS["SettingsLib"]
+        self.assertIn("SettingsLib/android_common/javac/SettingsLib.jar", str(cfg["code"]))
+        self.assertIn("SettingsLib/res", str(cfg["res"]))
+        self.assertIn("SettingsLib/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertIn("SettingsLib/android_common/R.txt", str(cfg["rtxt"]))
+
+    def test_wmshell_config_paths(self):
+        cfg = paar.CONFIGS["WindowManager-Shell"]
+        self.assertIn("WindowManager-Shell/android_common/javac/WindowManager-Shell.jar", str(cfg["code"]))
+        self.assertIn("WindowManager/Shell/res", str(cfg["res"]))
+        self.assertIn("WindowManager-Shell/android_common/manifest_fixer/AndroidManifest.xml", str(cfg["manifest"]))
+        self.assertIn("WindowManager-Shell/android_common/R.txt", str(cfg["rtxt"]))
+
+    def test_wmshell_config_rejects_sysui(self):
+        """WM-Shell config 必须声明 reject_sysui=True。"""
+        self.assertTrue(paar.CONFIGS["WindowManager-Shell"].get("reject_sysui", False))
+
+    def test_other_configs_do_not_reject_sysui(self):
+        for name in ["WifiTrackerLib", "iconloader", "SettingsLib", "animationlib"]:
+            self.assertFalse(paar.CONFIGS[name].get("reject_sysui", False),
+                             f"{name} 不应 reject_sysui")
+
+
+class TestAbsentInputFails(unittest.TestCase):
+    """Step 1: 缺输入报 FileNotFoundError。"""
+
+    def test_missing_code_jar_raises(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            _make_jar(d / "code.jar", {"com/x/Foo.class": b"1"})
+            res = d / "res"
+            (res / "values").mkdir(parents=True)
+            (res / "values/ids.xml").write_bytes(b"<ids/>")
+            manifest = d / "AndroidManifest.xml"
+            manifest.write_bytes(b"<manifest/>")
+            rtxt = d / "R.txt"
+            rtxt.write_bytes(b"int id foo 0x0\n")
+            with self.assertRaises(FileNotFoundError):
+                paar.assemble_aar([d / "nonexistent.jar"], res, manifest, rtxt, d / "out.aar")
+
+
+class TestCodeJarWithRFails(unittest.TestCase):
+    """Step 1: code JAR 含 R 则在输出替换前失败。"""
+
+    def test_r_class_in_code_jar_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            _make_jar(d / "code.jar", {"com/x/R.class": b"x", "com/x/Foo.class": b"1"})
+            res = d / "res"
+            (res / "values").mkdir(parents=True)
+            (res / "values/ids.xml").write_bytes(b"<ids/>")
+            manifest = d / "AndroidManifest.xml"
+            manifest.write_bytes(b"<manifest/>")
+            rtxt = d / "R.txt"
+            rtxt.write_bytes(b"int id foo 0x0\n")
+            with self.assertRaises(paar.DuplicateEntryError):
+                paar.assemble_aar([d / "code.jar"], res, manifest, rtxt, d / "out.aar")
+
+
+class TestDuplicateResourcePaths(unittest.TestCase):
+    """Step 3: 重复 res 相对路径报错而非合并/覆盖。"""
+
+    def test_duplicate_res_entry_raises(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            _make_jar(d / "code.jar", {"com/x/Foo.class": b"1"})
+            # 两个 res root 有相同相对路径
+            res1 = d / "res1"
+            (res1 / "values").mkdir(parents=True)
+            (res1 / "values/ids.xml").write_bytes(b"<ids1/>")
+            res2 = d / "res2"
+            (res2 / "values").mkdir(parents=True)
+            (res2 / "values/ids.xml").write_bytes(b"<ids2/>")
+            manifest = d / "AndroidManifest.xml"
+            manifest.write_bytes(b"<manifest/>")
+            rtxt = d / "R.txt"
+            rtxt.write_bytes(b"int id foo 0x0\n")
+            with self.assertRaises(paar.DuplicateEntryError):
+                paar.assemble_aar([d / "code.jar"], [res1, res2], manifest, rtxt, d / "out.aar")
+
+
+class TestWmShellNoSysuiClasses(unittest.TestCase):
+    """Step 4: WM-Shell 输出不得含 com/android/systemui/** 类。"""
+
+    def test_sysui_class_rejected_when_configured(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            _make_jar(d / "code.jar", {
+                "com/android/wm/shell/Shell.class": b"1",
+                "com/android/systemui/animation/Foo.class": b"2",
+            })
+            res = d / "res"
+            (res / "values").mkdir(parents=True)
+            (res / "values/ids.xml").write_bytes(b"<ids/>")
+            manifest = d / "AndroidManifest.xml"
+            manifest.write_bytes(b"<manifest/>")
+            rtxt = d / "R.txt"
+            rtxt.write_bytes(b"int id foo 0x0\n")
+            with self.assertRaises(paar.DuplicateEntryError):
+                paar.assemble_aar([d / "code.jar"], res, manifest, rtxt, d / "out.aar",
+                                  reject_prefixes=["com/android/systemui/"])
+
+
+class TestRepeatedPackagingDeterministic(unittest.TestCase):
+    """Step 6: 重复打包字节一致。"""
+
+    def test_four_artifacts_deterministic(self):
+        import time
+        for name in ["WifiTrackerLib", "iconloader", "SettingsLib", "WindowManager-Shell"]:
+            with tempfile.TemporaryDirectory() as d:
+                d = Path(d)
+                first = d / "first.aar"
+                second = d / "second.aar"
+                paar.build_artifact(name, first)
+                time.sleep(2)
+                paar.build_artifact(name, second)
+                self.assertEqual(first.read_bytes(), second.read_bytes(),
+                                 f"{name} 重复打包字节不一致")
+
+
 if __name__ == "__main__":
     unittest.main()

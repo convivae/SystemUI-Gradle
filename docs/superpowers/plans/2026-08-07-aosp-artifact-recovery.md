@@ -99,7 +99,7 @@ git commit -m "docs: establish AOSP artifact recovery baseline"
 - Consumes: canonical inputs table above.
 - Produces: four byte-deterministic direct AARs with code, raw resources, manifest, R.txt, and no R classes.
 
-- [ ] **Step 1: Add config/provenance tests before implementation**
+- [x] **Step 1: Add config/provenance tests before implementation**
 
 Add one test case per artifact asserting its configured code JAR/resource/manifest/R.txt paths match the canonical table. Add tests asserting:
 
@@ -111,7 +111,7 @@ Add one test case per artifact asserting its configured code JAR/resource/manife
 
 Run focused tests and confirm the four-config tests fail because only animationlib is currently supported.
 
-- [ ] **Step 2: Add declarative configs without general resource discovery**
+- [x] **Step 2: Add declarative configs without general resource discovery**
 
 Extend the CLI choices to:
 
@@ -125,15 +125,15 @@ WindowManager-Shell
 
 Each config must list exact code JAR, exact resource root(s), exact manifest, exact R.txt, and output path. Do not use recursive `find_res_dirs()` because it can accidentally include tests or static dependency resources.
 
-- [ ] **Step 3: Preserve raw resource bytes and reject collisions**
+- [x] **Step 3: Preserve raw resource bytes and reject collisions**
 
 For each listed root, copy files to `res/<relative-path>` in sorted order. If two roots produce the same AAR entry, raise `DuplicateEntryError`. Do not parse XML and do not remove version-qualified resources.
 
-- [ ] **Step 4: Enforce code ownership**
+- [x] **Step 4: Enforce code ownership**
 
 The packager must reject all R classes for every artifact. For WindowManager-Shell it must also reject any class under `com/android/systemui/`; the selected `javac/WindowManager-Shell.jar` should naturally satisfy this. Do not filter a fat JAR after the fact—select the clean javac output.
 
-- [ ] **Step 5: Generate and inspect all four AARs**
+- [x] **Step 5: Generate and inspect all four AARs**
 
 Run:
 
@@ -147,11 +147,11 @@ python3 -m unittest tools.tests.test_package_aosp_aar -v
 
 Run a ZIP assertion that fails if any nested classes.jar contains R; additionally fail if WM Shell contains `com/android/systemui/`.
 
-- [ ] **Step 6: Prove deterministic output**
+- [x] **Step 6: Prove deterministic output**
 
 Generate all four twice with a 2-second delay and compare `sha256sum` files. Expected: no diff.
 
-- [ ] **Step 7: Commit packager and direct AARs**
+- [x] **Step 7: Commit packager and direct AARs**
 
 ```bash
 git add tools/package_aosp_aar.py tools/tests/test_package_aosp_aar.py \
