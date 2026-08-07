@@ -43,11 +43,11 @@
 - Create: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 - Modify: this plan's checkboxes/results
 
-- [ ] **Step 1: Create the issue before artifact changes**
+- [x] **Step 1: Create the issue before artifact changes**
 
 issue 必须包含：背景、四个 artifact 当前交付位置、当前 core first-failure、执行步骤、错误数演变、待解决问题。
 
-- [ ] **Step 2: Capture current dependency consumers**
+- [x] **Step 2: Capture current dependency consumers**
 
 Run:
 
@@ -59,7 +59,7 @@ rg -n 'WindowManager-Shell\.jar|systemui\.(settingslib|iconloader|wmshell|wifitr
   > /tmp/core-debugCompileClasspath.before.txt
 ```
 
-- [ ] **Step 3: Audit current AARs for embedded R and SystemUI classes**
+- [x] **Step 3: Audit current AARs for embedded R and SystemUI classes**
 
 Run a read-only Python ZIP scan over every `libs/maven/com/android/systemui/*/*/*.aar` and record for each:
 
@@ -74,7 +74,7 @@ Expected current evidence:
 - WindowManager-Shell: R classes and 179 `com/android/systemui/**` classes present;
 - WifiTrackerLib: no R class in current classes.jar.
 
-- [ ] **Step 4: Commit evidence only**
+- [x] **Step 4: Commit evidence only**
 
 ```bash
 git add docs/issues/2026-08-07-aosp-artifact-recovery.md \
