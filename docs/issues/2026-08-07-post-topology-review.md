@@ -238,6 +238,19 @@ missing=0, misplaced=0, extra=0, modified=0
   - `./gradlew :SystemUI-compose:compileDebugKotlin --rerun-tasks` → BUILD SUCCESSFUL（exit 0）。
 - 文档同步：修正 `module-consolidation-plan.md` 两处旧描述；更新 `CURRENT_STATE.md`/`HANDOFF.md` 保留错误列表（common/compose 已解决）。
 
+#### Task 5：恢复 Plugin Compose runtime 依赖 ✅
+
+- 先确认红：plugin `debugCompileClasspath` 无 `androidx.compose.runtime:runtime`。
+- `TileDetailsViewModel.kt` 用 `@Composable abstract fun GetContentView()`（abstract，无 body）。
+- 修复：`SystemUI-plugin/build.gradle.kts` 加 `implementation("androidx.compose.runtime:runtime:1.8.3")`（对齐 AOSP `plugin/Android.bp`）。
+- 验证：
+  - classpath 含 `androidx.compose.runtime:runtime:1.8.3`。
+  - `./gradlew :SystemUI-plugin:compileDebugKotlin --rerun-tasks` → BUILD SUCCESSFUL（exit 0）。
+  - 未加 compose compiler plugin：`@Composable abstract fun` 无 body，不需要 IR 转换，Kotlin 编译通过。
+- 确认：
+  - `PluginProtectorStub.kt` 不存在。
+  - `SystemUI-plugin/build/generated` 下无 `PluginProtector.java`（processor 仍看不到 .kt 标注）。
+
 ### Phase B：独立 artifact-recovery 计划
 
 Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：

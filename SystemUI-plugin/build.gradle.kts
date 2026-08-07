@@ -68,4 +68,6 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.kotlin.stdlib)
+    // Compose runtime：TileDetailsViewModel.kt 用 @Composable（对齐 AOSP plugin/Android.bp）
+    implementation("androidx.compose.runtime:runtime:1.8.3")
 }
