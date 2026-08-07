@@ -6,7 +6,7 @@
 >
 > **最终 13 个 Gradle module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
 >
-> **隔离编译证据**：`:SystemUI-animation`、`:SystemUI-shared-biometrics`、`:SystemUI-plugin`（配置解析）通过。
+> **隔离编译证据**：`:SystemUI-common`、`:SystemUI-compose`、`:SystemUI-plugin`、`:SystemUI-animation`、`:SystemUI-shared-biometrics` 均编译通过（Phase A 后）。
 >
 > **保留错误（待办，未修复）**：
 > 1. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注，见 Task 9 待办）
@@ -15,7 +15,7 @@
 > - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly，Task 3）
 > - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0，Task 4）
 >
-> **core 编译边界**：common/compose 上游 blocker 已清除，core 首次失败需在 Task 6 重新取得。
+> **core 编译边界（Phase A 后）**：首个失败为 `:SystemUI-res:packageDebugResources`——AOSP `res-product` 的 `product="..."` 资源变体不被 AAPT2 支持（blocker B1，需规则 H）。次要 blocker：`:SystemUI-plugin:compileDebugJavaWithJavac` processor 运行时缺 kotlin stdlib（B2）。core 自身 Kotlin 编译尚未开始。
 >
 > **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复计划已写入 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，必须在 post-topology correctness 完成并取得新 first-failure 后执行。`./gradlew :app:assembleDebug` 未运行。
 >

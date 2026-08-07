@@ -35,7 +35,7 @@
 - Consumes: `run_source_check(mappings, aosp_root, project_root, suffixes)` 与 `build_aosp_index(...)`。
 - Produces: 对同一 relative tail 的每个合法物理 source root 独立检查；合法 release 副本不能掩盖缺失的 debug 副本。
 
-- [ ] **Step 1: Add the failing duplicate-tail test**
+- [x] **Step 1: Add the failing duplicate-tail test**
 
 在 `tools/tests/test_check_source_alignment.py` 末尾新增：
 
@@ -66,7 +66,7 @@ class TestDuplicateTailAcrossExpectedRoots(unittest.TestCase):
             self.assertEqual(result["extra"], [])
 ```
 
-- [ ] **Step 2: Run the test and confirm the current false negative**
+- [x] **Step 2: Run the test and confirm the current false negative**
 
 Run:
 
@@ -77,7 +77,7 @@ python3 -m unittest \
 
 Expected: FAIL because `result["missing"]` is empty.
 
-- [ ] **Step 3: Restrict missing suppression to genuinely misplaced locations**
+- [x] **Step 3: Restrict missing suppression to genuinely misplaced locations**
 
 在 `run_source_check()` 中，把“只要别处存在就跳过”的逻辑改为按该 tail 的合法 owner 集合判断：
 
@@ -101,7 +101,7 @@ missing.append((m.aosp_subdirs[0], m.project_module,
 
 不要把合法的另一个 expected root 当成 misplaced，也不要改变字节级 MODIFIED 判断。
 
-- [ ] **Step 4: Run focused and full alignment tests**
+- [x] **Step 4: Run focused and full alignment tests**
 
 Run:
 
@@ -112,7 +112,7 @@ python3 tools/check_source_alignment.py --strict
 
 Expected: tests PASS；当前真实项目 strict exit 0。
 
-- [ ] **Step 5: Record and commit**
+- [x] **Step 5: Record and commit**
 
 在 review issue 的 Phase A 记录测试命令和结果，然后：
 
@@ -141,7 +141,7 @@ git commit -m "fix: validate duplicate source tails per root"
 - Consumes: existing AOSP Soong code JARs/resources and compilelib Java files.
 - Produces: identical bytes and SHA-256 when the same input is packaged twice.
 
-- [ ] **Step 1: Add a failing deterministic AAR test**
+- [x] **Step 1: Add a failing deterministic AAR test**
 
 在 `TestAssembleAar` 中复用临时输入，连续调用两次 `assemble_aar(...)`，并断言：
 
@@ -167,7 +167,7 @@ python3 -m unittest \
 
 Expected: FAIL，两个 AAR bytes 不同。
 
-- [ ] **Step 2: Add a failing deterministic compilelib JAR test**
+- [x] **Step 2: Add a failing deterministic compilelib JAR test**
 
 创建 `tools/tests/test_package_compilelib_jars.py`，动态导入脚本并使用临时 `Compile.java`：
 
@@ -198,7 +198,7 @@ python3 -m unittest tools.tests.test_package_compilelib_jars -v
 
 Expected: FAIL。
 
-- [ ] **Step 3: Introduce one normalized ZIP entry writer in each focused script**
+- [x] **Step 3: Introduce one normalized ZIP entry writer in each focused script**
 
 两个脚本都使用以下固定 metadata；不要依赖输入 JAR 的原始 timestamp：
 
@@ -225,7 +225,7 @@ def _write_entry(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
 - R.class 拒绝；
 - res/ 与 manifest/R.txt 内容字节不变。
 
-- [ ] **Step 4: Run packaging tests**
+- [x] **Step 4: Run packaging tests**
 
 Run:
 
@@ -242,7 +242,7 @@ python3 -m py_compile \
 
 Expected: all PASS。
 
-- [ ] **Step 5: Regenerate tracked artifacts and prove reproducibility**
+- [x] **Step 5: Regenerate tracked artifacts and prove reproducibility**
 
 Run:
 
@@ -264,7 +264,7 @@ unzip -t libs/compilelib-release.jar
 
 Expected: hash diff 无输出；三个 archive integrity check 通过。
 
-- [ ] **Step 6: Record and commit**
+- [x] **Step 6: Record and commit**
 
 ```bash
 git add tools/package_aosp_aar.py tools/package_compilelib_jars.py \
@@ -288,7 +288,7 @@ git commit -m "fix: make packaged AOSP artifacts deterministic"
 - Consumes: `${ANDROID_HOME}/platforms/android-SysUISdk/android.jar` and existing `framework.jar`.
 - Produces: JVM `:SystemUI-common` can resolve `android.icu.text.SimpleDateFormat` without becoming an Android library.
 
-- [ ] **Step 1: Verify the required class provenance**
+- [x] **Step 1: Verify the required class provenance**
 
 Run:
 
@@ -304,7 +304,7 @@ fi
 
 Expected: class exists only in SysUISdk android.jar。
 
-- [ ] **Step 2: Capture the red compile result**
+- [x] **Step 2: Capture the red compile result**
 
 Run:
 
@@ -315,7 +315,7 @@ Run:
 
 Expected: non-zero with unresolved `android.icu` / `SimpleDateFormat`。
 
-- [ ] **Step 3: Add a module-local compileOnly SysUISdk android.jar**
+- [x] **Step 3: Add a module-local compileOnly SysUISdk android.jar**
 
 在 `SystemUI-common/build.gradle.kts` 顶层定义：
 
@@ -335,7 +335,7 @@ compileOnly(files(sysUiAndroidJar))
 
 保留现有 `framework.jar` module dependency；不要修改 root `KotlinCompile` classpath，不要把 Common 改成 Android library。
 
-- [ ] **Step 4: Compile Common**
+- [x] **Step 4: Compile Common**
 
 Run:
 
@@ -346,7 +346,7 @@ Run:
 
 Expected: `:SystemUI-common:compileKotlin` exit 0。若出现新的 duplicate/conflicting Android class 错误，停止 Task，保留日志并询问用户是否改为用 SysUISdk android.jar 替换 module-local framework.jar；不要擅自切换 module 类型。
 
-- [ ] **Step 5: Record and commit**
+- [x] **Step 5: Record and commit**
 
 ```bash
 git add SystemUI-common/build.gradle.kts \
@@ -370,7 +370,7 @@ git commit -m "build: expose SysUISdk APIs to SystemUI common"
 - Consumes: official Maven artifact `androidx.core:core-animation:1.0.0`.
 - Produces: `androidx.core.animation.Interpolator` is directly visible to `:SystemUI-compose`.
 
-- [ ] **Step 1: Confirm the artifact contains the required class**
+- [x] **Step 1: Confirm the artifact contains the required class**
 
 Run:
 
@@ -383,7 +383,7 @@ grep 'androidx.core:core-animation:1.0.0' /tmp/animation-deps.log
 
 Expected: dependency is already resolved for animation, proving the official artifact/version is available。
 
-- [ ] **Step 2: Capture the red Compose compile result**
+- [x] **Step 2: Capture the red Compose compile result**
 
 Run:
 
@@ -394,7 +394,7 @@ Run:
 
 Expected: non-zero with unresolved/inaccessible `androidx.core.animation.Interpolator`。
 
-- [ ] **Step 3: Add the version-catalog entry and direct dependency**
+- [x] **Step 3: Add the version-catalog entry and direct dependency**
 
 在 `gradle/libs.versions.toml` 增加：
 
@@ -410,7 +410,7 @@ implementation(libs.androidx.core.animation)
 
 保留 `core-ktx`；不要改 `Easings.kt` 源码。
 
-- [ ] **Step 4: Compile Compose and inspect dependency resolution**
+- [x] **Step 4: Compile Compose and inspect dependency resolution**
 
 Run:
 
@@ -424,11 +424,11 @@ Run:
 
 Expected: classpath 包含 `core-animation:1.0.0`，Compose compile exit 0 或推进到一个新的、与 Interpolator 不同的真实错误。若出现新错误，原样记录，不修改 AOSP Compose 源码。
 
-- [ ] **Step 5: Correct all active documentation**
+- [x] **Step 5: Correct all active documentation**
 
 把 active state/handoff/issue 中的“缺 `androidx.core:core`”统一改为“缺 `androidx.core:core-animation:1.0.0`”，并写入本次实际编译结果。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add gradle/libs.versions.toml SystemUI-compose/build.gradle.kts \
@@ -450,7 +450,7 @@ git commit -m "build: add Compose core animation dependency"
 - Consumes: official Maven artifact `androidx.compose.runtime:runtime:1.8.3`.
 - Produces: `TileDetailsViewModel.kt` can resolve `androidx.compose.runtime.Composable`; processor behavior remains unchanged.
 
-- [ ] **Step 1: Prove the runtime is currently absent**
+- [x] **Step 1: Prove the runtime is currently absent**
 
 Run:
 
@@ -466,7 +466,7 @@ fi
 
 Expected: grep 找不到 Compose runtime。
 
-- [ ] **Step 2: Add the direct runtime dependency**
+- [x] **Step 2: Add the direct runtime dependency**
 
 在 Plugin 的 AndroidX 依赖区加入：
 
@@ -476,7 +476,7 @@ implementation("androidx.compose.runtime:runtime:1.8.3")
 
 不要加入 KAPT、不要修改 processor 源码、不要生成 `PluginProtector` 副本。
 
-- [ ] **Step 3: Verify classpath and compile Plugin**
+- [x] **Step 3: Verify classpath and compile Plugin**
 
 Run:
 
@@ -490,7 +490,7 @@ Run:
 
 Expected: classpath 包含 runtime；Plugin Kotlin compile exit 0。processor 仍不会看到 Kotlin annotations，这不是本 Task 的失败。
 
-- [ ] **Step 4: Confirm no fake generated output or stub appeared**
+- [x] **Step 4: Confirm no fake generated output or stub appeared**
 
 Run:
 
@@ -501,7 +501,7 @@ find SystemUI-plugin/build/generated -type f -name 'PluginProtector.java' -print
 
 Expected: stub 不存在；当前 javac-only processor 仍不生成 `PluginProtector.java`。
 
-- [ ] **Step 5: Record and commit**
+- [x] **Step 5: Record and commit**
 
 ```bash
 git add SystemUI-plugin/build.gradle.kts \
@@ -524,7 +524,7 @@ git commit -m "build: restore plugin Compose runtime"
 - Consumes: Tasks 1–5 and unchanged 13-module graph.
 - Produces: verified isolated compile results, the actual first core blocker, and an accurate handoff for the artifact-recovery phase.
 
-- [ ] **Step 1: Run all Python verification**
+- [x] **Step 1: Run all Python verification**
 
 Run:
 
@@ -536,7 +536,7 @@ python3 tools/check_source_alignment.py --strict
 
 Expected: all exit 0；source/res counts remain zero。
 
-- [ ] **Step 2: Reassert the 13-module graph**
+- [x] **Step 2: Reassert the 13-module graph**
 
 Run:
 
@@ -560,7 +560,7 @@ PY
 
 Expected: Gradle configuration and assertion pass。
 
-- [ ] **Step 3: Run isolated compile evidence**
+- [x] **Step 3: Run isolated compile evidence**
 
 Run each command separately so failures are attributable：
 
@@ -584,7 +584,7 @@ Expected:
 
 任何新错误都记录首个 failing task 和首个完整异常，不新增 stub。
 
-- [ ] **Step 4: Capture core's new first boundary**
+- [x] **Step 4: Capture core's new first boundary**
 
 Run:
 
@@ -595,7 +595,7 @@ Run:
 
 Expected: 命令可能失败；本步骤的成功标准是日志明确显示修复后的第一真实 blocker。若进入 AAR transform duplicate-R，则记录具体 artifact、task 和 duplicate class；若先到 `PluginProtector`，按规则 H 停止并询问用户。
 
-- [ ] **Step 5: Audit active prebuilt/source duplicate classes before artifact recovery**
+- [x] **Step 5: Audit active prebuilt/source duplicate classes before artifact recovery**
 
 运行一个只读 Python 扫描，至少确认 `libs/WindowManager-Shell.jar` 与 `:SystemUI-animation` 的重叠类数量和样例，并把输出写入 review issue。扫描不得修改 JAR/AAR。
 
@@ -606,7 +606,7 @@ rg -n 'WindowManager-Shell\.jar|systemui\.(settingslib|iconloader|wmshell|wifitr
   --glob '*.kts' .
 ```
 
-- [ ] **Step 6: Rewrite active handoff sections to current facts**
+- [x] **Step 6: Rewrite active handoff sections to current facts**
 
 更新文档时必须：
 
@@ -619,7 +619,7 @@ rg -n 'WindowManager-Shell\.jar|systemui\.(settingslib|iconloader|wmshell|wifitr
 - 把下一计划命名为 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`；
 - 如本轮未运行 `:app:assembleDebug`，明确写“未运行”。
 
-- [ ] **Step 7: Verify documentation and commit checkpoint**
+- [x] **Step 7: Verify documentation and commit checkpoint**
 
 Run:
 

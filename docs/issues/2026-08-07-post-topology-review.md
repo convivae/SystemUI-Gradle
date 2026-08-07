@@ -251,6 +251,77 @@ missing=0, misplaced=0, extra=0, modified=0
   - `PluginProtectorStub.kt` 不存在。
   - `SystemUI-plugin/build/generated` 下无 `PluginProtector.java`（processor 仍看不到 .kt 标注）。
 
+#### Task 6：建立 post-topology build boundary ✅
+
+**Step 1–2：Python 验证 + 13-module graph**
+- `python3 -m py_compile tools/*.py tools/tests/*.py` → OK。
+- `python3 -m unittest discover -s tools/tests -v` → 19 tests PASS（新增 Task 1/2 共 3 个测试）。
+- `python3 tools/check_source_alignment.py --strict` → exit 0，全 0。
+- `./gradlew projects` → BUILD SUCCESSFUL；`settings.gradle.kts` 精确匹配 13 module。
+
+**Step 3：隔离编译证据**
+- `:SystemUI-common:compileKotlin` → BUILD SUCCESSFUL。
+- `:SystemUI-compose:compileDebugKotlin` → BUILD SUCCESSFUL。
+- `:SystemUI-plugin:compileDebugKotlin` → BUILD SUCCESSFUL。
+- `:SystemUI-shared:compileDebugKotlin` → BUILD FAILED（首个失败 task 为 `:SystemUI-plugin:compileDebugJavaWithJavac`，见 blocker B2）。
+
+**Step 4：core 新的 first boundary**
+
+`./gradlew :SystemUI-core:compileDebugKotlin --rerun-tasks` 失败，首个失败 task 为：
+
+```text
+> Task :SystemUI-res:packageDebugResources FAILED
+```
+
+不是 Kotlin 编译错误，也不是 AAR transform duplicate-R，而是资源打包阶段。
+
+**Step 5：重复类审计**
+- `libs/WindowManager-Shell.jar`（turbine-combined fat jar）含 20155 classes，其中 179 个 `com/android/systemui/**`：
+  - animation: 109（与 `:SystemUI-animation` 源码重复）
+  - surfaceeffects: 48（与 `:SystemUI-animation` Shader 源码重复）
+  - util: 12、(root): 5、shared: 5
+- 消费位置（`compileOnly`）：`:app`、`:SystemUI-core`、`:SystemUI-animation`、`:SystemUI-shared`。
+- `:SystemUI-core` 还用 catalog aliases 消费 `libs/maven/` 的 settingslib/iconloader/wmshell/wifitrackerlib。
+
+### Phase A 完成后的 blocker 分析
+
+Phase A 清除了 common/compose/plugin 三个上游 classpath blocker，但暴露了两个新的、更深层的 blocker，均需规则 H。
+
+#### Blocker B1（core first boundary）：AOSP `product="..."` 资源变体不被 AAPT2 支持
+
+`./gradlew :SystemUI-core:compileDebugKotlin` 首个失败为 `:SystemUI-res:packageDebugResources`。
+
+根因：AOSP `res-product/values/strings.xml`（与项目字节一致，`check_source_alignment` MODIFIED=0）定义了：
+
+```xml
+<string name="inattentive_sleep_warning_message" product="tv">The Android TV device will soon turn off...</string>
+<string name="inattentive_sleep_warning_message" product="default">The device will soon turn off...</string>
+```
+
+这是 AOSP 的资源 product variant 机制（`product="tv"` / `product="default"`）。Soong 的资源处理器理解该属性，按构建变体选择；但 Gradle/AAPT2 **不支持** `product="..."` 资源属性，把两者都当 default configuration 重复，报 `Found item ... more than one time`，涉及 res-product 下所有 locale 目录（~40 个）。
+
+AOSP `Android.bp` 有独立 `android_library { name: "SystemUI-res", resource_dirs: ["res-product", "res-keyguard", "res"] }`，与项目 `:SystemUI-res` 配置一致——是 Soong vs AAPT2 行为差异，不是配置错误。
+
+涉及规则 R（不得修改 res 文件）和规则 C（res 必须与 AOSP 字节一致），需规则 H 询问用户。
+
+#### Blocker B2：Plugin annotation processor 运行时缺 kotlin stdlib
+
+`:SystemUI-shared:compileDebugKotlin` 首个失败 task 为 `:SystemUI-plugin:compileDebugJavaWithJavac`：
+
+```text
+java.lang.NoClassDefFoundError: kotlin/jvm/internal/Intrinsics
+```
+
+根因：`SystemUI-plugin/build.gradle.kts` 配置 `options.annotationProcessorPath = files(jarTask.archiveFile)`，只含 `:SystemUI-plugin-processor` 的 jar，不含 kotlin stdlib。processor 是 Kotlin 编译的 JVM `java-library`，运行时引用 `kotlin.jvm.internal.Intrinsics`，但 processor classpath 缺 stdlib 导致 `NoClassDefFoundError`。
+
+这不是 PluginProtector 不生成的问题（那是 B3），而是 processor 运行时 crash。在 B1 解决前会阻断 shared/core 的 Java 编译。
+
+修复方向（不需产品决策，属 build 配置）：把 kotlin stdlib 加入 `annotationProcessorPath`，或用 processor module 的 runtime classpath。
+
+#### Blocker B3（保留）：PluginProtector 不生成
+
+javac 原生 processor 仍看不到 .kt 标注。需用户裁决是否授权 KSP 等价实现。
+
 ### Phase B：独立 artifact-recovery 计划
 
 Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：

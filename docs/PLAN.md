@@ -2,8 +2,7 @@
 
 > ⚠️ **历史计划警告（2026-08-06）**：本文件 §阶段 1–5 主体停留在 2026-07-29，旧的错误数目标、“把 SystemUIApplication/SystemUIService 移到 app”计划、以及“animationlib 源码化”方案均已失效。入口类必须保留在 `:SystemUI-core`（见 ADR 0003 更正）；animationlib 是非 SystemUI 代码，须改为直接 AAR。
 >
-> **当前优先级（2026-08-07 审查）**：先执行
-> `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。13-module 拓扑迁移步骤已经完成，但编译/功能验收仅部分完成。该计划修复 alignment 多 root 漏报、ZIP/JAR 确定性、Common 的 SysUISdk classpath、Compose 的 `androidx.core:core-animation:1.0.0` 和 Plugin Compose runtime，并取得新的 core first-failure。随后按该证据校准并执行 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`。错误数始终只作诊断，不作为提交门槛。下文历史阶段保留供参考，不代表当前优先级。
+> **当前优先级（Phase A 完成后）**：`docs/superpowers/plans/2026-08-07-post-topology-correctness.md` 的 Task 1–6 已执行完毕。common/compose/plugin 三个 classpath blocker 已清除（均编译通过），但 core 首次失败暴露两个新 blocker：**B1** `:SystemUI-res:packageDebugResources` 因 AOSP `res-product` 的 `product="..."` 资源变体不被 AAPT2 支持（需规则 H）；**B2** `:SystemUI-plugin:compileDebugJavaWithJavac` processor 运行时缺 kotlin stdlib。core 自身 Kotlin 编译尚未开始。需用户对 B1（资源 owner/构建机制）和 B2 是否在本阶段修复决策后，再校准 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`。错误数始终只作诊断，不作为提交门槛。下文历史阶段保留供参考，不代表当前优先级。
 
 > **历史最后更新**: 2026-07-29
 > **历史错误数**: 509
@@ -19,7 +18,8 @@
 阶段 2 ✅ (2026-07-28): server-notification-flags.jar — 已解决（删除 stub Flags.kt）
 阶段 2.5 ✅ (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509（历史，非当前基线）
 阶段 3 ✅/⚠️ (2026-08-08 checkpoint): 13-module 拓扑与 owner 迁移完成；编译/processor 验收部分完成
-阶段 3.5 🚧 (下一步): post-topology correctness（工具确定性 + Common/Compose/Plugin classpath）
+阶段 3.5 ✅ (Phase A): post-topology correctness 完成（工具确定性 + Common/Compose/Plugin classpath 全通过）
+阶段 3.6 🚧 (blocker): res product-variant (B1 需规则 H) + processor kotlin stdlib (B2)
 阶段 4 ⏳ (已规划): AAR artifact 恢复 + 重复 R/源码-prebuilt 重复类修复（`docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`）
 阶段 5 ⏳ (待启动): manifest merge + Kotlin 基线 + :app:assembleDebug
 ```
