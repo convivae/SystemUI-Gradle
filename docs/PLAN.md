@@ -19,8 +19,8 @@
 阶段 2.5 ✅ (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509（历史，非当前基线）
 阶段 3 ✅/⚠️ (2026-08-08 checkpoint): 13-module 拓扑与 owner 迁移完成；编译/processor 验收部分完成
 阶段 3.5 ✅ (Phase A): post-topology correctness 完成（工具确定性 + Common/Compose/Plugin classpath 全通过）
-阶段 3.5.5 ✅ (Phase A.5): CONV 标记规范（ADR 0004）+ B1 product variant CONV_DEL + B2 processor stdlib 解决
-阶段 3.6 🚧 (blocker): shared `Thread.getUncaughtExceptionPreHandler` 等 framework @hide API 未解析
+阶段 3.5.5 ✅ (Phase A.5): CONV 标记规范（ADR 0004）+ B1 product variant CONV_DEL + B2 processor stdlib + B3 PluginProtector stub 恢复 + shared reflection 全解决
+阶段 3.6 🚧 (blocker): core AAR transform——SettingsLib/iconloader/WM-Shell 的 classes.jar 含 R.class（Phase B artifact-recovery 解决）
 阶段 4 ⏳ (已规划): AAR artifact 恢复 + 重复 R/源码-prebuilt 重复类修复（`docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`）
 阶段 5 ⏳ (待启动): manifest merge + Kotlin 基线 + :app:assembleDebug
 ```

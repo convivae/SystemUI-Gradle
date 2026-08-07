@@ -341,18 +341,26 @@ javac 原生 processor 仍看不到 .kt 标注。需用户裁决是否授权 KSP
 - 修复：移除手动 `doFirst`，只用 `annotationProcessor(project(...))` 声明——Gradle 9 会自动解析 processor 的传递依赖（含 kotlin-stdlib）。手动设反而破坏了传递依赖解析
 - `:SystemUI-plugin:compileDebugJavaWithJavac` BUILD SUCCESSFUL
 
-### 新的 first boundary
+**B3 解决——恢复 AOSP 自带 PluginProtectorStub**（本次提交）
+- 根因：AOSP `plugin/Android.bp:33` 用 `exclude_srcs` 排除 `PluginProtectorStub.kt`（生产有 processor 生成真品）；本项目 javac processor 看不到 .kt 标注，不生成 `PluginProtector`
+- 解决：恢复 AOSP 自带的 `PluginProtectorStub.kt`（AOSP 官方 fallback，非我们发明的 stub）；从对齐工具 exclude 列表移除
+- 用户澄清：规则 P 禁止的是"我们自己新生成的 stub"；AOSP 自带源码文件（含 stub）属源码复制范畴，可原样复制
+- 排查其他 AOSP 自带 stub：仅 `PluginProtectorStub.kt` 被错误删除；其他 `*Stub*` 要么 test-only 要么是正常源码
+- `:SystemUI-shared:compileDebugJavaWithJavac` BUILD SUCCESSFUL
 
-B1、B2 解决后，core 编译链推进到 `:SystemUI-shared:compileDebugKotlin`，错误为 4 个真实 Kotlin unresolved reference：
+### 新的 first boundary（B1/B2/B3 全解决后）
+
+core Kotlin 编译终于启动！卡在 AAR transform 阶段：
 
 ```text
-SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:31:37 Unresolved reference 'getUncaughtExceptionPreHandler'.
-SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:36:29 Cannot infer type for this parameter. Specify it explicitly.
-SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:36:33 Cannot infer type for this parameter. Specify it explicitly.
-SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:37:20 Unresolved reference 'setUncaughtExceptionPreHandler'.
+Failed to transform SettingsLib-1.0.0.aar
+  Zip file '...SettingsLib-1.0.0-api.jar' already contains entry 'com/android/settingslib/R.class'
+Failed to transform iconloader-1.0.0.aar
+  ... 'com/android/launcher3/icons/R.class'
+Failed to transform WindowManager-Shell-1.0.0.aar
 ```
 
-全部是 `Thread.getUncaughtExceptionPreHandler()`/`setUncaughtExceptionPreHandler()` framework @hide API 未解析（参考项目 GRADLE_MIGRATION.md:439/458 记录同类问题）。core 自身 Kotlin 编译尚未开始。
+这正是 artifact-recovery 计划（Phase B）要解决的 AAR 重复 R.class 问题——`gen_aar_maven.py` 把 R.jar 错误合入 classes.jar 的失败实验遗留。
 
 ### Phase B：独立 artifact-recovery 计划
 

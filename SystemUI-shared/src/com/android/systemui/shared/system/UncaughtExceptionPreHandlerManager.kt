@@ -28,13 +28,31 @@ class UncaughtExceptionPreHandlerManager @Inject constructor() {
      * Verifies that the global handler is set in Thread. If not, sets is up.
      */
     private fun checkGlobalHandlerSetup() {
-        val currentHandler = Thread.getUncaughtExceptionPreHandler()
+        // CONV_MOD BEGIN: Thread.getUncaughtExceptionPreHandler 是 @UnsupportedAppUsage 隐藏 API，
+        // 无可用 jar 含此方法（hiddenapi 从所有 stub 移除），改用反射。见 docs/issues/2026-08-07-uncaught-exception-prehandler-reflection.md
+        // val currentHandler = Thread.getUncaughtExceptionPreHandler()
+        val currentHandler = runCatching {
+            Thread::class.java.getDeclaredMethod("getUncaughtExceptionPreHandler")
+                .apply { isAccessible = true }
+                .invoke(null) as? UncaughtExceptionHandler
+        }.getOrNull()
+        // CONV_MOD END
         if (currentHandler != globalUncaughtExceptionPreHandler) {
             if (currentHandler is GlobalUncaughtExceptionHandler) {
                 throw IllegalStateException("Two UncaughtExceptionPreHandlerManagers created")
             }
             currentHandler?.let { addHandler(it) }
-            Thread.setUncaughtExceptionPreHandler(globalUncaughtExceptionPreHandler)
+            // CONV_MOD BEGIN: Thread.setUncaughtExceptionPreHandler 同为隐藏 API，改用反射。
+            // Thread.setUncaughtExceptionPreHandler(globalUncaughtExceptionPreHandler)
+            runCatching {
+                Thread::class.java.getDeclaredMethod(
+                    "setUncaughtExceptionPreHandler", UncaughtExceptionHandler::class.java
+                ).apply { isAccessible = true }
+                    .invoke(null, globalUncaughtExceptionPreHandler)
+            }.onFailure { e ->
+                Log.w("UncaughtExceptionPreHandler", "Failed to set pre-handler via reflection", e)
+            }
+            // CONV_MOD END
         }
     }
 

@@ -15,7 +15,7 @@
 > - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly，Task 3）
 > - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0，Task 4）
 >
-> **core 编译边界（Phase A.5 后）**：首个失败为 `:SystemUI-shared:compileDebugKotlin`——4 个 `UncaughtExceptionPreHandlerManager.kt` 的 `Thread.getUncaughtExceptionPreHandler`/`setUncaughtExceptionPreHandler` framework @hide API 未解析。B1（product variant）和 B2（processor kotlin stdlib）已解决。core 自身 Kotlin 编译尚未开始。
+> **core 编译边界（Phase A.5 后）**：首个失败为 `:SystemUI-core:compileDebugKotlin` 的 AAR transform 阶段——SettingsLib/iconloader/WindowManager-Shell 的本地 Maven AAR 的 `classes.jar` 含 R.class，AGP 报 "already contains entry"。B1（product variant）、B2（processor stdlib）、B3（PluginProtector stub 恢复）已全部解决。core Kotlin 编译已启动但被 AAR transform 阻断。
 >
 > **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复计划已写入 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，必须在 post-topology correctness 完成并取得新 first-failure 后执行。`./gradlew :app:assembleDebug` 未运行。
 >

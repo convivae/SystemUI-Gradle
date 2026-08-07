@@ -116,10 +116,12 @@ SOURCE_MAPPINGS = [
     M(["plugin_core/processor/src"], "SystemUI-plugin-processor", "src",
       note="PluginAnnotationProcessor"),
 
-    # SystemUI-plugin: SystemUIPluginLib runtime（含 bcsmartspace）；排除 BP 不编译的 stub
+    # SystemUI-plugin: SystemUIPluginLib runtime（含 bcsmartspace）
+    # AOSP plugin/Android.bp 生产构建用 exclude_srcs 排除 PluginProtectorStub.kt（因有 processor 生成真品）。
+    # 本项目 javac processor 看不到 .kt 标注，不生成 PluginProtector，故恢复 AOSP 自带的 stub 作为 fallback。
+    # stub 是 AOSP 官方源码文件（非我们发明），属源码复制范畴，不违反规则 P。
     M(["plugin/src"], "SystemUI-plugin", "src",
-      exclude_tails=["com/android/systemui/plugins/PluginProtectorStub.kt"],
-      note="SystemUIPluginLib (excl PluginProtectorStub)"),
+      note="SystemUIPluginLib (with AOSP PluginProtectorStub fallback)"),
     M(["plugin/bcsmartspace/src"], "SystemUI-plugin", "bcsmartspace/src", note="bcsmartspace"),
 
     # SystemUI-unfold
