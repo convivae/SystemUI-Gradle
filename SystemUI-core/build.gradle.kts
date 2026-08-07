@@ -153,12 +153,10 @@ dependencies {
     implementation(libs.android.server.notification.flags)
     
 
-    // 本地 Maven AAR
-    implementation(libs.systemui.settingslib)
-    // 我方 SettingsLib aar 只含 res，不含 kotlin class；补上 AOSP 完整 SettingsLib jar：
-    // kotlin jar (AudioRepository 等 kotlin 类) + javac jar (LocalBluetoothLeBroadcast 等 java 类)
+    // 直接 AAR（Soong javac + 原始 res + R.txt，无 R.class）
+    implementation(files("${rootProject.projectDir}/libs/aars/SettingsLib.aar"))
+    // SettingsLib-full.jar 含 SettingsLib 子模块类（与 AAR javac 0 重叠），保留
     compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-full.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-javac.jar"))
     implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
     implementation(libs.systemui.wmshell)
     implementation(files("${rootProject.projectDir}/libs/aars/WifiTrackerLib.aar"))

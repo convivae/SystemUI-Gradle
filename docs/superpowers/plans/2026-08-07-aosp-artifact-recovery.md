@@ -238,7 +238,7 @@ git commit -m "build: consume WifiTrackerLib direct AAR"
 - Possibly modify: SettingsLib-specific JAR declarations proven redundant by class audit
 - Modify: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 
-- [ ] **Step 1: Switch both consumers atomically**
+- [x] **Step 1: Switch both consumers atomically**
 
 Replace core and res usages of `libs.systemui.settingslib` with the same direct file AAR path:
 
@@ -248,7 +248,7 @@ files("${rootProject.projectDir}/libs/aars/SettingsLib.aar")
 
 Use `implementation(...)` in core and `api(...)` in res, preserving current visibility semantics.
 
-- [ ] **Step 2: Audit SettingsLib supplemental JAR overlap**
+- [x] **Step 2: Audit SettingsLib supplemental JAR overlap**
 
 Compare classes in `SettingsLib.aar!/classes.jar` with:
 
@@ -257,13 +257,13 @@ Compare classes in `SettingsLib.aar!/classes.jar` with:
 
 If either supplemental JAR contains any class already in the AAR, it cannot remain wholesale on compile classpath. Record counts and exact package prefixes.
 
-- [ ] **Step 3: Remove redundant main-code supplements**
+- [x] **Step 3: Remove redundant main-code supplements**
 
 Remove `SettingsLib-javac.jar` when its main classes are provided by direct AAR. Do not delete a supplemental static-dependency JAR unless the audit proves all required classes have another owner. If `SettingsLib-full.jar` is a fat combined artifact, stop and create a focused extraction subtask that keeps only AOSP SettingsLib child-module classes and rejects AndroidX/third-party/main SettingsLib duplicates.
 
 The extraction must be a deterministic Python tool with tests; manual `zip -d` is not acceptable.
 
-- [ ] **Step 4: Verify resources and compile**
+- [x] **Step 4: Verify resources and compile**
 
 ```bash
 ./gradlew :SystemUI-res:processDebugResources --rerun-tasks --console=plain \
@@ -274,7 +274,7 @@ The extraction must be a deterministic Python tool with tests; manual `zip -d` i
 
 Success criterion: no `com/android/settingslib/R*` duplicate transform. Missing SettingsLib child classes must be traced to named BP static libs, not solved by resource edits.
 
-- [ ] **Step 5: Commit SettingsLib recovery**
+- [x] **Step 5: Commit SettingsLib recovery**
 
 Use commit message `build: consume SettingsLib direct AAR` and include any tested deterministic child-module JAR tool/artifact created by Step 3.
 
