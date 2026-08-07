@@ -224,10 +224,21 @@ def run_source_check(mappings, aosp_root, project_root, suffixes=SOURCE_SUFFIXES
         loc = (m.project_module, m.project_src_root)
 
         for tail in sorted(aosp_tails - proj_tails):
-            locs = find_tail_locations(tail, mappings, project_root, suffixes)
-            elsewhere = [(mod, sr) for (mod, sr, _p) in locs if (mod, sr) != loc]
-            if elsewhere:
-                continue  # misplaced，由对应映射的 extra 阶段报告
+            # 该 tail 在 AOSP 下的全部合法 owner（module, src_root）集合。
+            # 只有出现在不在该集合的位置才算 MISPLACED；
+            # 合法的另一个 root（如 src-release 存在但 src-debug 缺失）不能掩盖 MISSING。
+            expected_locs = {
+                (module, src_root)
+                for module, src_root, _aosp_sub in aosp_idx.get(tail, [])
+            }
+            misplaced_elsewhere = [
+                (module, src_root)
+                for module, src_root, _path in find_tail_locations(
+                    tail, mappings, project_root, suffixes)
+                if (module, src_root) not in expected_locs
+            ]
+            if misplaced_elsewhere:
+                continue  # 由错误位置所属映射的 extra 阶段报告 MISPLACED
             missing.append((m.aosp_subdirs[0], m.project_module, m.project_src_root, tail, m.note))
 
         for tail in sorted(aosp_tails & proj_tails):

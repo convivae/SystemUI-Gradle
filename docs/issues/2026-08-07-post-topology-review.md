@@ -188,6 +188,17 @@ missing=0, misplaced=0, extra=0, modified=0
 6. 重新取得隔离模块和 core 的第一真实 blocker；
 7. 更新状态与交接文档。
 
+### Phase A 执行进度
+
+#### Task 1：修复多合法 root 的 MISSING 漏报 ✅
+
+- 新增回归测试 `TestDuplicateTailAcrossExpectedRoots.test_missing_one_of_two_valid_roots_is_reported`。
+- 先确认红：`missing=[]`，合法的 `src-release` 掩盖了 `src-debug` 缺失。
+- 修复 `run_source_check()`：用 `aosp_idx` 算出该 tail 的全部合法 owner 集合 `expected_locs`，只有出现在不在该集合的位置才算 MISPLACED；合法的另一个 root 不再掩盖 MISSING。
+- 验证：
+  - `python3 -m unittest tools.tests.test_check_source_alignment -v` → 9 tests PASS。
+  - `python3 tools/check_source_alignment.py --strict` → exit 0，全 0。
+
 ### Phase B：独立 artifact-recovery 计划
 
 Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：

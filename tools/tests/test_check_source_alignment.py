@@ -145,5 +145,40 @@ class TestRootAwareMisplaced(unittest.TestCase):
             self.assertNotIn("Bar.kt", missing_tails)
 
 
+class TestDuplicateTailAcrossExpectedRoots(unittest.TestCase):
+    """同一 tail 在 AOSP 有多个合法 root（如 src-debug + src-release）时，
+    项目只放了一份，另一份的缺失必须被报告为 MISSING，
+    不能被合法的另一份掩盖成“别处有”。"""
+
+    def test_missing_one_of_two_valid_roots_is_reported(self):
+        mappings = [
+            csa.M(["src-debug"], "Core", "src-debug"),
+            csa.M(["src-release"], "Core", "src-release"),
+        ]
+        tail = Path("com/android/systemui/flags/FlagsFactory.kt")
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            aosp = root / "aosp"
+            project = root / "project"
+            # AOSP: src-debug 和 src-release 各有一份（内容不同）
+            for variant, body in (("src-debug", b"debug"), ("src-release", b"release")):
+                path = aosp / variant / tail
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(body)
+            # 项目：只放了 src-release（合法 root），缺 src-debug
+            release = project / "Core/src-release" / tail
+            release.parent.mkdir(parents=True, exist_ok=True)
+            release.write_bytes(b"release")
+
+            result = csa.run_source_check(mappings, aosp, project)
+
+            # src-debug 的缺失必须被报告
+            missing_tails = [item[3] for item in result["missing"]]
+            self.assertEqual(missing_tails, [str(tail)])
+            # src-release 是合法 root，不应误报 MISPLACED
+            self.assertEqual(result["misplaced"], [])
+            self.assertEqual(result["extra"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
