@@ -37,23 +37,19 @@ android {
     }
 }
 
-// javac 原生注解处理：把 processor 模块的 jar 加到 JavaCompile 的 annotationProcessorPath。
-// processor 模块是 JVM `java-library`，jar task 产出含服务描述符的 processor jar。
+// javac 原生注解处理：用 annotationProcessor dependency 声明（见 dependencies 块），
+// Gradle 会自动解析 processor 及其传递依赖（含 kotlin-stdlib）。
+// 不再手动设 annotationProcessorPath——手动设会丢传递依赖且在 Gradle 9 触发 unsafe lock 错误。
 // ⚠️ 待办：javac 看不到 .kt 源码，PluginProtector 暂不生成。
 tasks.withType<JavaCompile>().configureEach {
     dependsOn(":SystemUI-plugin-processor:jar")
-    doFirst {
-        val jarTask = project(":SystemUI-plugin-processor")
-            .tasks.named<org.gradle.jvm.tasks.Jar>("jar").get()
-        options.annotationProcessorPath = files(jarTask.archiveFile)
-    }
 }
 
 dependencies {
     // Framework APIs - provided by system at runtime
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
 
-    // build-time 注解处理器（javac 原生，见上方配置）
+    // build-time 注解处理器（javac 原生）：Gradle 自动解析其传递依赖（kotlin-stdlib 等）
     annotationProcessor(project(":SystemUI-plugin-processor"))
 
     // tier① SystemUI 自有源码模块

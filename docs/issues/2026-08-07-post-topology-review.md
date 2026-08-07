@@ -322,6 +322,38 @@ java.lang.NoClassDefFoundError: kotlin/jvm/internal/Intrinsics
 
 javac 原生 processor 仍看不到 .kt 标注。需用户裁决是否授权 KSP 等价实现。
 
+### Phase A.5：CONV 标记规范与 B1/B2 解决（2026-08-07）
+
+在 Phase A 之后，与用户经 grilling 对齐确定了 AOSP 源码改动标记规范（ADR 0004），并以此解决了 B1、B2：
+
+**阶段一：规范落地**（commit `17fb5c14`）
+- ADR 0004：CONV_ADD/DEL/MOD + BEGIN/END 标记；XML 用 `<!-- -->`；顺序铁律（先对齐干净再打标）；`check_source_alignment.py --strict` 不再卡 MODIFIED，靠人工对账
+- 27 tests PASS，对齐仍 0/0/0/0，strict exit 0
+
+**阶段二：B1 解决——product variant CONV_DEL**（本次提交）
+- 写 `tools/markup_product_variants.py`（+8 单测）批量给非 default product 变体加 CONV_DEL 块
+- 86 个 res-product 文件、2237 处非 default 变体被注释（不删除字节，可追溯可撤回）
+- `:SystemUI-res:packageDebugResources` BUILD SUCCESSFUL（重复资源错误消除）
+- RES-MODIFIED=86 与 issue 清单逐条对账一致；86 个 XML 仍合法
+
+**B2 解决——processor kotlin stdlib**（本次提交）
+- 根因：`SystemUI-plugin/build.gradle.kts` 手动设 `annotationProcessorPath = files(jarTask.archiveFile)` 只含 processor jar，缺 kotlin stdlib → `NoClassDefFoundError: kotlin/jvm/internal/Intrinsics`
+- 修复：移除手动 `doFirst`，只用 `annotationProcessor(project(...))` 声明——Gradle 9 会自动解析 processor 的传递依赖（含 kotlin-stdlib）。手动设反而破坏了传递依赖解析
+- `:SystemUI-plugin:compileDebugJavaWithJavac` BUILD SUCCESSFUL
+
+### 新的 first boundary
+
+B1、B2 解决后，core 编译链推进到 `:SystemUI-shared:compileDebugKotlin`，错误为 4 个真实 Kotlin unresolved reference：
+
+```text
+SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:31:37 Unresolved reference 'getUncaughtExceptionPreHandler'.
+SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:36:29 Cannot infer type for this parameter. Specify it explicitly.
+SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:36:33 Cannot infer type for this parameter. Specify it explicitly.
+SystemUI-shared/src/com/android/systemui/shared/system/UncaughtExceptionPreHandlerManager.kt:37:20 Unresolved reference 'setUncaughtExceptionPreHandler'.
+```
+
+全部是 `Thread.getUncaughtExceptionPreHandler()`/`setUncaughtExceptionPreHandler()` framework @hide API 未解析（参考项目 GRADLE_MIGRATION.md:439/458 记录同类问题）。core 自身 Kotlin 编译尚未开始。
+
 ### Phase B：独立 artifact-recovery 计划
 
 Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：

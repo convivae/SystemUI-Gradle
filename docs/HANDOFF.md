@@ -56,7 +56,7 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 > - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly）
 > - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0）
 >
-> **core 编译边界（Phase A 后）**：首个失败为 `:SystemUI-res:packageDebugResources`——AOSP `res-product` 的 `product="..."` 资源变体不被 AAPT2 支持（blocker B1，需规则 H）。次要 blocker：`:SystemUI-plugin:compileDebugJavaWithJavac` processor 运行时缺 kotlin stdlib（B2）。core 自身 Kotlin 编译尚未开始。
+> **core 编译边界（Phase A.5 后）**：首个失败为 `:SystemUI-shared:compileDebugKotlin`——4 个 `UncaughtExceptionPreHandlerManager.kt` 的 `Thread.getUncaughtExceptionPreHandler`/`setUncaughtExceptionPreHandler` framework @hide API 未解析。B1（product variant，CONV_DEL 解决）和 B2（processor kotlin stdlib，移除手动 annotationProcessorPath 解决）已解决。core 自身 Kotlin 编译尚未开始。
 >
 > **下一步**：先执行 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。该计划修复审查中无需产品裁决的问题并取得新的 core first-failure；随后按新证据校准并执行 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，逐个处理 SettingsLib/iconloader/WM Shell/WifiTrackerLib、manifest 和 APK 验收。
 

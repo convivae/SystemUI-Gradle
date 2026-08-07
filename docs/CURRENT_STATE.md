@@ -15,7 +15,7 @@
 > - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly，Task 3）
 > - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0，Task 4）
 >
-> **core 编译边界（Phase A 后）**：首个失败为 `:SystemUI-res:packageDebugResources`——AOSP `res-product` 的 `product="..."` 资源变体不被 AAPT2 支持（blocker B1，需规则 H）。次要 blocker：`:SystemUI-plugin:compileDebugJavaWithJavac` processor 运行时缺 kotlin stdlib（B2）。core 自身 Kotlin 编译尚未开始。
+> **core 编译边界（Phase A.5 后）**：首个失败为 `:SystemUI-shared:compileDebugKotlin`——4 个 `UncaughtExceptionPreHandlerManager.kt` 的 `Thread.getUncaughtExceptionPreHandler`/`setUncaughtExceptionPreHandler` framework @hide API 未解析。B1（product variant）和 B2（processor kotlin stdlib）已解决。core 自身 Kotlin 编译尚未开始。
 >
 > **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复计划已写入 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，必须在 post-topology correctness 完成并取得新 first-failure 后执行。`./gradlew :app:assembleDebug` 未运行。
 >
