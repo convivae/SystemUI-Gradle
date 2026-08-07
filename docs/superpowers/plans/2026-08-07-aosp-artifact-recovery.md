@@ -222,11 +222,11 @@ git commit -m "build: consume WifiTrackerLib direct AAR"
 - Modify: `SystemUI-core/build.gradle.kts`
 - Modify: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 
-- [ ] Replace only `implementation(libs.systemui.iconloader)` with `implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))`.
-- [ ] Run `:SystemUI-core:processDebugResources` and `:SystemUI-core:compileDebugKotlin` separately with `--rerun-tasks` and tee logs.
-- [ ] Confirm no `com/android/launcher3/icons/R*` duplicate-class error.
-- [ ] If launcher flags are missing, recover the existing AOSP generated flags JAR or its already-declared official/AOSP dependency; do not put launcher source in a SystemUI module.
-- [ ] Record result and commit as `build: consume iconloader direct AAR`.
+- [x] Replace only `implementation(libs.systemui.iconloader)` with `implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))`.
+- [x] Run `:SystemUI-core:processDebugResources` and `:SystemUI-core:compileDebugKotlin` separately with `--rerun-tasks` and tee logs.
+- [x] Confirm no `com/android/launcher3/icons/R*` duplicate-class error.
+- [x] If launcher flags are missing, recover the existing AOSP generated flags JAR or its already-declared official/AOSP dependency; do not put launcher source in a SystemUI module.
+- [x] Record result and commit as `build: consume iconloader direct AAR`.
 
 ---
 

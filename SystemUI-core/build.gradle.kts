@@ -159,7 +159,7 @@ dependencies {
     // kotlin jar (AudioRepository 等 kotlin 类) + javac jar (LocalBluetoothLeBroadcast 等 java 类)
     compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-full.jar"))
     compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-javac.jar"))
-    implementation(libs.systemui.iconloader)
+    implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
     implementation(libs.systemui.wmshell)
     implementation(files("${rootProject.projectDir}/libs/aars/WifiTrackerLib.aar"))
 
