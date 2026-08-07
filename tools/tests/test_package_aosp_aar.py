@@ -131,6 +131,25 @@ class TestAssembleAar(unittest.TestCase):
                                  n.rsplit("/", 1)[-1].startswith("R$") for n in cn),
                              "classes.jar 不应含 R.class")
 
+    def test_repeated_builds_are_byte_identical(self):
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            _make_jar(d / "code.jar", {"com/x/Foo.class": b"\xca\xfe\xba\xbe"})
+            res = d / "res"
+            (res / "values").mkdir(parents=True)
+            (res / "values/ids.xml").write_bytes(b"<ids/>")
+            manifest = d / "AndroidManifest.xml"
+            manifest.write_bytes(b"<manifest/>")
+            rtxt = d / "R.txt"
+            rtxt.write_bytes(b"int id foo 0x0\n")
+            first = d / "first.aar"
+            second = d / "second.aar"
+            paar.assemble_aar([d / "code.jar"], res, manifest, rtxt, first)
+            time.sleep(2)
+            paar.assemble_aar([d / "code.jar"], res, manifest, rtxt, second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+
 
 if __name__ == "__main__":
     unittest.main()

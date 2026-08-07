@@ -199,6 +199,22 @@ missing=0, misplaced=0, extra=0, modified=0
   - `python3 -m unittest tools.tests.test_check_source_alignment -v` → 9 tests PASS。
   - `python3 tools/check_source_alignment.py --strict` → exit 0，全 0。
 
+#### Task 2：AAR/JAR 打包字节确定性 ✅
+
+- 新增 failing 测试：
+  - `test_package_aosp_aar.TestAssembleAar.test_repeated_builds_are_byte_identical`
+  - `tools/tests/test_package_compilelib_jars.py::TestCompilelibJarDeterminism`（新文件）
+- 先确认红：两次生成的 ZIP entry timestamp 不同导致 bytes 不同。
+- 修复：两个脚本均引入 `FIXED_ZIP_TIME=(1980,1,1,0,0,0)` 和 `_write_entry()`，用固定 `ZipInfo`（timestamp/compress_type/create_system/external_attr）写入所有 entry，不依赖输入 JAR 原始 metadata。
+- 验证：
+  - `python3 -m unittest tools.tests.test_package_aosp_aar tools.tests.test_package_compilelib_jars -v` → 10 tests PASS。
+  - 两次重生成 animationlib.aar / compilelib-debug.jar / compilelib-release.jar 的 SHA-256 完全一致。
+  - `unzip -t` 三个 archive integrity check 通过。
+  - 重生成后的 SHA-256：
+    - animationlib.aar: `91f85a93f174c1907a4af1d7afab66253314a45b09b750a4a84d7215eeb610ab`
+    - compilelib-debug.jar: `9d12cbddf01e352485197646dcb794676738ee3ed1faf5d9490175cf920afbd3`
+    - compilelib-release.jar: `ad605e3fc7bb80f563497983392fc193368d88c1042bdda22e28004df73ca022`
+
 ### Phase B：独立 artifact-recovery 计划
 
 Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：

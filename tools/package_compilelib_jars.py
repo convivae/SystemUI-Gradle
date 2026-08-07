@@ -28,6 +28,23 @@ DEBUG_JAR = Path("libs/compilelib-debug.jar")
 RELEASE_JAR = Path("libs/compilelib-release.jar")
 
 
+FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
+
+
+def _zip_info(name: str) -> zipfile.ZipInfo:
+    """固定 timestamp/metadata 的 ZipInfo，保证重复打包字节一致。"""
+    info = zipfile.ZipInfo(name, FIXED_ZIP_TIME)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 3
+    info.external_attr = 0o100644 << 16
+    return info
+
+
+def _write_entry(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
+    """用固定 metadata 写入一个 ZIP entry。"""
+    archive.writestr(_zip_info(name), data)
+
+
 def _compile_one(src: Path, output: Path) -> None:
     """用 javac --release 21 编译单个 Compile.java，打包为确定性 JAR。"""
     if not src.exists():
@@ -43,9 +60,9 @@ def _compile_one(src: Path, output: Path) -> None:
         class_file = tdp / "com/android/systemui/util/Compile.class"
         if not class_file.exists():
             raise RuntimeError(f"编译未产出 Compile.class: {class_file}")
-        # 确定性 JAR（entry 排序）
+        # 确定性 JAR（entry 排序 + 固定 metadata）
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as z:
-            z.writestr("com/android/systemui/util/Compile.class", class_file.read_bytes())
+            _write_entry(z, "com/android/systemui/util/Compile.class", class_file.read_bytes())
     print(f"{output} ({output.stat().st_size} bytes)")
 
 

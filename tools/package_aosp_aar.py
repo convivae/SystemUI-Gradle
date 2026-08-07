@@ -44,6 +44,23 @@ def _is_r_class(name: str) -> bool:
     return basename == "R.class" or basename.startswith("R$")
 
 
+FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
+
+
+def _zip_info(name: str) -> zipfile.ZipInfo:
+    """固定 timestamp/metadata 的 ZipInfo，保证重复打包字节一致。"""
+    info = zipfile.ZipInfo(name, FIXED_ZIP_TIME)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 3
+    info.external_attr = 0o100644 << 16
+    return info
+
+
+def _write_entry(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
+    """用固定 metadata 写入一个 ZIP entry，不依赖输入 JAR 的原始 timestamp。"""
+    archive.writestr(_zip_info(name), data)
+
+
 def merge_code_jars(jars, output: Path) -> None:
     """合并多个 JAR 到 output。跳过目录 entry 与重复 MANIFEST；拒绝 R.class；其余重复报错。"""
     seen = {}
@@ -63,13 +80,13 @@ def merge_code_jars(jars, output: Path) -> None:
                         if name in seen:
                             continue  # 仅允许重复 MANIFEST，保留第一份
                         seen[name] = jar
-                        out.writestr(info, z.read(info))
+                        _write_entry(out, name, z.read(info))
                         continue
                     if name in seen:
                         raise DuplicateEntryError(
                             f"重复 entry: {name}（{seen[name]} 与 {jar}）")
                     seen[name] = jar
-                    out.writestr(info, z.read(info))
+                    _write_entry(out, name, z.read(info))
 
 
 def copy_resource_tree(source: Path, destination: Path) -> None:
@@ -106,12 +123,12 @@ def assemble_aar(code_jars, res_dir: Path, manifest: Path, rtxt: Path, output: P
                         if name in seen:
                             continue
                         seen.add(name)
-                        mw.writestr(info, z.read(info))
+                        _write_entry(mw, name, z.read(info))
                         continue
                     if name in seen:
                         raise DuplicateEntryError(f"重复 entry: {name}（来自 {jar}）")
                     seen.add(name)
-                    mw.writestr(info, z.read(info))
+                    _write_entry(mw, name, z.read(info))
     classes_bytes = merged.getvalue()
 
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as aar:
@@ -126,7 +143,7 @@ def assemble_aar(code_jars, res_dir: Path, manifest: Path, rtxt: Path, output: P
                 rel = p.relative_to(res_dir)
                 entries.append((f"res/{rel}".replace("\\", "/"), p.read_bytes()))
         for name, data in sorted(entries, key=lambda e: e[0]):
-            aar.writestr(name, data)
+            _write_entry(aar, name, data)
 
 
 def build_animationlib(output: Path = DEFAULT_OUTPUT) -> None:
