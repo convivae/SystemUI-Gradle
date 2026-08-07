@@ -53,7 +53,17 @@ SystemUI-res/build.gradle.kts:37     api(libs.systemui.settingslib)
 | Task 3 | WifiTrackerLib 切直接 AAR | 待执行 |
 | Task 4 | iconloader 切直接 AAR | 待执行 |
 | Task 5 | SettingsLib 切直接 AAR | 待执行 |
-| Task 6 | WM-Shell 切直接 AAR + 删 fat JAR | 待执行 |
+| Task 6 | WM-Shell 切直接 AAR + 删 fat JAR | ✅ 完成 |
+
+## Task 6 额外恢复
+
+WM-Shell 直接 AAR 的 javac JAR 不含 static_libs 代码，需额外恢复：
+- `libs/WindowManager-Shell-shared.jar`（64 classes，无 R/sysui）：含 `ShellTransitions`/`TransitionUtil` 等，加到 core(implementation)/animation(compileOnly)/shared(compileOnly)
+- `libs/systemui-shared-flags.jar`（已存在，5 classes）：含 `com.android.systemui.shared.Flags`，加到 shared(compileOnly)
+
+## 里程碑：core Kotlin 编译启动
+
+AAR transform 阻塞全部消除后，core Kotlin 编译跑了 24 秒，产生 **708 个真实 Kotlin 错误**——这是真正的编译期诊断信息（Compose experimental API、Unresolved reference 等），不是 build 配置 blocker。这是项目首次取得可信的 core Kotlin 错误基线。
 | Task 7 | 删废弃 Maven 坐标 | 待执行 |
 | Task 8 | manifest merge 验证 | 待执行 |
 | Task 9 | core + APK 证据 | 待执行 |

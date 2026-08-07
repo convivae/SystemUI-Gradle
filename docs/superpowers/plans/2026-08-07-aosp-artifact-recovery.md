@@ -290,7 +290,7 @@ Use commit message `build: consume SettingsLib direct AAR` and include any teste
 - Delete only after no consumers: `libs/WindowManager-Shell.jar`
 - Modify: `docs/issues/2026-08-07-aosp-artifact-recovery.md`
 
-- [ ] **Step 1: Confirm clean direct AAR ownership**
+- [x] **Step 1: Confirm clean direct AAR ownership**
 
 Assert:
 
@@ -298,15 +298,15 @@ Assert:
 - no `com/android/systemui/**` class;
 - WM Shell public classes used by project sources are present.
 
-- [ ] **Step 2: Replace core runtime artifact**
+- [x] **Step 2: Replace core runtime artifact**
 
 Replace `implementation(libs.systemui.wmshell)` with direct AAR. Remove core's separate `compileOnly(libs/WindowManager-Shell.jar)` only in the same change so there is one WM Shell code owner.
 
-- [ ] **Step 3: Replace compile-only consumers**
+- [x] **Step 3: Replace compile-only consumers**
 
 For `:SystemUI-animation` and `:SystemUI-shared`, replace the fat JAR compileOnly dependency with compileOnly on the clean direct AAR. Remove the app dependency because app has no source and must only directly depend on core.
 
-- [ ] **Step 4: Prove no Gradle consumer remains and delete the fat JAR**
+- [x] **Step 4: Prove no Gradle consumer remains and delete the fat JAR**
 
 ```bash
 if rg -n 'libs/WindowManager-Shell\.jar' --glob '*.kts' .; then
@@ -316,7 +316,7 @@ fi
 git rm libs/WindowManager-Shell.jar
 ```
 
-- [ ] **Step 5: Run module and core verification**
+- [x] **Step 5: Run module and core verification**
 
 ```bash
 ./gradlew \
@@ -332,7 +332,7 @@ git rm libs/WindowManager-Shell.jar
 
 Success criterion: no WM Shell R duplicate and no duplicate `com.android.systemui.animation` class. If javac JAR lacks a named WM Shell static library class, recover that named dependency according to BP; never return to the fat JAR.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add SystemUI-core/build.gradle.kts SystemUI-animation/build.gradle.kts \

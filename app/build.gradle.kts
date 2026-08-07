@@ -75,7 +75,6 @@ android {
 dependencies {
     implementation(project(":SystemUI-core"))
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
     // tier③ bp public maven deps (subset needed at app level)
     implementation(libs.androidx.core)
     implementation(libs.androidx.annotation)

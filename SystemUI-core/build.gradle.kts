@@ -115,7 +115,6 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
     compileOnly(files("${rootProject.projectDir}/libs/framework-statsd.jar"))
     compileOnly(files("${rootProject.projectDir}/libs/android.car.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell.jar"))
     // 添加 android_module_lib_stubs_current.jar 提供缺失的 framework stub
     compileOnly(files("${rootProject.projectDir}/libs/android_module_lib_stubs_current.jar"))
 
@@ -158,7 +157,10 @@ dependencies {
     // SettingsLib-full.jar 含 SettingsLib 子模块类（与 AAR javac 0 重叠），保留
     compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-full.jar"))
     implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
-    implementation(libs.systemui.wmshell)
+    implementation(files("${rootProject.projectDir}/libs/aars/WindowManager-Shell.aar"))
+    // WindowManager-Shell-shared：WM-Shell 的 static_libs 子模块（ShellTransitions/TransitionUtil 等），
+    // Soong javac JAR 不含 static_libs 代码，需单独引入。纯代码无 R 类。
+    implementation(files("${rootProject.projectDir}/libs/WindowManager-Shell-shared.jar"))
     implementation(files("${rootProject.projectDir}/libs/aars/WifiTrackerLib.aar"))
 
     // 注：prebuilt JAR 不再需要，所有子模块都包含完整源码
