@@ -23,6 +23,7 @@
 - **ADR 0001** `aosp-res-via-local-maven.md` — AOSP res 缺失处理优先级：AAR 先直接引入，确认冲突后才用 local Maven
 - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 下脚本一律 Python，禁止 .sh
 - **ADR 0003** `app-module-aligns-aosp-bp.md` — 模块划分/依赖/入口类位置严格按 AOSP `Android.bp`
+- **ADR 0004** `conv-markup-and-alignment-discipline.md` — AOSP 源码改动用 CONV 标记追溯；对齐工具 strict 不卡 MODIFIED，靠人工对账
 
 写 ADR 的判定：决策 **难以反转 + 没有上下文会令人困惑 + 有真正权衡**。
 
@@ -135,6 +136,8 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ❌ **绝对禁止** Agent 在 res/ 下生成同名资源绕过编译错误。
 
+> **规则 R 升级（2026-08-07，ADR 0004）**：规则 R 细化为“禁止**无 CONV 标记**地擅改 res/src”。AOSP 源码在 Gradle 无法直接消费时（如 `product="tv"` 资源变体），经用户授权后可用 `CONV_ADD`/`CONV_DEL`/`CONV_MOD` + `BEGIN`/`END` 块标记注释掉原内容（不删除字节），使改动可追溯可撤回。必须先跑 `check_source_alignment.py` 达 MISSING/MISPLACED/EXTRA 全 0 后才允许打标。工具 `--strict` 不卡 MODIFIED，“是否擅改”靠 MODIFIED 清单与 issue CONV 记录人工对账。详见 ADR 0004 与 `docs/issues/2026-08-07-conv-markup-spec.md`。
+
 ### 1.9 项目结构对齐 AOSP `Android.bp`（用户明确要求，2026-07-29；2026-08-06 修正为语义对齐）
 
 > **规则 B (bp-aligned structure)**: `Android.bp` 是生产 source roots、资源 owner、
@@ -226,6 +229,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 - **ADR 0001** — AOSP res 缺失处理优先级：AAR 先直接引入，确认冲突后才用 local Maven（不用 flatDir）
 - **ADR 0002** — `tools/` 下脚本一律 Python，禁止 .sh（除非纯系统 CLI 调用）
 - **ADR 0003** — 项目结构/模块命名/依赖严格按 AOSP `Android.bp`
+- **ADR 0004** — AOSP 源码改动用 CONV 标记追溯；对齐工具 strict 不卡 MODIFIED，靠人工对账
 
 ---
 
@@ -469,6 +473,7 @@ javap -p <ClassName>
 | 2026-07-28 重写 | 配合 docs/HANDOFF.md 重组结构，新增 §0 优先级、§1.4 参考、§2.5 求助规则、§3.2 libs 警告、§4.1 错误数演变表 |
 | 2026-07-29 增订 | 新增 §0.二 ADR 索引、§1.5 规则 S、§1.6 规则 C、§1.7 规则 F、§1.8 规则 R、§1.9 规则 B（bp 对齐）；同步 ADR 0001/0002/0003 |
 | 2026-08-06 更正 | Maven 不再列为第四种产物；AAR 先直接引入、确认冲突后才用本地 Maven；补充自定义 SDK/framework.jar/framework-res 原理；删除错误数下降/阈值和逐次编译要求，改为“项目整体向前推进”原则 |
+| 2026-08-07 增订 | 新增 ADR 0004（CONV 标记规范 + 对齐纪律）；规则 R 升级为“禁止无标记擅改”；`check_source_alignment.py --strict` 不再卡 MODIFIED |
 
 ---
 

@@ -180,5 +180,52 @@ class TestDuplicateTailAcrossExpectedRoots(unittest.TestCase):
             self.assertEqual(result["extra"], [])
 
 
+class TestStrictShouldFail(unittest.TestCase):
+    """strict 模式只卡 MISSING/MISPLACED/EXTRA，不卡 MODIFIED（见 ADR 0004）。"""
+
+    def _src(self, **kw):
+        base = {"missing": [], "misplaced": [], "extra": [], "modified": []}
+        base.update(kw)
+        return base
+
+    def _res(self, **kw):
+        base = {"missing": [], "extra": [], "modified": []}
+        base.update(kw)
+        return base
+
+    def test_all_clean_passes(self):
+        self.assertFalse(csa.strict_should_fail(self._src(), [], self._res()))
+
+    def test_modified_does_not_fail_strict(self):
+        # MODIFIED>0 不应触发 strict 失败（CONV 标记的授权改动也会改字节）
+        src = self._src(modified=[("m", "sr", "t.kt", None, None)])
+        res = self._res(modified=[("res", "p", "t.xml")])
+        self.assertFalse(csa.strict_should_fail(src, [], res))
+
+    def test_missing_fails_strict(self):
+        self.assertTrue(csa.strict_should_fail(
+            self._src(missing=[("sub", "m", "sr", "t.kt", "n")]), [], self._res()))
+
+    def test_misplaced_fails_strict(self):
+        self.assertTrue(csa.strict_should_fail(
+            self._src(misplaced=[("m", "sr", "t.kt", None, "em", "esr", "as")]), [], self._res()))
+
+    def test_extra_fails_strict(self):
+        self.assertTrue(csa.strict_should_fail(
+            self._src(extra=[("m", "sr", "t.kt", None)]), [], self._res()))
+
+    def test_res_missing_fails_strict(self):
+        self.assertTrue(csa.strict_should_fail(
+            self._src(), [], self._res(missing=[("res", "p", "t.xml")])))
+
+    def test_res_extra_fails_strict(self):
+        self.assertTrue(csa.strict_should_fail(
+            self._src(), [], self._res(extra=[("res", "p", "t.xml")])))
+
+    def test_app_issues_fail_strict(self):
+        self.assertTrue(csa.strict_should_fail(
+            self._src(), [("APP-MISSING", "f", "p", "msg")], self._res()))
+
+
 if __name__ == "__main__":
     unittest.main()

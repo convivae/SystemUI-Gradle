@@ -23,7 +23,7 @@
     python3 tools/check_source_alignment.py            # 全量检查（源码 + res）
     python3 tools/check_source_alignment.py --no-res   # 只检查源码
     python3 tools/check_source_alignment.py --summary  # 只看汇总数字
-    python3 tools/check_source_alignment.py --strict   # 任一 missing/misplaced/extra/modified 时退出 1
+    python3 tools/check_source_alignment.py --strict   # 任一 missing/misplaced/extra 时退出 1（MODIFIED 不卡，见 ADR 0004）
 """
 
 import argparse
@@ -287,6 +287,17 @@ def check_app_entry():
     return issues
 
 
+def strict_should_fail(src_result, app_issues, res_result):
+    """strict 模式是否应失败。
+
+    只卡 MISSING/MISPLACED/EXTRA，不卡 MODIFIED（见 ADR 0004）——
+    CONV 标记的授权改动也会改字节，"是否擅改"靠 MODIFIED 清单与
+    issue CONV 记录人工对账，不由工具自动判定。
+    """
+    return bool(src_result["missing"] or src_result["misplaced"] or src_result["extra"]
+                or app_issues or res_result["missing"] or res_result["extra"])
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # main
 # ─────────────────────────────────────────────────────────────────────────────
@@ -295,7 +306,7 @@ def main():
     ap.add_argument("--no-res", action="store_true", help="跳过 res 检查")
     ap.add_argument("--summary", action="store_true", help="只输出汇总数字")
     ap.add_argument("--strict", action="store_true",
-                    help="任一 missing/misplaced/extra/modified 时退出 1")
+                    help="任一 missing/misplaced/extra 时退出 1（MODIFIED 不卡，见 ADR 0004）")
     args = ap.parse_args()
 
     if not AOSP_ROOT.exists():
@@ -327,8 +338,7 @@ def main():
     print()
 
     if args.summary:
-        if args.strict and (src["missing"] or src["misplaced"] or src["extra"] or src["modified"]
-                            or app or res["missing"] or res["extra"] or res["modified"]):
+        if args.strict and strict_should_fail(src, app, res):
             return 1
         return 0
 
@@ -425,8 +435,7 @@ def main():
     print("\n" + "=" * 78)
     print("完成。")
 
-    if args.strict and (src["missing"] or src["misplaced"] or src["extra"] or src["modified"]
-                        or app or res["missing"] or res["extra"] or res["modified"]):
+    if args.strict and strict_should_fail(src, app, res):
         return 1
     return 0
 

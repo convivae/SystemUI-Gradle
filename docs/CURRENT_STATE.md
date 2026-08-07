@@ -32,6 +32,7 @@
 > - **ADR 0001** `aosp-res-via-local-maven.md` — AAR 先直接引入，确认冲突后才用 local Maven
 > - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 脚本一律 Python
 > - **ADR 0003** `app-module-aligns-aosp-bp.md` — 项目结构对齐 AOSP `Android.bp`
+> - **ADR 0004** `conv-markup-and-alignment-discipline.md` — AOSP 源码改动用 CONV 标记追溯；对齐 strict 不卡 MODIFIED
 
 ---
 

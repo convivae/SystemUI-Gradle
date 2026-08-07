@@ -67,7 +67,7 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 3. **规则 S**: SystemUI 自有代码一律源码复制；非自有纯代码走 jar、含资源走 AAR（详见 §1.5）
 4. **规则 C**: SystemUI src/aidl/res 必须与 AOSP 不漏不多（详见 §1.6）
 5. **规则 F**: framework 等非 SystemUI 代码严禁源码复制（详见 §1.7）
-6. **规则 R**: res 缺失走 AOSP 源码 → 直接 AAR → 确认冲突后本地 Maven AAR；禁止凭空生成（详见 §1.8）
+6. **规则 R**: res 缺失走 AOSP 源码 → 直接 AAR → 确认冲突后本地 Maven AAR；禁止凭空生成；禁止无 CONV 标记擅改 res/src（ADR 0004）
 7. **规则 B**: 项目结构按 AOSP `Android.bp` **语义**对齐（Gradle module 不与 target 1:1；详见 §1.9 + `docs/adr/0003` 决策 1）
 8. **规则 I**: 以项目整体向前推进为标准；错误数不是提交/回滚/审批门槛，不要求每次修改或提交都编译
 9. **规则 D**: 所有改动先写文档 (`docs/issues/YYYY-MM-DD-<topic>.md`)
@@ -77,6 +77,7 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 - **ADR 0001** `aosp-res-via-local-maven.md` — res 处理优先级：AAR 先直接引入，确认冲突后才用 local Maven
 - **ADR 0002** `tools-scripts-only-python.md` — 脚本一律 Python
 - **ADR 0003** `app-module-aligns-aosp-bp.md` — 项目结构对齐 bp
+- **ADR 0004** `conv-markup-and-alignment-discipline.md` — AOSP 源码改动用 CONV 标记追溯；对齐 strict 不卡 MODIFIED
 
 ---
 
