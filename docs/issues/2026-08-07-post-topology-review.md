@@ -226,6 +226,18 @@ missing=0, misplaced=0, extra=0, modified=0
   - `./gradlew :SystemUI-common:compileKotlin --rerun-tasks` → BUILD SUCCESSFUL（exit 0）。
   - 仅余一条 Kotlin annotation-target warning（`LogLevel.kt:22`），非 error。
 
+#### Task 4：恢复 Compose 的 core-animation 依赖 ✅
+
+- 先确认红：`compileDebugKotlin` 报 `Unresolved reference 'Interpolator'`（`Easings.kt:21`）。
+- 确认 `:SystemUI-animation` 已有 `androidx.core:core-animation:1.0.0`，证明官方 artifact/version 可用。
+- 修复：
+  - `gradle/libs.versions.toml` 加 `androidx-core-animation = { module = "androidx.core:core-animation", version = "1.0.0" }`。
+  - `SystemUI-compose/build.gradle.kts` 加 `implementation(libs.androidx.core.animation)`。
+- 验证：
+  - `./gradlew :SystemUI-compose:dependencies --configuration debugCompileClasspath` 包含 `core-animation:1.0.0`。
+  - `./gradlew :SystemUI-compose:compileDebugKotlin --rerun-tasks` → BUILD SUCCESSFUL（exit 0）。
+- 文档同步：修正 `module-consolidation-plan.md` 两处旧描述；更新 `CURRENT_STATE.md`/`HANDOFF.md` 保留错误列表（common/compose 已解决）。
+
 ### Phase B：独立 artifact-recovery 计划
 
 Phase A 完成并取得新的 first-failure 证据后，下一 AI 应执行（开始前按新证据校准首个 blocker）：

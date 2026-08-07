@@ -264,8 +264,8 @@ core 自身 Kotlin 未开始；AAR transform 错误未出现（被上游保留�
    - 方向：JVM + compileOnly(android.jar) 或改回 com.android.library
 
 2. **:SystemUI-compose `androidx.core.animation.Interpolator`**
-   - 根因：计划 deps 未列 androidx.core:core；pre-existing，非回归
-   - 方向：加 androidx.core:core 依赖
+   - 根因：计划 deps 未列 androidx.core:core-animation:1.0.0；pre-existing，非回归
+   - 方向：加 androidx.core:core-animation:1.0.0 依赖
 
 3. **:SystemUI-plugin PluginProtector 不生成**
    - 根因：javac 原生处理器看不到 .kt 标注；KAPT 与 Gradle 9.5 不兼容；KSP API 不兼容

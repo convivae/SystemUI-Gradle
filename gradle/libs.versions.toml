@@ -42,6 +42,7 @@ androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.re
 # AndroidX Core
 androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+androidx-core-animation = { module = "androidx.core:core-animation", version = "1.0.0" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version = "1.6.1" }
 androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "androidxCardview" }

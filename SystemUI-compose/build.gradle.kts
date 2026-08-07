@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.core)
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation(libs.androidx.core.animation)
     implementation("androidx.window:window:1.3.0")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
     implementation("androidx.tracing:tracing:1.2.0")

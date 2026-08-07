@@ -50,11 +50,13 @@ echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /
 > **最终 13 module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
 >
 > **保留错误（待办）**：
-> 1. `:SystemUI-common` — `android.icu.text.SimpleDateFormat`（JVM 模块无 AGP android.jar）
-> 2. `:SystemUI-compose` — `androidx.core.animation.Interpolator`（缺官方依赖 `androidx.core:core-animation:1.0.0`）
-> 3. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注）
+> 1. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注）
 >
-> **core 编译被上游 1/2 阻断**，第一个失败 task 为 `:SystemUI-common:compileKotlin`。
+> **已修复的隔离编译 blocker（Phase A）**：
+> - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly）
+> - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0）
+>
+> **core 上游 blocker 已清除**，core 首次失败需在 Task 6 重新取得。
 >
 > **下一步**：先执行 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。该计划修复审查中无需产品裁决的问题并取得新的 core first-failure；随后按新证据校准并执行 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，逐个处理 SettingsLib/iconloader/WM Shell/WifiTrackerLib、manifest 和 APK 验收。
 

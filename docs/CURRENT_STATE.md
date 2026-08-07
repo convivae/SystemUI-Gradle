@@ -9,11 +9,13 @@
 > **隔离编译证据**：`:SystemUI-animation`、`:SystemUI-shared-biometrics`、`:SystemUI-plugin`（配置解析）通过。
 >
 > **保留错误（待办，未修复）**：
-> 1. `:SystemUI-common:compileKotlin` — `android.icu.text.SimpleDateFormat` unresolved（JVM 模块无 AGP android.jar）
-> 2. `:SystemUI-compose:compileDebugKotlin` — `androidx.core.animation.Interpolator` unresolved（缺官方依赖 `androidx.core:core-animation:1.0.0`）
-> 3. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注，见 Task 9 待办）
+> 1. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注，见 Task 9 待办）
 >
-> **core 编译边界**：`./gradlew :SystemUI-core:compileDebugKotlin` 被上游保留错误 1/2 阻断，第一个失败 task 为 `:SystemUI-common:compileKotlin`。core 自身 Kotlin 未开始；AAR transform 错误未出现（被上游阻断）。
+> **已修复的隔离编译 blocker（Phase A）**：
+> - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly，Task 3）
+> - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0，Task 4）
+>
+> **core 编译边界**：common/compose 上游 blocker 已清除，core 首次失败需在 Task 6 重新取得。
 >
 > **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复计划已写入 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，必须在 post-topology correctness 完成并取得新 first-failure 后执行。`./gradlew :app:assembleDebug` 未运行。
 >
