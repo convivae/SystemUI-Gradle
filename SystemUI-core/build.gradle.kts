@@ -74,6 +74,20 @@ android {
         jvmToolchain(21)
     }
 
+    // SystemUI-core 的 compose/features 源码使用 Compose experimental API（combinedClickable、
+    // pointerInteropFilter、AnimatedContent 等），需全局 opt-in。与 :SystemUI-compose 保持一致。
+    kotlinOptions {
+        freeCompilerArgs = freeCompilerArgs + listOf(
+            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+            "-opt-in=androidx.compose.animation.ExperimentalAnimationApi",
+            "-opt-in=androidx.compose.animation.core.ExperimentalAnimationSpecApi",
+            "-opt-in=androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi",
+            "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
+        )
+    }
+
     lint {
         abortOnError = false
         checkReleaseBuilds = false
@@ -133,8 +147,13 @@ dependencies {
     // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
     implementation(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
+    // com.android.tools.r8.keepanno.annotations.KeepTarget/UsesReflection
+    // (SystemUIAppComponentFactoryBase; Maven 上无此 artifact，AOSP 用 prebuilts/r8/keepanno-annotations.jar)
+    compileOnly(files("${rootProject.projectDir}/libs/keepanno-annotations.jar"))
     // com.android.settingslib.flags.Flags (aconfig, enableLeAudioSharing 等)
-    compileOnly(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
+    implementation(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
+    // com.android.settingslib.media.flags.Flags (aconfig, removeUnnecessaryRouteScanning 等)
+    implementation(files("${rootProject.projectDir}/libs/settingslib-media-flags.jar"))
     // motion_tool_lib (com.android.app.motiontool.*，来自 AOSP frameworks/libs/systemui/motiontoollib)
     compileOnly(files("${rootProject.projectDir}/libs/motion_tool_lib.jar"))
     // contextualeducationlib (com.android.systemui.contextualeducation.GestureType 等，
@@ -162,6 +181,9 @@ dependencies {
     // Soong javac JAR 不含 static_libs 代码，需单独引入。纯代码无 R 类。
     // WM-Shell-shared 合并 javac+kotlin JAR（含 PhysicsAnimator），改为直接 AAR
     implementation(libs.systemui.wmshell.shared)
+    // LowLightDreamLib: com.android.dream.lowlight.util.TruncatedInterpolator 等
+    // (frameworks/base/libs/dream/lowlight，AOSP core static_libs)
+    implementation(libs.systemui.lowlight.dream.lib)
     // com.android.systemui.shared.Flags（KeyboardTouchpadTutorialCoreStartable 等使用）
     implementation(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖）
@@ -218,21 +240,23 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.session)
     // Compose (用于 Scene 框架与 UI 组件)
-    implementation("androidx.compose.runtime:runtime:1.7.5")
-    implementation("androidx.compose.animation:animation:1.7.5")
+    // 统一 1.8.3（与 :SystemUI-compose 一致；hideFromAccessibility 等 API 需 1.8+）
+    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.compose.runtime:runtime:1.8.3")
+    implementation("androidx.compose.animation:animation:1.8.3")
     // animation-graphics: AnimatedImageVector / animatedVectorResource（CommonTile 等）
-    implementation("androidx.compose.animation:animation-graphics:1.7.5")
+    implementation("androidx.compose.animation:animation-graphics:1.8.3")
     implementation("androidx.compose.material3:material3:1.3.1")
     // material3-window-size-class: WindowSizeClass（compose windowsizeclass 目录）
     implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
     // Material Components for Android（com.google.android.material.slider.Slider 等，非 compose）
     implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.compose.foundation:foundation:1.7.5")
-    implementation("androidx.compose.ui:ui:1.7.5")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.7.5")
-    implementation("androidx.compose.ui:ui-graphics:1.7.5")
-    implementation("androidx.compose.material:material-icons-core:1.7.5")
-    implementation("androidx.compose.material:material-icons-extended:1.7.5")
+    implementation("androidx.compose.foundation:foundation:1.8.3")
+    implementation("androidx.compose.ui:ui:1.8.3")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.8.3")
+    implementation("androidx.compose.ui:ui-graphics:1.8.3")
+    implementation("androidx.compose.material:material-icons-core:1.7.8")
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("androidx.tracing:tracing:1.2.0")
     // concurrent-futures-ktx: ListenableFuture.await()（media/zen 等）
     implementation("androidx.concurrent:concurrent-futures-ktx:1.2.0")

@@ -80,7 +80,11 @@ CONFIGS = {
         "output": "libs/aars/SettingsLib.aar",
     },
     "WindowManager-Shell": {
-        "code": [SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/javac/WindowManager-Shell.jar"],
+        # javac JAR (Java classes) + kotlin JAR (Kotlin classes, 如 HasWMComponent) 合并
+        "code": [
+            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/javac/WindowManager-Shell.jar",
+            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/kotlin/WindowManager-Shell.jar",
+        ],
         "res": [AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/res"],
         "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/R.txt",
@@ -98,6 +102,18 @@ CONFIGS = {
         "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/shared/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared/android_common/R.txt",
         "output": "libs/aars/WindowManager-Shell-shared.aar",
+        "reject_sysui": True,
+    },
+    "LowLightDreamLib": {
+        # frameworks/base/libs/dream/lowlight：TruncatedInterpolator 等在 kotlin JAR
+        "code": [
+            SOONG_DIR / "frameworks/base/libs/dream/lowlight/LowLightDreamLib/android_common/javac/LowLightDreamLib.jar",
+            SOONG_DIR / "frameworks/base/libs/dream/lowlight/LowLightDreamLib/android_common/kotlin/LowLightDreamLib.jar",
+        ],
+        "res": [AOSP_ROOT / "frameworks/base/libs/dream/lowlight/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/libs/dream/lowlight/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/libs/dream/lowlight/LowLightDreamLib/android_common/R.txt",
+        "output": "libs/aars/LowLightDreamLib.aar",
         "reject_sysui": True,
     },
 }

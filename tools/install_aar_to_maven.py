@@ -31,6 +31,7 @@ ARTIFACTS = {
     "WindowManager-Shell-shared": {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "1.0.0"},
     "animationlib": {"group": "com.android.systemui", "name": "animationlib", "version": "1.0.0"},
     "iconloader": {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.0"},
+    "LowLightDreamLib": {"group": "com.android.systemui", "name": "LowLightDreamLib", "version": "1.0.0"},
 }
 
 POM_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>

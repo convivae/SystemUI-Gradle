@@ -297,7 +297,8 @@ class TestAllFlag(unittest.TestCase):
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
-             "SettingsLib", "WindowManager-Shell", "WindowManager-Shell-shared"})
+             "SettingsLib", "WindowManager-Shell", "WindowManager-Shell-shared",
+             "LowLightDreamLib"})
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

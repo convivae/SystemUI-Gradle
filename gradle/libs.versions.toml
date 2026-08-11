@@ -98,4 +98,5 @@ systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell
 systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "1.0.0" }
 systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "1.0.0" }
 systemui-iconloader = { group = "com.android.systemui", name = "iconloader", version = "1.0.0" }
+systemui-lowlight-dream-lib = { group = "com.android.systemui", name = "LowLightDreamLib", version = "1.0.0" }
 
