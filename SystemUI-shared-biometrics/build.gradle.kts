@@ -1,7 +1,6 @@
 // BiometricsSharedLib — 独立 R namespace（com.android.systemui.shared.biometrics）
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {

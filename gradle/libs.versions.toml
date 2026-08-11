@@ -1,29 +1,44 @@
 [versions]
-media3 = "1.4.1"
+media3 = "1.11.0"
 agp = "9.2.0"
-kotlin = "2.1.0"
-androidxCore = "1.13.1"
-androidxAnnotation = "1.8.0"
-material = "1.13.0-alpha08"
-kotlinxCoroutines = "1.7.3"
-dagger = "2.55"
-guava = "32.1.3-android"
-lottie = "6.1.0"
-constraintlayout = "2.1.4"
-androidxLifecycle = "2.7.0"
-androidxFragment = "1.6.2"
+# Kotlin 2.2.10 对齐 AGP 9.2.0 嵌入编译器 + KSP 2.2.10-2.0.2
+# Kotlin 由 AGP builtInKotlin=true 提供（版本随 AGP 9.2.0 = Kotlin 2.2.10）
+# kotlin-compose 插件版本须与 AGP 内置 Kotlin 版本一致
+kotlin = "2.2.10"
+compose = "1.11.4"
+composeMaterialIcons = "1.7.8"
+androidxCore = "1.19.0"
+androidxAnnotation = "1.11.0-alpha01"
+material = "1.14.0"
+material3 = "1.5.0-alpha18"
+kotlinxCoroutines = "1.11.0"
+dagger = "2.59.2"
+guava = "33.4.8-android"
+lottie = "6.6.6"
+constraintlayout = "2.2.2"
+androidxLifecycle = "2.11.0"
+androidxFragment = "1.9.0-rc01"
 androidxPreference = "1.2.1"
-androidxLeanback = "1.0.0"
+androidxLeanback = "1.3.0-alpha02"
+androidxLeanbackPreference = "1.2.0"
 androidxSlice = "1.1.0-alpha02"
-androidxMedia = "1.7.0"
-androidxConcurrent = "1.1.0"
-androidxExifinterface = "1.3.7"
+androidxMedia = "1.9.0-alpha01"
+androidxConcurrent = "1.4.0-alpha01"
+androidxExifinterface = "1.4.2"
 androidxCardview = "1.0.0"
-androidxRecyclerView = "1.3.2"
-androidxViewPager2 = "1.0.0"
-androidxDynamicanimation = "1.0.0"
-androidxConstraintlayoutCore = "1.0.4"
-androidxPalette = "1.0.0"
+androidxRecyclerView = "1.4.0"
+androidxAsyncLayoutInflater = "1.1.0"
+androidxViewPager2 = "1.1.0"
+androidxDynamicanimation = "1.1.0"
+androidxConstraintlayoutCore = "1.1.0"
+androidxPalette = "1.1.0-alpha01"
+androidxActivity = "1.13.0"
+androidxDatastore = "1.3.0-alpha10"
+androidxWindow = "1.6.0-alpha05"
+androidxTracing = "2.0.0-rc01"
+androidxSavedstate = "1.5.0"
+androidxRoom = "2.8.4"
+androidxAppcompat = "1.8.0-rc01"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -44,7 +59,7 @@ androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidxCore
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-core-animation = { module = "androidx.core:core-animation", version = "1.0.0" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
-androidx-appcompat = { module = "androidx.appcompat:appcompat", version = "1.6.1" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
 androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "androidxCardview" }
 androidx-concurrent-futures = { module = "androidx.concurrent:concurrent-futures", version.ref = "androidxConcurrent" }
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
@@ -53,13 +68,14 @@ androidx-dynamicanimation = { module = "androidx.dynamicanimation:dynamicanimati
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidxExifinterface" }
 androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "androidxFragment" }
 androidx-leanback = { module = "androidx.leanback:leanback", version.ref = "androidxLeanback" }
-androidx-leanback-preference = { module = "androidx.leanback:leanback-preference", version.ref = "androidxLeanback" }
+androidx-leanback-preference = { module = "androidx.leanback:leanback-preference", version.ref = "androidxLeanbackPreference" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidxLifecycle" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
 androidx-mediarouter = { module = "androidx.mediarouter:mediarouter", version.ref = "androidxMedia" }
 androidx-palette = { module = "androidx.palette:palette", version.ref = "androidxPalette" }
 androidx-preference = { module = "androidx.preference:preference", version.ref = "androidxPreference" }
 androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "androidxRecyclerView" }
+androidx-asynclayoutinflater = { module = "androidx.asynclayoutinflater:asynclayoutinflater", version.ref = "androidxAsyncLayoutInflater" }
 androidx-slice-builders = { module = "androidx.slice:slice-builders", version.ref = "androidxSlice" }
 androidx-slice-core = { module = "androidx.slice:slice-core", version.ref = "androidxSlice" }
 androidx-slice-view = { module = "androidx.slice:slice-view", version.ref = "androidxSlice" }
@@ -77,9 +93,36 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
 dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }
 
+# Compose（对齐 AOSP prebuilts 1.9.0-alpha01）
+compose-animation = { module = "androidx.compose.animation:animation", version.ref = "compose" }
+compose-animation-graphics = { module = "androidx.compose.animation:animation-graphics", version.ref = "compose" }
+compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "compose" }
+compose-material-icons-core = { module = "androidx.compose.material:material-icons-core", version.ref = "composeMaterialIcons" }
+compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "composeMaterialIcons" }
+compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+compose-material3-window-size = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "material3" }
+compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "compose" }
+compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics", version.ref = "compose" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose" }
+
+# AndroidX（对齐 AOSP prebuilts）
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
+androidx-datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "androidxDatastore" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
+androidx-window = { module = "androidx.window:window", version.ref = "androidxWindow" }
+androidx-tracing = { module = "androidx.tracing:tracing", version.ref = "androidxTracing" }
+androidx-savedstate-ktx = { module = "androidx.savedstate:savedstate-ktx", version.ref = "androidxSavedstate" }
+androidx-concurrent-futures-ktx = { module = "androidx.concurrent:concurrent-futures-ktx", version.ref = "androidxConcurrent" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "androidxRoom" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "androidxRoom" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "androidxRoom" }
+
 # Third-party
+google-material = { module = "com.google.android.material:material", version.ref = "material" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
-errorprone-annotations = { module = "com.google.errorprone:error_prone_annotations", version = "2.28.0" }
+errorprone-annotations = { module = "com.google.errorprone:error_prone_annotations", version = "2.50.0" }
 lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 

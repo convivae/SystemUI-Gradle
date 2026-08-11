@@ -4,7 +4,6 @@
 //    PluginProtector 暂不生成，下游 Unresolved reference 作为保留错误（见 Task 9 记录）
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -65,5 +64,5 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.kotlin.stdlib)
     // Compose runtime：TileDetailsViewModel.kt 用 @Composable（对齐 AOSP plugin/Android.bp）
-    implementation("androidx.compose.runtime:runtime:1.8.3")
+    implementation(libs.compose.runtime)
 }

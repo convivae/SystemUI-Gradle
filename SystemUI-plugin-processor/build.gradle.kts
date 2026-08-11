@@ -2,7 +2,7 @@
 // 生成 PluginProtector 等 protected 源码；不作为 runtime implementation 打进 APK
 plugins {
     `java-library`
-    alias(libs.plugins.kotlin.jvm)
+    id("org.jetbrains.kotlin.jvm")
 }
 
 java {

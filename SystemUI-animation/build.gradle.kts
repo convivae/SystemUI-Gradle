@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -30,13 +29,16 @@ android {
         jvmToolchain(21)
     }
 
-    // 对齐 AOSP kotlincflags: ["-Xjvm-default=all"]
-    kotlinOptions {
-        freeCompilerArgs = freeCompilerArgs + "-Xjvm-default=all"
-    }
-
     lint {
         abortOnError = false
+    }
+}
+
+// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// 对齐 AOSP kotlincflags: ["-Xjvm-default=all"]
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 
@@ -58,7 +60,7 @@ dependencies {
     // tier③ 标准第三方（maven 版本依赖）
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.core.ktx)
-    implementation("androidx.core:core-animation:1.0.0")
+    implementation(libs.androidx.core.animation)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

@@ -1,6 +1,6 @@
 plugins {
     `java-library`
-    alias(libs.plugins.kotlin.jvm)
+    id("org.jetbrains.kotlin.jvm")
 }
 
 // SystemUI-common: Common + Log + shared-utils 合并为单一 JVM 源码模块

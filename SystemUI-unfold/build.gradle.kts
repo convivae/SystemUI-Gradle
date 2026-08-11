@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp")
 }
 
@@ -35,13 +34,16 @@ android {
         jvmToolchain(21)
     }
 
-    // 对齐 AOSP kotlincflags: ["-Xjvm-default=all"]
-    kotlinOptions {
-        freeCompilerArgs = freeCompilerArgs + "-Xjvm-default=all"
-    }
-
     lint {
         abortOnError = false
+    }
+}
+
+// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// 对齐 AOSP kotlincflags: ["-Xjvm-default=all"]
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 
@@ -54,15 +56,13 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/dynamicanimation-1.1.0-alpha04.jar"))
 
     // Dagger 组件（DaggerUnfold/RemoteUnfoldSharedComponent）由 KSP 在本项目内生成。
-    // 本模块单独用 dagger 2.57.2：2.51.1 + KSP2 有 "unexpected jvm signature V" bug；
-    // 而 2.56+ 全局引入 Lazy<T : Any> 边界会让 core 的无界 Lazy<T> 报错，故用 implementation
-    // 直接坐标把 2.57.2 限定在 unfold（implementation 不透传到 core，core 仍用 catalog 2.51.1）
-    ksp("com.google.dagger:dagger-compiler:2.57.2")
+    // 对齐 core：dagger 2.60.1 + useBindingGraphFix 默认启用（2.58+）。
+    ksp(libs.dagger.compiler)
 
     // tier③ 标准第三方（maven 版本依赖，对齐 bp static_libs）
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.core.ktx)
-    implementation("com.google.dagger:dagger:2.57.2")
+    implementation(libs.dagger)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

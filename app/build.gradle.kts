@@ -3,7 +3,6 @@
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -24,10 +23,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-    // AOSP bp: kotlincflags: ["-Xjvm-default=all"]
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xjvm-default=all")
     }
     // AOSP bp: defaults: [platform_app_defaults, SystemUI_optimized_defaults, wmshell_defaults]
     //   - platform_app_defaults: soong-only (platform-level)
@@ -66,6 +61,14 @@ android {
     }
     // AOSP bp: dxflags: ["--multi-dex"] → automatic with minSdk 21+, no flag needed
     // AOSP bp: use_resource_processor: true → automatic with AGP aapt2
+}
+
+// AOSP bp: kotlincflags: ["-Xjvm-default=all"]
+// Kotlin 由 AGP builtInKotlin=true 提供；用顶层 kotlin { compilerOptions { } } 配置编译参数
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjvm-default=all")
+    }
 }
 
 // AOSP bp static_libs: ["SystemUI-core"]

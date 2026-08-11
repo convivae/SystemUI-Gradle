@@ -1,14 +1,12 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp")
 }
 
-// Dagger 2.55 绑定图重写（修复 subcomponent 绑定解析问题）
+// Dagger 2.60.1：useBindingGraphFix 自 2.58 起默认启用（修复 subcomponent 绑定解析）
 // https://dagger.dev/dev-guide/compiler-options#useBindingGraphFix
-ksp {
-    arg("dagger.useBindingGraphFix", "ENABLED")
-}
+// ksp.incremental=false（gradle.properties）避免 KSP2 FIR 解析非确定性崩溃
+//   参考：https://github.com/google/ksp/issues/2542
 
 // Configure compile tasks to use framework.jar before Android SDK
 val frameworkJars = files(
@@ -52,6 +50,12 @@ android {
                 "compose/facade/enabled/src",
                 "pods",
             )
+            kotlin.srcDirs(
+                "src",
+                "compose/features/src",
+                "compose/facade/enabled/src",
+                "pods",
+            )
             // AOSP 源码里的 .aidl 参与源码编译（规则 S：AIDL 是 SystemUI 自有代码，不用 jar）
             // framework 隐藏接口（android.os.IRemoteCallback）由 SysUISdk 的 framework.aidl 补齐，
             // 见 tools/install_sdk.py（规则 F：非 SystemUI 代码不源码复制）
@@ -61,9 +65,14 @@ android {
         }
         getByName("debug") {
             java.srcDirs("src-debug")
+            kotlin.srcDirs("src-debug")
+            // AIDL 生成的 Java 源码加入 kotlin sourceSet，使 KSP 能解析 AIDL 接口
+            kotlin.srcDir(layout.buildDirectory.dir("generated/aidl_source_output_dir/debug/out"))
         }
         getByName("release") {
             java.srcDirs("src-release")
+            kotlin.srcDirs("src-release")
+            kotlin.srcDir(layout.buildDirectory.dir("generated/aidl_source_output_dir/release/out"))
         }
     }
 
@@ -82,8 +91,21 @@ android {
 
     // SystemUI-core 的 compose/features 源码使用 Compose experimental API（combinedClickable、
     // pointerInteropFilter、AnimatedContent 等），需全局 opt-in。与 :SystemUI-compose 保持一致。
-    kotlinOptions {
-        freeCompilerArgs = freeCompilerArgs + listOf(
+    // 已迁移到顶层 kotlin { compilerOptions { } }（Kotlin 2.3.x 废弃 android.kotlinOptions）
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+}
+
+// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// SystemUI-core 的 compose/features 源码使用 Compose experimental API（combinedClickable、
+// pointerInteropFilter、AnimatedContent 等），需全局 opt-in。与 :SystemUI-compose 保持一致。
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-Xjvm-default=all",
             "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
             "-opt-in=androidx.compose.animation.ExperimentalAnimationApi",
             "-opt-in=androidx.compose.animation.core.ExperimentalAnimationSpecApi",
@@ -93,22 +115,12 @@ android {
             "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
         )
     }
-
-    lint {
-        abortOnError = false
-        checkReleaseBuilds = false
-    }
 }
 
 // KSP 配置 Dagger 与 Room annotation processor（对齐 AOSP plugins: ["dagger2-compiler",
-//   "androidx.room_room-compiler-plugin"]）。KAPT 已移除（IR 内部错误），KSP 2.2.10-2.0.2
-//   与 unfold 一致。dagger 2.55 折中：2.51.1 + KSP2 有 "unexpected jvm signature V" bug，
-//   2.56+ 引入 Lazy<T : Any> 边界让 core 无界 Lazy<T> 报错；2.55 在两者之间。
-// 关键：dagger.useBindingGraphFix=ENABLED（上方 ksp{} 块）修复 KSP2 subcomponent 绑定解析。
-//   该选项在 Dagger 2.55 引入（默认 disabled），2.58+ 默认启用。
-//   参考：https://dagger.dev/dev-guide/compiler-options#useBindingGraphFix
-// 关键：ksp.incremental=false（gradle.properties）避免 KSP2 FIR 解析非确定性崩溃。
-//   参考：https://github.com/google/ksp/issues/2542
+//   "androidx.room_room-compiler-plugin"]）。KAPT 已移除（IR 内部错误），KSP 2.3.11
+//   对齐 Kotlin 2.3.21。Dagger 2.60.1：useBindingGraphFix 自 2.58 起默认启用。
+//   ksp.incremental=false（gradle.properties）避免 KSP2 FIR 非确定性崩溃。
 
 dependencies {
     // 项目模块（对齐 AOSP SystemUI-core static_libs）
@@ -145,7 +157,7 @@ dependencies {
     implementation(files("${rootProject.projectDir}/libs/SystemUI-proto.jar"))
     // SystemUIUnfoldLib 通过 :SystemUI-shared / :SystemUI-customization 透传
     // androidx.window：FoldingFeature / WindowLayoutInfo 等
-    implementation("androidx.window:window:1.3.0")
+    implementation(libs.androidx.window)
     // Lottie 动画（com.airbnb.lottie.* / lottie.compose.*）→ tier③ 标准第三方，用 maven 版本依赖
     // （lottie 见下方 implementation(libs.lottie)；lottie-compose 补 maven）
     implementation(libs.lottie.compose)
@@ -209,6 +221,7 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.cardview)
+    implementation(libs.androidx.asynclayoutinflater)
     implementation(libs.androidx.concurrent.futures)
     // androidx.core.animation.Animator/ValueAnimator/AnimatorSet/ObjectAnimator/Interpolator
     // AOSP PlatformAnimationLib bp 有 androidx.core_core-animation；core 通过 static_libs 传递获得。
@@ -240,8 +253,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
     // Dagger：KSP 生成 DaggerReferenceGlobalRootComponent 等（对齐 AOSP plugins: ["dagger2-compiler"]）
-    // runtime 用 2.55（避免 2.56+ Lazy<T : Any> 边界导致 core 228 处无界 Lazy<T> 报错）
-    // processor 也用 2.55：2.57.2 processor 触发 KSP2 内部崩溃（KotlinIllegalArgumentExceptionWithAttachments）
+    // 2.60.1 最新版：useBindingGraphFix 自 2.58 起默认启用，无需手动配置 ksp{} arg
     implementation(libs.dagger)
     ksp(libs.dagger.compiler)
 
@@ -252,37 +264,36 @@ dependencies {
     // Media3 (for media controls)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.session)
-    // Compose (用于 Scene 框架与 UI 组件)
-    // 统一 1.8.3（与 :SystemUI-compose 一致；hideFromAccessibility 等 API 需 1.8+）
-    implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.compose.runtime:runtime:1.8.3")
-    implementation("androidx.compose.animation:animation:1.8.3")
+    // Compose (用于 Scene 框架与 UI 组件，对齐 AOSP prebuilts 1.9.0-alpha01)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.compose.runtime)
+    implementation(libs.compose.animation)
     // animation-graphics: AnimatedImageVector / animatedVectorResource（CommonTile 等）
-    implementation("androidx.compose.animation:animation-graphics:1.8.3")
-    implementation("androidx.compose.material3:material3:1.4.0-alpha09")
+    implementation(libs.compose.animation.graphics)
+    implementation(libs.compose.material3)
     // material3-window-size-class: WindowSizeClass（compose windowsizeclass 目录）
-    implementation("androidx.compose.material3:material3-window-size-class:1.4.0-alpha09")
+    implementation(libs.compose.material3.window.size)
     // Material Components for Android（com.google.android.material.slider.Slider 等，非 compose）
     // 1.13.0-alpha08：trackIconActiveColor/trackIconActiveEnd 需此版本（AOSP material-design-x
     //   prebuilt 与 Maven 版字节完全一致 1985863 bytes；规则③优先官方 Maven 坐标）
-    implementation("com.google.android.material:material:1.13.0-alpha08")
-    implementation("androidx.compose.foundation:foundation:1.8.3")
-    implementation("androidx.compose.ui:ui:1.8.3")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.8.3")
-    implementation("androidx.compose.ui:ui-graphics:1.8.3")
-    implementation("androidx.compose.material:material-icons-core:1.7.8")
-    implementation("androidx.compose.material:material-icons-extended:1.7.8")
-    implementation("androidx.tracing:tracing:1.2.0")
+    implementation(libs.google.material)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.material.icons.core)
+    implementation(libs.compose.material.icons.extended)
+    implementation(libs.androidx.tracing)
     // concurrent-futures-ktx: ListenableFuture.await()（media/zen 等）
-    implementation("androidx.concurrent:concurrent-futures-ktx:1.2.0")
+    implementation(libs.androidx.concurrent.futures.ktx)
     // Room 2.7.0-beta01：fallbackToDestructiveMigration(dropAllTables=) 需 2.7+（AOSP 版本）
     // room-compiler 通过 KSP 运行（对齐 AOSP plugins: ["androidx.room_room-compiler-plugin"]）
-    implementation("androidx.room:room-runtime:2.7.0-beta01")
-    implementation("androidx.room:room-ktx:2.7.0-beta01")
-    ksp("androidx.room:room-compiler:2.7.0-beta01")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     // DataStore (对齐 AOSP SystemUI 的 androidx.datastore_datastore-preferences)
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.datastore:datastore-core:1.1.1")
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore.core)
     // SystemUI AIDL：源码里的 .aidl 现由 AGP 源码编译（buildFeatures.aidl=true + aidl.srcDirs("src")）。
     // framework 隐藏接口 android.os.IRemoteCallback 由 SysUISdk 的 framework.aidl 补齐（tools/install_sdk.py），
     // 不源码复制 framework 代码（规则 F）。已删 libs/systemui-aidl.jar：AIDL 是 SystemUI 自有代码，规则 S 要求源码编译。
@@ -292,3 +303,10 @@ dependencies {
     //     PlatformComposeCore），已随 src/ 源码编译，依赖上方 androidx.compose.* maven（tier③）。
     //     全量重编 0 报错，无需再排除或拆独立模块。
 }
+
+// builtInKotlin 下 KSP 任务默认不依赖 compileDebugAidl，导致 AIDL 生成的接口
+// （如 IHomeControlsRemoteProxy）在 KSP 处理 Dagger 时不可见。
+tasks.matching { it.name.startsWith("ksp") }.configureEach {
+    dependsOn("compileDebugAidl")
+}
+

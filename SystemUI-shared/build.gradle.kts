@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -35,13 +34,16 @@ android {
         jvmToolchain(21)
     }
 
-    // 对齐 AOSP SystemUISharedLib 的 kotlincflags: ["-Xjvm-default=all"]
-    kotlinOptions {
-        freeCompilerArgs = freeCompilerArgs + "-Xjvm-default=all"
-    }
-
     lint {
         abortOnError = false
+    }
+}
+
+// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// 对齐 AOSP SystemUISharedLib 的 kotlincflags: ["-Xjvm-default=all"]
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 

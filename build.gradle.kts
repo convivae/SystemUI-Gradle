@@ -1,8 +1,8 @@
 plugins {
     id("com.android.application") apply false
     id("com.android.library") apply false
-    // KSP：用于跑 Dagger 注解处理器（KAPT 1.9+ 与 Gradle 9.5 不兼容，改用 KSP）
-    // 版本须对齐实际 Kotlin 编译器 2.2.10
+    // KSP：用于跑 Dagger/Room 注解处理器（KAPT 1.9+ 与 Gradle 9.5 不兼容，改用 KSP）
+    // KSP 2.3.11（新独立版本号，对齐 Kotlin 2.3.21）
     id("com.google.devtools.ksp") version "2.2.10-2.0.2" apply false
 }
 

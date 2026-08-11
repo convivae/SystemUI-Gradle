@@ -1,7 +1,7 @@
 // :SystemUI-plugin-core — PluginCoreLib runtime API（JVM 源码库，无 Android 资源/manifest）
 plugins {
     `java-library`
-    alias(libs.plugins.kotlin.jvm)
+    id("org.jetbrains.kotlin.jvm")
 }
 
 java {
