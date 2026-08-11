@@ -1,23 +1,32 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> ⚠️ **历史快照警告（2026-08-06）**：本文件 §2–§6 主体停留在 2026-07-29，错误数、待办和 app 入口类计划已过时。当前规则与优先级以 `AGENTS.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md` 为准。
+> **当前阶段（2026-08-11 commit `05ea2064`）**：**KSP + Dagger 2.55 已通过，core Kotlin 编译被 Compose inline 问题阻塞**。
 >
-> **当前阶段（2026-08-08 checkpoint；2026-08-07 审查）**：**13-module 拓扑迁移步骤已完成，编译/功能验收部分完成**。从 22 module 收敛为目标 13 module，语义对齐 BP，非 target 1:1。当前文件集的源码/res 对齐检查全绿（`check_source_alignment.py --strict` exit 0：MISSING/MISPLACED/EXTRA/MODIFIED/RES 全 0），但检查器仍有多合法 root 的漏报缺陷，已纳入下一计划。animationlib 已改为直接 AAR；kairos 为 test-only 不进生产图。审查结论见 `docs/issues/2026-08-07-post-topology-review.md`，下一执行计划见 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。
+> **Phase C 收尾（4 项决策落地）**：
+> - material 1.13.0-alpha08（Maven 坐标，trackIconActiveColor/End）
+> - material3 1.4.0-alpha09（IconButton shape）
+> - Room 2.7.0-beta01 + KSP compiler（fallbackToDestructiveMigration）
+> - slice 1.1.0-alpha02（setShowTitleItems）
+> - SettingsLibColor AAR（res-only，com.android.settingslib.color.R）
+> - Dagger 2.51.1 → 2.55（对齐 AOSP external/dagger2 DAGGER_TAG）
+>
+> **KSP + Dagger 关键解法**：
+> 1. `ksp { arg("dagger.useBindingGraphFix", "ENABLED") }` — 启用 Dagger 2.55 绑定图重写，
+>    修复 KSP2 subcomponent 绑定解析（120 个 MissingBinding → 0）
+> 2. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 非确定性崩溃
+>    （https://github.com/google/ksp/issues/2542）
+>
+> **KSP 结果**：BUILD SUCCESSFUL，`DaggerReferenceGlobalRootComponent.java` 已生成。
+>
+> **当前阻塞**：`:SystemUI-core:compileDebugKotlin` 遇到 Compose inline 问题
+> （`Couldn't inline method call: Box$default`）。这是 AGENTS.md §2.4 已记录的已知问题
+> （framework.jar 污染 KotlinCompile Compose inline metadata），与本次改动无关。
 >
 > **最终 13 个 Gradle module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
 >
-> **隔离编译证据**：`:SystemUI-common`、`:SystemUI-compose`、`:SystemUI-plugin`、`:SystemUI-animation`、`:SystemUI-shared-biometrics` 均编译通过（Phase A 后）。
+> **8 个 AAR**（`libs/aars/` + `libs/maven/`，均 gitignored）：animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
 >
-> **保留错误（待办，未修复）**：
-> 1. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注，见 Task 9 待办）
->
-> **已修复的隔离编译 blocker（Phase A）**：
-> - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly，Task 3）
-> - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0，Task 4）
->
-> **core 编译边界（Phase B 后）**：core Kotlin 编译已启动，708 个真实 Kotlin 错误（Compose experimental API、Unresolved reference Animator/ValueAnimator、MessageNano supertype 等）。无 PluginProtector 错误。AAR transform 阻塞全部消除。B1/B2/B3 已解决。四个 artifact（WifiTrackerLib/iconloader/SettingsLib/WM-Shell）已切换为直接 AAR，fat WM-Shell.jar 已删除。manifest merge 成功。
->
-> **构建状态**：错误数只作诊断，不是提交门槛。入口类保留在 `:SystemUI-core`，不是 `:app`。AAR transform 恢复计划已写入 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，必须在 post-topology correctness 完成并取得新 first-failure 后执行。`./gradlew :app:assembleDebug` 未运行。
+> **构建前置**：`python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py` → Gradle 构建。
 >
 > 下文 §1–§8 为历史记录，保留供诊断参考，不代表当前优先级。
 

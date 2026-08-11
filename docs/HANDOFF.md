@@ -30,35 +30,28 @@ cd /home/conv/myspace/SystemUI-Gradle
 
 ### 1.2 跑一次基线编译，统计错误数
 ```bash
-./gradlew :SystemUI-core:compileDebugKotlin --console=plain 2>&1 | tee /tmp/build.log
-echo "Total errors: $(grep -c '^e: file:' /tmp/build.log)"
-echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /tmp/build.log)"
+# 构建前置：生成 AAR + 安装到本地 Maven
+python3 tools/package_aosp_aar.py --all
+python3 tools/install_aar_to_maven.py
+
+# KSP（Dagger + Room annotation processing）
+./gradlew :SystemUI-core:kspDebugKotlin --console=plain 2>&1 | tee /tmp/build.log
+echo "KSP errors: $(grep -c 'e: \\[ksp\\]' /tmp/build.log)"
+
+# Kotlin 编译
+./gradlew :SystemUI-core:compileDebugKotlin --console=plain 2>&1 | tee /tmp/build2.log
+echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
 ```
 
-**历史基线（2026-07-29）**: **70** 错误（src/aidl/res 完整性审查后）。其中：
-- ~~server-notification Flags~~: ✅ 已清零（删除 stub `Flags.kt`）
-- ~~全项目 R import 歧义~~: ✅ 已清零
-- Compose Scene Framework (`com.android.compose.animation.scene.*`): 12 个
-- 其他残留错误: ~58 个
+**当前状态（2026-08-11 commit `05ea2064`）**：
+- ✅ KSP + Dagger 2.55 BUILD SUCCESSFUL（0 个 KSP 错误）
+- ✅ `DaggerReferenceGlobalRootComponent.java` 已生成
+- ⚠️ `:SystemUI-core:compileDebugKotlin` 被 Compose inline 问题阻塞（`Couldn't inline method call: Box$default`，AGENTS.md §2.4 已知问题）
+- 57 个单元测试全部通过
 
-> **2026-08-06 更新**：该 70 错误不是当前基线。当前 checkpoint 中的 AAR 生成改写导致 AAR transform 在编译前失败，错误数暂时无统计意义。用户已明确错误数在任何阶段都只作为诊断，不是提交/回滚/审批门槛；当前先校准源码/jar/AAR 来源与模块边界。详见 `AGENTS.md` §2.1 和 `docs/architecture/2026-08-06-reference-project-rationale.md`。
->
-> **2026-08-08 模块拓扑 checkpoint**：13-module 拓扑迁移步骤已完成，从 22 module 收敛为目标 13 module；语义对齐 BP，非 target 1:1。`check_source_alignment.py --strict` 在当前文件集上 exit 0（源码/res 全绿）。animationlib 已改为直接 AAR；kairos 为 test-only 不进生产图。**但 Task 6/9/10 的编译和功能验收仅部分完成，不能宣称完整构建恢复。**
->
-> **2026-08-07 审查结论与执行计划**：见 `docs/issues/2026-08-07-post-topology-review.md`。下一个 AI 先执行 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`，修复确定性工具、Common/Compose/Plugin classpath，并取得新的 core first-failure；之后再基于真实证据编写 artifact-recovery 计划。
->
-> **最终 13 module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
->
-> **保留错误（待办）**：
-> 1. `:SystemUI-plugin` PluginProtector 不生成（javac 原生处理器看不到 .kt 标注）
->
-> **已修复的隔离编译 blocker（Phase A）**：
-> - `:SystemUI-common:compileKotlin` ✅ 已通过（加 SysUISdk android.jar compileOnly）
-> - `:SystemUI-compose:compileDebugKotlin` ✅ 已通过（加 androidx.core:core-animation:1.0.0）
->
-> **core 编译边界（Phase B 后）**：core Kotlin 编译已启动，708 个真实 Kotlin 错误（Compose experimental API、Unresolved reference Animator/ValueAnimator、MessageNano supertype 等）。无 PluginProtector 错误。AAR transform 阻塞全部消除。B1/B2/B3 已解决。四个 artifact（WifiTrackerLib/iconloader/SettingsLib/WM-Shell）已切换为直接 AAR，fat WM-Shell.jar 已删除，manifest merge 成功。
->
-> **下一步**：先执行 `docs/superpowers/plans/2026-08-07-post-topology-correctness.md`。该计划修复审查中无需产品裁决的问题并取得新的 core first-failure；随后按新证据校准并执行 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`，逐个处理 SettingsLib/iconloader/WM Shell/WifiTrackerLib、manifest 和 APK 验收。
+**KSP 关键配置**（缺一不可）：
+1. `ksp { arg("dagger.useBindingGraphFix", "ENABLED") }` — 修复 subcomponent 绑定解析
+2. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 非确定性崩溃
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
@@ -142,7 +135,9 @@ SystemUI-Gradle/
 | Gradle | 9.5.0 | wrapper |
 | AGP | 9.2.0 | alias `libs.plugins.android.library` |
 | Kotlin Plugin | 2.1.0（项目）/ 2.2.10（AGP 内部嵌入） | 关键：**AGP 嵌入的 kotlin-compiler-embeddable 比插件新** |
-| KAPT | 1.9+ 临时禁用 | 1.9+ 与 Gradle 9.5 报 "IR 内部错误" |
+| KSP | 2.2.10-2.0.2 | 替代 KAPT（KAPT 1.9+ 与 Gradle 9.5 不兼容） |
+| KSP 配置 | `ksp.incremental=false` | 避免 KSP2 FIR 非确定性崩溃（google/ksp#2542） |
+| Dagger | 2.55 | `useBindingGraphFix=ENABLED` 修复 KSP2 subcomponent 绑定解析 |
 | 目标 JVM | 21 | Java/Kotlin 编译都用 21 |
 | 目标 SDK | `SysUISdk`（自定义 preview） | 路径 `/home/conv/Android/Sdk/platforms/android-SysUISdk/` |
 
