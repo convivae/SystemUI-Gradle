@@ -153,15 +153,22 @@ dependencies {
     
 
     // 直接 AAR（Soong javac + 原始 res + R.txt，无 R.class）
-    implementation(files("${rootProject.projectDir}/libs/aars/SettingsLib.aar"))
+    implementation(libs.systemui.settingslib)
     // SettingsLib-full.jar 含 SettingsLib 子模块类（与 AAR javac 0 重叠），保留
     compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-full.jar"))
-    implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
-    implementation(files("${rootProject.projectDir}/libs/aars/WindowManager-Shell.aar"))
+    implementation(libs.systemui.iconloader)
+    implementation(libs.systemui.wmshell)
     // WindowManager-Shell-shared：WM-Shell 的 static_libs 子模块（ShellTransitions/TransitionUtil 等），
     // Soong javac JAR 不含 static_libs 代码，需单独引入。纯代码无 R 类。
-    implementation(files("${rootProject.projectDir}/libs/WindowManager-Shell-shared.jar"))
-    implementation(files("${rootProject.projectDir}/libs/aars/WifiTrackerLib.aar"))
+    // WM-Shell-shared 合并 javac+kotlin JAR（含 PhysicsAnimator），改为直接 AAR
+    implementation(libs.systemui.wmshell.shared)
+    // com.android.systemui.shared.Flags（KeyboardTouchpadTutorialCoreStartable 等使用）
+    implementation(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
+    // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖）
+    implementation(files("${rootProject.projectDir}/libs/libprotobuf-java-nano.jar"))
+    // com.android.server.policy.feature.flags.Flags（ConnectingDisplayViewModel 等使用）
+    implementation(files("${rootProject.projectDir}/libs/device-state-flags.jar"))
+    implementation(libs.systemui.wifitrackerlib)
 
     // 注：prebuilt JAR 不再需要，所有子模块都包含完整源码
 
@@ -170,6 +177,10 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.concurrent.futures)
+    // androidx.core.animation.Animator/ValueAnimator/AnimatorSet/ObjectAnimator/Interpolator
+    // AOSP PlatformAnimationLib bp 有 androidx.core_core-animation；core 通过 static_libs 传递获得。
+    // Gradle implementation 不传递,需显式声明(同 Phase A Task 4 给 compose 的处理)。
+    implementation(libs.androidx.core.animation)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.constraintlayout.core)
     implementation(libs.androidx.core.ktx)

@@ -30,6 +30,23 @@ ANIMATIONLIB_SOONG = SOONG_DIR / "frameworks/libs/systemui/animationlib/animatio
 
 DEFAULT_OUTPUT = Path("libs/aars/animationlib.aar")
 
+def _discover_settingslib_code_jars() -> list:
+    """自动发现 SettingsLib 主 target + 全部 static_libs 子模块的 javac JAR。
+
+    Soong 的 android_library static_libs 是独立编译单元，javac JAR 只含主 target
+    的类。static_libs 子模块的类在 dex 阶段合并进最终 APK。为模拟此语义，
+    需把主 target 与所有 static_libs 子模块的 javac JAR 合并到 classes.jar。
+    """
+    base = SOONG_DIR / "frameworks/base/packages/SettingsLib"
+    jars = []
+    for jar in sorted(base.rglob("*/android_common/javac/*.jar")):
+        s = str(jar)
+        if "turbine" in s or "aconfig" in s or "flags_lib" in s:
+            continue
+        jars.append(jar)
+    return jars
+
+
 # Declarative artifact configs（canonical inputs，见 artifact-recovery 计划）
 CONFIGS = {
     "animationlib": {
@@ -55,7 +72,8 @@ CONFIGS = {
         "output": "libs/aars/iconloader.aar",
     },
     "SettingsLib": {
-        "code": [SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/javac/SettingsLib.jar"],
+        # 主 target + 全部 static_libs 子模块 javac JAR（780 classes，0 重复）
+        "code": _discover_settingslib_code_jars(),
         "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/res"],
         "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/R.txt",
@@ -67,6 +85,19 @@ CONFIGS = {
         "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/R.txt",
         "output": "libs/aars/WindowManager-Shell.aar",
+        "reject_sysui": True,
+    },
+    "WindowManager-Shell-shared": {
+        # WM-Shell 的 static_libs 子模块(ShellTransitions/TransitionUtil/PhysicsAnimator 等)
+        # javac JAR (Java classes) + kotlin JAR (Kotlin classes, Soong 命名是 kotlin/ 不是 kotlinc/) 合并
+        "code": [
+            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared/android_common/javac/WindowManager-Shell-shared.jar",
+            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared/android_common/kotlin/WindowManager-Shell-shared.jar",
+        ],
+        "res": [AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/shared/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/shared/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared/android_common/R.txt",
+        "output": "libs/aars/WindowManager-Shell-shared.aar",
         "reject_sysui": True,
     },
 }

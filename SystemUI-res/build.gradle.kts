@@ -34,7 +34,7 @@ dependencies {
     // 资源合并所需的上游资源依赖（对齐 AOSP res 的 resource_dirs）
     api(project(":SystemUI-shared"))
     api(project(":SystemUI-customization"))
-    api(files("${rootProject.projectDir}/libs/aars/SettingsLib.aar"))
+    api(libs.systemui.settingslib)
     api(libs.androidx.leanback)
     api(libs.androidx.slice.core)
     api(libs.androidx.slice.view)

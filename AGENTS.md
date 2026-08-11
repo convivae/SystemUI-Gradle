@@ -44,7 +44,7 @@
 |------|--------|------|
 | 源码依赖 | **仅** AOSP `frameworks/base/packages/SystemUI/` 内的 SystemUI 自有代码 | `implementation(project(":SystemUI-shared"))` |
 | jar | SystemUI 之外的纯代码 AOSP 产物、aconfig 生成类、无资源库 | `compileOnly(files("libs/framework.jar"))` |
-| aar | SystemUI 之外且包含资源的 AOSP 库；**先直接引入**，出现冲突后才放入本地 Maven 仓 | `implementation(files("libs/<name>.aar"))`；冲突后 `implementation(libs.systemui.settingslib)` |
+| aar | SystemUI 之外且包含资源的 AOSP 库；**先直接引入**，出现冲突后才放入本地 Maven 仓 | `implementation(files("libs/<name>.aar"))`；冲突后 `implementation(libs.systemui.settingslib)`（catalog 统一管理，见 §3.2） |
 
 ### 1.2 禁止
 
@@ -67,7 +67,7 @@
 
 - `CarSystemUIGradle` 项目（同用户私有项目）是参考实现
 - 参考文档：`CarSystemUIGradle/docs/GRADLE_MIGRATION.md`、`DEPENDENCIES.md`、`README.md`
-- `tools/gen_aar_maven.py` 来自参考项目，**仅用于已经确认的 AAR 资源/类冲突**；当前阶段先直接引入 AAR 验证冲突，不默认运行脚本
+- `tools/install_aar_to_maven.py` 负责把 `libs/aars/*.aar` 安装为 `libs/maven/` 下的本地 Maven AAR（AAR + POM 骨架）；`tools/gen_aar_maven.py` 是旧脚本（R.jar 合并失败实验，已废弃）
 - 关键资源：参考 `CarSystemUIGradle/SystemUI-core/build.gradle.kts` 的依赖引入方式
 - 本项目对参考项目机制的“为什么”记录：`docs/architecture/2026-08-06-reference-project-rationale.md`
 
@@ -90,7 +90,7 @@
   - `libs/maven/` = 本项目的**本地 AAR 仓库**，仓内应是 AAR + POM；
   - `google()` / `mavenCentral()` = 上游第三方库的公网获取渠道。
 - **② 里 jar vs AAR 的区别是是否含资源**：无资源用 jar；含资源用 AAR。
-- **AAR 先直接引入**：先验证 AAR-AAR、AAR-jar 及传递依赖是否冲突；只有确认冲突后，才记录问题并用 `tools/gen_aar_maven.py` 生成本地 Maven AAR，借 Gradle/AAPT2 标准资源合并解决。
+- **AAR 先直接引入**：先验证 AAR-AAR、AAR-jar 及传递依赖是否冲突；只有确认无冲突后，才用 `tools/install_aar_to_maven.py` 安装为 `libs/maven/` 下的本地 Maven AAR，并在 `libs.versions.toml` 声明 catalog alias 统一管理。
 - **③ 上游库优先官方依赖**：androidx/Compose 等尽量不使用本地 jar/aar；如果官方版本无法满足 AOSP 源码，先记录问题、核对 `Android.bp` 的解决方式，再与用户讨论，禁止擅自打包替代。
 - ⚠️ 若某模块同时有源码和 prebuilt jar/aar 会重复类：源码化时**必须移除对应 prebuilt**
 - 完整调研见 `docs/architecture/2026-07-29-systemui-module-source-vs-jar.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md`
@@ -131,7 +131,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 2. **AOSP 编译产物（非 SystemUI）**：
    - 无 res 的纯代码库 → `libs/<name>.jar`
    - 有 res 的库 → **先直接引入 AAR**，验证 AAR-AAR、AAR-jar 和传递依赖是否冲突
-   - 只有确认直接 AAR 存在资源/类/依赖冲突后，才经 `tools/gen_aar_maven.py` 打包成本地 Maven AAR 到 `libs/maven/`，并在 `settings.gradle.kts` 配置本地仓库
+   - 只有确认直接 AAR 存在资源/类/依赖冲突后，才经 `tools/install_aar_to_maven.py` 安装为 `libs/maven/` 下的本地 Maven AAR，并在 `settings.gradle.kts` 配置本地仓库、在 `libs.versions.toml` 声明 catalog alias
 3. **公网官方依赖**（规则 ③）：androidx/Compose/material/lottie 等直接使用 `google()` / `mavenCentral()` 官方坐标
 
 ❌ **绝对禁止** Agent 在 res/ 下生成同名资源绕过编译错误。
@@ -265,41 +265,50 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ### 3.2 libs/ 内容
 
+> **AAR 统一管理（2026-08-11）**：所有 AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`，
+> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（AAR + POM 骨架），
+> 在 `libs.versions.toml` 声明 catalog alias（如 `libs.systemui.settingslib`）统一引用。
+> build.gradle.kts 中不再直接 `files("libs/aars/xxx.aar")`。
+
 ```
 libs/
 ├── framework.jar                       # AOSP 框架 jar (隐藏 API)
 ├── framework-statsd.jar
 ├── android.car.jar                     # Car API
-├── WindowManager-Shell.jar
 ├── android_module_lib_stubs_current.jar
-├── SystemUI-proto.jar                  # protobuf
-├── SystemUI-tags.jar
-├── SystemUI-statsd.jar
 ├── monet.jar                           # ColorScheme/Shades/Style
 ├── systemui-flags.jar                  # com.android.systemui.Flags
-├── server-notification-flags.jar       # 见 notes: 实际为空, 真实 jar 在 libs/maven/
-├── aars/                               # 直接 AAR（含资源，未入 maven）
-│   └── animationlib.aar                 # frameworks/libs/systemui:animationlib
-├── prebuilts/
-│   ├── SystemUISharedLib.jar
-│   ├── SystemUIPluginLib.jar
-│   ├── SystemUICustomizationLib.jar
-│   ├── PlatformAnimationLib.jar
-│   └── tracinglib-platform.jar
-└── maven/                              # 本地 Maven 仓库
+├── systemui-shared-flags.jar           # com.android.systemui.shared.Flags
+├── settingslib-flags.jar               # com.android.settingslib.flags.Flags (aconfig)
+├── settingslib-media-flags.jar         # com.android.settingslib.media.flags.Flags
+├── device-state-flags.jar              # com.android.server.policy.feature.flags.Flags
+├── libprotobuf-java-nano.jar           # com.google.protobuf.nano.MessageNano (SystemUI-proto 依赖)
+├── WindowManager-Shell-shared.jar      # [已删] 合并入 libs/aars/WindowManager-Shell-shared.aar
+├── aars/                               # 直接 AAR（工具中间产物，package_aosp_aar.py 生成）
+│   ├── animationlib.aar                  # frameworks/libs/systemui:animationlib
+│   ├── WifiTrackerLib.aar                # frameworks/opt/net/wifi/libs/WifiTrackerLib
+│   ├── iconloader.aar                    # frameworks/libs/systemui:iconloaderlib
+│   ├── SettingsLib.aar                    # frameworks/base/packages/SettingsLib（含 32 个子模块合并）
+│   ├── WindowManager-Shell.aar           # frameworks/base/libs/WindowManager/Shell
+│   └── WindowManager-Shell-shared.aar    # WM-Shell static_libs 子模块（javac+kotlin 合并，含 PhysicsAnimator）
+├── prebuilts/                          # 历史 prebuilt jar（逐步清理中）
+└── maven/                              # 本地 Maven 仓库（install_aar_to_maven.py 安装）
     ├── com.android.systemui/
-    │   ├── SettingsLib/1.0.0/
-    │   ├── iconloader/1.0.0/
-    │   ├── WindowManager-Shell/1.0.0/
-    │   ├── WifiTrackerLib/1.0.0/
-    │   └── SystemUISharedLib/1.0.0/
+    │   ├── SettingsLib/1.0.0/            # libs.systemui.settingslib
+    │   ├── iconloader/1.0.0/            # libs.systemui.iconloader
+    │   ├── WindowManager-Shell/1.0.0/   # libs.systemui.wmshell
+    │   ├── WindowManager-Shell-shared/1.0.0/  # libs.systemui.wmshell.shared
+    │   ├── WifiTrackerLib/1.0.0/        # libs.systemui.wifitrackerlib
+    │   ├── animationlib/1.0.0/          # libs.systemui.animationlib
+    │   └── SystemUISharedLib/1.0.0/     # [旧] 遗留，待清理
     ├── com.android.systemui.flags/
     │   └── flags/1.0.0/
     └── com.android.server.notification/
-        └── Flags/1.0.0/                # 真实的 notification-flags-1.0.0.jar (6285 bytes)
+        └── Flags/1.0.0/
+```
 ```
 
-**⚠️ 重要**: `libs/server-notification-flags.jar` 当前是**空 jar**（0 字节）。真实的 jar 在 `libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar`，plugin id `android-server-notification-flags` 已被 libs.versions.toml 定义。
+**⚠️ 历史**: `libs/server-notification-flags.jar` 已在 Phase B 清理。notification flags 现由 `libs/maven/com/android/server/notification-flags/` 提供。
 
 ### 3.3 AOSP 源码镜像
 
@@ -444,9 +453,11 @@ javap -p <ClassName>
 | `docs/issues/YYYY-MM-DD-<topic>.md` | 每日详细问题记录 |
 | `docs/architecture/YYYY-MM-DD-<topic>.md` | 复杂调研 |
 | `docs/adr/NNNN-<slug>.md` | 架构决策记录 (ADR) |
-| `tools/gen_aar_maven.py` | AAR 生成脚本（参考项目移植，本项目 `AOSP_ROOT` 待改） |
-| `tools/install_sdk.py` | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口）|
-| `tools/clean_prebuilts.py` | 清理 prebuilt jar 中的冲突类（与 maven 重复）|
+| `tools/package_aosp_aar.py` | 从 AOSP Soong 产物打包干净 AAR 到 `libs/aars/`（含多 JAR 合并、reject_sysui、确定性） |
+| `tools/install_aar_to_maven.py` | 把 `libs/aars/*.aar` 安装到 `libs/maven/` 本地 Maven 仓（AAR + POM 骨架） |
+| `tools/package_compilelib_jars.py` | 打包 compilelib debug/release JAR（确定性） |
+| `tools/install_sdk.py` | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口） |
+| `tools/clean_prebuilts.py` | 清理 prebuilt jar 中的冲突类（与 maven 重复） |
 
 ---
 

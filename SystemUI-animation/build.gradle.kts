@@ -45,11 +45,11 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
 
     // tier② AOSP 特有产物 jar
-    compileOnly(files("${rootProject.projectDir}/libs/aars/WindowManager-Shell.aar"))
-    compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell-shared.jar"))
+    compileOnly(libs.systemui.wmshell)
+    compileOnly(libs.systemui.wmshell.shared)
     // animationlib（frameworks/libs/systemui:animationlib，提供 com.android.app.animation.*）
     // 直接 AAR（含 res），替代旧 animationlib.jar
-    api(files("${rootProject.projectDir}/libs/aars/animationlib.aar"))
+    api(libs.systemui.animationlib)
     // com.android.systemui.Flags（aconfig）
     compileOnly(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
     // com.android.systemui.shared.Flags（aconfig，shared_flags_lib）

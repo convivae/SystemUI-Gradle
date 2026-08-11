@@ -53,7 +53,7 @@ dependencies {
     // tier① SystemUI 自有源码模块
     api(project(":SystemUI-animation"))
     // animationlib 直接 AAR（含 res）
-    implementation(files("${rootProject.projectDir}/libs/aars/animationlib.aar"))
+    implementation(libs.systemui.animationlib)
     implementation(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
 
     // tier③ 标准第三方（合并 core + scene 的 Maven 坐标，去重）

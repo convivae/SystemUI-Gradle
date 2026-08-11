@@ -57,8 +57,8 @@ dependencies {
     api(project(":SystemUI-unfold"))
 
     // tier② AOSP 特有产物 jar（含资源/内部类，非源码模块）
-    compileOnly(files("${rootProject.projectDir}/libs/aars/WindowManager-Shell.aar"))
-    compileOnly(files("${rootProject.projectDir}/libs/WindowManager-Shell-shared.jar"))
+    compileOnly(libs.systemui.wmshell)
+    compileOnly(libs.systemui.wmshell.shared)
     // com_android_systemui_shared_flags_lib（aconfig 生成，含 com.android.systemui.shared.Flags）
     compileOnly(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // tracinglib（frameworks/libs/systemui，tier② prebuilt jar）
