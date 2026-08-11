@@ -265,10 +265,11 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ### 3.2 libs/ 内容
 
-> **AAR 统一管理（2026-08-11）**：所有 AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`，
-> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（AAR + POM 骨架），
+> **AAR 统一管理（2026-08-11）**：所有 AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`（**gitignored 中间产物**），
+> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（**gitignored**，AAR + POM 骨架），
 > 在 `libs.versions.toml` 声明 catalog alias（如 `libs.systemui.settingslib`）统一引用。
 > build.gradle.kts 中不再直接 `files("libs/aars/xxx.aar")`。
+> **构建前置**：新 clone 后需跑 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py` 恢复 AAR。
 
 ```
 libs/
@@ -284,7 +285,7 @@ libs/
 ├── device-state-flags.jar              # com.android.server.policy.feature.flags.Flags
 ├── libprotobuf-java-nano.jar           # com.google.protobuf.nano.MessageNano (SystemUI-proto 依赖)
 ├── WindowManager-Shell-shared.jar      # [已删] 合并入 libs/aars/WindowManager-Shell-shared.aar
-├── aars/                               # 直接 AAR（工具中间产物，package_aosp_aar.py 生成）
+├── aars/                               # 直接 AAR（**gitignored 中间产物**，package_aosp_aar.py 生成）
 │   ├── animationlib.aar                  # frameworks/libs/systemui:animationlib
 │   ├── WifiTrackerLib.aar                # frameworks/opt/net/wifi/libs/WifiTrackerLib
 │   ├── iconloader.aar                    # frameworks/libs/systemui:iconloaderlib
@@ -292,7 +293,7 @@ libs/
 │   ├── WindowManager-Shell.aar           # frameworks/base/libs/WindowManager/Shell
 │   └── WindowManager-Shell-shared.aar    # WM-Shell static_libs 子模块（javac+kotlin 合并，含 PhysicsAnimator）
 ├── prebuilts/                          # 历史 prebuilt jar（逐步清理中）
-└── maven/                              # 本地 Maven 仓库（install_aar_to_maven.py 安装）
+└── maven/                              # 本地 Maven 仓库（**gitignored**，install_aar_to_maven.py 安装）
     ├── com.android.systemui/
     │   ├── SettingsLib/1.0.0/            # libs.systemui.settingslib
     │   ├── iconloader/1.0.0/            # libs.systemui.iconloader

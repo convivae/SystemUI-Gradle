@@ -109,8 +109,10 @@ Every mechanism in this list is a real prebuilt, not a stub.
 # 1. Create local.properties pointing at your SDK
 echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-# 2. (Optional) Regenerate AARs from your local AOSP build outputs
-python3 tools/gen_aar_maven.py
+# 2. Regenerate AARs from your local AOSP build outputs (required before first build)
+#    libs/aars/ and libs/maven/ are gitignored intermediate products
+python3 tools/package_aosp_aar.py --all    # generate libs/aars/*.aar
+python3 tools/install_aar_to_maven.py       # install to libs/maven/ + POM
 ```
 
 ### Build SystemUI-core

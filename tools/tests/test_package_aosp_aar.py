@@ -289,5 +289,29 @@ class TestRepeatedPackagingDeterministic(unittest.TestCase):
                                  f"{name} 重复打包字节不一致")
 
 
+class TestAllFlag(unittest.TestCase):
+    """--all 选项应能遍历 CONFIGS。"""
+
+    def test_configs_covers_six_artifacts(self):
+        # 确认 CONFIGS 含 6 个 artifact（与 install_aar_to_maven.py ARTIFACTS 对齐）
+        self.assertEqual(
+            set(paar.CONFIGS),
+            {"animationlib", "WifiTrackerLib", "iconloader",
+             "SettingsLib", "WindowManager-Shell", "WindowManager-Shell-shared"})
+
+    def test_all_flag_iterates_all_configs(self):
+        # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）
+        called = []
+        orig = paar.build_artifact
+        paar.build_artifact = lambda name, out: called.append(name)
+        try:
+            sys.argv = ["package_aosp_aar.py", "--all"]
+            rc = paar.main()
+            self.assertEqual(rc, 0)
+            self.assertEqual(set(called), set(paar.CONFIGS))
+        finally:
+            paar.build_artifact = orig
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -75,6 +75,7 @@ captures
 **/build/
 !libs/
 libs/maven/
+libs/aars/
 !libs/**/*.jar
 !libs/**/*.aar
 !gradle/wrapper/gradle-wrapper.jar

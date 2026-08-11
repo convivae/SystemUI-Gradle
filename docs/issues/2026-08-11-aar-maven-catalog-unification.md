@@ -49,9 +49,9 @@ ADR 0001 的原文是: "AAR 先直接引入,确认冲突后才用 local Maven"�
 - [x] 更新 `libs.versions.toml` 6 个 alias
 - [x] 替换 13 处 files() 引用
 - [x] 验证 `gradlew projects` + core 编译（BUILD SUCCESSFUL，错误数 234 未退化）
-- [ ] 删除 `libs/aars/` 目录（待用户决策 check-in 策略，见下）
+- [x] 删除 `libs/aars/` 目录（gitignore，git rm --cached，磁盘保留为中间产物）
 - [x] 更新 AGENTS.md（§1.1、§2.3、§3.2）
-- [ ] 提交
+- [x] 提交
 
 ## 结果
 
@@ -62,18 +62,21 @@ ADR 0001 的原文是: "AAR 先直接引入,确认冲突后才用 local Maven"�
 
 ## 待用户决策：libs/aars/ vs libs/maven/ 的 check-in 策略
 
-当前：
-- `libs/aars/` 6 个 AAR 被 git 追踪（Phase B check-in）
-- `libs/maven/` 被 `.gitignore` 排除（视为 generated artifact）
-- 内容重复（AAR 在两处）
+**用户决策（2026-08-11）**：
+- `libs/maven/` gitignore（保持）
+- `libs/aars/` gitignore（中间产物，不入版本控制）
+- 项目代码只用 Maven catalog 形式引用 AAR（已实现）
+- 构建前需跑工具恢复 AAR
 
-参考项目（CarSystemUIGradle）模式：
-- `libs/maven/` AAR + POM **check-in** 到版本控制（vendored deps）
-- 不依赖外部 AOSP 构建环境即可重现
-- 无 `libs/aars/` 中间目录
+**已执行**：
+- `.gitignore` 加 `libs/aars/`
+- `git rm --cached` 6 个 AAR（磁盘保留）
+- `package_aosp_aar.py` 加 `--all` 选项（+2 单测）
+- 验证完整工作流：清空 → `package_aosp_aar.py --all` → `install_aar_to_maven.py` → `gradlew projects` BUILD SUCCESSFUL
 
-两种方案：
-- **A（维持现状）**：`libs/aars/` check-in，`libs/maven/` gitignored。仓库大，但构建不需跑工具。
-- **B（参考项目模式）**：`libs/aars/` gitignored（中间产物），`libs/maven/` check-in。仓库含 vendored AAR，构建不需跑工具，但换 AOSP 版本时需重跑 `package_aosp_aar.py` + `install_aar_to_maven.py` 后 commit。
-
-按规则 H，此项待用户决策。
+**构建前置步骤**（新 clone 或清空后）：
+```bash
+python3 tools/package_aosp_aar.py --all    # 生成 libs/aars/*.aar
+python3 tools/install_aar_to_maven.py       # 安装到 libs/maven/
+./gradlew :app:assembleDebug
+```

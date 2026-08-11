@@ -269,9 +269,19 @@ def build_animationlib(output: Path = DEFAULT_OUTPUT) -> None:
 
 def main():
     ap = argparse.ArgumentParser(description="打包 AOSP 库为直接 AAR")
-    ap.add_argument("lib", choices=list(CONFIGS), help="要打包的库")
+    ap.add_argument("lib", nargs="?", choices=list(CONFIGS),
+                   help="要打包的库（省略时配合 --all 打包全部）")
     ap.add_argument("--output", default=None, help="输出 AAR 路径（默认用 config）")
+    ap.add_argument("--all", action="store_true", help="打包 CONFIGS 中所有库")
     args = ap.parse_args()
+
+    if args.all:
+        for name in CONFIGS:
+            build_artifact(name, None)
+        return 0
+
+    if not args.lib:
+        ap.error("需要指定 lib 或 --all")
     build_artifact(args.lib, Path(args.output) if args.output else None)
     return 0
 
