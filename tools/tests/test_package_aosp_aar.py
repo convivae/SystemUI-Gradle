@@ -187,10 +187,17 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertTrue(paar.CONFIGS["WindowManager-Shell"].get("reject_sysui", False))
 
     def test_other_configs_do_not_reject_sysui(self):
-        for name in ["WifiTrackerLib", "iconloader", "SettingsLib", "animationlib"]:
+        for name in ["WifiTrackerLib", "iconloader", "SettingsLib", "animationlib", "SettingsLibColor"]:
             self.assertFalse(paar.CONFIGS[name].get("reject_sysui", False),
                              f"{name} 不应 reject_sysui")
 
+
+    def test_settingslib_color_config_paths(self):
+        cfg = paar.CONFIGS["SettingsLibColor"]
+        self.assertEqual(cfg["code"], [])  # res-only 模块，无代码 JAR
+        self.assertIn("SettingsLib/Color/res", str(cfg["res"]))
+        self.assertTrue(str(cfg["manifest"]).endswith("Color/AndroidManifest.xml"))
+        self.assertIn("SettingsLibColor/android_common/R.txt", str(cfg["rtxt"]))
 
 class TestAbsentInputFails(unittest.TestCase):
     """Step 1: 缺输入报 FileNotFoundError。"""
@@ -293,12 +300,12 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 6 个 artifact（与 install_aar_to_maven.py ARTIFACTS 对齐）
+        # 确认 CONFIGS 含 8 个 artifact（与 install_aar_to_maven.py ARTIFACTS 对齐）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
              "SettingsLib", "WindowManager-Shell", "WindowManager-Shell-shared",
-             "LowLightDreamLib"})
+             "LowLightDreamLib", "SettingsLibColor"})
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

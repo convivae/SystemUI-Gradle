@@ -4,9 +4,9 @@ agp = "9.2.0"
 kotlin = "2.1.0"
 androidxCore = "1.13.1"
 androidxAnnotation = "1.8.0"
-material = "1.12.0"
+material = "1.13.0-alpha08"
 kotlinxCoroutines = "1.7.3"
-dagger = "2.51.1"
+dagger = "2.55"
 guava = "32.1.3-android"
 lottie = "6.1.0"
 constraintlayout = "2.1.4"
@@ -14,7 +14,7 @@ androidxLifecycle = "2.7.0"
 androidxFragment = "1.6.2"
 androidxPreference = "1.2.1"
 androidxLeanback = "1.0.0"
-androidxSlice = "1.0.0"
+androidxSlice = "1.1.0-alpha02"
 androidxMedia = "1.7.0"
 androidxConcurrent = "1.1.0"
 androidxExifinterface = "1.3.7"
@@ -99,4 +99,5 @@ systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManage
 systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "1.0.0" }
 systemui-iconloader = { group = "com.android.systemui", name = "iconloader", version = "1.0.0" }
 systemui-lowlight-dream-lib = { group = "com.android.systemui", name = "LowLightDreamLib", version = "1.0.0" }
+systemui-settingslib-color = { group = "com.android.settingslib", name = "color", version = "1.0.0" }
 

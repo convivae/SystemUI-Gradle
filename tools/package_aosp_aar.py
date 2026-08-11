@@ -116,6 +116,16 @@ CONFIGS = {
         "output": "libs/aars/LowLightDreamLib.aar",
         "reject_sysui": True,
     },
+    "SettingsLibColor": {
+        # SettingsLib/Color：res-only 模块（无 srcs），package com.android.settingslib.color
+        # 47 个 color 资源（settingslib_color_blue400 等），被 SettingsLibIllustrationPreference 依赖
+        # SystemUI 源码 SideFpsOverlayViewModel.kt 直接引用 com.android.settingslib.color.R
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/Color/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/Color/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/Color/SettingsLibColor/android_common/R.txt",
+        "output": "libs/aars/SettingsLibColor.aar",
+    },
 }
 
 

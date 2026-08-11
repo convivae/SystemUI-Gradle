@@ -1,7 +1,13 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    // id("kotlin-kapt") // 临时禁用：KAPT 1.9+ 与 Gradle 9.5 不兼容（IR 内部错误）
+    id("com.google.devtools.ksp")
+}
+
+// Dagger 2.55 绑定图重写（修复 subcomponent 绑定解析问题）
+// https://dagger.dev/dev-guide/compiler-options#useBindingGraphFix
+ksp {
+    arg("dagger.useBindingGraphFix", "ENABLED")
 }
 
 // Configure compile tasks to use framework.jar before Android SDK
@@ -94,14 +100,15 @@ android {
     }
 }
 
-// Configure kapt for Dagger (built-in in AGP 9.0+)
-// 临时禁用：KAPT 1.9+ 与 Gradle 9.5 + Kotlin 2.x 不兼容（IR fake override builder 内部错误）
-// kapt {
-//     correctErrorTypes = true
-//     javacOptions {
-//         option("-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED")
-//     }
-// }
+// KSP 配置 Dagger 与 Room annotation processor（对齐 AOSP plugins: ["dagger2-compiler",
+//   "androidx.room_room-compiler-plugin"]）。KAPT 已移除（IR 内部错误），KSP 2.2.10-2.0.2
+//   与 unfold 一致。dagger 2.55 折中：2.51.1 + KSP2 有 "unexpected jvm signature V" bug，
+//   2.56+ 引入 Lazy<T : Any> 边界让 core 无界 Lazy<T> 报错；2.55 在两者之间。
+// 关键：dagger.useBindingGraphFix=ENABLED（上方 ksp{} 块）修复 KSP2 subcomponent 绑定解析。
+//   该选项在 Dagger 2.55 引入（默认 disabled），2.58+ 默认启用。
+//   参考：https://dagger.dev/dev-guide/compiler-options#useBindingGraphFix
+// 关键：ksp.incremental=false（gradle.properties）避免 KSP2 FIR 解析非确定性崩溃。
+//   参考：https://github.com/google/ksp/issues/2542
 
 dependencies {
     // 项目模块（对齐 AOSP SystemUI-core static_libs）
@@ -191,6 +198,10 @@ dependencies {
     // com.android.server.policy.feature.flags.Flags（ConnectingDisplayViewModel 等使用）
     implementation(files("${rootProject.projectDir}/libs/device-state-flags.jar"))
     implementation(libs.systemui.wifitrackerlib)
+    // SettingsLibColor：com.android.settingslib.color.R（settingslib_color_blue400 等）
+    // 独立 android_library（res-only，无 srcs），被 SettingsLibIllustrationPreference 依赖。
+    // SystemUI 源码 SideFpsOverlayViewModel.kt 直接引用 com.android.settingslib.color.R。
+    implementation(libs.systemui.settingslib.color)
 
     // 注：prebuilt JAR 不再需要，所有子模块都包含完整源码
 
@@ -228,9 +239,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
 
-    // Dagger
+    // Dagger：KSP 生成 DaggerReferenceGlobalRootComponent 等（对齐 AOSP plugins: ["dagger2-compiler"]）
+    // runtime 用 2.55（避免 2.56+ Lazy<T : Any> 边界导致 core 228 处无界 Lazy<T> 报错）
+    // processor 也用 2.55：2.57.2 processor 触发 KSP2 内部崩溃（KotlinIllegalArgumentExceptionWithAttachments）
     implementation(libs.dagger)
-    // kapt(libs.dagger.compiler) - 临时禁用 KAPT（IR 内部错误，待替换为 KSP）
+    ksp(libs.dagger.compiler)
 
     // 第三方库
     implementation(libs.guava)
@@ -246,11 +259,13 @@ dependencies {
     implementation("androidx.compose.animation:animation:1.8.3")
     // animation-graphics: AnimatedImageVector / animatedVectorResource（CommonTile 等）
     implementation("androidx.compose.animation:animation-graphics:1.8.3")
-    implementation("androidx.compose.material3:material3:1.3.1")
+    implementation("androidx.compose.material3:material3:1.4.0-alpha09")
     // material3-window-size-class: WindowSizeClass（compose windowsizeclass 目录）
-    implementation("androidx.compose.material3:material3-window-size-class:1.3.1")
+    implementation("androidx.compose.material3:material3-window-size-class:1.4.0-alpha09")
     // Material Components for Android（com.google.android.material.slider.Slider 等，非 compose）
-    implementation("com.google.android.material:material:1.12.0")
+    // 1.13.0-alpha08：trackIconActiveColor/trackIconActiveEnd 需此版本（AOSP material-design-x
+    //   prebuilt 与 Maven 版字节完全一致 1985863 bytes；规则③优先官方 Maven 坐标）
+    implementation("com.google.android.material:material:1.13.0-alpha08")
     implementation("androidx.compose.foundation:foundation:1.8.3")
     implementation("androidx.compose.ui:ui:1.8.3")
     implementation("androidx.compose.ui:ui-tooling-preview:1.8.3")
@@ -260,8 +275,11 @@ dependencies {
     implementation("androidx.tracing:tracing:1.2.0")
     // concurrent-futures-ktx: ListenableFuture.await()（media/zen 等）
     implementation("androidx.concurrent:concurrent-futures-ktx:1.2.0")
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
+    // Room 2.7.0-beta01：fallbackToDestructiveMigration(dropAllTables=) 需 2.7+（AOSP 版本）
+    // room-compiler 通过 KSP 运行（对齐 AOSP plugins: ["androidx.room_room-compiler-plugin"]）
+    implementation("androidx.room:room-runtime:2.7.0-beta01")
+    implementation("androidx.room:room-ktx:2.7.0-beta01")
+    ksp("androidx.room:room-compiler:2.7.0-beta01")
     // DataStore (对齐 AOSP SystemUI 的 androidx.datastore_datastore-preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.datastore:datastore-core:1.1.1")
