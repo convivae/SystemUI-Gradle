@@ -73,11 +73,13 @@ captures
 
 # Gradle project additions
 **/build/
+# libs/ (jars + aars + local Maven repo) is committed to git since 2026-08-12
+# so a fresh clone builds without regenerating AOSP artifacts.
 !libs/
-libs/maven/
-libs/aars/
 !libs/**/*.jar
 !libs/**/*.aar
+!libs/**/*.pom
+!libs/**/*.module
 !gradle/wrapper/gradle-wrapper.jar
 res-gradle/
 

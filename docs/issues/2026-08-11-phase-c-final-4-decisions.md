@@ -1,5 +1,11 @@
 # 2026-08-11 Phase C 收尾：4 项版本/依赖决策落地
 
+> **修订（2026-08-12）**：本文落地的版本（material 1.13.0-alpha08、material3 1.4.0-alpha09、
+> Room 2.7.0-beta01、Dagger 2.55 + 手动 `useBindingGraphFix`）已在 2026-08-12 的**全依赖升级**中被超越：
+> Dagger → 2.59.2（useBindingGraphFix 默认启用，手动 arg 已移除）、material3 → 1.5.0-alpha18、
+> Room → 2.8.4、Compose → 1.11.4，并迁移到 AGP `builtInKotlin=true`。
+> 详见 `docs/issues/2026-08-12-deps-upgrade-builtin-kotlin.md`。本文保留作为决策过程的历史记录。
+
 ## 背景
 
 core Kotlin 编译剩余 8 个错误（commit `44f6b03c` 后）。用户对 4 个问题做出决策：

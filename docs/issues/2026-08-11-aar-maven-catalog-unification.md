@@ -1,5 +1,9 @@
 # AAR 统一到 Maven catalog（参考项目模式）
 
+> **修订（2026-08-12）**：本文中 “`libs/aars/` 和 `libs/maven/` 为 gitignored 中间产物” 的策略已变更——
+> 用户 2026-08-12 明确要求 **`libs/`（含 jar/aars/maven）全部提交入 git**，新 clone 可直接构建，
+> 无需先跑 `package_aosp_aar.py` / `install_aar_to_maven.py`。其余 catalog 统一管理机制不变。
+
 > **背景**: 用户 2026-08-11 建议: "所有的maven格式的aar都可以使用libs.versions.toml进行统一管理,就像参考项目一样"。
 > 本项目 Phase B 走 direct AAR 路径(`libs/aars/*.aar` + `files()`),build.gradle.kts 里出现 13 处
 > `files("${rootProject.projectDir}/libs/aars/xxx.aar")` 重复路径,不便统一管理。

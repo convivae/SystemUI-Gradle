@@ -1,296 +1,210 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **当前阶段（2026-08-11 commit `05ea2064`）**：**KSP + Dagger 2.55 已通过，core Kotlin 编译被 Compose inline 问题阻塞**。
->
-> **Phase C 收尾（4 项决策落地）**：
-> - material 1.13.0-alpha08（Maven 坐标，trackIconActiveColor/End）
-> - material3 1.4.0-alpha09（IconButton shape）
-> - Room 2.7.0-beta01 + KSP compiler（fallbackToDestructiveMigration）
-> - slice 1.1.0-alpha02（setShowTitleItems）
-> - SettingsLibColor AAR（res-only，com.android.settingslib.color.R）
-> - Dagger 2.51.1 → 2.55（对齐 AOSP external/dagger2 DAGGER_TAG）
->
-> **KSP + Dagger 关键解法**：
-> 1. `ksp { arg("dagger.useBindingGraphFix", "ENABLED") }` — 启用 Dagger 2.55 绑定图重写，
->    修复 KSP2 subcomponent 绑定解析（120 个 MissingBinding → 0）
-> 2. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 非确定性崩溃
->    （https://github.com/google/ksp/issues/2542）
->
-> **KSP 结果**：BUILD SUCCESSFUL，`DaggerReferenceGlobalRootComponent.java` 已生成。
->
-> **当前阻塞**：`:SystemUI-core:compileDebugKotlin` 遇到 Compose inline 问题
-> （`Couldn't inline method call: Box$default`）。这是 AGENTS.md §2.4 已记录的已知问题
-> （framework.jar 污染 KotlinCompile Compose inline metadata），与本次改动无关。
->
-> **最终 13 个 Gradle module**：`:app`、`:SystemUI-core`、`:SystemUI-res`、`:SystemUI-common`、`:SystemUI-animation`、`:SystemUI-plugin-core`、`:SystemUI-plugin-processor`、`:SystemUI-plugin`、`:SystemUI-unfold`、`:SystemUI-customization`、`:SystemUI-shared`、`:SystemUI-shared-biometrics`、`:SystemUI-compose`。
->
-> **8 个 AAR**（`libs/aars/` + `libs/maven/`，均 gitignored）：animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
->
-> **构建前置**：`python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py` → Gradle 构建。
->
-> 下文 §1–§8 为历史记录，保留供诊断参考，不代表当前优先级。
-
-> **历史最后更新**: 2026-07-29（ADR 增订）
-> **历史错误数**: 70（Stage 2 已解 + 完整性审查完成）；此数字不代表 2026-08-06 当前构建状态
-> **历史阶段**: Stage 3 推进中（animationlib 收尾 + app 模块按 bp 重构）
-
-> ✅ **Stage 2 已解决 (2026-07-28)**: server-notification-flags 的根因是源码 stub 遮蔽 jar，
-> `git rm` 后 2000 → 1979。详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
-
-> 🆕 **2026-07-29 ADR**: 项目引入 3 份架构决策记录，详见 `docs/adr/`：
-> - **ADR 0001** `aosp-res-via-local-maven.md` — AAR 先直接引入，确认冲突后才用 local Maven
-> - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 脚本一律 Python
-> - **ADR 0003** `app-module-aligns-aosp-bp.md` — 项目结构对齐 AOSP `Android.bp`
-> - **ADR 0004** `conv-markup-and-alignment-discipline.md` — AOSP 源码改动用 CONV 标记追溯；对齐 strict 不卡 MODIFIED
+> **当前阶段（2026-08-12 commit `e3548016`）**：**全依赖升级 + AGP builtInKotlin 迁移完成，KSP 0 错误，Kotlin 编译仅剩 2 个 pre-existing 错误**。
 
 ---
 
-## 0. 本次新增规则的速查
+## 0. TL;DR — 2026-08-12 里程碑
 
-| 规则 | 触发场景 | 行动 |
-|------|---------|------|
-| **R** (§1.8) | res 缺失编译报错 | AOSP SystemUI 源码 → 直接 AAR → 确认冲突后本地 Maven AAR → 公网上游官方依赖；**禁止**凭空生成 |
-| **B** (§1.9) | 想加模块/调依赖 | 按 AOSP `Android.bp` 校准（ADR 0003） |
-| ADR 0002 | 想写脚本 | Python；除非纯 CLI 调用才可 .sh |
+| 指标 | 值 |
+|------|-----|
+| KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误 |
+| KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
+| Kotlin 编译 | 2 个错误（pre-existing：`concurrent` / `GuardedBy` 未解析） |
+| 单元测试 | 57 个全部通过 |
+| commit | `e3548016` — Upgrade all deps to latest available + migrate to AGP builtInKotlin |
+
+**前一次里程碑（commit `05ea2064`）**：KSP + Dagger 2.55 useBindingGraphFix 首次通过，
+但 Kotlin 编译被 Compose inline 问题（`Couldn't inline method call: Box$default`）阻塞。
+
+**本次关键突破**：通过升级 Compose 到 1.11.4 + 迁移到 AGP `builtInKotlin=true`，
+**Compose inline 问题已消失**，Kotlin 编译可运行并仅剩 2 个 pre-existing 错误。
 
 ---
 
-## 1. 工具链版本
+## 1. 本次升级详情（2026-08-12）
+
+### 1.1 版本兼容性调研结论
+
+**核心约束**：AGP 9.2.0 ~ 9.4.0-alpha08 **全部** 嵌入 Kotlin 2.2.10（查 POM 确认），
+没有更高版本的 AGP 支持 Kotlin 2.3.x。因此无法使用 Kotlin 2.3.x / 2.4.x。
+
+**最终版本矩阵**：
+
+| 组件 | 升级前 | 升级后 | 说明 |
+|------|--------|--------|------|
+| Kotlin | 2.1.0（显式插件） | 2.2.10（AGP builtInKotlin） | AGP 9.2.0 内置，无法更高 |
+| KSP | 2.2.10-2.0.2 | 2.2.10-2.0.2（不变） | 对齐 AGP 内置 Kotlin 2.2.10 |
+| Dagger | 2.55 | 2.59.2 | useBindingGraphFix 自 2.58 起默认启用 |
+| Compose | 1.8.3 | 1.11.4 | **最高保留 `ExperimentalAnimatableApi` 的版本**（1.12.0 已移除） |
+| material3 | 1.4.0-alpha09 | 1.5.0-alpha18 | 对齐 compose 1.11.x（1.5.0-alpha25 需 compose 1.12.0） |
+| androidx.core | 1.16.0-beta01 | 1.19.0 | 公网最新 |
+| androidx.lifecycle | 2.9.0-alpha11 | 2.11.0 | 公网最新 |
+| androidx.activity | 1.11.0-alpha01 | 1.13.0 | 公网最新 |
+| androidx.room | 2.7.0-beta01 | 2.8.4 | 公网最新 |
+| androidx.recyclerview | 1.5.0-alpha01 | 1.4.0 | 公网最新（AOSP 版本不在公网） |
+| constraintlayout | 2.3.0-alpha01 | 2.2.2 | 公网最新（AOSP 版本不在公网） |
+| kotlinx-coroutines | 1.10.2 | 1.11.0 | 公网最新 |
+| guava | 33.4.8-android | 33.4.8-android（不变） | 已是最新 |
+| lottie | 6.6.6 | 6.6.6（不变） | 已是最新 |
+| media3 | 1.11.0 | 1.11.0（不变） | 已是最新 |
+| errorprone | 2.50.0 | 2.50.0（不变） | 已是最新 |
+
+> **注意**：AOSP prebuilts 中的 `recyclerview:1.5.0-alpha01`、`constraintlayout:2.3.0-alpha01`
+> 等版本是 AOSP 内部构建，**不在公网 Maven 发布**。升级时改用公网可用的最新版。
+
+### 1.2 AGP builtInKotlin 迁移
+
+**背景**：Kotlin 2.3.x 的 `kotlin-android` 插件与 AGP `newDsl=true`（9.0 默认）不兼容，
+报 `ClassCastException: ApplicationExtensionImpl$AgpDecorated → BaseExtension`。
+AGP 建议用 `android.builtInKotlin=true` 迁移到 AGP 内置 Kotlin。
+
+**改动**：
+1. `gradle.properties`：`android.builtInKotlin=true`
+2. 所有 Android 模块移除 `alias(libs.plugins.kotlin.android)`（AGP 内置提供）
+3. JVM 模块（common, plugin-core, plugin-processor）用 `id("org.jetbrains.kotlin.jvm")`（无版本，根 settings 声明 `apply false`）
+4. `settings.gradle.kts` 声明 `id("org.jetbrains.kotlin.jvm") version "2.2.10" apply false`
+5. catalog `kotlin = "2.2.10"`（仅 `kotlin-compose` 插件引用，须与 AGP 内置版本一致）
+
+### 1.3 DSL 迁移
+
+所有 Android模块的 `android { kotlinOptions { } }` → 顶层 `kotlin { compilerOptions { } }`：
+- `freeCompilerArgs = listOf(...)` → `freeCompilerArgs.addAll(...)`
+- 涉及 8 个文件：app, SystemUI-core, SystemUI-compose, SystemUI-customization, SystemUI-animation, SystemUI-unfold, SystemUI-shared, SystemUI-shared-biometrics
+
+### 1.4 builtInKotlin + KSP + AIDL 兼容性修复
+
+迁移到 `builtInKotlin=true` 后出现三个兼容性问题，逐一解决：
+
+| 问题 | 根因 | 解决方案 |
+|------|------|---------|
+| KSP 通过 `kotlin.sourceSets` 添加源码被禁止 | builtInKotlin 不允许第三方插件操作 kotlin sourceSets | `android.disallowKotlinSourceSets=false` |
+| KSP `NO-SOURCE`（找不到 Kotlin 源码） | builtInKotlin 下 `java.srcDirs()` 不自动包含 `.kt` 文件 | 所有模块添加 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` |
+| KSP 无法解析 AIDL 生成的接口（`IHomeControlsRemoteProxy`） | builtInKotlin 下 AIDL 输出不在 KSP 源码集中 | `android.sourceset.disallowProvider=false` + `kotlin.srcDir(aidl_output)` + `tasks.matching { ksp }.dependsOn(compileDebugAidl)` |
+
+### 1.5 新增依赖
+
+- `androidx.asynclayoutinflater:1.1.0` — 解决 `AsyncLayoutInflater` 未解析（KSP 111→4 错误）
+- `androidx.leanback-preference:1.2.0` — 独立版本（与 leanback 1.3.0-alpha02 分离，因 leanback-preference 最新仅 1.2.0）
+
+### 1.6 Dagger useBindingGraphFix 简化
+
+- **之前**（commit `05ea2064`）：Dagger 2.55 需手动 `ksp { arg("dagger.useBindingGraphFix", "ENABLED") }`
+- **现在**：Dagger 2.59.2（≥2.58）默认启用 useBindingGraphFix，移除手动 `ksp{}` arg
+- `ksp.incremental=false` 仍保留（避免 KSP2 FIR 非确定性崩溃 google/ksp#2542）
+
+---
+
+## 2. 当前构建状态详解
+
+### 2.1 KSP 编译（通过）
+
+```bash
+./gradlew :SystemUI-core:kspDebugKotlin --console=plain
+# → BUILD SUCCESSFUL
+# → 0 个 KSP 错误
+# → 2933 个文件生成（含 DaggerReferenceGlobalRootComponent.java）
+```
+
+**KSP 关键配置**（缺一不可）：
+1. `android.builtInKotlin=true`（gradle.properties）— AGP 内置 Kotlin
+2. `android.disallowKotlinSourceSets=false`（gradle.properties）— 允许 KSP 操作 kotlin sourceSets
+3. `android.sourceset.disallowProvider=false`（gradle.properties）— 允许 sourceSets provider API
+4. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 崩溃
+5. Dagger 2.59.2（≥2.58 默认启用 useBindingGraphFix）
+6. SystemUI-core: `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` + AIDL 输出目录加入 kotlin sourceSet
+
+### 2.2 Kotlin 编译（2 个 pre-existing 错误）
+
+```bash
+./gradlew :SystemUI-core:compileDebugKotlin --console=plain
+# → BUILD FAILED
+# → 2 个错误：
+#   1. CommunalAppWidgetHost.kt:25  Unresolved reference 'concurrent'
+#   2. CommunalAppWidgetHost.kt:52  Unresolved reference 'GuardedBy'
+```
+
+**这两个错误是 pre-existing**（升级前就存在），不是版本升级导致：
+- `concurrent` — 可能缺 `androidx.concurrent` 或 `java.util.concurrent` import
+- `GuardedBy` — 可能缺 `javax.annotation.concurrent.GuardedBy` 依赖（errorprone 或 jsr305）
+
+### 2.3 Compose inline 问题已解决
+
+**之前**（commit `05ea2064`）：`:SystemUI-core:compileDebugKotlin` 被
+`Couldn't inline method call: Box$default` 阻塞（AGENTS.md §2.4 已知问题：
+framework.jar 污染 KotlinCompile Compose inline metadata）。
+
+**现在**：升级到 Compose 1.11.4 + Kotlin 2.2.10（builtInKotlin）后，
+**Compose inline 问题已消失**，Kotlin 编译可正常运行到源码错误。
+
+---
+
+## 3. 工具链版本
 
 | 工具 | 版本 | 备注 |
 |------|------|------|
 | Gradle | 9.5.0 | wrapper |
 | AGP | 9.2.0 | `libs.plugins.android.library` |
-| Kotlin Plugin | 2.1.0 | 项目声明 |
-| Kotlin 编译器 | 2.2.10 | AGP 内部嵌入（比插件新） |
-| KAPT | 禁止使用 | Plugin processor 当前 javac-only，无法看到 Kotlin 标注；后续工具链需用户裁决 |
+| Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置（无显式插件） |
+| KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin 2.2.10 |
+| Dagger | 2.59.2 | useBindingGraphFix 默认启用（≥2.58） |
+| Compose | 1.11.4 | 最高保留 `ExperimentalAnimatableApi` |
+| material3 | 1.5.0-alpha18 | 对齐 compose 1.11.x |
 | JDK | 21 | 工具链 |
-| AGP target SDK | `SysUISdk` | preview, 非标准 |
+| 目标 SDK | `SysUISdk` | 自定义 preview |
 
 ---
 
-## 2. 错误数演变
+## 4. 模块结构
+
+**最终 13 个 Gradle module**：
+
+```
+:app                          # APK 入口（无源码，只依赖 :SystemUI-core）
+:SystemUI-core                # 主模块（src + compose + pods + 入口类）
+:SystemUI-res                 # 独立资源 namespace（res/res-keyguard/res-product）
+:SystemUI-common              # Common + Log + utils 合并（JVM）
+:SystemUI-animation           # PlatformAnimation + Shader 合并
+:SystemUI-plugin-core         # Plugin runtime API（JVM）
+:SystemUI-plugin-processor    # Plugin annotation processor（build-time）
+:SystemUI-plugin              # PluginLib runtime（含 bcsmartspace）
+:SystemUI-unfold              # Unfold（KSP Dagger）
+:SystemUI-customization       # Customization（含 res）
+:SystemUI-shared              # Shared + keyguard 合并
+:SystemUI-shared-biometrics   # biometrics（独立 R namespace）
+:SystemUI-compose             # Compose Core + Scene 合并
+```
+
+**8 个 AAR**（`libs/aars/` + `libs/maven/`，2026-08-12 起随 `libs/` 全部提交入 git）：
+animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
+
+**构建**：`libs/` 已提交入 git，新 clone 可直接构建；仅在需要重新生成 AOSP 产物时才跑
+`python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py`。
+
+---
+
+## 5. 待解决
+
+1. **修复 2 个 pre-existing Kotlin 错误**：`concurrent` / `GuardedBy` 未解析
+2. 取得稳定 Kotlin 错误基线后逐包击破
+3. 最终以 `:app:assembleDebug` 验证 APK 里程碑
+
+---
+
+## 6. 历史错误数演变（供诊断参考）
 
 | 日期 | 错误数 | 关键改动 |
 |------|--------|----------|
 | 2026-07-22 初 | 5296 | 仅有 sdk android.jar |
-| 2026-07-22 | 4675 | 替换 framework.jar (AOSP 完整版) |
-| 2026-07-22 | 3008 | 合并 SDK android.jar + framework.jar |
-| 2026-07-22 | 2412 | 删除所有 v1 stub (~60 个) |
-| 2026-07-22 | 2000 | 加 Monet + SystemUI Flags jar |
-| 2026-07-23 | 2000 | Stage 2 启动，暂无突破 |
-| 2026-07-28 | 2000 | 调试 session，未减少 |
-| 2026-07-28 | **1979** | **删除遮蔽 jar 的 stub `server/notification/Flags.kt`（Stage 2 解决）** |
-| 2026-07-28 | 1953 | 修 `compose/theme/AndroidColorScheme.kt` R 歧义 |
-| 2026-07-28 | 1923 | 修 `compose/theme/PlatformTheme.kt` R 歧义 |
-| 2026-07-28 | **1879** | **修其余 5 个文件 R 歧义（全项目 R 歧义清零）** |
-| 2026-07-28 | **1806** | **补齐 androidx.datastore 依赖（datastore-preferences/core）** |
-| 2026-07-28 | **1759** | **customization res 补齐 + 关闭 nonTransitiveRClass（传递合并）** |
-| 2026-07-28 | **1658** | **引入 systemui-aidl.jar（11 个 AIDL 接口，从 AOSP classes.jar 提取）** |
-| 2026-07-28 | **1491** | **customization prebuilt jar 改 api 暴露给 core（KeyguardQuickAffordanceSlots 等）** |
-| 2026-07-28 | **1039** | **补齐完整 SettingsLib jar（kotlin+javac，AudioRepository/LocalBluetoothLeBroadcast 等）** |
-| 2026-07-28 | **938** | **补齐 nano proto 生成类 jar（CommunalHubState/SystemUIProtoDump/QsTileState 等）** |
-| 2026-07-28 | **885** | **补齐新版 SystemUILogLib jar（LogMessage.str1 + MessageInitializer/Printer typealias）** |
-| 2026-07-28 | **844** | **补齐 SystemUIUnfoldLib jar + androidx.window（FOLD_UPDATE_*/FoldingFeature）** |
-| 2026-07-28 | **809** | **补齐 lottie/lottie_compose jar（com.airbnb.lottie.* 动画）** |
-| 2026-07-28 | **741** | **补齐 PlatformComposeCore 源码（modifiers/ui.graphics/windowsizeclass 等）+ compose androidx 依赖** |
-| 2026-07-28 | **724** | **补齐 compose/core 顶层组件文件（PlatformButton/Slider/SystemUiController）** |
-| 2026-07-28 | **509** | **补齐 compose/features(152)+biometric(9)+animation(4) 源码 + res.R→R 规范化(39)** |
-| 2026-07-29 | — | animationlib 源码化进行中（未提交，未重编译） |
+| 2026-07-22 | 2000 | framework.jar + 删 stub + Monet + Flags jar |
+| 2026-07-28 | 1979 | 删 server-notification-flags stub |
+| 2026-07-28 | 1879 | 全项目 R import 歧义清零 |
+| 2026-07-29 | 509 | 大批源码补齐 |
+| 2026-07-29 | 70 | tier① 全源码化 + KSP + AIDL 源码编译 + 规则 C 审查 |
+| 2026-08-11 | — | KSP + Dagger 2.55 useBindingGraphFix 首次通过（0 KSP 错误） |
+| **2026-08-12** | **KSP: 0, Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移** |
 
-**目标**: 0 (完整编译通过)
-
----
-
-## 3. 错误分布（2000 错误按包分类）
-
-### 3.1 顶级错误包（前 25）
-
-| 错误数 | 目录 |
-|--------|------|
-| 81 | systemui/volume/domain/interactor |
-| 79 | systemui/bluetooth/qsdialog |
-| 60 | compose/theme |
-| 57 | systemui/scene |
-| 57 | systemui/communal/widgets |
-| 56 | systemui/volume/panel/component/mediaoutput/domain/interactor |
-| 51 | systemui/keyguard/ui/preview |
-| 51 | systemui/education/data/repository |
-| 48 | systemui/volume/dialog/sliders/ui |
-| 46 | systemui/communal/data/repository |
-| 45 | systemui/keyguard/ui/view/layout/sections |
-| 43 | systemui/volume/dagger |
-| 43 | systemui/scene/ui/view |
-| 40 | systemui/keyguard/ui/viewmodel |
-| 39 | systemui/inputdevice/tutorial |
-| 38 | systemui/qs/panels/ui/compose/infinitegrid |
-| 29 | systemui/inputdevice/tutorial/ui/composable |
-| 28 | systemui/volume/panel/component/volume/slider/ui/viewmodel |
-| 28 | systemui/keyguard/data/repository |
-| 27 | systemui/statusbar/policy/domain/interactor |
-| 25 | systemui/user/ui/dialog |
-| 23 | systemui/unfold |
-| 23 | systemui/communal/shared/log |
-| 22 | systemui/volume |
-| 22 | systemui/inputdevice/tutorial/data/repository |
-
-### 3.2 Stage 2 关键错误（13 个 + 6 个）
-
-| 错误 | 文件 | 行 |
-|------|------|-----|
-| Unresolved 'screenshareNotificationHiding' | SensitiveContentCoordinator.kt | 25, 98, 108, 115, 178, 211, 217 |
-| Unresolved 'screenshareNotificationHiding' | StackCoordinator.kt | 20, 71 |
-| Unresolved 'screenshareNotificationHiding' | NotifUiAdjustmentProvider.kt | 25, 73, 92, 145 |
-| Argument type mismatch + Unresolved 'politeNotifications' | FlagDependencies.kt | 79 |
-| Argument type mismatch + Unresolved 'crossAppPoliteNotifications' | FlagDependencies.kt | 82 |
-| Argument type mismatch + Unresolved 'vibrateWhileUnlocked' | FlagDependencies.kt | 85 |
-
-### 3.3 Stage 3 Compose 错误（72 个）
-
-| 错误数 | 子区域 |
-|--------|--------|
-| 60 | `com.android.compose.theme.AndroidColorScheme.kt` R 冲突 |
-| 12 | `com.android.compose.animation.scene.*` 内部 API |
-
-具体缺失符号：
-- `thenIf` (Modifier extension)
-- `drawInContainer` (DrawModifier)
-- `ContainerState` (Scene 内部)
-- `modifiers.*`, `graphics.*` (Qualified access 失败)
-
-### 3.4 其他（剩余 ~1909）
-
-分散在 80+ 包。错误种类混合：
-- Dagger `@Inject` 找不到 (无 KSP 生成)
-- 业务类未引用
-- 第三方库 API 漂移
-
----
-
-## 4. 已知问题与决策点
-
-### 4.0 ✅ [已解决 2026-07-28] Stage 2 server-notification-flags
-
-**根因**: 源码 stub `SystemUI-core/src/com/android/server/notification/Flags.kt`（`object Flags`）
-遮蔽了 jar 里的真实 `Flags` 类。全项目编译时 Kotlin 优先用源码定义，stub 没有
-`screenshareNotificationHiding()` 且把 flag 声明为 `val` 而非方法 → 13+6 个 unresolved。
-
-**修复**: `git rm` 该 stub。2000 → 1979。前面几轮围绕 classpath/Kotlin 版本/FeatureFlags 的
-排查全部走偏（详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`）。
-
-> 下方 4.1/4.2 记录的是历史怀疑点，**已被证伪**，保留供教训参考。
-
-### 4.1 ⚠️ [已证伪] `libs/server-notification-flags.jar` 是空 jar
-
-```bash
-$ unzip -l libs/server-notification-flags.jar
-# 完全空!
-```
-
-正确 jar 在 `libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar`（6285 字节，含 `Flags.class`）。
-
-**根因**: `gradle/libs.versions.toml` 已定义 `android-server-notification-flags`，但 `SystemUI-core/build.gradle.kts` 和 `build.gradle.kts` 中没显式使用它。`build.gradle.kts` 里通过 `libraries.from(serverNotificationFlagsJar)` 注入到 KotlinCompile classpath。
-
-**行动**: 已在 `SystemUI-core/build.gradle.kts` 加 `implementation(libs.android.server.notification.flags)`，但仍报错。详见 `docs/issues/2026-07-28-server-flags-debug-session.md`。
-
-### 4.2 🚨 AGP 9.2 嵌入 Kotlin 2.2.10，但项目声明 2.1.0
-
-- 项目 plugins: `kotlin("android") version 2.1.0`
-- AGP 9.2 内部使用 `kotlin-compiler-embeddable 2.2.10`
-- 行为：编译时用 2.2.10
-- 影响：对 jar 内 `@UnsupportedAppUsage` 等注解的解析更严格
-
-**这是 stage 2 阻塞的核心怀疑点**。详见 `docs/architecture/STAGE2-3-RESEARCH-LOG.md`。
-
-### 4.3 KAPT 已禁用
-
-```kotlin
-// SystemUI-core/build.gradle.kts 第 4 行
-// id("kotlin-kapt") // 临时禁用：KAPT 1.9+ 与 Gradle 9.5 不兼容（IR 内部错误）
-```
-
-**后果**: Dagger 不会生成代码，所有 `@Inject` 注入失败。
-
-**候选解**:
-- 改 KSP（`com.google.devtools.ksp` 1.9+）
-- 降级 AGP 到 8.x
-- 退而要求 Dagger 显式 Provider
-
-### 4.4 未跟踪源码（可能不参与编译）
-
-`git status` 显示以下文件是 `??`（未跟踪）：
-
-```
-SystemUI-core/src/com/android/compose/animation/scene/* (47 个)
-SystemUI-core/src/com/android/compose/nestedscroll/* (2 个)
-SystemUI-core/src/com/android/compose/ui/util/* (3 个)
-SystemUI-core/src/com/android/compose/theme/AndroidColorScheme.kt (1 个)
-SystemUI-plugin-core/src/main/java/.../* (移动过)
-SystemUI-plugin/src/main/java/.../* (移动过)
-```
-
-**重要**: 这些文件**不在编译路径**（git status 证明它们是新增但未提交）。`SystemUI-core/build.gradle.kts` 通过 `java.srcDir("src")` 包含 `src/` 下所有 .kt/.java，所以它们**会被编译**。
-
----
-
-## 5. 已尝试的方案（保留供下个 AI 参考）
-
-### 5.1 server-notification-flags
-
-| 方案 | 结果 | 详情 |
-|------|------|------|
-| `compileOnly(files("libs/server-notification-flags.jar"))` | 失败 | 空 jar |
-| `implementation(files("libs/server-notification-flags.jar"))` | 失败 | 空 jar |
-| `api(files("libs/server-notification-flags.jar"))` | 失败 | 空 jar |
-| `implementation(libs.android.server.notification.flags)` | 失败 | 在 classpath 但仍报错 |
-| `implementation(libs.android.server.notification.flags)` + `libraries.from` 双注入 | 失败 | 错误数不变 |
-| `allprojects` `libraries.from()` 注入 | 失败 | 注入已生效，但 Kotlin 仍 Unresolved |
-| 提供 `AconfigFlagAccessor` 注解类 | 失败 | jar 已有 |
-| 提供 `UnsupportedAppUsage` 注解类 | 失败 | jar 已有 |
-| 提供 `FeatureFlags` 接口 | N/A | jar 引用 `com.android.server.notification.FeatureFlags` |
-| 升级 Kotlin 到 2.2.10 | 失败 | plugin 冲突 |
-| 独立 kotlin("jvm") 2.1.0 项目测试 | 成功 | 同样的 jar 能编译 |
-
-### 5.2 Compose Scene Framework
-
-| 方案 | 状态 |
-|------|------|
-| 加 androidx.compose 1.8.0 | 未尝试 |
-| 提取 AOSP Scene AAR | 未尝试 |
-| 复制源码为独立 module | 未尝试 |
-| 排除源码（暂时禁用） | 未尝试 |
-
-### 5.3 Compose Theme R 冲突
-
-| 方案 | 状态 |
-|------|------|
-| alias import | 理论可行未尝试 |
-| 限定 R 类 | 理论可行未尝试 |
-| 排除 AndroidColorScheme.kt | 理论可行未尝试 |
-
----
-
-## 6. 下一个 AI 的 5 个优先行动
-
-### 优先级 1: Stage 2 server-notification-flags
-- 详读 `docs/issues/2026-07-28-server-flags-debug-session.md`
-- 尝试用 K2JVMCompiler 手动调用绕过 AGP，看是否问题在 AGP 层
-- 尝试让 Kotlin 编译器日志输出（`-Xverbose` / `-Xlog-level=DEBUG`）
-- 尝试提取 server.notification.FeatureFlags 接口类
-
-### 优先级 2: KAPT 替代方案
-- 决定走 KSP 还是降级 AGP
-- 这是进一步降低错误数的前置
-
-### 优先级 3: Compose Scene Framework
-- 找到 `thenIf`, `drawInContainer` 等内部 API 来源
-- 决策：提取 AAR vs 排除源码
-
-### 优先级 4: Compose Theme R 冲突
-- 加 alias import
-
-### 优先级 5: 业务模块错误
-- 用 `Pitfalls.md` 模板化分类，逐个击破
+> **注意**：错误数仅作诊断参考，不是提交/回滚/审批门槛（规则 I）。
 
 ---
 
@@ -302,21 +216,29 @@ SystemUI-plugin/src/main/java/.../* (移动过)
 - [ ] 来源和决策已记录；中间态的已知问题没有被隐瞒
 - [ ] 没引入新 stub
 - [ ] 没有凭空生成或擅自修改 res/ 资源
-- [ ] 已如实记录本次是否运行编译/验证及实际结果（不要求每次都编译）
-
-> 错误数可以记录到 `docs/GRADLE_MIGRATION_LOG.md` 供诊断，但不是提交条件。
+- [ ] 已如实记录本次是否运行编译/验证及实际结果
 
 ---
 
 ## 8. 快速命令
 
 ```bash
-# 一键状态报告
-./gradlew :SystemUI-core:compileDebugKotlin --console=plain 2>&1 | tee /tmp/build.log | tail -5
-echo "Errors: $(grep -c '^e: file:' /tmp/build.log)"
-echo "screenshareNotificationHiding: $(grep -c 'screenshareNotificationHiding' /tmp/build.log)"
-echo "FlagDependencies: $(grep -c 'FlagDependencies.kt' /tmp/build.log)"
+# 重新生成 AOSP 产物（可选——libs/ 已提交入 git，新 clone 无需此步）
+python3 tools/package_aosp_aar.py --all && python3 tools/install_aar_to_maven.py
 
-# 哪个包错误最多
-grep "^e: file:" /tmp/build.log | sed -E 's|.*/SystemUI-Gradle/SystemUI-core/src/com/android/||; s|/[^/]+\.kt.*||' | sort | uniq -c | sort -rn | head -10
+# KSP 编译 + 统计错误
+./gradlew :SystemUI-core:kspDebugKotlin --console=plain 2>&1 | tee /tmp/build.log
+echo "KSP errors: $(grep -c 'e: \[ksp\]' /tmp/build.log)"
+
+# Kotlin 编译 + 统计错误
+./gradlew :SystemUI-core:compileDebugKotlin --console=plain 2>&1 | tee /tmp/build2.log
+echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
+
+# 分类错误
+grep "^e: file:" /tmp/build2.log | \
+  sed -E 's|.*/SystemUI-Gradle/SystemUI-core/src/com/android/||; s|/[^/]+\.kt.*||' | \
+  sort | uniq -c | sort -rn | head -20
+
+# 单元测试
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
 ```

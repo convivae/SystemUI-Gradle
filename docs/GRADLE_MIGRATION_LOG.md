@@ -5,6 +5,75 @@
 
 ---
 
+## 2026-08-12 — 全依赖升级 + AGP builtInKotlin 迁移
+
+### 背景
+
+此前 KSP + Dagger 2.55 useBindingGraphFix 已首次通过（commit `05ea2064`），
+但 Kotlin 编译被 Compose inline 问题（`Couldn't inline method call: Box$default`）阻塞。
+用户要求将所有依赖升级到最新可用版本，避免旧版本 bug 需手动 workaround。
+
+### 版本兼容性调研
+
+1. **AGP 版本范围**: 9.2.0 ~ 9.4.0-alpha08 全部嵌入 Kotlin 2.2.10，无更高版本
+2. **Kotlin 2.3.x 不可行**: `kotlin-android` 插件与 AGP `newDsl=true` 不兼容
+   （`ClassCastException: ApplicationExtensionImpl$AgpDecorated → BaseExtension`）
+3. **Compose 上限 1.11.4**: `ExperimentalAnimatableApi` 在 1.12.0 中被移除，
+   但 AOSP 源码（`ContainerReveal.kt` 等）仍在使用
+4. **material3 上限 1.5.0-alpha18**: 1.5.0-alpha25 需 compose 1.12.0（不兼容）
+5. **AOSP prebuilts ≠ 公网 Maven**: recyclerview 1.5.0-alpha01、constraintlayout 2.3.0-alpha01
+   等 AOSP 内部版本不在公网发布，改用公网最新
+
+### 版本升级汇总
+
+| 组件 | 升级前 | 升级后 | 说明 |
+|------|--------|--------|------|
+| Kotlin | 2.1.0（显式插件） | 2.2.10（AGP builtInKotlin） | 随 AGP 9.2.0 内置 |
+| KSP | 2.2.10-2.0.2 | 2.2.10-2.0.2 | 不变（对齐 AGP） |
+| Dagger | 2.55 | 2.59.2 | useBindingGraphFix 默认启用 |
+| Compose | 1.8.3 | 1.11.4 | 最高保留 ExperimentalAnimatableApi |
+| material3 | 1.4.0-alpha09 | 1.5.0-alpha18 | 对齐 compose 1.11.x |
+| androidx.core | 1.16.0-beta01 | 1.19.0 | 公网最新 |
+| androidx.lifecycle | 2.9.0-alpha11 | 2.11.0 | 公网最新 |
+| androidx.activity | 1.11.0-alpha01 | 1.13.0 | 公网最新 |
+| androidx.room | 2.7.0-beta01 | 2.8.4 | 公网最新 |
+| kotlinx-coroutines | 1.10.2 | 1.11.0 | 公网最新 |
+
+### AGP builtInKotlin 迁移步骤
+
+1. `gradle.properties`: `android.builtInKotlin=true`
+2. 所有 Android 模块移除 `alias(libs.plugins.kotlin.android)`
+3. JVM 模块改用 `id("org.jetbrains.kotlin.jvm")`（无版本）
+4. `settings.gradle.kts` 声明 `kotlin-jvm version "2.2.10" apply false`
+5. 所有 `kotlinOptions {}` → 顶层 `kotlin { compilerOptions {} }`
+6. 移除 `android.newDsl=false`（newDsl 默认 true）
+
+### builtInKotlin + KSP + AIDL 兼容性修复
+
+| 问题 | 解决方案 |
+|------|---------|
+| KSP 禁止操作 kotlin.sourceSets | `android.disallowKotlinSourceSets=false` |
+| KSP NO-SOURCE | 所有模块添加 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` |
+| KSP 无法解析 AIDL 接口 | `android.sourceset.disallowProvider=false` + kotlin.srcDir(aidl_out) + ksp dependsOn compileDebugAidl |
+
+### 新增依赖
+
+- `androidx.asynclayoutinflater:1.1.0` — 解决 `AsyncLayoutInflater` 未解析
+- `androidx.leanback-preference:1.2.0` — 独立版本（与 leanback 分离）
+
+### 验证结果
+
+- KSP: 0 错误，2933 个文件生成（DaggerReferenceGlobalRootComponent.java 已生成）
+- Kotlin 编译: 2 个错误（pre-existing：concurrent/GuardedBy 未解析）
+- Compose inline 问题: 已消失（升级后不再出现）
+- 单元测试: 57 个全部通过
+
+### commit
+
+`e3548016` — Upgrade all deps to latest available + migrate to AGP builtInKotlin
+
+---
+
 ## 问题一：废弃 v1 离线策略，切换到 v2 设计
 
 ### 问题描述
@@ -181,13 +250,13 @@ v2 spec §9 deliverable 已完成：所有 9 个 Task 执行完毕，骨架交�
 ### 完成情况
 | Task | 文件 | 状态 |
 |------|------|------|
-| 1 | root Gradle config + 7 placeholder dirs | ✅ `0632789` |
-| 2 | framework.jar 提取 | ✅ `2704f80` |
-| 3+4 | :SystemUI-core, :SystemUI-plugin-core | ✅ `5f87314` |
-| 5+6 | 4 prebuilt JARs + extract script + 4 library modules | ✅ `e1a2710` |
-| 7 | :app skeleton (SystemUIService stub + APK 12MB) | ✅ `d158fa8` |
-| 8 | Android.bp + CleanSpec.mk | ✅ `5d0f7a9` |
-| 9 | 本条目 + 末尾 push | ✅ |
+| 1 | root Gradle config + 7 placeholder dirs | `0632789` |
+| 2 | framework.jar 提取 | `2704f80` |
+| 3+4 | :SystemUI-core, :SystemUI-plugin-core | `5f87314` |
+| 5+6 | 4 prebuilt JARs + extract script + 4 library modules | `e1a2710` |
+| 7 | :app skeleton (SystemUIService stub + APK 12MB) | `d158fa8` |
+| 8 | Android.bp + CleanSpec.mk | `5d0f7a9` |
+| 9 | 本条目 + 末尾 push | |
 
 ### 制品汇总
 | 文件 | 说明 |

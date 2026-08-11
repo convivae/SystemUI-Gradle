@@ -48,20 +48,20 @@
 
 ### 1.2 禁止
 
-- ❌ **不允许创建 *.java stub 类**只为让 IDE/编译器满意
-- ❌ **不允许私自创建资源文件** (res/ 下的任何 .xml/.png/.9.png 等)
-- ❌ **不允许创建 *.kt stub 文件**（同 Java）
-- ❌ 所有资源文件必须来自：AOSP 源码、AAR（直接或由本地 Maven 仓交付）、或 Google/MavenCentral 上游依赖的原始产物
-- ⚠️ 退路：如果所有方案都失败，**临时**用 stub 必须明显标注 `// TODO: temporary stub, replace with real impl` 并记录到 `docs/issues/`
+- **不允许创建 *.java stub 类**只为让 IDE/编译器满意
+- **不允许私自创建资源文件** (res/ 下的任何 .xml/.png/.9.png 等)
+- **不允许创建 *.kt stub 文件**（同 Java）
+- 所有资源文件必须来自：AOSP 源码、AAR（直接或由本地 Maven 仓交付）、或 Google/MavenCentral 上游依赖的原始产物
+- 退路：如果所有方案都失败，**临时**用 stub 必须明显标注 `// TODO: temporary stub, replace with real impl` 并记录到 `docs/issues/`
 
 ### 1.3 允许
 
-- ✅ 复制 AOSP SystemUI 源码目录作为 module（例如 `:SystemUI-monet`）
-- ✅ 从 AOSP 编译产物提取 *.class 打包为 jar
-- ✅ AOSP 非 SystemUI 纯代码产物以 jar 放入 `libs/`
-- ✅ 含资源的 AOSP 库先以 AAR 直接引入；确认发生资源/依赖冲突后，再经脚本安装为 `libs/maven/` 下的本地 Maven AAR
-- ✅ 复制 AOSP SystemUI 的 res 目录（例如 `res-keyguard/`, `res-product/`），保持文件集与内容 1:1
-- ✅ 通过 Gradle `sourceSets`/模块配置消费原始资源；**不得**为适配 AAPT2 擅自修改、去重、合并或重写 AOSP SystemUI 资源文件。若构建系统无法直接消费，按规则 H 停止并询问用户
+- 复制 AOSP SystemUI 源码目录作为 module（例如 `:SystemUI-monet`）
+- 从 AOSP 编译产物提取 *.class 打包为 jar
+- AOSP 非 SystemUI 纯代码产物以 jar 放入 `libs/`
+- 含资源的 AOSP 库先以 AAR 直接引入；确认发生资源/依赖冲突后，再经脚本安装为 `libs/maven/` 下的本地 Maven AAR
+- 复制 AOSP SystemUI 的 res 目录（例如 `res-keyguard/`, `res-product/`），保持文件集与内容 1:1
+- 通过 Gradle `sourceSets`/模块配置消费原始资源；**不得**为适配 AAPT2 擅自修改、去重、合并或重写 AOSP SystemUI 资源文件。若构建系统无法直接消费，按规则 H 停止并询问用户
 
 ### 1.4 参考实现
 
@@ -92,7 +92,7 @@
 - **② 里 jar vs AAR 的区别是是否含资源**：无资源用 jar；含资源用 AAR。
 - **AAR 先直接引入**：先验证 AAR-AAR、AAR-jar 及传递依赖是否冲突；只有确认无冲突后，才用 `tools/install_aar_to_maven.py` 安装为 `libs/maven/` 下的本地 Maven AAR，并在 `libs.versions.toml` 声明 catalog alias 统一管理。
 - **③ 上游库优先官方依赖**：androidx/Compose 等尽量不使用本地 jar/aar；如果官方版本无法满足 AOSP 源码，先记录问题、核对 `Android.bp` 的解决方式，再与用户讨论，禁止擅自打包替代。
-- ⚠️ 若某模块同时有源码和 prebuilt jar/aar 会重复类：源码化时**必须移除对应 prebuilt**
+- 若某模块同时有源码和 prebuilt jar/aar 会重复类：源码化时**必须移除对应 prebuilt**
 - 完整调研见 `docs/architecture/2026-07-29-systemui-module-source-vs-jar.md` 和 `docs/architecture/2026-08-06-reference-project-rationale.md`
 - SystemUI 自有源码应按 AOSP 完整复制；源码补全、依赖切换或结构校准造成的错误数变化只作为诊断信息，不构成回滚或审批条件。
 
@@ -134,7 +134,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
    - 只有确认直接 AAR 存在资源/类/依赖冲突后，才经 `tools/install_aar_to_maven.py` 安装为 `libs/maven/` 下的本地 Maven AAR，并在 `settings.gradle.kts` 配置本地仓库、在 `libs.versions.toml` 声明 catalog alias
 3. **公网官方依赖**（规则 ③）：androidx/Compose/material/lottie 等直接使用 `google()` / `mavenCentral()` 官方坐标
 
-❌ **绝对禁止** Agent 在 res/ 下生成同名资源绕过编译错误。
+**绝对禁止** Agent 在 res/ 下生成同名资源绕过编译错误。
 
 > **规则 R 升级（2026-08-07，ADR 0004）**：规则 R 细化为“禁止**无 CONV 标记**地擅改 res/src”。AOSP 源码在 Gradle 无法直接消费时（如 `product="tv"` 资源变体），经用户授权后可用 `CONV_ADD`/`CONV_DEL`/`CONV_MOD` + `BEGIN`/`END` 块标记注释掉原内容（不删除字节），使改动可追溯可撤回。必须先跑 `check_source_alignment.py` 达 MISSING/MISPLACED/EXTRA 全 0 后才允许打标。工具 `--strict` 不卡 MODIFIED，“是否擅改”靠 MODIFIED 清单与 issue CONV 记录人工对账。详见 ADR 0004 与 `docs/issues/2026-08-07-conv-markup-spec.md`。
 
@@ -205,6 +205,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 - **framework.jar 与自定义 SDK 资源不是一回事**：framework.jar 主要提供代码签名；单独把它放到 bootclasspath 不能解决 framework 私有资源 ID（参考项目问题二十五已证伪），资源 ID 必须由自定义 SDK 的 android.jar 资源部分解决
 - 本项目根 `build.gradle.kts` 当前只把 framework.jar 注入 `JavaCompile.bootstrapClasspath/classpath`，**不注入 KotlinCompile**；后者会污染 Compose inline metadata，触发 `Couldn't inline method call` 等 IR 错误
 - Kotlin 所需隐藏 API 由合并后的 SysUISdk/AGP classpath 提供
+- **2026-08-12 更新**：升级 Compose 1.11.4 + 迁移 builtInKotlin 后，Compose inline 问题已不再出现（此前 Kotlin 编译被 `Couldn't inline method call: Box$default` 阻塞）
 - 内部 flags jar 必须放在 framework.jar 之前，否则 framework.jar 的同名 stub 会遮蔽真实 flags 类
 - 参考：`CarSystemUIGradle/docs/GRADLE_MIGRATION.md` 问题二十四至二十六；`docs/architecture/2026-08-06-reference-project-rationale.md`
 
@@ -260,16 +261,18 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 > **历史**：2026-07-29 源码化里程碑将 tier① 自有代码由 jar 改为源码依赖（规则 S）；
 > unfold 引入 KSP（`2.2.10-2.0.2`，对齐编译器 2.2.10）跑 Dagger。详见
-> `docs/architecture/2026-07-29-dependency-audit.md` §6。当前构建仍被 AAR 重复 R transform 阻塞，
-> 尚无可信 Kotlin 错误数基线。
+> `docs/architecture/2026-07-29-dependency-audit.md` §6。
+> **2026-08-12 更新（commit `e3548016`）**：全依赖升级 + 迁移 AGP `builtInKotlin=true`；
+> KSP 0 错误（2933 文件生成），Kotlin 编译仅剩 2 个 pre-existing 错误；Compose inline 问题消失。
 
 ### 3.2 libs/ 内容
 
-> **AAR 统一管理（2026-08-11）**：所有 AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`（**gitignored 中间产物**），
-> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（**gitignored**，AAR + POM 骨架），
+> **AAR 统一管理（2026-08-11 建立；2026-08-12 起提交入 git）**：所有 AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`，
+> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（AAR + POM 骨架），
 > 在 `libs.versions.toml` 声明 catalog alias（如 `libs.systemui.settingslib`）统一引用。
 > build.gradle.kts 中不再直接 `files("libs/aars/xxx.aar")`。
-> **构建前置**：新 clone 后需跑 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py` 恢复 AAR。
+> **2026-08-12 起 `libs/`（含 jar/aars/maven）全部提交入 git**（用户明确要求），新 clone 可直接构建；
+> 仅当需要重新生成 AOSP 产物时才跑 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py`。
 
 ```
 libs/
@@ -285,7 +288,7 @@ libs/
 ├── device-state-flags.jar              # com.android.server.policy.feature.flags.Flags
 ├── libprotobuf-java-nano.jar           # com.google.protobuf.nano.MessageNano (SystemUI-proto 依赖)
 ├── WindowManager-Shell-shared.jar      # [已删] 合并入 libs/aars/WindowManager-Shell-shared.aar
-├── aars/                               # 直接 AAR（**gitignored 中间产物**，package_aosp_aar.py 生成）
+├── aars/                               # 直接 AAR（package_aosp_aar.py 生成；2026-08-12 起提交入 git）
 │   ├── animationlib.aar                  # frameworks/libs/systemui:animationlib
 │   ├── WifiTrackerLib.aar                # frameworks/opt/net/wifi/libs/WifiTrackerLib
 │   ├── iconloader.aar                    # frameworks/libs/systemui:iconloaderlib
@@ -293,7 +296,7 @@ libs/
 │   ├── WindowManager-Shell.aar           # frameworks/base/libs/WindowManager/Shell
 │   └── WindowManager-Shell-shared.aar    # WM-Shell static_libs 子模块（javac+kotlin 合并，含 PhysicsAnimator）
 ├── prebuilts/                          # 历史 prebuilt jar（逐步清理中）
-└── maven/                              # 本地 Maven 仓库（**gitignored**，install_aar_to_maven.py 安装）
+└── maven/                              # 本地 Maven 仓库（install_aar_to_maven.py 安装；2026-08-12 起提交入 git）
     ├── com.android.systemui/
     │   ├── SettingsLib/1.0.0/            # libs.systemui.settingslib
     │   ├── iconloader/1.0.0/            # libs.systemui.iconloader
@@ -309,7 +312,7 @@ libs/
 ```
 ```
 
-**⚠️ 历史**: `libs/server-notification-flags.jar` 已在 Phase B 清理。notification flags 现由 `libs/maven/com/android/server/notification-flags/` 提供。
+**历史**: `libs/server-notification-flags.jar` 已在 Phase B 清理。notification flags 现由 `libs/maven/com/android/server/notification-flags/` 提供。
 
 ### 3.3 AOSP 源码镜像
 
@@ -322,7 +325,7 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 
 ---
 
-## 四、当前进度状态（历史记录至 2026-07-29；现状更新于 2026-08-06）
+## 四、当前进度状态（历史记录至 2026-07-29；现状更新于 2026-08-12）
 
 ### 4.1 已完成
 
@@ -339,29 +342,53 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 | 2026-07-29 | 102 | Phase A–C：tier① 全源码化 + KSP 跑 Dagger（无回归） |
 | 2026-07-29 | 73 | Phase D：AIDL 源码编译删 systemui-aidl.jar（communal/widgets 29→0） |
 | 2026-07-29 | 70 | 规则 C 审查：删 5 个伪造 stub + 18 处伪造 import（回归 AOSP 原貌） |
+| 2026-08-11 | KSP: 0 | KSP + Dagger 2.55 useBindingGraphFix 首次通过（commit `05ea2064`） |
+| **2026-08-12** | **KSP: 0 / Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移（commit `e3548016`）** |
 
-### 4.2 当前构建状态
+### 4.2 当前构建状态（2026-08-12 commit `e3548016`）
 
-- 2026-07-29 的 **70** 是历史 Kotlin 错误数，不是当前基线
-- 当前构建在 Kotlin 编译前被 SettingsLib/iconloader/WindowManager-Shell AAR 的重复 R 类 transform 错误阻塞
-- 在恢复 AAR transform 前，没有可信的当前 Kotlin 错误数；`grep` 得到 0 条 `e: file:` 不代表无错误
+- **KSP 编译**: BUILD SUCCESSFUL，0 错误，2933 个文件生成（`DaggerReferenceGlobalRootComponent.java` 已生成）
+- **Kotlin 编译**: 仅 2 个 pre-existing 错误（`CommunalAppWidgetHost.kt` 的 `concurrent` / `GuardedBy` 未解析，升级前就存在）
+- **Compose inline 问题**: 已消失（Compose 1.11.4 + builtInKotlin 后不再出现 `Couldn't inline method call: Box$default`）
+- **单元测试**: 57 个全部通过
 - 错误数只作诊断，不构成提交、回滚或审批条件
-- 详见 `docs/CURRENT_STATE.md`、`docs/issues/2026-07-31-gen_aar_maven-rewrite.md`
+- 详见 `docs/CURRENT_STATE.md`
 
-### 4.3 待解决（按结构校准顺序）
+### 4.3 版本矩阵（2026-08-12）
 
-1. 审查并完善 `tools/check_source_alignment.py`，校准 AOSP SystemUI src/AIDL/res 不漏不多
-2. 删除非 SystemUI 违规源码；审计 SystemUI 自有源码是否仍被 prebuilt jar/AAR 重复提供
-3. 审计 `libs/`、`libs/maven/` 和 Gradle 依赖，清理无用、违规、历史生成产物
-4. 撤销/修正 `gen_aar_maven.py` 将 R 类合入 `classes.jar` 的错误中间逻辑；恢复直接 AAR 验证并诊断原始 R 可见性问题
-5. 审查 `:app` 的额外直接依赖、manifest merge 和 `SystemUI-res` 映射；入口类继续保留在 `:SystemUI-core`
-6. AAR transform 恢复后按需取得新的 Kotlin 基线；依赖结构稳定后以 `:app:assembleDebug` 验证 APK 里程碑
+| 组件 | 版本 | 备注 |
+|------|------|------|
+| Gradle | 9.5.0 | wrapper |
+| AGP | 9.2.0 | settings.gradle.kts 硬编码 |
+| Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置，**无显式 kotlin-android 插件** |
+| KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin |
+| Dagger | 2.59.2 | useBindingGraphFix 自 2.58 默认启用 |
+| Compose | 1.11.4 | **最高保留 `ExperimentalAnimatableApi`**（1.12.0 已移除，AOSP 源码在用） |
+| material3 | 1.5.0-alpha18 | 对齐 compose 1.11.x |
+| androidx 系列 | 公网最新 | AOSP prebuilts 版本多在公网不存在，须逐个查 maven-metadata.xml |
 
-### 4.4 已解决
+**builtInKotlin 关键配置**（详见 PITFALLS §1.5）：
+- `android.builtInKotlin=true`（gradle.properties）
+- `android.disallowKotlinSourceSets=false`（允许 KSP 操作 kotlin sourceSets）
+- `android.sourceset.disallowProvider=false`（允许 sourceSets provider API）
+- 所有 Android 模块必须 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)`（builtInKotlin 下 java.srcDirs 不含 .kt）
+- SystemUI-core: AIDL 输出目录加入 kotlin sourceSet + `ksp* dependsOn compileDebugAidl`
 
-- **server-notification-flags.jar** (Stage 2): ✅ 已解决。根因是源码 stub 遮蔽 jar，`git rm` 后 2000 → 1979
+### 4.4 待解决
+
+1. 修复 2 个 pre-existing Kotlin 错误：`CommunalAppWidgetHost.kt` 的 `concurrent` / `GuardedBy` 未解析（androidx.concurrent / jsr305 依赖问题）
+2. 取得稳定 Kotlin 错误基线后逐包击破
+3. 处理 `srcDirs` deprecation 警告（AGP 建议用 `directories` mutable set；多个模块）
+4. 最终以 `:app:assembleDebug` 验证 APK 里程碑
+
+### 4.5 已解决
+
+- **server-notification-flags.jar** (Stage 2): 已解决。根因是源码 stub 遮蔽 jar，`git rm` 后 2000 → 1979
   - 详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`
-- **全项目 R import 歧义**: ✅ 已清零（7 文件删多余 `systemui.R`，1979→1879）
+- **全项目 R import 歧义**: 已清零（7 文件删多余 `systemui.R`，1979→1879）
+- **KSP + Dagger 绑定解析**: 已解决（Dagger 2.59.2 默认启用 useBindingGraphFix，KSP 0 错误）
+- **Compose inline 问题**: 已解决（Compose 1.11.4 + builtInKotlin 后消失）
+- **Kotlin 版本兼容**: 已解决（AGP builtInKotlin 锁定 2.2.10；2.3.x 插件与 newDsl 不兼容）
 
 ---
 
@@ -445,8 +472,8 @@ javap -p <ClassName>
 
 | 路径 | 说明 |
 |------|------|
-| `docs/HANDOFF.md` | ⭐ 下个 AI 必读入口 |
-| `AGENTS.md` | ⭐ 本文件（规则 + 现状） |
+| `docs/HANDOFF.md` | 下个 AI 必读入口 |
+| `AGENTS.md` | 本文件（规则 + 现状） |
 | `docs/CURRENT_STATE.md` | 状态快照 |
 | `docs/PLAN.md` | 阶段计划 |
 | `docs/PITFALLS.md` | 踩坑记录 |
@@ -473,6 +500,10 @@ javap -p <ClassName>
 - **用户要求给下一个 AI 留完整交接文档** (2026-07-28 提醒)
 - 用户坚持"无 stub"原则 (2026-07-22 决定)
 - **`tools/` 下脚本一律写 Python，不写 shell** (用户 2026-07-29 明确)
+- **依赖尽可能升级到最新版本**；重要决策先与用户沟通 (用户 2026-08-12 明确)
+- **commit message 用英文**，及时 commit 并 push (用户 2026-08-12 明确)
+- **不用 `@Suppress("DEPRECATION")` 等绕过语法** (用户 2026-08-12 明确)
+- **遇到不会的内容去查官方文档** (用户 2026-08-12 明确)
 
 ---
 
@@ -486,6 +517,7 @@ javap -p <ClassName>
 | 2026-07-29 增订 | 新增 §0.二 ADR 索引、§1.5 规则 S、§1.6 规则 C、§1.7 规则 F、§1.8 规则 R、§1.9 规则 B（bp 对齐）；同步 ADR 0001/0002/0003 |
 | 2026-08-06 更正 | Maven 不再列为第四种产物；AAR 先直接引入、确认冲突后才用本地 Maven；补充自定义 SDK/framework.jar/framework-res 原理；删除错误数下降/阈值和逐次编译要求，改为“项目整体向前推进”原则 |
 | 2026-08-07 增订 | 新增 ADR 0004（CONV 标记规范 + 对齐纪律）；规则 R 升级为“禁止无标记擅改”；`check_source_alignment.py --strict` 不再卡 MODIFIED |
+| 2026-08-12 增订 | §4 更新：全依赖升级 + builtInKotlin 迁移（commit `e3548016`）；§4.2 重写为当前构建状态；新增 §4.3 版本矩阵；§2.4 记录 Compose inline 问题已解决 |
 
 ---
 

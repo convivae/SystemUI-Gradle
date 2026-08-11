@@ -7,20 +7,20 @@
 
 ## 1. 环境类踩坑
 
-### 1.1 AGP 版本与 Kotlin 编译器版本不同
+### 1.1 AGP 版本与 Kotlin 编译器版本绑定（2026-08-12 更新）
 
-**现象**: 项目声明 `kotlin("android") = "2.1.0"`，但 AGP 9.2 内部嵌入 `kotlin-compiler-embeddable 2.2.10`。编译时实际使用 2.2.10。
-
-**错误**:
-- `Unresolved reference` 出现在 valid jar 中的方法
-- 独立 kotlin("jvm") 项目用同样 jar 编译成功
+**现象**: 项目声明 `kotlin("android") version "2.1.0"`，但 AGP 9.2 内部嵌入 `kotlin-compiler-embeddable 2.2.10`。编译时实际使用 2.2.10。
 
 **根因**: AGP 9.2 故意用比 plugin 更新的 Kotlin 编译器。
 
-**绕道**:
-- 升级项目 plugin 到 2.2.10: plugin 冲突
-- 降级 AGP: 风险高，需要全部重测
-- 接受现状: 锁定 2.1.0，但 AGP 仍用 2.2.10
+**2026-08-12 更新**: 已迁移到 `android.builtInKotlin=true`，移除显式 kotlin-android 插件。
+Kotlin 版本由 AGP 内置（2.2.10），不再单独声明。
+
+**关键发现**：
+- AGP 9.2.0 ~ 9.4.0-alpha08 **全部** 嵌入 Kotlin 2.2.10（查 POM 确认）
+- Kotlin 2.3.x 的 `kotlin-android` 插件与 AGP `newDsl=true` 不兼容
+- `builtInKotlin=true` 是 AGP 9.x 的推荐路径
+- JVM 模块仍需显式 `id("org.jetbrains.kotlin.jvm")`（builtInKotlin 只影响 Android 模块）
 
 ### 1.2 KAPT 1.9+ 与 Gradle 9.5 不兼容
 
@@ -52,6 +52,86 @@
 
 **绕道**: 忽略（这是已知）
 
+### 1.5 AGP builtInKotlin + KSP + AIDL 兼容性（2026-08-12 新增）
+
+**现象**: 迁移到 `android.builtInKotlin=true` 后，KSP 编译失败。
+
+**三个独立问题，逐一解决**：
+
+**问题 1：KSP 通过 `kotlin.sourceSets` 添加源码被禁止**
+```
+Using kotlin.sourceSets DSL to add Kotlin sources is not allowed with built-in Kotlin.
+```
+**解决**: `android.disallowKotlinSourceSets=false`（gradle.properties）
+
+**问题 2：KSP `NO-SOURCE`（找不到 Kotlin 源码）**
+**根因**: builtInKotlin 下 `java.srcDirs()` 不自动包含 `.kt` 文件。
+传统 Kotlin 插件会同时扫描 java.srcDirs 中的 `.kt` 文件，builtInKotlin 不会。
+**解决**: 所有 Android 模块添加 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)`：
+```kotlin
+sourceSets {
+    getByName("main") {
+        java.srcDirs("src")
+        kotlin.srcDirs("src")  // 必须添加！
+    }
+}
+```
+
+**问题 3：KSP 无法解析 AIDL 生成的接口（`IHomeControlsRemoteProxy`）**
+**根因**: builtInKotlin 下 AIDL 生成的 Java 源码默认不在 KSP/Kotlin 源码集中。
+KSP 任务也不自动依赖 `compileDebugAidl`。
+**解决**: 
+1. `android.sourceset.disallowProvider=false`（gradle.properties）
+2. AIDL 输出目录加入 kotlin sourceSet：
+```kotlin
+android.sourceSets {
+    getByName("debug") {
+        kotlin.srcDir(layout.buildDirectory.dir("generated/aidl_source_output_dir/debug/out"))
+    }
+}
+```
+3. 手动添加任务依赖：
+```kotlin
+tasks.matching { it.name.startsWith("ksp") }.configureEach {
+    dependsOn("compileDebugAidl")
+}
+```
+
+**结果**: KSP 0 错误，2933 个文件生成，AIDL 接口全部解析。
+
+### 1.6 Compose 版本与 AOSP 源码兼容性（2026-08-12 新增）
+
+**现象**: 升级 Compose 到 1.12.0-rc01 后，`ExperimentalAnimatableApi` 未解析。
+
+**根因**: `ExperimentalAnimatableApi` 在 Compose 1.12.0 中被移除，
+但 AOSP SystemUI 源码（`ContainerReveal.kt` 等）仍在使用。
+
+**排查过程**:
+- 1.11.4 有 `ExperimentalAnimatableApi`
+- 1.12.0-alpha01 已移除
+- 1.12.0-rc01 已移除
+
+**结论**: Compose 最高只能用到 **1.11.4**。
+material3 对齐 **1.5.0-alpha18**（依赖 compose 1.11.0-beta02；
+1.5.0-alpha25 需 compose 1.12.0-beta01 不兼容）。
+
+### 1.7 AOSP prebuilts 版本 ≠ 公网 Maven 版本（2026-08-12 新增）
+
+**现象**: 按 AOSP prebuilts 配置 androidx 版本后，Gradle 依赖解析失败（404）。
+
+**根因**: AOSP 内部构建的 androidx 版本（如 `recyclerview:1.5.0-alpha01`、
+`constraintlayout:2.3.0-alpha01`）**不在公网 Maven 发布**。
+AOSP 有自己的构建系统，版本号可能领先公网。
+
+**对策**: 升级时先用 `maven-metadata.xml` 检查公网可用版本：
+```bash
+curl -s 'https://dl.google.com/dl/android/maven2/androidx/recyclerview/recyclerview/maven-metadata.xml' \
+  | grep -oP '<latest>\K[^<]+'
+```
+
+**踩过的坑**: recyclerview 1.5.0-alpha01 → 公网最新 1.4.0；
+constraintlayout 2.3.0-alpha01 → 公网最新 2.2.2。
+
 ---
 
 ## 2. aconfig Flags 类踩坑
@@ -76,7 +156,7 @@ val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/
 
 ### 2.2 [已证伪 2026-07-28] Kotlin 2.2.10 看不到 aconfig Flags `@UnsupportedAppUsage` 注解的类
 
-> ⚠️ **本条推测已被证伪**。真正根因：源码 stub `com/android/server/notification/Flags.kt`
+> **本条推测已被证伪**。真正根因：源码 stub `com/android/server/notification/Flags.kt`
 > 遮蔽了 jar。孤立 K2JVMCompiler（含完整 128 项 AGP classpath）编译成功，证明 classpath 和
 > Kotlin 2.2.10 都无罪。见下方 §2.4 与 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
 > 下面保留原推测内容供"如何走偏"的教训参考。
@@ -107,8 +187,8 @@ val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/
 ### 2.3 systemui-flags.jar 可以，server-notification-flags.jar 不行
 
 **对比**:
-- `com.android.systemui.Flags` (systemui-flags.jar, 53220 bytes) → ✅ 工作
-- `com.android.server.notification.Flags` (notification-flags.jar, 6285 bytes) → ❌ unresolved
+- `com.android.systemui.Flags` (systemui-flags.jar, 53220 bytes) → 工作
+- `com.android.server.notification.Flags` (notification-flags.jar, 6285 bytes) → unresolved
 
 **差异**:
 - 包名: `com.android.systemui.*` vs `com.android.server.*`
@@ -119,9 +199,9 @@ val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/
 - 或者大类的某个方法签名不同
 - 或者 `@UnsupportedAppUsage` 在不同类的处理方式不同
 
-> ⚠️ 以上全部错。真正差异见 §2.4。
+> 以上全部错。真正差异见 §2.4。
 
-### 2.4 ✅ [真正根因 2026-07-28] 源码 stub 遮蔽 jar 类
+### 2.4 [真正根因 2026-07-28] 源码 stub 遮蔽 jar 类
 
 **现象**: `Unresolved reference '<方法名>'`，但 jar 在 classpath、`javap` 能看到方法、孤立编译成功。
 

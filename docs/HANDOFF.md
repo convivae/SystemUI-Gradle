@@ -30,7 +30,8 @@ cd /home/conv/myspace/SystemUI-Gradle
 
 ### 1.2 跑一次基线编译，统计错误数
 ```bash
-# 构建前置：生成 AAR + 安装到本地 Maven
+# （可选）重新生成 AAR + 安装到本地 Maven——libs/ 自 2026-08-12 起已提交入 git，
+# 新 clone 无需此步；仅在需要重新生成 AOSP 产物时运行
 python3 tools/package_aosp_aar.py --all
 python3 tools/install_aar_to_maven.py
 
@@ -43,15 +44,28 @@ echo "KSP errors: $(grep -c 'e: \\[ksp\\]' /tmp/build.log)"
 echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
 ```
 
-**当前状态（2026-08-11 commit `05ea2064`）**：
-- ✅ KSP + Dagger 2.55 BUILD SUCCESSFUL（0 个 KSP 错误）
-- ✅ `DaggerReferenceGlobalRootComponent.java` 已生成
-- ⚠️ `:SystemUI-core:compileDebugKotlin` 被 Compose inline 问题阻塞（`Couldn't inline method call: Box$default`，AGENTS.md §2.4 已知问题）
+**当前状态（2026-08-12 commit `e3548016`）**：
+- **全依赖升级完成** — 所有依赖升级到公网最新可用版本
+- **AGP builtInKotlin 迁移完成** — 移除显式 kotlin-android 插件，Kotlin 2.2.10 由 AGP 内置
+- KSP 编译 BUILD SUCCESSFUL（0 个 KSP 错误，2933 个文件生成）
+- `DaggerReferenceGlobalRootComponent.java` 已生成
+- Kotlin 编译 2 个错误（pre-existing：`concurrent` / `GuardedBy` 未解析，非升级导致）
+- Compose inline 问题已解决（升级 Compose 1.11.4 + builtInKotlin 后消失）
 - 57 个单元测试全部通过
 
 **KSP 关键配置**（缺一不可）：
-1. `ksp { arg("dagger.useBindingGraphFix", "ENABLED") }` — 修复 subcomponent 绑定解析
-2. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 非确定性崩溃
+1. `android.builtInKotlin=true`（gradle.properties）— AGP 内置 Kotlin
+2. `android.disallowKotlinSourceSets=false`（gradle.properties）— 允许 KSP 操作 kotlin sourceSets
+3. `android.sourceset.disallowProvider=false`（gradle.properties）— 允许 sourceSets provider API
+4. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 非确定性崩溃
+5. Dagger 2.59.2（≥2.58 默认启用 useBindingGraphFix，无需手动 ksp{} arg）
+6. SystemUI-core: `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` + AIDL 输出目录加入 kotlin sourceSet
+
+**版本兼容性关键结论**：
+- AGP 9.2.0 ~ 9.4.0-alpha08 **全部** 嵌入 Kotlin 2.2.10，无更高版本
+- Compose 最高 **1.11.4**（1.12.0 移除了 `ExperimentalAnimatableApi`，AOSP 源码在用）
+- material3 **1.5.0-alpha18**（对齐 compose 1.11.x；1.5.0-alpha25 需 compose 1.12.0）
+- AOSP prebuilts 中的部分版本（recyclerview 1.5.0-alpha01 等）**不在公网 Maven**，改用公网最新
 
 ### 1.3 必须遵守的规则（优先级从高到低）
 
@@ -78,33 +92,24 @@ echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
 
 ```
 SystemUI-Gradle/
-├── AGENTS.md                  # ⭐ 项目规则（必读）
+├── AGENTS.md                  # 项目规则（必读）
 ├── docs/
-│   ├── HANDOFF.md             # ⭐ 本文件（新 AI 入口）
-│   ├── CURRENT_STATE.md       # ⭐ 当前状态快照
+│   ├── HANDOFF.md             # 本文件（新 AI 入口）
+│   ├── CURRENT_STATE.md       # 当前状态快照
 │   ├── PLAN.md                # 阶段计划
-│   ├── PITFALLS.md            # ⚠️ 踩坑记录
+│   ├── PITFALLS.md            # 踩坑记录
 │   ├── GRADLE_MIGRATION_LOG.md # 历史错误数演变
 │   ├── issues/               # 每日问题记录
 │   └── architecture/         # 架构/调研文档
-├── libs/                     # 自包含依赖（不入 gitignore）
+├── libs/                     # 自包含依赖
 │   ├── framework.jar         # AOSP 框架（含 @hide API）
-│   ├── framework-statsd.jar
-│   ├── android.car.jar
-│   ├── WindowManager-Shell.jar
-│   ├── android_module_lib_stubs_current.jar
-│   ├── SystemUI-{proto,tags,statsd}.jar
-│   ├── monet.jar            # ColorScheme/Shades/Style
-│   ├── systemui-flags.jar   # com.android.systemui.Flags
-│   ├── aars/animationlib.aar # frameworks/libs/systemui animationlib（直接 AAR）
-│   ├── maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar
-│   ├── prebuilts/
-│   │   ├── SystemUISharedLib.jar
-│   │   ├── SystemUIPluginLib.jar
-│   │   ├── SystemUICustomizationLib.jar
-│   │   ├── PlatformAnimationLib.jar
-│   │   └── tracinglib-platform.jar
-│   └── maven/com/android/systemui/{settingslib,iconloader,WindowManager-Shell,WifiTrackerLib,SystemUISharedLib}/1.0.0/
+│   ├── framework-statsd.jar / android.car.jar / monet.jar
+│   ├── systemui-flags.jar / systemui-shared-flags.jar / settingslib-flags.jar 等 aconfig flags jar
+│   ├── libprotobuf-java-nano.jar / compilelib-{debug,release}.jar / 其他无资源 jar
+│   ├── aars/                 # 8 个直接 AAR（package_aosp_aar.py 生成；2026-08-12 起提交入 git）
+│   │   └── {animationlib,WifiTrackerLib,iconloader,SettingsLib,WindowManager-Shell,WindowManager-Shell-shared,LowLightDreamLib,SettingsLibColor}.aar
+│   ├── maven/                # 本地 Maven 仓（install_aar_to_maven.py 安装，AAR + POM；2026-08-12 起提交入 git）
+│   └── prebuilts/            # 历史 prebuilt jar（逐步清理中，仅剩 tracinglib-platform.jar）
 ├── SystemUI-core/            # 主模块与入口类 owner（13-module 拓扑）
 │   ├── src/                  # = AOSP frameworks/base/packages/SystemUI/src/
 │   ├── build.gradle.kts
@@ -134,10 +139,11 @@ SystemUI-Gradle/
 |------|------|------|
 | Gradle | 9.5.0 | wrapper |
 | AGP | 9.2.0 | alias `libs.plugins.android.library` |
-| Kotlin Plugin | 2.1.0（项目）/ 2.2.10（AGP 内部嵌入） | 关键：**AGP 嵌入的 kotlin-compiler-embeddable 比插件新** |
-| KSP | 2.2.10-2.0.2 | 替代 KAPT（KAPT 1.9+ 与 Gradle 9.5 不兼容） |
-| KSP 配置 | `ksp.incremental=false` | 避免 KSP2 FIR 非确定性崩溃（google/ksp#2542） |
-| Dagger | 2.55 | `useBindingGraphFix=ENABLED` 修复 KSP2 subcomponent 绑定解析 |
+| Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置（无显式插件） |
+| KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin 2.2.10 |
+| Dagger | 2.59.2 | useBindingGraphFix 默认启用（≥2.58） |
+| Compose | 1.11.4 | 最高保留 `ExperimentalAnimatableApi` |
+| material3 | 1.5.0-alpha18 | 对齐 compose 1.11.x |
 | 目标 JVM | 21 | Java/Kotlin 编译都用 21 |
 | 目标 SDK | `SysUISdk`（自定义 preview） | 路径 `/home/conv/Android/Sdk/platforms/android-SysUISdk/` |
 
@@ -146,29 +152,34 @@ SystemUI-Gradle/
 ## 4. 我（当前 AI）留下未完成的事
 
 ### 4.1 Stage 2 (server-notification-flags.jar)
-- **状态**: ✅ **已解决 (2026-07-28)**。根因是源码 stub `com/android/server/notification/Flags.kt`
+- **状态**: **已解决 (2026-07-28)**。根因是源码 stub `com/android/server/notification/Flags.kt`
   遮蔽了 jar，`git rm` 后 2000 → 1979。**不是** classpath/Kotlin 2.2.10/FeatureFlags 的问题。
 - **详情**: `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`、`docs/PITFALLS.md §2.4`
 
 ### 4.2 app 模块按 bp 重构（ADR 0003，结构已更正）
-- **状态**: ✅ 结构决策已更正并实施（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）
+- **状态**: 结构决策已更正并实施（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md`）
 - **7/31 关键更正**：最初将 bp 误读为入口类属于 app。实际 `SystemUI-core` 的 `srcs: ["src/**/*.java"]` 包含 `SystemUIApplication.java` / `SystemUIService.java`；`android_app "SystemUI"` 无独立 srcs。
 - **正确结构**：入口类保留在 `:SystemUI-core/src/com/android/systemui/`；`:app` 无源码，只依赖 `:SystemUI-core`，并持有完整 AOSP manifest/proguard 配置。
 - **禁止**再次把入口类迁到 `:app/src/main/java/`。
 
 ### 4.3 animationlib → 直接 AAR（原“源码化”方案已废止）
-- **状态**: 🚧 原计划将 animationlib 源码化为 `:SystemUI-animationlib` module；2026-08-06 确认 animationlib 位于 `frameworks/libs/systemui/animationlib`，属**非 SystemUI 代码**，违反规则 S/F，不得源码复制。
-- **新方案**: 用 `tools/package_aosp_aar.py` 从 AOSP Soong javac+Kotlin jar + res 生成直接 AAR `libs/aars/animationlib.aar`，由 animation/customization 直接 `api(files(...))` 引入。
-- **详情**: `docs/architecture/2026-08-06-module-structure-audit.md`、`docs/superpowers/plans/2026-08-06-13-module-source-topology.md` Task 4
+- **状态**: 已落地。animationlib 位于 `frameworks/libs/systemui/animationlib`，属**非 SystemUI 代码**，按规则 S/F 不源码复制；已由 `tools/package_aosp_aar.py` 生成 `libs/aars/animationlib.aar`，经 catalog 统一引入。
+- **详情**: `docs/architecture/2026-08-06-module-structure-audit.md`
 
 ### 4.4 Stage 3 (Compose Scene Framework)
-- **状态**: 历史记录 12 个错误，全部在 `com.android.compose.animation.scene.*`；当前无可信基线（构建被 AAR transform 阻塞）。Compose Core+Scene 将合并为 `:SystemUI-compose`。
+- **状态**: Compose Core+Scene 已合并为 `:SystemUI-compose`。原 12 个 `com.android.compose.animation.scene.*` 错误的最新状态待全量构建确认；Compose 版本现锁 1.11.4（最高保留 `ExperimentalAnimatableApi`）。
 
 ### 4.5 AIDL 编译知识（已解答）
 - **问题**: 为什么 framework.jar 不能满足 AIDL 编译需要？
 - **答案**: aidl 工具只认 `.aidl` 声明文件，不读 jar 字节码。framework.aidl 和 framework.jar
   服务于两个不同编译阶段，互补不可替代。详见 `docs/issues/2026-07-29-aidl-animationlib-app.md §一`
 - **ISystemUiProxy.aidl** 属于 `:SystemUI-shared` 模块，由 `OverviewProxyService.java` 使用
+
+### 4.6 全依赖升级 + builtInKotlin 迁移（2026-08-12，最新里程碑）
+- **状态**: 完成（commit `e3548016`）
+- **要点**: 所有依赖升级到公网最新可用版本；迁移到 AGP `builtInKotlin=true`（Kotlin 2.2.10 内置）；KSP 0 错误；Kotlin 编译仅剩 2 个 pre-existing 错误；Compose inline 问题消失。
+- **遗留**: 修复 `concurrent`/`GuardedBy` 未解析 → `:app:assembleDebug` APK 里程碑
+- **详情**: `docs/issues/2026-08-12-deps-upgrade-builtin-kotlin.md`
 
 ---
 
@@ -181,6 +192,10 @@ SystemUI-Gradle/
 - 用户希望增量提交，每个 commit 都有意义
 - 用户希望参考 `CarSystemUIGradle` 项目的做法
 - **用户要求给下一个 AI 留完整交接文档** (2026-07-28 提醒)
+- **依赖尽可能升级到最新版本**；重要决策先与用户沟通 (2026-08-12)
+- **commit message 用英文**，及时 commit 并 push (2026-08-12)
+- **不用 `@Suppress("DEPRECATION")` 等绕过语法** (2026-08-12)
+- **遇到不会的内容查官方文档** (2026-08-12)
 
 ---
 

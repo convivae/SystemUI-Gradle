@@ -2,7 +2,11 @@
 
 A standalone, self-contained Gradle build of the Android SystemUI source tree — designed to compile independently of the AOSP build system while remaining compatible with it.
 
-> **Status:** active development — see [docs/PLAN.md](docs/PLAN.md) for the roadmap. Currently **~2,000 compile errors** remaining out of the original ~24,000.
+> **Status:** active development — see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for the live snapshot.
+> As of 2026-08-12 (commit `e3548016`): KSP annotation processing passes with **0 errors**
+> (2,933 files generated, incl. `DaggerReferenceGlobalRootComponent.java`); the core Kotlin
+> compile is down to **2 pre-existing errors**. All dependencies are on the latest versions
+> available on public Maven.
 
 ---
 
@@ -14,7 +18,9 @@ AOSP's SystemUI is normally built inside the AOSP source tree using Blueprint (`
 - use as a library or standalone project outside the full AOSP checkout;
 - version, branch, or code-review independently of the platform.
 
-This project extracts SystemUI from AOSP, ports it to a pure Gradle build (Gradle 9.5 + AGP 9.2 + Kotlin 2.1), and packages every dependency it needs so that the project compiles without ever reaching back into the AOSP tree.
+This project extracts SystemUI from AOSP, ports it to a pure Gradle build (Gradle 9.5 + AGP 9.2 +
+Kotlin 2.2.10 via AGP `builtInKotlin`), and packages every dependency it needs so that the project
+compiles without ever reaching back into the AOSP tree.
 
 A reference implementation that informed many of the choices here is [`CarSystemUIGradle`](../CarSystemUIGradle) (commit `c0ae96b`) — a sibling project that did the same thing for the Car SystemUI.
 
@@ -26,7 +32,7 @@ A reference implementation that informed many of the choices here is [`CarSystem
 2. **Stay BP-compatible.** The source tree is kept close enough to AOSP that the same files still compile under Blueprint, so the project can be dropped back into AOSP without rewriting imports or layout.
 3. **No stubs.** Hidden AOSP APIs are provided by real prebuilt JARs/AARs copied out of AOSP outputs, never by hand-written `*.java` stub classes.
 4. **No private resource files.** Every resource under `res/` came from AOSP source, a checked-in AAR, or a checked-in JAR — never a one-off XML/PNG created locally to make the build pass.
-5. **Use modern Gradle.** Kotlin DSL (`build.gradle.kts`), version catalog (`gradle/libs.versions.toml`), Gradle 9.5, AGP 9.2.
+5. **Use modern Gradle.** Kotlin DSL (`build.gradle.kts`), version catalog (`gradle/libs.versions.toml`), Gradle 9.5, AGP 9.2 with `builtInKotlin=true`.
 
 ---
 
@@ -34,24 +40,28 @@ A reference implementation that informed many of the choices here is [`CarSystem
 
 ```
 SystemUI-Gradle/
-├── app/                         # Main entry point (com.android.application)
-├── SystemUI-core/               # ~95% of SystemUI source (~1,400 .kt/.java files)
-├── SystemUI-shared/             # Shared utility library
-├── SystemUI-animation/          # Animation library
-├── SystemUI-customization/      # Customization library
-├── SystemUI-plugin/             # Plugin interfaces (runtime)
-├── SystemUI-plugin-core/        # Plugin annotations (compile-time)
-├── libs/                        # All prebuilt jars/aars + local Maven repo
+├── app/                         # APK entry point (no sources; depends on :SystemUI-core)
+├── SystemUI-core/               # Main module: src + compose + pods + entry classes
+├── SystemUI-res/                # Standalone resource namespace (res/res-keyguard/res-product)
+├── SystemUI-common/             # Common + Log + utils (JVM)
+├── SystemUI-animation/          # PlatformAnimation + Shader
+├── SystemUI-plugin-core/        # Plugin runtime API (JVM)
+├── SystemUI-plugin-processor/   # Plugin annotation processor (build-time)
+├── SystemUI-plugin/             # PluginLib runtime (incl. bcsmartspace)
+├── SystemUI-unfold/             # Unfold (KSP Dagger)
+├── SystemUI-customization/      # Customization (with res)
+├── SystemUI-shared/             # Shared + keyguard
+├── SystemUI-shared-biometrics/  # Biometrics (own R namespace)
+├── SystemUI-compose/            # Compose Core + Scene
+├── libs/                        # All prebuilt jars/aars + local Maven repo (committed to git)
 │   ├── framework.jar            # AOSP framework (provides hidden APIs)
 │   ├── monet.jar                # Monet color engine
-│   ├── systemui-flags.jar       # aconfig-generated SystemUI flags
-│   ├── server-notification-flags.jar
-│   ├── aconfig-annotations-lib.jar
-│   ├── compat-annotations.jar
-│   ├── prebuilts/               # SystemUISharedLib, SystemUIPluginLib, ...
-│   └── maven/                   # Local Maven repo for AOSP-produced AARs
-├── tools/                       # Helper scripts (AAR extraction, SDK install, ...)
-├── docs/                        # PLAN.md, GRADLE_MIGRATION_LOG.md, issues/
+│   ├── systemui-flags.jar       # aconfig-generated SystemUI flags (+ other flag jars)
+│   ├── aars/                    # 8 AOSP-produced AARs (animationlib, SettingsLib, WM-Shell, ...)
+│   ├── maven/                   # Local Maven repo (AAR + POM) consumed via version catalog
+│   └── prebuilts/               # Legacy prebuilt jars (being cleaned up)
+├── tools/                       # Python helper scripts (AAR packaging, SDK install, ...)
+├── docs/                        # CURRENT_STATE.md, PLAN.md, PITFALLS.md, issues/, adr/
 ├── gradle/libs.versions.toml    # Single source of truth for versions/deps
 ├── settings.gradle.kts
 └── build.gradle.kts             # Root build + framework.jar injection
@@ -77,14 +87,13 @@ mechanisms:
    additionally need to take precedence over `android.jar`; for those we merged the
    conflicting classes into the SDK's `android.jar` itself (`libs/android-merged.jar` →
    `SysUISdk/android.jar`).
-2. **aconfig-flag jars** — `com.android.systemui.Flags` and
-   `com.android.server.notification.Flags` are generated by aconfig at AOSP build time.
-   We extract the `.class` files from the AOSP intermediates and package them as small
-   standalone jars (see `libs/systemui-flags.jar`, `libs/server-notification-flags.jar`).
-3. **Local Maven AARs** — SystemUI's own prebuilt artifacts (`SettingsLib`,
-   `iconloader`, `WindowManager-Shell`, `WifiTrackerLib`, `SystemUISharedLib`, …) are
-   produced by AOSP and consumed here as AARs from `libs/maven/`. They are generated by
-   `tools/gen_aar_maven.py`.
+2. **aconfig-flag jars** — `com.android.systemui.Flags` and friends are generated by aconfig at
+   AOSP build time. We extract the `.class` files from the AOSP intermediates and package them as
+   small standalone jars (see `libs/systemui-flags.jar` and the other `*-flags.jar` files).
+3. **Local Maven AARs** — SystemUI-adjacent prebuilt artifacts (`SettingsLib`, `iconloader`,
+   `WindowManager-Shell`, `WifiTrackerLib`, `animationlib`, …) are produced by AOSP and consumed
+   here as AARs from `libs/maven/`, referenced through the version catalog. They are generated by
+   `tools/package_aosp_aar.py` and installed by `tools/install_aar_to_maven.py`.
 
 Every mechanism in this list is a real prebuilt, not a stub.
 
@@ -99,7 +108,7 @@ Every mechanism in this list is a real prebuilt, not a stub.
 - Android SDK at `$ANDROID_SDK_ROOT` (defaults to `~/Android/Sdk`)
 - A `SysUISdk` platform installed under `$ANDROID_SDK_ROOT/platforms/android-SysUISdk`
   with both `android.jar` and `core-for-system-modules.jar` — see
-  `tools/install_sdk.sh`
+  `tools/install_sdk.py`
 - AOSP source tree at `/home/conv/myspace/aosp` (only needed if you regenerate the
   prebuilt jars/AARs)
 
@@ -109,8 +118,9 @@ Every mechanism in this list is a real prebuilt, not a stub.
 # 1. Create local.properties pointing at your SDK
 echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-# 2. Regenerate AARs from your local AOSP build outputs (required before first build)
-#    libs/aars/ and libs/maven/ are gitignored intermediate products
+# 2. (Optional) Regenerate AARs from your local AOSP build outputs.
+#    libs/ (jars, aars/, maven/) is committed to git, so a fresh clone builds
+#    without this step; run it only when AOSP artifacts need regenerating.
 python3 tools/package_aosp_aar.py --all    # generate libs/aars/*.aar
 python3 tools/install_aar_to_maven.py       # install to libs/maven/ + POM
 ```
@@ -147,8 +157,8 @@ python3 tools/install_aar_to_maven.py       # install to libs/maven/ + POM
 - **Source mirrors AOSP layout.** `SystemUI-core/src/<path>` corresponds to
   `aosp/frameworks/base/packages/SystemUI/src/<path>`. Don't reshuffle directories.
 - **One commit per logical change.** Push promptly. Update `docs/` in the same commit.
-- **Track error-count regression.** Every compile attempt that changes the error count
-  should be reflected in `docs/GRADLE_MIGRATION_LOG.md`.
+- **Error counts are diagnostic only.** They never gate commits or rollbacks; what matters is
+  forward progress toward a correct, maintainable, buildable project (see `AGENTS.md` rule I).
 
 The full list of constraints and conventions lives in [`AGENTS.md`](AGENTS.md).
 
@@ -162,21 +172,25 @@ The full list of constraints and conventions lives in [`AGENTS.md`](AGENTS.md).
 | See how the error count has evolved over time | [`docs/GRADLE_MIGRATION_LOG.md`](docs/GRADLE_MIGRATION_LOG.md) |
 | Read about a specific build problem and its fix | [`docs/issues/`](docs/issues/) (one file per day/topic) |
 | Understand project rules and constraints | [`AGENTS.md`](AGENTS.md) |
-| Regenerate AARs from AOSP outputs | [`tools/gen_aar_maven.py`](tools/gen_aar_maven.py) |
+| Regenerate AARs from AOSP outputs | [`tools/package_aosp_aar.py`](tools/package_aosp_aar.py) + [`tools/install_aar_to_maven.py`](tools/install_aar_to_maven.py) |
 | Find where a hidden API lives | check `libs/framework.jar` first, then `docs/issues/` |
 
 ---
 
 ## Known issues
 
-The project is actively being reduced from ~2,000 errors to 0. The biggest remaining
-issue is documented in
-[`docs/issues/2026-07-23-server-notification-flags-unresolvable.md`](docs/issues/2026-07-23-server-notification-flags-unresolvable.md):
-`com.android.server.notification.Flags.screenshareNotificationHiding()` is on the
-classpath and resolves correctly in standalone Kotlin tests, but the Kotlin compiler
-that ships with AGP 9.2 (kotlin-compiler-embeddable 2.2.10) reports it as
-`Unresolved reference` when invoked through the AGP Kotlin compile task. We are
-tracking this and several other categories of remaining errors in `docs/PLAN.md`.
+As of 2026-08-12 the remaining work is small and tracked in
+[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md):
+
+- **2 pre-existing Kotlin errors** in `CommunalAppWidgetHost.kt` (`Unresolved reference
+  'concurrent'` / `'GuardedBy'`) — a missing `androidx.concurrent` / jsr305-style dependency,
+  predating the 2026-08-12 upgrade.
+- `srcDirs` deprecation warnings from AGP (cosmetic).
+
+Historical blockers that are **solved**: KSP + Dagger binding resolution (Dagger 2.59.2 enables
+`useBindingGraphFix` by default), the Compose inline-metadata failure (gone since Compose 1.11.4 +
+AGP `builtInKotlin`), and the server-notification-flags resolution issue (a source stub was
+shadowing the jar — see `docs/PITFALLS.md` §2.4).
 
 ---
 

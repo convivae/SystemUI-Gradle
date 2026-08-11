@@ -1,8 +1,8 @@
 # SystemUI-Gradle 详细开发计划 (PLAN.md)
 
-> ⚠️ **历史计划警告（2026-08-06）**：本文件 §阶段 1–5 主体停留在 2026-07-29，旧的错误数目标、“把 SystemUIApplication/SystemUIService 移到 app”计划、以及“animationlib 源码化”方案均已失效。入口类必须保留在 `:SystemUI-core`（见 ADR 0003 更正）；animationlib 是非 SystemUI 代码，须改为直接 AAR。
+> **历史计划警告（2026-08-06）**：本文件 §阶段 1–5 主体停留在 2026-07-29，旧的错误数目标、“把 SystemUIApplication/SystemUIService 移到 app”计划、以及“animationlib 源码化”方案均已失效。入口类必须保留在 `:SystemUI-core`（见 ADR 0003 更正）；animationlib 是非 SystemUI 代码，须改为直接 AAR。
 >
-> **当前优先级（Phase A 完成后）**：`docs/superpowers/plans/2026-08-07-post-topology-correctness.md` 的 Task 1–6 已执行完毕。common/compose/plugin 三个 classpath blocker 已清除（均编译通过），但 core 首次失败暴露两个新 blocker：**B1** `:SystemUI-res:packageDebugResources` 因 AOSP `res-product` 的 `product="..."` 资源变体不被 AAPT2 支持（需规则 H）；**B2** `:SystemUI-plugin:compileDebugJavaWithJavac` processor 运行时缺 kotlin stdlib。core 自身 Kotlin 编译尚未开始。需用户对 B1（资源 owner/构建机制）和 B2 是否在本阶段修复决策后，再校准 `docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`。错误数始终只作诊断，不作为提交门槛。下文历史阶段保留供参考，不代表当前优先级。
+> **当前优先级（2026-08-12，commit `e3548016`）**：**全依赖升级 + AGP builtInKotlin 迁移完成**。KSP 编译 0 错误（2933 个文件生成），Kotlin 编译仅剩 2 个 pre-existing 错误（`CommunalAppWidgetHost.kt` 的 `concurrent`/`GuardedBy` 未解析）。Compose inline 问题已随 Compose 1.11.4 + builtInKotlin 消失。详见 `docs/CURRENT_STATE.md` 与 `docs/issues/2026-08-12-deps-upgrade-builtin-kotlin.md`。下一步：修复 2 个 pre-existing 错误 → 全量 `:app:assembleDebug` 验证 APK。错误数始终只作诊断，不作为提交门槛。下文历史阶段保留供参考，不代表当前优先级。
 
 > **历史最后更新**: 2026-07-29
 > **历史错误数**: 509
@@ -14,29 +14,29 @@
 ## 阶段总览
 
 ```
-阶段 1 ✅ (2026-07-22): 文档 + 阶段性 commit
-阶段 2 ✅ (2026-07-28): server-notification-flags.jar — 已解决（删除 stub Flags.kt）
-阶段 2.5 ✅ (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509（历史，非当前基线）
-阶段 3 ✅/⚠️ (2026-08-08 checkpoint): 13-module 拓扑与 owner 迁移完成；编译/processor 验收部分完成
-阶段 3.5 ✅ (Phase A): post-topology correctness 完成（工具确定性 + Common/Compose/Plugin classpath 全通过）
-阶段 3.5.5 ✅ (Phase A.5): CONV 标记规范（ADR 0004）+ B1 product variant CONV_DEL + B2 processor stdlib + B3 PluginProtector stub 恢复 + shared reflection 全解决
-阶段 3.6 ✅ (Phase B): artifact recovery 完成——4 个直接 AAR、删 fat WM-Shell.jar、manifest merge 成功
-阶段 3.7 🚧: core 708 个真实 Kotlin 错误（Compose experimental API、Animator/ValueAnimator、MessageNano 等）
-阶段 4 ⏳ (已规划): AAR artifact 恢复 + 重复 R/源码-prebuilt 重复类修复（`docs/superpowers/plans/2026-08-07-aosp-artifact-recovery.md`）
-阶段 5 ⏳ (待启动): manifest merge + Kotlin 基线 + :app:assembleDebug
+阶段 1 (2026-07-22): 文档 + 阶段性 commit
+阶段 2 (2026-07-28): server-notification-flags.jar — 已解决（删除 stub Flags.kt）
+阶段 2.5 (2026-07-28): R 歧义 + jar 补齐 + 源码补齐 — 5296→509（历史，非当前基线）
+阶段 3 (2026-08-08 checkpoint): 13-module 拓扑与 owner 迁移完成；编译/processor 验收部分完成
+阶段 3.5 (Phase A): post-topology correctness 完成（工具确定性 + Common/Compose/Plugin classpath 全通过）
+阶段 3.5.5 (Phase A.5): CONV 标记规范（ADR 0004）+ B1 product variant CONV_DEL + B2 processor stdlib + B3 PluginProtector stub 恢复 + shared reflection 全解决
+阶段 3.6 (Phase B): artifact recovery 完成——4 个直接 AAR、删 fat WM-Shell.jar、manifest merge 成功
+阶段 3.7 (2026-08-12): 全依赖升级 + builtInKotlin 迁移——KSP 0 错误，Kotlin 仅剩 2 个 pre-existing 错误
+阶段 4: 修复 2 个 pre-existing 错误（concurrent/GuardedBy 依赖）→ 全量构建验证
+阶段 5: `:app:assembleDebug` APK 里程碑
 ```
 
 > 旧的“阶段 3: animationlib 源码化”已废止——animationlib 属非 SystemUI 代码，改为直接 AAR。
 
 ---
 
-## 阶段 1: 文档与阶段性 commit ✅ 已完成 (2026-07-22)
+## 阶段 1: 文档与阶段性 commit 已完成 (2026-07-22)
 
 ### 任务
-1. ✅ 创建 AGENTS.md
-2. ✅ 清理 build.gradle.kts debug 输出
-3. ✅ 写 docs/issues/2026-07-22-stub-cleanup-and-deps.md
-4. ✅ 提交 (commit `a7176c7` 等)
+1. 创建 AGENTS.md
+2. 清理 build.gradle.kts debug 输出
+3. 写 docs/issues/2026-07-22-stub-cleanup-and-deps.md
+4. 提交 (commit `a7176c7` 等)
 
 ### 错误数变化
 - 进入: 2412
@@ -45,7 +45,7 @@
 
 ---
 
-## 阶段 2: server-notification-flags.jar 解析问题 ✅ 已解决 (2026-07-28)
+## 阶段 2: server-notification-flags.jar 解析问题 已解决 (2026-07-28)
 
 ### 问题
 
@@ -69,7 +69,7 @@
 
 ---
 
-## 阶段 2.5: jar 补齐 + 源码补齐 ✅ 已完成 (2026-07-28)
+## 阶段 2.5: jar 补齐 + 源码补齐 已完成 (2026-07-28)
 
 ### 操作
 
@@ -89,7 +89,7 @@
 
 ---
 
-## 阶段 3: 13-module 拓扑与 owner 迁移 ✅/⚠️ checkpoint
+## 阶段 3: 13-module 拓扑与 owner 迁移 /checkpoint
 
 已完成：
 
@@ -117,7 +117,7 @@
 
 ---
 
-## 阶段 4: Compose Scene Framework + 业务模块错误 ⏳
+## 阶段 4: Compose Scene Framework + 业务模块错误 
 
 ### 问题描述
 
@@ -178,7 +178,7 @@ import com.android.compose.theme.R as ComposeR
 
 ---
 
-## 阶段 4: 业务模块错误 ⏳
+## 阶段 4: 业务模块错误 
 
 ### 4.1 分类剩余错误
 
@@ -248,7 +248,7 @@ dependencies {
 
 ---
 
-## 阶段 5: 最终验证 ⏳
+## 阶段 5: 最终验证 
 
 ### 5.1 编译完整 :SystemUI-core
 
@@ -296,15 +296,15 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 每个阶段建议对应一个 commit：
 
-1. ✅ `docs: add AGENTS.md with rules and progress`
-2. ✅ `refactor: 遵循参考项目 (CarSystemUIGradle) 引入依赖方式 - 删除所有 stub`
-3. ✅ `feat(SystemUI-core): 完整合并 framework.jar 到 SysUISdk/android.jar`
-4. ⏳ `feat(deps): resolve server-notification-flags.jar ...`
-5. ⏳ `feat(scene): integrate Compose Scene Framework AAR`
-6. ⏳ `feat(deps): upgrade Compose to 1.8.x for internal APIs`
-7. ⏳ `chore(deps): migrate from KAPT to KSP`
-8. ⏳ `fix: exclude test code from main source set`
-9. ⏳ `feat: complete SystemUI Gradle build pipeline`
+1. `docs: add AGENTS.md with rules and progress`
+2. `refactor: 遵循参考项目 (CarSystemUIGradle) 引入依赖方式 - 删除所有 stub`
+3. `feat(SystemUI-core): 完整合并 framework.jar 到 SysUISdk/android.jar`
+4. `feat(deps): resolve server-notification-flags.jar ...`
+5. `feat(scene): integrate Compose Scene Framework AAR`
+6. `feat(deps): upgrade Compose to 1.8.x for internal APIs`
+7. `chore(deps): migrate from KAPT to KSP`
+8. `fix: exclude test code from main source set`
+9. `feat: complete SystemUI Gradle build pipeline`
 
 ---
 
@@ -312,11 +312,11 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 | 阶段 | 状态 | 预估时间 | 已用 |
 |------|------|---------|------|
-| 阶段 1 | ✅ | 0.5h | 0.5h |
-| 阶段 2 | 🚧 | 2-4h | 4h (阻塞) |
-| 阶段 3 | ⏳ | 4-8h | 0 |
-| 阶段 4 | ⏳ | 2-4h | 0 |
-| 阶段 5 | ⏳ | 1-2h | 0 |
+| 阶段 1 | | 0.5h | 0.5h |
+| 阶段 2 | | 2-4h | 4h (阻塞) |
+| 阶段 3 | | 4-8h | 0 |
+| 阶段 4 | | 2-4h | 0 |
+| 阶段 5 | | 1-2h | 0 |
 
 总计：预估 9.5-18.5h，已用 ~4.5h
 
@@ -325,7 +325,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 ## 参考资源
 
 - [AGENTS.md](../AGENTS.md) - 项目规则与进度
-- [docs/HANDOFF.md](./HANDOFF.md) - ⭐ 下个 AI 入口
+- [docs/HANDOFF.md](./HANDOFF.md) - 下个 AI 入口
 - [docs/CURRENT_STATE.md](./CURRENT_STATE.md) - 当前状态快照
 - [docs/PITFALLS.md](./PITFALLS.md) - 踩坑记录
 - [docs/GRADLE_MIGRATION_LOG.md](./GRADLE_MIGRATION_LOG.md) - 历史错误数演变
