@@ -44,13 +44,13 @@ Kotlin 版本由 AGP 内置（2.2.10），不再单独声明。
 
 ### 1.3 SysUISdk 是 preview SDK
 
-**现象**: AGP 警告 "compile SDK preview version 'SysUISdk' has not been tested"
+**现象（AGP 9.2.0）**: AGP 曾警告 "compile SDK preview version 'SysUISdk' has not been tested"。
 
-**根因**: AGP 9.2 官方测到 SDK 37，`SysUISdk` 是我们自定义
+**根因**: `SysUISdk` 是我们基于 AOSP 产物生成的自定义 preview SDK。
 
-**后果**: 编译时 SDK 不识别，但 `@hide` API 仍能通过 framework.jar 引入
+**当前（AGP 9.3.1）**: core KSP/Kotlin 编译日志不再出现该警告；无需额外 suppression。
 
-**绕道**: 忽略（这是已知）
+**后果**: `@hide` API 由自定义 SDK/android.jar 与 framework.jar 的真实 AOSP 产物提供，不依赖 stub。
 
 ### 1.5 AGP builtInKotlin + KSP + AIDL 兼容性（2026-08-12 新增）
 
@@ -80,24 +80,25 @@ sourceSets {
 **问题 3：KSP 无法解析 AIDL 生成的接口（`IHomeControlsRemoteProxy`）**
 **根因**: builtInKotlin 下 AIDL 生成的 Java 源码默认不在 KSP/Kotlin 源码集中。
 KSP 任务也不自动依赖 `compileDebugAidl`。
-**解决**: 
-1. `android.sourceset.disallowProvider=false`（gradle.properties）
-2. AIDL 输出目录加入 kotlin sourceSet：
+**解决**:
+1. AIDL 输出目录按 variant 加入 kotlin sourceSet（不使用 sourceSets provider API）：
 ```kotlin
 android.sourceSets {
     getByName("debug") {
-        kotlin.srcDir(layout.buildDirectory.dir("generated/aidl_source_output_dir/debug/out"))
+        kotlin.srcDir("build/generated/aidl_source_output_dir/debug/out")
+    }
+    getByName("release") {
+        kotlin.srcDir("build/generated/aidl_source_output_dir/release/out")
     }
 }
 ```
-3. 手动添加任务依赖：
+2. 按 variant 添加任务依赖：
 ```kotlin
-tasks.matching { it.name.startsWith("ksp") }.configureEach {
-    dependsOn("compileDebugAidl")
-}
+tasks.matching { it.name == "kspDebugKotlin" }.configureEach { dependsOn("compileDebugAidl") }
+tasks.matching { it.name == "kspReleaseKotlin" }.configureEach { dependsOn("compileReleaseAidl") }
 ```
 
-**结果**: KSP 0 错误，2933 个文件生成，AIDL 接口全部解析。
+**结果**: KSP 0 错误，2933 个文件生成，AIDL 接口全部解析；release KSP 不再错误依赖 debug AIDL 输出。
 
 ### 1.6 Compose 版本与 AOSP 源码兼容性（2026-08-12 新增）
 
@@ -138,7 +139,7 @@ constraintlayout 2.3.0-alpha01 → 公网最新 2.2.2。
 
 ### 2.1 `libs/server-notification-flags.jar` 是空 jar
 
-**现象**: 
+**现象**:
 ```bash
 $ unzip -l libs/server-notification-flags.jar
 (empty)
@@ -161,7 +162,7 @@ val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/
 > Kotlin 2.2.10 都无罪。见下方 §2.4 与 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`。
 > 下面保留原推测内容供"如何走偏"的教训参考。
 
-**现象**: 
+**现象**:
 - Jar 在 classpath（`./gradlew --debug` 验证）
 - `javap -p` 能看到方法
 - 独立 K2JVMCompiler 同样报错
@@ -194,7 +195,7 @@ val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/
 - 包名: `com.android.systemui.*` vs `com.android.server.*`
 - 类大小: 53220 vs 6285 字节
 
-**可能根因**: 
+**可能根因**:
 - Kotlin Android plugin 对 `com.android.systemui.*` namespace 特殊处理
 - 或者大类的某个方法签名不同
 - 或者 `@UnsupportedAppUsage` 在不同类的处理方式不同
@@ -352,7 +353,7 @@ files(frameworkJar) + files(options.bootstrapClasspath?.files ?: emptySet<File>(
 
 **现象**: `--info` 不显示 kotlin 编译器的实际命令行
 
-**解决**: 
+**解决**:
 ```bash
 ./gradlew :SystemUI-core:compileDebugKotlin --debug 2>&1 | grep -oE "[-]classpath [^ ]+"
 ```

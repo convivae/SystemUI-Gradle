@@ -13,9 +13,9 @@
 | 2 | [`../AGENTS.md`](../AGENTS.md) | 项目规则（必读） |
 | 3 | [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) | 当前状态快照（构建状态、版本矩阵、待解决） |
 
-**当前里程碑（2026-08-12 commit `cde2a6ed`）**：依赖升级 + AGP `builtInKotlin` 迁移完成；
-KSP 0 错误（2933 文件，fresh checkout 已复验）；Kotlin 编译剩 2 个 `jsr305` 错误。
-首次 `:app:assembleDebug` 另发现 WM-Shell 重复类与两个 header flag JAR 的 D8 阻塞。
+**当前里程碑（2026-08-12 实施检查点，Task 1–6）**：依赖升级 + AGP `builtInKotlin` 迁移完成；
+debug/release KSP 0 错误；core Kotlin 0 错误。审查发现的 `jsr305`、WM-Shell AAR 交集、
+header flag JAR 与 release KSP/AIDL 依赖问题均已修复；最终 `:app:assembleDebug` 基线待 Task 7 记录。
 详见 [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)，
 后续按 [`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md) 执行。
 
@@ -118,6 +118,7 @@ KSP 0 错误（2933 文件，fresh checkout 已复验）；Kotlin 编译剩 2 �
 | [`../tools/package_aosp_aar.py`](../tools/package_aosp_aar.py) | 从 AOSP Soong 产物打包 AAR 到 `libs/aars/`（多 JAR 合并、reject_sysui、确定性） |
 | [`../tools/install_aar_to_maven.py`](../tools/install_aar_to_maven.py) | 安装 `libs/aars/*.aar` 到 `libs/maven/`（AAR + POM 骨架） |
 | [`../tools/package_compilelib_jars.py`](../tools/package_compilelib_jars.py) | 打包 compilelib debug/release JAR |
+| [`../tools/package_aconfig_jars.py`](../tools/package_aconfig_jars.py) | 从 AOSP `javac` 产物打包完整 aconfig runtime JAR |
 | [`../tools/install_sdk.py`](../tools/install_sdk.py) | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口） |
 | [`../tools/check_source_alignment.py`](../tools/check_source_alignment.py) | AOSP SystemUI src/AIDL/res 对齐校验（规则 C） |
 | [`../tools/markup_product_variants.py`](../tools/markup_product_variants.py) | res-product `product=` 变体 CONV 标记 |
@@ -127,7 +128,7 @@ KSP 0 错误（2933 文件，fresh checkout 已复验）；Kotlin 编译剩 2 �
 | [`../tools/rebuild_settingslib_aar.py`](../tools/rebuild_settingslib_aar.py) | 重建 SettingsLib AAR |
 | `../tools/gen_aar_maven.py` | 已废弃（R.jar 合并失败实验），勿用 |
 
-单元测试：`python3 -m unittest discover -s tools/tests -p 'test_*.py'`（57 个）。
+单元测试：`python3 -m unittest discover -s tools/tests -p 'test_*.py'`（60 个）。
 
 ---
 
@@ -148,7 +149,7 @@ KSP 0 错误（2933 文件，fresh checkout 已复验）；Kotlin 编译剩 2 �
 → [`AGENTS.md`](../AGENTS.md) §1, §2
 
 ### "现在构建状态如何？"
-→ [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §0–§2（KSP 0 错误 / Kotlin 2 个错误 / APK 打包阻塞）
+→ [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §0–§2（KSP 0 错误 / Kotlin 0 错误 / APK 最终基线待复验）
 
 ### "当前各依赖什么版本？"
 → [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §3 或 [`AGENTS.md`](../AGENTS.md) §4.3

@@ -39,7 +39,7 @@ android {
     }
 }
 
-// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// AGP builtInKotlin：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
 // 对齐 AOSP kotlincflags: ["-Xjvm-default=all"]
 kotlin {
     compilerOptions {

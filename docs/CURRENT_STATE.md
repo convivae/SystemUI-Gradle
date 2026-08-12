@@ -1,6 +1,6 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **当前阶段（2026-08-12 commit `cde2a6ed`）**：**依赖升级 + AGP builtInKotlin 迁移完成，KSP 0 错误；core Kotlin 剩 2 个错误；APK 入口另有 WM-Shell 重复类和 header flag JAR D8 阻塞**。
+> **当前阶段（2026-08-12 实施检查点）**：**审查阻塞 Task 1–5 已完成：core Kotlin 0 错误，WM-Shell 重复类与 header flag JAR 已修复，AGP 9.3.1 验证通过；等待最终 `:app:assembleDebug` 基线**。
 
 ---
 
@@ -8,12 +8,12 @@
 
 | 指标 | 值 |
 |------|-----|
-| KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误 |
+| KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误（debug/release 均验证） |
 | KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
-| Kotlin 编译 | 2 个错误（`javax.annotation.concurrent.GuardedBy` / `jsr305` 未解析） |
-| APK 编译 | 未通过：WM-Shell 12 个重复类；2 个 header flag JAR 无法被 D8 处理 |
-| 单元测试 | 57 个全部通过 |
-| commit | `cde2a6ed` — 文档同步并提交 `libs/` 产物 |
+| Kotlin 编译 | **BUILD SUCCESSFUL**，0 个 Kotlin 错误 |
+| APK 编译 | 前置阻塞已修复；最终 `:app:assembleDebug` 待复验 |
+| 单元测试 | 60 个全部通过 |
+| 实施基线 | Task 1–6 已完成 |
 
 **前一次里程碑（commit `05ea2064`）**：KSP + Dagger 2.55 useBindingGraphFix 首次通过，
 但 Kotlin 编译被 Compose inline 问题（`Couldn't inline method call: Box$default`）阻塞。
@@ -22,8 +22,10 @@
 **Compose inline 问题已消失**，Kotlin 编译可运行并仅剩 2 个 pre-existing 错误。
 
 **2026-08-12 后置审查补充**：fresh checkout 已复验 KSP 成功；首次运行
-`:app:assembleDebug` 证明 APK 还被 WM-Shell AAR class-set 重叠及两个不可执行的
-header flag JAR 阻塞。完整证据和下一步见
+`:app:assembleDebug` 证明 APK 曾被 WM-Shell AAR class-set 重叠及两个不可执行的
+header flag JAR 阻塞。Task 1–5 已逐项修复这些阻塞；Task 6 完成构建脚本与维护文档一致性清理。
+最终 APK 结果待 Task 7 记录。
+完整证据见
 [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)。
 
 ---
@@ -86,7 +88,7 @@ AGP 建议用 `android.builtInKotlin=true` 迁移到 AGP 内置 Kotlin。
 |------|------|---------|
 | KSP 通过 `kotlin.sourceSets` 添加源码被禁止 | builtInKotlin 不允许第三方插件操作 kotlin sourceSets | `android.disallowKotlinSourceSets=false` |
 | KSP `NO-SOURCE`（找不到 Kotlin 源码） | builtInKotlin 下 `java.srcDirs()` 不自动包含 `.kt` 文件 | 所有模块添加 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` |
-| KSP 无法解析 AIDL 生成的接口（`IHomeControlsRemoteProxy`） | builtInKotlin 下 AIDL 输出不在 KSP 源码集中 | `android.sourceset.disallowProvider=false` + `kotlin.srcDir(aidl_output)` + `tasks.matching { ksp }.dependsOn(compileDebugAidl)` |
+| KSP 无法解析 AIDL 生成的接口（`IHomeControlsRemoteProxy`） | builtInKotlin 下 AIDL 输出不在 KSP 源码集中，且 KSP 不自动依赖 AIDL 编译 | AIDL 输出按 variant 加入 `kotlin.srcDir(...)`；`kspDebugKotlin→compileDebugAidl`、`kspReleaseKotlin→compileReleaseAidl` |
 
 ### 1.5 新增依赖
 
@@ -115,38 +117,31 @@ AGP 建议用 `android.builtInKotlin=true` 迁移到 AGP 内置 Kotlin。
 **KSP 关键配置**（缺一不可）：
 1. `android.builtInKotlin=true`（gradle.properties）— AGP 内置 Kotlin
 2. `android.disallowKotlinSourceSets=false`（gradle.properties）— 允许 KSP 操作 kotlin sourceSets
-3. `android.sourceset.disallowProvider=false`（gradle.properties）— 允许 sourceSets provider API
-4. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 崩溃
-5. Dagger 2.59.2（≥2.58 默认启用 useBindingGraphFix）
-6. SystemUI-core: `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` + AIDL 输出目录加入 kotlin sourceSet
+3. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 崩溃
+4. Dagger 2.59.2（≥2.58 默认启用 useBindingGraphFix）
+5. SystemUI-core: `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` + AIDL 输出目录加入 kotlin sourceSet
+6. KSP/AIDL 按 variant 精确接线：debug→debug、release→release
 
-### 2.2 Kotlin 编译（2 个 pre-existing 错误）
-
-```bash
-./gradlew :SystemUI-core:compileDebugKotlin --console=plain
-# → BUILD FAILED
-# → 2 个错误：
-#   1. CommunalAppWidgetHost.kt:25  Unresolved reference 'concurrent'
-#   2. CommunalAppWidgetHost.kt:52  Unresolved reference 'GuardedBy'
-```
-
-**这两个错误是 pre-existing**（升级前就存在），不是版本升级导致：
-- `concurrent` — 可能缺 `androidx.concurrent` 或 `java.util.concurrent` import
-- `GuardedBy` — 可能缺 `javax.annotation.concurrent.GuardedBy` 依赖（errorprone 或 jsr305）
-
-### 2.3 APK 入口验证（3 类已知阻塞）
+### 2.2 Kotlin 编译（通过）
 
 ```bash
-./gradlew :app:assembleDebug --console=plain
-# → BUILD FAILED
-# → SystemUI-core Kotlin: GuardedBy/jsr305 2 个错误
-# → checkDebugDuplicateClasses: WM-Shell 两个 AAR 重复 12 个 shared AIDL 类
-# → desugarDebugFileDependencies: settingslib-flags.jar 与
-#    systemui-shared-flags.jar 缺少方法 Code attribute
+./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --console=plain
+# → BUILD SUCCESSFUL
+# → 0 个 Kotlin 错误
 ```
 
-这些打包错误与 KSP 里程碑相互独立。不得通过 stub、忽略 D8 校验或删除整个
-`WindowManager-Shell-shared` 依赖绕过；应修正依赖 scope、完整 JAR 来源和 AAR class owner。
+Task 1 补充了 AOSP `Android.bp` 明确声明的 `com.google.code.findbugs:jsr305:3.0.2`，
+并应用了 Soong 等价的 Compose compiler plugin；此前的 `GuardedBy` 与 Box inline 错误均消失。
+
+### 2.3 APK 入口前置阻塞（已修复，最终 APK 待复验）
+
+审查阶段发现的 3 类阻塞已逐项修复：
+
+1. `jsr305` 缺失 → 官方 `com.google.code.findbugs:jsr305:3.0.2` 已接入；
+2. WM-Shell 12 个重复 shared AIDL 类 → 主/shared AAR class-set 交集已为 0；
+3. 两个 header flag JAR 无法 D8 → shared flags 换成 Soong `javac` JAR，SettingsLib flags 改 `compileOnly`。
+
+下一步是运行 `:app:assembleDebug` 建立真实 APK 基线；不得预先声明成功。
 
 ### 2.4 Compose inline 问题已解决
 
@@ -164,7 +159,7 @@ framework.jar 污染 KotlinCompile Compose inline metadata）。
 | 工具 | 版本 | 备注 |
 |------|------|------|
 | Gradle | 9.5.0 | wrapper |
-| AGP | 9.2.0 | `libs.plugins.android.library` |
+| AGP | 9.3.1 | `libs.plugins.android.library` |
 | Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置（无显式插件） |
 | KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin 2.2.10 |
 | Dagger | 2.59.2 | useBindingGraphFix 默认启用（≥2.58） |
@@ -206,12 +201,8 @@ animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell�
 
 ## 5. 待解决
 
-1. **补 AOSP 已声明的 `jsr305` 官方依赖**，解决 `GuardedBy` 两个 core Kotlin 错误
-2. **修正 aconfig JAR 语义**：SettingsLib flags 使用 `compileOnly`；SystemUI shared flags 换完整 javac JAR
-3. **修复 WM-Shell AAR 交集**：去除主 AAR 中由 shared AAR 交付的 12 个 AIDL 生成类
-4. **修复 release KSP → debug AIDL 的错误任务依赖**
-5. 验证 AGP 9.3.1，并清理版本注释/README 漂移
-6. 重新运行 `:app:assembleDebug`，记录真实下一基线
+1. **运行 `:app:assembleDebug`**，记录真实 APK 基线或下一阻塞
+2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 执行计划：[`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md)
 
@@ -229,6 +220,7 @@ animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell�
 | 2026-07-29 | 70 | tier① 全源码化 + KSP + AIDL 源码编译 + 规则 C 审查 |
 | 2026-08-11 | — | KSP + Dagger 2.55 useBindingGraphFix 首次通过（0 KSP 错误） |
 | **2026-08-12** | **KSP: 0, Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移** |
+| **2026-08-12 实施** | **KSP: 0, Kotlin: 0** | **Task 1–6：jsr305、aconfig JAR、WM-Shell AAR、variant KSP/AIDL、AGP 9.3.1、文档/格式清理** |
 
 > **注意**：错误数仅作诊断参考，不是提交/回滚/审批门槛（规则 I）。
 

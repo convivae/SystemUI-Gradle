@@ -3,10 +3,10 @@
 A standalone, self-contained Gradle build of the Android SystemUI source tree — designed to compile independently of the AOSP build system while remaining compatible with it.
 
 > **Status:** active development — see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for the live snapshot.
-> As of 2026-08-12 (commit `cde2a6ed`): KSP annotation processing passes with **0 errors**
-> in a fresh checkout (2,933 files generated). Core Kotlin has **2 `jsr305` dependency errors**;
-> APK assembly additionally exposes WM-Shell duplicate classes and two non-dexable header flag
-> JARs. See the [standards review](docs/issues/2026-08-12-current-progress-standards-review.md).
+> As of the 2026-08-12 implementation checkpoints (Tasks 1–6): debug/release KSP and
+> core Kotlin compilation pass with **0 errors**. The review-identified APK pre-blockers are fixed;
+> the final `:app:assembleDebug` baseline is pending. See the
+> [standards review](docs/issues/2026-08-12-current-progress-standards-review.md).
 
 ---
 
@@ -18,7 +18,7 @@ AOSP's SystemUI is normally built inside the AOSP source tree using Blueprint (`
 - use as a library or standalone project outside the full AOSP checkout;
 - version, branch, or code-review independently of the platform.
 
-This project extracts SystemUI from AOSP, ports it to a pure Gradle build (Gradle 9.5 + AGP 9.2 +
+This project extracts SystemUI from AOSP, ports it to a pure Gradle build (Gradle 9.5 + AGP 9.3.1 +
 Kotlin 2.2.10 via AGP `builtInKotlin`), and packages every dependency it needs so that the project
 compiles without ever reaching back into the AOSP tree.
 
@@ -32,7 +32,7 @@ A reference implementation that informed many of the choices here is [`CarSystem
 2. **Stay BP-compatible.** The source tree is kept close enough to AOSP that the same files still compile under Blueprint, so the project can be dropped back into AOSP without rewriting imports or layout.
 3. **No stubs.** Hidden AOSP APIs are provided by real prebuilt JARs/AARs copied out of AOSP outputs, never by hand-written `*.java` stub classes.
 4. **No private resource files.** Every resource under `res/` came from AOSP source, a checked-in AAR, or a checked-in JAR — never a one-off XML/PNG created locally to make the build pass.
-5. **Use modern Gradle.** Kotlin DSL (`build.gradle.kts`), version catalog (`gradle/libs.versions.toml`), Gradle 9.5, AGP 9.2 with `builtInKotlin=true`.
+5. **Use modern Gradle.** Kotlin DSL (`build.gradle.kts`), version catalog (`gradle/libs.versions.toml`), Gradle 9.5, AGP 9.3.1 with `builtInKotlin=true`.
 
 ---
 
@@ -183,12 +183,12 @@ As of 2026-08-12 the verified blockers are tracked in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) and the
 [standards review](docs/issues/2026-08-12-current-progress-standards-review.md):
 
-- **2 core Kotlin errors** in `CommunalAppWidgetHost.kt`: AOSP's declared `jsr305` dependency
-  has not yet been connected to Gradle.
-- **12 duplicate WM-Shell shared AIDL classes** occur across the main and shared AARs.
-- **2 header flag JARs cannot be dexed** because runtime methods have no `Code` attribute.
-- release KSP currently depends on debug AIDL output; AGP 9.3.1 verification and deprecated
-  source-set provider cleanup are pending.
+- **Final APK assembly is pending.** The previous blockers have been fixed: `jsr305` is now
+  declared; WM-Shell AAR class overlap is zero; shared SettingsLib/SystemUI flags use the correct
+  compile/runtime forms; release KSP is wired to release AIDL; AGP 9.3.1 is verified.
+- **Non-blocking warnings remain.** Room schema export is unconfigured, Kotlin 2.3 warns about
+  future data-class copy visibility, and manifest merging reports duplicate permissions. These are
+  deferred follow-ups, not current build blockers.
 
 Historical blockers that are **solved**: KSP + Dagger binding resolution (Dagger 2.59.2 enables
 `useBindingGraphFix` by default), the Compose inline-metadata failure (gone since Compose 1.11.4 +

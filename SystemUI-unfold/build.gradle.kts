@@ -39,7 +39,7 @@ android {
     }
 }
 
-// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// AGP builtInKotlin：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
 // 对齐 AOSP kotlincflags: ["-Xjvm-default=all"]
 kotlin {
     compilerOptions {
@@ -56,7 +56,7 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/dynamicanimation-1.1.0-alpha04.jar"))
 
     // Dagger 组件（DaggerUnfold/RemoteUnfoldSharedComponent）由 KSP 在本项目内生成。
-    // 对齐 core：dagger 2.60.1 + useBindingGraphFix 默认启用（2.58+）。
+    // 对齐 core：Dagger 2.59.2 + useBindingGraphFix 默认启用（2.58+）。
     ksp(libs.dagger.compiler)
 
     // tier③ 标准第三方（maven 版本依赖，对齐 bp static_libs）

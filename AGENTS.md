@@ -126,7 +126,7 @@
 
 res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-maven.md`）：
 
-1. **AOSP 源码**（规则 S 优先）：SystemUI 自有的 res 在 `SystemUI-core/res{, -keyguard, -product}/`，
+1. **AOSP 源码**（规则 S 优先）：SystemUI 自有的 res 在 `SystemUI-res/res{, -keyguard, -product}/`，
    必须与 AOSP 1:1 对齐（规则 C 不漏不多）
 2. **AOSP 编译产物（非 SystemUI）**：
    - 无 res 的纯代码库 → `libs/<name>.jar`
@@ -205,7 +205,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 - **framework.jar 与自定义 SDK 资源不是一回事**：framework.jar 主要提供代码签名；单独把它放到 bootclasspath 不能解决 framework 私有资源 ID（参考项目问题二十五已证伪），资源 ID 必须由自定义 SDK 的 android.jar 资源部分解决
 - 本项目根 `build.gradle.kts` 当前只把 framework.jar 注入 `JavaCompile.bootstrapClasspath/classpath`，**不注入 KotlinCompile**；后者会污染 Compose inline metadata，触发 `Couldn't inline method call` 等 IR 错误
 - Kotlin 所需隐藏 API 由合并后的 SysUISdk/AGP classpath 提供
-- **2026-08-12 更新**：升级 Compose 1.11.4 + 迁移 builtInKotlin 后，Compose inline 问题已不再出现（此前 Kotlin 编译被 `Couldn't inline method call: Box$default` 阻塞）
+- **2026-08-12 更新**：Compose 1.11.4 + AGP builtInKotlin + `:SystemUI-core` 应用 Compose compiler plugin 后，Compose inline 问题已不再出现（此前 Kotlin 编译被 `Couldn't inline method call: Box$default` 阻塞）
 - 内部 flags jar 必须放在 framework.jar 之前，否则 framework.jar 的同名 stub 会遮蔽真实 flags 类
 - 参考：`CarSystemUIGradle/docs/GRADLE_MIGRATION.md` 问题二十四至二十六；`docs/architecture/2026-08-06-reference-project-rationale.md`
 
@@ -262,9 +262,10 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 > **历史**：2026-07-29 源码化里程碑将 tier① 自有代码由 jar 改为源码依赖（规则 S）；
 > unfold 引入 KSP（`2.2.10-2.0.2`，对齐编译器 2.2.10）跑 Dagger。详见
 > `docs/architecture/2026-07-29-dependency-audit.md` §6。
-> **2026-08-12 更新（commit `e3548016`）**：依赖升级 + 迁移 AGP `builtInKotlin=true`；
-> KSP 0 错误（2933 文件生成），Kotlin 编译剩 2 个 `jsr305` 错误；Compose inline 问题消失。
-> commit `cde2a6ed` 后置审查进一步发现 APK 入口的 WM-Shell 重复类与 header flag JAR D8 阻塞。
+> **2026-08-12 更新（Task 1–6）**：依赖升级 + 迁移 AGP `builtInKotlin=true`；
+> KSP 0 错误（2933 文件生成），core Kotlin 编译 0 错误；Compose inline 问题消失。
+> 后置审查发现的 `jsr305`、WM-Shell AAR 重复类、header flag JAR 与 release KSP/AIDL
+> 依赖问题均已在 Task 1–5 修复；最终 APK 基线待 `:app:assembleDebug` 复验。
 
 ### 3.2 libs/ 内容
 
@@ -345,16 +346,18 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 | 2026-07-29 | 70 | 规则 C 审查：删 5 个伪造 stub + 18 处伪造 import（回归 AOSP 原貌） |
 | 2026-08-11 | KSP: 0 | KSP + Dagger 2.55 useBindingGraphFix 首次通过（commit `05ea2064`） |
 | **2026-08-12** | **KSP: 0 / Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移（commit `e3548016`）** |
+| **2026-08-12 实施** | **KSP: 0 / Kotlin: 0** | **Task 1–6：jsr305、aconfig JAR、WM-Shell AAR、variant KSP/AIDL、AGP 9.3.1、文档/格式清理** |
 
-### 4.2 当前构建状态（2026-08-12 commit `cde2a6ed` 后置审查）
+### 4.2 当前构建状态（2026-08-12 实施检查点，Task 1–6）
 
-- **KSP 编译**: BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
-- **Kotlin 编译**: 2 个错误，均来自 AOSP 已声明但 Gradle 未接入的 `jsr305`/`GuardedBy`
-- **APK 编译**: 未通过；除上述 Kotlin 错误外，存在 WM-Shell 12 个重复类和两个 header flag JAR 的 D8 错误
-- **Compose inline 问题**: 已消失（Compose 1.11.4 + builtInKotlin 后不再出现 `Couldn't inline method call: Box$default`）
-- **单元测试**: 57 个全部通过
+- **KSP 编译**: debug/release 均 BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
+- **Kotlin 编译**: `:SystemUI-core:compileDebugKotlin` BUILD SUCCESSFUL，0 错误
+- **APK 编译**: 审查发现的 3 类前置阻塞已修复；最终 `:app:assembleDebug` 尚未复验
+- **WM-Shell AAR**: 主/shared class-set 交集为 0，`:app:checkDebugDuplicateClasses` 通过
+- **flag JAR**: `systemui-shared-flags.jar` 已换 Soong `javac` 完整 JAR；`settingslib-flags.jar` 为 `compileOnly`；D8 `Absent Code attribute` 消失
+- **单元测试**: 60 个全部通过
 - 错误数只作诊断，不构成提交、回滚或审批条件
-- 审查详情：`docs/issues/2026-08-12-current-progress-standards-review.md`
+- 审查与实施记录：`docs/issues/2026-08-12-current-progress-standards-review.md`
 - 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
 
 ### 4.3 版本矩阵（2026-08-12）
@@ -362,7 +365,7 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 | 组件 | 版本 | 备注 |
 |------|------|------|
 | Gradle | 9.5.0 | wrapper |
-| AGP | 9.2.0 | settings.gradle.kts 硬编码 |
+| AGP | 9.3.1 | settings.gradle.kts 硬编码 |
 | Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置，**无显式 kotlin-android 插件** |
 | KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin |
 | Dagger | 2.59.2 | useBindingGraphFix 自 2.58 默认启用 |
@@ -373,19 +376,13 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 **builtInKotlin 关键配置**（详见 PITFALLS §1.5）：
 - `android.builtInKotlin=true`（gradle.properties）
 - `android.disallowKotlinSourceSets=false`（允许 KSP 操作 kotlin sourceSets）
-- `android.sourceset.disallowProvider=false`（允许 sourceSets provider API）
 - 所有 Android 模块必须 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)`（builtInKotlin 下 java.srcDirs 不含 .kt）
-- SystemUI-core: AIDL 输出目录加入 kotlin sourceSet + `ksp* dependsOn compileDebugAidl`
+- SystemUI-core: AIDL 输出目录加入 kotlin sourceSet + `kspDebugKotlin→compileDebugAidl`、`kspReleaseKotlin→compileReleaseAidl`
 
 ### 4.4 待解决
 
-1. 补 AOSP `SystemUI-core` 已声明的官方 `jsr305` 依赖，解决 `GuardedBy` 两个错误
-2. 修正 flag JAR 语义：SettingsLib flags 为 platform compile-only；SystemUI shared flags 使用完整 javac JAR
-3. 修复 `WindowManager-Shell` 与 `WindowManager-Shell-shared` 的 12 个 shared AIDL 重复类
-4. 将 KSP/AIDL 任务依赖改为 debug→debug、release→release，并移除已废弃 provider 开关
-5. 验证已调研的最新稳定 AGP 9.3.1；若不兼容，记录具体证据后保留 9.2.0
-6. 清理构建脚本版本注释、README 资源 owner 与 whitespace 漂移
-7. 重新运行 `:app:assembleDebug`，以实际结果建立 APK 里程碑
+1. 运行 `:app:assembleDebug`，以实际结果建立 APK 里程碑
+2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 ### 4.5 已解决
 
@@ -490,6 +487,7 @@ javap -p <ClassName>
 | `tools/package_aosp_aar.py` | 从 AOSP Soong 产物打包干净 AAR 到 `libs/aars/`（含多 JAR 合并、reject_sysui、确定性） |
 | `tools/install_aar_to_maven.py` | 把 `libs/aars/*.aar` 安装到 `libs/maven/` 本地 Maven 仓（AAR + POM 骨架） |
 | `tools/package_compilelib_jars.py` | 打包 compilelib debug/release JAR（确定性） |
+| `tools/package_aconfig_jars.py` | 从 AOSP `javac` 产物打包完整 aconfig runtime JAR |
 | `tools/install_sdk.py` | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口） |
 | `tools/clean_prebuilts.py` | 清理 prebuilt jar 中的冲突类（与 maven 重复） |
 

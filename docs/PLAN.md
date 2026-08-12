@@ -117,7 +117,7 @@
 
 ---
 
-## 阶段 4: Compose Scene Framework + 业务模块错误 
+## 阶段 4: Compose Scene Framework + 业务模块错误
 
 ### 问题描述
 
@@ -178,7 +178,7 @@ import com.android.compose.theme.R as ComposeR
 
 ---
 
-## 阶段 4: 业务模块错误 
+## 阶段 4: 业务模块错误
 
 ### 4.1 分类剩余错误
 
@@ -248,7 +248,7 @@ dependencies {
 
 ---
 
-## 阶段 5: 最终验证 
+## 阶段 5: 最终验证
 
 ### 5.1 编译完整 :SystemUI-core
 

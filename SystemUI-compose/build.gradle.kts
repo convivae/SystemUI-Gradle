@@ -36,7 +36,7 @@ android {
 
 }
 
-// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// AGP builtInKotlin：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
 // Platform Compose 含 Experimental API（OverscrollEffect / AnimatedContent 等）
 kotlin {
     compilerOptions {
@@ -69,7 +69,7 @@ dependencies {
     implementation(libs.androidx.window)
     implementation(libs.androidx.savedstate.ktx)
     implementation(libs.androidx.tracing)
-    // Compose 1.9.0-alpha01 — 对齐 AOSP SystemUI prebuilts
+    // Compose 1.11.4 — 公网最高保留 ExperimentalAnimatableApi 的版本
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.ui)

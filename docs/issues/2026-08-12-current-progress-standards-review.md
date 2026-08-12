@@ -430,3 +430,31 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'
 ./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --console=plain
 # BUILD SUCCESSFUL；Kotlin errors: 0
 ```
+
+### Task 6：构建脚本注释、资源 owner 与维护文档一致性（2026-08-12）
+
+**变更**：
+
+- 将构建脚本中的漂移版本注释修正为实际矩阵：Kotlin 2.2.10（AGP builtInKotlin）、
+  KSP 2.2.10-2.0.2、Dagger 2.59.2、Compose 1.11.4、Room 2.8.4；
+- 移除过时的 `android.suppressUnsupportedCompileSdk=JdJkcSdk`：AGP 9.3.1 下 `SysUISdk`
+  不再触发 unsupported preview SDK 警告，保留旧 SDK 名 suppression 只会误导；
+- 修正 `AGENTS.md` §1.8 的 SystemUI res owner 为 `SystemUI-res/res{, -keyguard, -product}/`；
+- 同步 `README.md`、`docs/README.md`、`docs/CURRENT_STATE.md`、`docs/HANDOFF.md`、
+  `docs/PITFALLS.md` 与 AGENTS 的真实状态：core Kotlin 0 错误、WM-Shell/header JAR/variant
+  wiring 已修复、AGP 9.3.1 已验证、最终 APK 基线仍待 Task 7；
+- 清理本轮触及的构建脚本与维护文档尾随空格。AOSP 镜像资源中的原始尾随空格保持不改，
+  以满足 res 1:1 对齐规则。
+
+**验证命令与结果**：
+
+```bash
+git diff --check
+# 无输出
+
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+# 60 tests passed
+
+./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --console=plain
+# BUILD SUCCESSFUL；Kotlin errors: 0
+```

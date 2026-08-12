@@ -4,7 +4,7 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-// Dagger 2.60.1：useBindingGraphFix 自 2.58 起默认启用（修复 subcomponent 绑定解析）
+// Dagger 2.59.2：useBindingGraphFix 自 2.58 起默认启用（修复 subcomponent 绑定解析）
 // https://dagger.dev/dev-guide/compiler-options#useBindingGraphFix
 // ksp.incremental=false（gradle.properties）避免 KSP2 FIR 解析非确定性崩溃
 //   参考：https://github.com/google/ksp/issues/2542
@@ -92,7 +92,7 @@ android {
 
     // SystemUI-core 的 compose/features 源码使用 Compose experimental API（combinedClickable、
     // pointerInteropFilter、AnimatedContent 等），需全局 opt-in。与 :SystemUI-compose 保持一致。
-    // 已迁移到顶层 kotlin { compilerOptions { } }（Kotlin 2.3.x 废弃 android.kotlinOptions）
+    // AGP builtInKotlin：已迁移到顶层 kotlin { compilerOptions { } }
 
     lint {
         abortOnError = false
@@ -100,7 +100,7 @@ android {
     }
 }
 
-// Kotlin 2.3.x：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
+// AGP builtInKotlin：用顶层 kotlin { compilerOptions { } } 替代废弃的 android.kotlinOptions { }
 // SystemUI-core 的 compose/features 源码使用 Compose experimental API（combinedClickable、
 // pointerInteropFilter、AnimatedContent 等），需全局 opt-in。与 :SystemUI-compose 保持一致。
 kotlin {
@@ -119,8 +119,8 @@ kotlin {
 }
 
 // KSP 配置 Dagger 与 Room annotation processor（对齐 AOSP plugins: ["dagger2-compiler",
-//   "androidx.room_room-compiler-plugin"]）。KAPT 已移除（IR 内部错误），KSP 2.3.11
-//   对齐 Kotlin 2.3.21。Dagger 2.60.1：useBindingGraphFix 自 2.58 起默认启用。
+//   "androidx.room_room-compiler-plugin"]）。KAPT 已移除（IR 内部错误），KSP 2.2.10-2.0.2
+//   对齐 AGP builtInKotlin 的 Kotlin 2.2.10。Dagger 2.59.2：useBindingGraphFix 自 2.58 起默认启用。
 //   ksp.incremental=false（gradle.properties）避免 KSP2 FIR 非确定性崩溃。
 
 dependencies {
@@ -191,7 +191,6 @@ dependencies {
     // server-notification Flags (AOSP @aconfig Flags) - 显式声明，避免 Kotlin 编译器遗漏
     // 配合 root build.gradle.kts 中的 allprojects 注入以保证顺序
     implementation(libs.android.server.notification.flags)
-    
 
     // 直接 AAR（Soong javac + 原始 res + R.txt，无 R.class）
     implementation(libs.systemui.settingslib)
@@ -258,7 +257,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
     // Dagger：KSP 生成 DaggerReferenceGlobalRootComponent 等（对齐 AOSP plugins: ["dagger2-compiler"]）
-    // 2.60.1 最新版：useBindingGraphFix 自 2.58 起默认启用，无需手动配置 ksp{} arg
+    // Dagger 2.59.2：useBindingGraphFix 自 2.58 起默认启用，无需手动配置 ksp{} arg
     implementation(libs.dagger)
     ksp(libs.dagger.compiler)
 
@@ -269,7 +268,7 @@ dependencies {
     // Media3 (for media controls)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.session)
-    // Compose (用于 Scene 框架与 UI 组件，对齐 AOSP prebuilts 1.9.0-alpha01)
+    // Compose 1.11.4（公网最高保留 ExperimentalAnimatableApi 的版本）
     implementation(libs.androidx.activity.compose)
     implementation(libs.compose.runtime)
     implementation(libs.compose.animation)
@@ -291,7 +290,7 @@ dependencies {
     implementation(libs.androidx.tracing)
     // concurrent-futures-ktx: ListenableFuture.await()（media/zen 等）
     implementation(libs.androidx.concurrent.futures.ktx)
-    // Room 2.7.0-beta01：fallbackToDestructiveMigration(dropAllTables=) 需 2.7+（AOSP 版本）
+    // Room 2.8.4：fallbackToDestructiveMigration(dropAllTables=) 需 2.7+（AOSP 内部版本不在公网）
     // room-compiler 通过 KSP 运行（对齐 AOSP plugins: ["androidx.room_room-compiler-plugin"]）
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
