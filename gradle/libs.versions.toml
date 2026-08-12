@@ -1,8 +1,8 @@
 [versions]
 media3 = "1.11.0"
-agp = "9.2.0"
-# Kotlin 2.2.10 对齐 AGP 9.2.0 嵌入编译器 + KSP 2.2.10-2.0.2
-# Kotlin 由 AGP builtInKotlin=true 提供（版本随 AGP 9.2.0 = Kotlin 2.2.10）
+agp = "9.3.1"
+# Kotlin 2.2.10 对齐 AGP 9.3.1 嵌入编译器 + KSP 2.2.10-2.0.2
+# Kotlin 由 AGP builtInKotlin=true 提供（版本随 AGP 9.3.1 = Kotlin 2.2.10）
 # kotlin-compose 插件版本须与 AGP 内置 Kotlin 版本一致
 kotlin = "2.2.10"
 compose = "1.11.4"

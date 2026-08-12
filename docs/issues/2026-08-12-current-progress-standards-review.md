@@ -418,3 +418,15 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'
 **诊断记录**：一次性执行 debug+release 且加 `--rerun-tasks` 会在同一 Gradle daemon 中
 同时运行两套完整链，KSP worker 因 4 GiB heap 耗尽失败。分别停止 daemon 后单独验证
 两个 variant，均成功；这不是源码错误或 wiring 回归，未增加任何 workaround。
+
+### Task 5：AGP 9.3.1 原子升级（2026-08-12）
+
+**变更**：`settings.gradle.kts` 与 `gradle/libs.versions.toml` 同步从 AGP 9.2.0 升级到 9.3.1。
+未改变 Kotlin/KSP 矩阵：AGP 内置 Kotlin 仍为 2.2.10，KSP 仍为 2.2.10-2.0.2。
+
+**验证命令与结果**：
+
+```bash
+./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --console=plain
+# BUILD SUCCESSFUL；Kotlin errors: 0
+```
