@@ -350,3 +350,37 @@ javap -classpath libs/systemui-shared-flags.jar -p -c com.android.systemui.share
 python3 -m unittest discover -s tools/tests -p 'test_*.py'
 # 59 tests passed
 ```
+
+### Task 3：WM-Shell AAR class-set 去重（2026-08-12）
+
+**变更**：
+
+- `tools/package_aosp_aar.py` 新增确定性 `exclude_prefixes` 机制；
+- `WindowManager-Shell` config 仅排除 3 个由 shared artifact 拥有的 AIDL interface class tree：
+  `IFocusTransitionListener`、`IHomeTransitionListener`、`IShellTransitions`；
+- `libs/aars/WindowManager-Shell.aar` 与本地 Maven 交付 AAR 重新生成（4352053 → 4341027 bytes）。
+
+**TDD 记录**：
+
+```bash
+python3 -m unittest tools.tests.test_package_aosp_aar.TestAssembleAar.test_excluded_prefix_is_omitted_but_other_classes_remain -v
+# RED：TypeError: assemble_aar() got an unexpected keyword argument 'exclude_prefixes'
+# GREEN：1 test passed
+```
+
+**验证命令与结果**：
+
+```bash
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+# 60 tests passed
+
+python3 tools/package_aosp_aar.py WindowManager-Shell
+python3 tools/install_aar_to_maven.py
+# libs/aars 与 libs/maven 中的 WindowManager-Shell AAR 字节一致
+
+# ZIP class-set intersection check
+# WindowManager-Shell ∩ WindowManager-Shell-shared = 0
+
+./gradlew :app:checkDebugDuplicateClasses --rerun-tasks --console=plain
+# BUILD SUCCESSFUL；无 Duplicate class
+```

@@ -131,6 +131,44 @@ class TestAssembleAar(unittest.TestCase):
                                  n.rsplit("/", 1)[-1].startswith("R$") for n in cn),
                              "classes.jar 不应含 R.class")
 
+    def test_excluded_prefix_is_omitted_but_other_classes_remain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            code = root / "code.jar"
+            _make_jar(
+                code,
+                {
+                    "com/android/wm/shell/shared/IHomeTransitionListener.class": b"aidl",
+                    "com/android/wm/shell/ShellTaskOrganizer.class": b"main",
+                },
+            )
+            resources = root / "res"
+            resources.mkdir()
+            manifest = root / "AndroidManifest.xml"
+            manifest.write_bytes(b"<manifest/>")
+            rtxt = root / "R.txt"
+            rtxt.write_bytes(b"")
+            output = root / "library.aar"
+
+            paar.assemble_aar(
+                [code],
+                resources,
+                manifest,
+                rtxt,
+                output,
+                exclude_prefixes=[
+                    "com/android/wm/shell/shared/IHomeTransitionListener"
+                ],
+            )
+
+            with zipfile.ZipFile(output) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as classes:
+                    names = set(classes.namelist())
+            self.assertNotIn(
+                "com/android/wm/shell/shared/IHomeTransitionListener.class", names
+            )
+            self.assertIn("com/android/wm/shell/ShellTaskOrganizer.class", names)
+
     def test_repeated_builds_are_byte_identical(self):
         import time
         with tempfile.TemporaryDirectory() as d:

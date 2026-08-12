@@ -89,6 +89,11 @@ CONFIGS = {
         "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/R.txt",
         "output": "libs/aars/WindowManager-Shell.aar",
+        "exclude_prefixes": [
+            "com/android/wm/shell/shared/IFocusTransitionListener",
+            "com/android/wm/shell/shared/IHomeTransitionListener",
+            "com/android/wm/shell/shared/IShellTransitions",
+        ],
         "reject_sysui": True,
     },
     "WindowManager-Shell-shared": {
@@ -198,16 +203,18 @@ def copy_resource_tree(source: Path, destination: Path) -> None:
 
 
 def assemble_aar(code_jars, res_dirs, manifest: Path, rtxt: Path, output: Path,
-                  reject_prefixes=None) -> None:
+                  reject_prefixes=None, exclude_prefixes=None) -> None:
     """组装最终 AAR：classes.jar（合并 code JAR）+ res/ + AndroidManifest.xml + R.txt。
 
     :param code_jars: code JAR 路径列表
     :param res_dirs: res root 路径或路径列表（多 root 时检测重复相对路径）
     :param reject_prefixes: 额外拒绝的类名前缀列表（如 WM-Shell 拒绝 com/android/systemui/）
+    :param exclude_prefixes: 由 sibling artifact 负责交付、需要从本 AAR 省略的类名前缀
     """
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     reject_prefixes = reject_prefixes or []
+    exclude_prefixes = exclude_prefixes or []
     # 合并 code JAR 到内存 classes.jar
     merged = BytesIO()
     seen = set()
@@ -227,6 +234,8 @@ def assemble_aar(code_jars, res_dirs, manifest: Path, rtxt: Path, output: Path,
                     if any(name.startswith(p) for p in reject_prefixes):
                         raise DuplicateEntryError(
                             f"拒绝禁止前缀的类: {name}（来自 {jar}）；前缀 {reject_prefixes}")
+                    if any(name.startswith(p) for p in exclude_prefixes):
+                        continue
                     if name == "META-INF/MANIFEST.MF":
                         if name in seen:
                             continue
@@ -284,7 +293,8 @@ def build_artifact(name: str, output: Path = None) -> None:
     output = Path(output) if output else Path(cfg["output"])
     reject_prefixes = ["com/android/systemui/"] if cfg.get("reject_sysui") else []
     assemble_aar(cfg["code"], cfg["res"], cfg["manifest"], cfg["rtxt"], output,
-                 reject_prefixes=reject_prefixes)
+                 reject_prefixes=reject_prefixes,
+                 exclude_prefixes=cfg.get("exclude_prefixes", []))
     print(f"{name} AAR → {output} ({output.stat().st_size} bytes)")
 
 
