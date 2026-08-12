@@ -317,3 +317,36 @@ tasks.matching { it.name.startsWith("ksp") }.configureEach {
 `build/soong/java/base.go` 中对包含 `androidx.compose.runtime_runtime` static lib 的模块自动追加
 `kotlin-compose-compiler-plugin`；`SystemUI-core` 符合该条件且含 154 个 `@Composable` Kotlin 文件，
 但 Gradle 模块此前未应用 Compose compiler plugin。应用插件后 Box inline IR 错误消失。
+
+### Task 2：aconfig JAR compile/runtime 语义（2026-08-12）
+
+**变更**：
+
+- 新增 `tools/package_aconfig_jars.py` 和 `tools/tests/test_package_aconfig_jars.py`；
+- `libs/systemui-shared-flags.jar` 替换为 AOSP Soong `javac` 完整实现 JAR（7111 → 11197 bytes），方法含 `Code` attribute；
+- `SystemUI-core/build.gradle.kts` 将 `settingslib-flags.jar` 从 `implementation` 改为 `compileOnly`。
+
+**TDD 记录**：
+
+```bash
+python3 -m unittest tools.tests.test_package_aconfig_jars -v
+# RED：FileNotFoundError: tools/package_aconfig_jars.py
+# GREEN：2 tests passed
+```
+
+**验证命令与结果**：
+
+```bash
+python3 tools/package_aconfig_jars.py systemui-shared-flags
+javap -classpath libs/systemui-shared-flags.jar -p -c com.android.systemui.shared.Flags
+# ambientAod() 等方法含 Code attribute
+
+./gradlew :app:desugarDebugFileDependencies --rerun-tasks --console=plain
+# BUILD SUCCESSFUL；Absent Code attribute 不再出现
+
+./gradlew :SystemUI-core:compileDebugKotlin --console=plain
+# BUILD SUCCESSFUL；Kotlin errors: 0
+
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+# 59 tests passed
+```

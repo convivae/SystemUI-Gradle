@@ -171,7 +171,9 @@ dependencies {
     // (SystemUIAppComponentFactoryBase; Maven 上无此 artifact，AOSP 用 prebuilts/r8/keepanno-annotations.jar)
     compileOnly(files("${rootProject.projectDir}/libs/keepanno-annotations.jar"))
     // com.android.settingslib.flags.Flags (aconfig, enableLeAudioSharing 等)
-    implementation(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
+    // Android.bp lists aconfig_settingslib_flags_java_lib under libs and states that
+    // its implementation is already in framework.jar; use the header only for compilation.
+    compileOnly(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
     // com.android.settingslib.media.flags.Flags (aconfig, removeUnnecessaryRouteScanning 等)
     implementation(files("${rootProject.projectDir}/libs/settingslib-media-flags.jar"))
     // motion_tool_lib (com.android.app.motiontool.*，来自 AOSP frameworks/libs/systemui/motiontoollib)
