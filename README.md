@@ -3,10 +3,10 @@
 A standalone, self-contained Gradle build of the Android SystemUI source tree — designed to compile independently of the AOSP build system while remaining compatible with it.
 
 > **Status:** active development — see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for the live snapshot.
-> As of 2026-08-12 (commit `e3548016`): KSP annotation processing passes with **0 errors**
-> (2,933 files generated, incl. `DaggerReferenceGlobalRootComponent.java`); the core Kotlin
-> compile is down to **2 pre-existing errors**. All dependencies are on the latest versions
-> available on public Maven.
+> As of 2026-08-12 (commit `cde2a6ed`): KSP annotation processing passes with **0 errors**
+> in a fresh checkout (2,933 files generated). Core Kotlin has **2 `jsr305` dependency errors**;
+> APK assembly additionally exposes WM-Shell duplicate classes and two non-dexable header flag
+> JARs. See the [standards review](docs/issues/2026-08-12-current-progress-standards-review.md).
 
 ---
 
@@ -69,9 +69,9 @@ SystemUI-Gradle/
 
 The AOSP sources under `SystemUI-core/src/` mirror the original layout of
 `frameworks/base/packages/SystemUI/src/` (see `AGENTS.md` for the full mapping).
-Resources under `SystemUI-core/res-keyguard/` and `SystemUI-core/res-product/` are
-copies of the corresponding AOSP resource directories (gitignored, regenerated
-from AOSP).
+Resources owned by `:SystemUI-res` under `SystemUI-res/res/`,
+`SystemUI-res/res-keyguard/`, and `SystemUI-res/res-product/` are tracked copies of the
+corresponding AOSP resource directories.
 
 ---
 
@@ -179,13 +179,16 @@ The full list of constraints and conventions lives in [`AGENTS.md`](AGENTS.md).
 
 ## Known issues
 
-As of 2026-08-12 the remaining work is small and tracked in
-[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md):
+As of 2026-08-12 the verified blockers are tracked in
+[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) and the
+[standards review](docs/issues/2026-08-12-current-progress-standards-review.md):
 
-- **2 pre-existing Kotlin errors** in `CommunalAppWidgetHost.kt` (`Unresolved reference
-  'concurrent'` / `'GuardedBy'`) — a missing `androidx.concurrent` / jsr305-style dependency,
-  predating the 2026-08-12 upgrade.
-- `srcDirs` deprecation warnings from AGP (cosmetic).
+- **2 core Kotlin errors** in `CommunalAppWidgetHost.kt`: AOSP's declared `jsr305` dependency
+  has not yet been connected to Gradle.
+- **12 duplicate WM-Shell shared AIDL classes** occur across the main and shared AARs.
+- **2 header flag JARs cannot be dexed** because runtime methods have no `Code` attribute.
+- release KSP currently depends on debug AIDL output; AGP 9.3.1 verification and deprecated
+  source-set provider cleanup are pending.
 
 Historical blockers that are **solved**: KSP + Dagger binding resolution (Dagger 2.59.2 enables
 `useBindingGraphFix` by default), the Compose inline-metadata failure (gone since Compose 1.11.4 +

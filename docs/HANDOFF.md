@@ -44,14 +44,16 @@ echo "KSP errors: $(grep -c 'e: \\[ksp\\]' /tmp/build.log)"
 echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
 ```
 
-**当前状态（2026-08-12 commit `e3548016`）**：
-- **全依赖升级完成** — 所有依赖升级到公网最新可用版本
-- **AGP builtInKotlin 迁移完成** — 移除显式 kotlin-android 插件，Kotlin 2.2.10 由 AGP 内置
-- KSP 编译 BUILD SUCCESSFUL（0 个 KSP 错误，2933 个文件生成）
+**当前状态（2026-08-12 commit `cde2a6ed`）**：
+- 依赖升级与 AGP builtInKotlin 迁移完成；Kotlin 2.2.10 由 AGP 内置
+- KSP 编译 BUILD SUCCESSFUL（0 个 KSP 错误，2933 个文件生成）；fresh checkout 已复验
 - `DaggerReferenceGlobalRootComponent.java` 已生成
-- Kotlin 编译 2 个错误（pre-existing：`concurrent` / `GuardedBy` 未解析，非升级导致）
-- Compose inline 问题已解决（升级 Compose 1.11.4 + builtInKotlin 后消失）
+- core Kotlin 编译 2 个错误：AOSP 已声明的 `jsr305`/`GuardedBy` 依赖未接入
+- Compose inline 问题已解决（Compose 1.11.4 + builtInKotlin）
+- `:app:assembleDebug` 另有两类打包阻塞：WM-Shell 12 个重复类；两个 header flag JAR 无法 D8
 - 57 个单元测试全部通过
+- 完整审查：`docs/issues/2026-08-12-current-progress-standards-review.md`
+- 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
 
 **KSP 关键配置**（缺一不可）：
 1. `android.builtInKotlin=true`（gradle.properties）— AGP 内置 Kotlin
@@ -175,11 +177,12 @@ SystemUI-Gradle/
   服务于两个不同编译阶段，互补不可替代。详见 `docs/issues/2026-07-29-aidl-animationlib-app.md §一`
 - **ISystemUiProxy.aidl** 属于 `:SystemUI-shared` 模块，由 `OverviewProxyService.java` 使用
 
-### 4.6 全依赖升级 + builtInKotlin 迁移（2026-08-12，最新里程碑）
-- **状态**: 完成（commit `e3548016`）
-- **要点**: 所有依赖升级到公网最新可用版本；迁移到 AGP `builtInKotlin=true`（Kotlin 2.2.10 内置）；KSP 0 错误；Kotlin 编译仅剩 2 个 pre-existing 错误；Compose inline 问题消失。
-- **遗留**: 修复 `concurrent`/`GuardedBy` 未解析 → `:app:assembleDebug` APK 里程碑
-- **详情**: `docs/issues/2026-08-12-deps-upgrade-builtin-kotlin.md`
+### 4.6 全依赖升级 + builtInKotlin 迁移（2026-08-12，KSP 里程碑）
+- **状态**: KSP 里程碑完成（commit `e3548016`）；产物/文档提交至 `cde2a6ed`
+- **要点**: 迁移到 AGP `builtInKotlin=true`（Kotlin 2.2.10 内置）；KSP 0 错误；Compose inline 问题消失。多数依赖已升级，但审查确认 AGP 9.2.0 仍低于已调研的最新稳定 9.3.1，需验证后再使用“全部最新”表述。
+- **遗留**: core 的 `jsr305` 依赖；flag JAR runtime 语义；WM-Shell AAR 重复类；release KSP/AIDL 变体依赖
+- **详情**: `docs/issues/2026-08-12-current-progress-standards-review.md`
+- **下一步**: 严格执行 `docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
 
 ---
 

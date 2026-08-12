@@ -13,9 +13,11 @@
 | 2 | [`../AGENTS.md`](../AGENTS.md) | 项目规则（必读） |
 | 3 | [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) | 当前状态快照（构建状态、版本矩阵、待解决） |
 
-**当前里程碑（2026-08-12 commit `e3548016`）**：全依赖升级 + AGP `builtInKotlin` 迁移完成；
-KSP 0 错误（2933 文件生成）；Kotlin 编译仅剩 2 个 pre-existing 错误。
-详见 [`issues/2026-08-12-deps-upgrade-builtin-kotlin.md`](./issues/2026-08-12-deps-upgrade-builtin-kotlin.md)。
+**当前里程碑（2026-08-12 commit `cde2a6ed`）**：依赖升级 + AGP `builtInKotlin` 迁移完成；
+KSP 0 错误（2933 文件，fresh checkout 已复验）；Kotlin 编译剩 2 个 `jsr305` 错误。
+首次 `:app:assembleDebug` 另发现 WM-Shell 重复类与两个 header flag JAR 的 D8 阻塞。
+详见 [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)，
+后续按 [`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md) 执行。
 
 ---
 
@@ -63,7 +65,8 @@ KSP 0 错误（2933 文件生成）；Kotlin 编译仅剩 2 个 pre-existing 错
 
 | 日期 | 文档 | 主题 |
 |------|------|------|
-| 2026-08-12 | [`issues/2026-08-12-deps-upgrade-builtin-kotlin.md`](./issues/2026-08-12-deps-upgrade-builtin-kotlin.md) | 全依赖升级 + builtInKotlin 迁移（最新里程碑） |
+| 2026-08-12 | [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md) | 当前进度规范审查、APK 新阻塞与后续实施计划 |
+| 2026-08-12 | [`issues/2026-08-12-deps-upgrade-builtin-kotlin.md`](./issues/2026-08-12-deps-upgrade-builtin-kotlin.md) | 全依赖升级 + builtInKotlin 迁移（KSP 里程碑） |
 | 2026-08-11 | [`issues/2026-08-11-phase-c-final-4-decisions.md`](./issues/2026-08-11-phase-c-final-4-decisions.md) | Phase C 4 项版本决策（版本已被 08-12 升级超越） |
 | 2026-08-11 | [`issues/2026-08-11-aar-maven-catalog-unification.md`](./issues/2026-08-11-aar-maven-catalog-unification.md) | AAR 统一到 Maven catalog（gitignore 策略已变更） |
 | 2026-08-07 | [`issues/2026-08-07-conv-markup-spec.md`](./issues/2026-08-07-conv-markup-spec.md) | CONV 标记规范（ADR 0004） |
@@ -145,7 +148,7 @@ KSP 0 错误（2933 文件生成）；Kotlin 编译仅剩 2 个 pre-existing 错
 → [`AGENTS.md`](../AGENTS.md) §1, §2
 
 ### "现在构建状态如何？"
-→ [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §0–§2（KSP 0 错误 / Kotlin 2 个 pre-existing 错误）
+→ [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §0–§2（KSP 0 错误 / Kotlin 2 个错误 / APK 打包阻塞）
 
 ### "当前各依赖什么版本？"
 → [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §3 或 [`AGENTS.md`](../AGENTS.md) §4.3

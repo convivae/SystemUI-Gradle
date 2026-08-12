@@ -262,8 +262,9 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 > **历史**：2026-07-29 源码化里程碑将 tier① 自有代码由 jar 改为源码依赖（规则 S）；
 > unfold 引入 KSP（`2.2.10-2.0.2`，对齐编译器 2.2.10）跑 Dagger。详见
 > `docs/architecture/2026-07-29-dependency-audit.md` §6。
-> **2026-08-12 更新（commit `e3548016`）**：全依赖升级 + 迁移 AGP `builtInKotlin=true`；
-> KSP 0 错误（2933 文件生成），Kotlin 编译仅剩 2 个 pre-existing 错误；Compose inline 问题消失。
+> **2026-08-12 更新（commit `e3548016`）**：依赖升级 + 迁移 AGP `builtInKotlin=true`；
+> KSP 0 错误（2933 文件生成），Kotlin 编译剩 2 个 `jsr305` 错误；Compose inline 问题消失。
+> commit `cde2a6ed` 后置审查进一步发现 APK 入口的 WM-Shell 重复类与 header flag JAR D8 阻塞。
 
 ### 3.2 libs/ 内容
 
@@ -318,9 +319,9 @@ libs/
 
 ```
 SystemUI-core/src/             <--  /home/conv/myspace/aosp/frameworks/base/packages/SystemUI/src/
-SystemUI-core/res/             <--  AOSP SystemUI/res/
-SystemUI-core/res-keyguard/    <--  AOSP SystemUI/res-keyguard/
-SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
+SystemUI-res/res/              <--  AOSP SystemUI/res/
+SystemUI-res/res-keyguard/     <--  AOSP SystemUI/res-keyguard/
+SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 ```
 
 ---
@@ -345,14 +346,16 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 | 2026-08-11 | KSP: 0 | KSP + Dagger 2.55 useBindingGraphFix 首次通过（commit `05ea2064`） |
 | **2026-08-12** | **KSP: 0 / Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移（commit `e3548016`）** |
 
-### 4.2 当前构建状态（2026-08-12 commit `e3548016`）
+### 4.2 当前构建状态（2026-08-12 commit `cde2a6ed` 后置审查）
 
-- **KSP 编译**: BUILD SUCCESSFUL，0 错误，2933 个文件生成（`DaggerReferenceGlobalRootComponent.java` 已生成）
-- **Kotlin 编译**: 仅 2 个 pre-existing 错误（`CommunalAppWidgetHost.kt` 的 `concurrent` / `GuardedBy` 未解析，升级前就存在）
+- **KSP 编译**: BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
+- **Kotlin 编译**: 2 个错误，均来自 AOSP 已声明但 Gradle 未接入的 `jsr305`/`GuardedBy`
+- **APK 编译**: 未通过；除上述 Kotlin 错误外，存在 WM-Shell 12 个重复类和两个 header flag JAR 的 D8 错误
 - **Compose inline 问题**: 已消失（Compose 1.11.4 + builtInKotlin 后不再出现 `Couldn't inline method call: Box$default`）
 - **单元测试**: 57 个全部通过
 - 错误数只作诊断，不构成提交、回滚或审批条件
-- 详见 `docs/CURRENT_STATE.md`
+- 审查详情：`docs/issues/2026-08-12-current-progress-standards-review.md`
+- 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
 
 ### 4.3 版本矩阵（2026-08-12）
 
@@ -376,10 +379,13 @@ SystemUI-core/res-product/     <--  AOSP SystemUI/res-product/
 
 ### 4.4 待解决
 
-1. 修复 2 个 pre-existing Kotlin 错误：`CommunalAppWidgetHost.kt` 的 `concurrent` / `GuardedBy` 未解析（androidx.concurrent / jsr305 依赖问题）
-2. 取得稳定 Kotlin 错误基线后逐包击破
-3. 处理 `srcDirs` deprecation 警告（AGP 建议用 `directories` mutable set；多个模块）
-4. 最终以 `:app:assembleDebug` 验证 APK 里程碑
+1. 补 AOSP `SystemUI-core` 已声明的官方 `jsr305` 依赖，解决 `GuardedBy` 两个错误
+2. 修正 flag JAR 语义：SettingsLib flags 为 platform compile-only；SystemUI shared flags 使用完整 javac JAR
+3. 修复 `WindowManager-Shell` 与 `WindowManager-Shell-shared` 的 12 个 shared AIDL 重复类
+4. 将 KSP/AIDL 任务依赖改为 debug→debug、release→release，并移除已废弃 provider 开关
+5. 验证已调研的最新稳定 AGP 9.3.1；若不兼容，记录具体证据后保留 9.2.0
+6. 清理构建脚本版本注释、README 资源 owner 与 whitespace 漂移
+7. 重新运行 `:app:assembleDebug`，以实际结果建立 APK 里程碑
 
 ### 4.5 已解决
 

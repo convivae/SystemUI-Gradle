@@ -1,6 +1,6 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **当前阶段（2026-08-12 commit `e3548016`）**：**全依赖升级 + AGP builtInKotlin 迁移完成，KSP 0 错误，Kotlin 编译仅剩 2 个 pre-existing 错误**。
+> **当前阶段（2026-08-12 commit `cde2a6ed`）**：**依赖升级 + AGP builtInKotlin 迁移完成，KSP 0 错误；core Kotlin 剩 2 个错误；APK 入口另有 WM-Shell 重复类和 header flag JAR D8 阻塞**。
 
 ---
 
@@ -10,15 +10,21 @@
 |------|-----|
 | KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误 |
 | KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
-| Kotlin 编译 | 2 个错误（pre-existing：`concurrent` / `GuardedBy` 未解析） |
+| Kotlin 编译 | 2 个错误（`javax.annotation.concurrent.GuardedBy` / `jsr305` 未解析） |
+| APK 编译 | 未通过：WM-Shell 12 个重复类；2 个 header flag JAR 无法被 D8 处理 |
 | 单元测试 | 57 个全部通过 |
-| commit | `e3548016` — Upgrade all deps to latest available + migrate to AGP builtInKotlin |
+| commit | `cde2a6ed` — 文档同步并提交 `libs/` 产物 |
 
 **前一次里程碑（commit `05ea2064`）**：KSP + Dagger 2.55 useBindingGraphFix 首次通过，
 但 Kotlin 编译被 Compose inline 问题（`Couldn't inline method call: Box$default`）阻塞。
 
 **本次关键突破**：通过升级 Compose 到 1.11.4 + 迁移到 AGP `builtInKotlin=true`，
 **Compose inline 问题已消失**，Kotlin 编译可运行并仅剩 2 个 pre-existing 错误。
+
+**2026-08-12 后置审查补充**：fresh checkout 已复验 KSP 成功；首次运行
+`:app:assembleDebug` 证明 APK 还被 WM-Shell AAR class-set 重叠及两个不可执行的
+header flag JAR 阻塞。完整证据和下一步见
+[`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)。
 
 ---
 
@@ -128,7 +134,21 @@ AGP 建议用 `android.builtInKotlin=true` 迁移到 AGP 内置 Kotlin。
 - `concurrent` — 可能缺 `androidx.concurrent` 或 `java.util.concurrent` import
 - `GuardedBy` — 可能缺 `javax.annotation.concurrent.GuardedBy` 依赖（errorprone 或 jsr305）
 
-### 2.3 Compose inline 问题已解决
+### 2.3 APK 入口验证（3 类已知阻塞）
+
+```bash
+./gradlew :app:assembleDebug --console=plain
+# → BUILD FAILED
+# → SystemUI-core Kotlin: GuardedBy/jsr305 2 个错误
+# → checkDebugDuplicateClasses: WM-Shell 两个 AAR 重复 12 个 shared AIDL 类
+# → desugarDebugFileDependencies: settingslib-flags.jar 与
+#    systemui-shared-flags.jar 缺少方法 Code attribute
+```
+
+这些打包错误与 KSP 里程碑相互独立。不得通过 stub、忽略 D8 校验或删除整个
+`WindowManager-Shell-shared` 依赖绕过；应修正依赖 scope、完整 JAR 来源和 AAR class owner。
+
+### 2.4 Compose inline 问题已解决
 
 **之前**（commit `05ea2064`）：`:SystemUI-core:compileDebugKotlin` 被
 `Couldn't inline method call: Box$default` 阻塞（AGENTS.md §2.4 已知问题：
@@ -178,16 +198,22 @@ framework.jar 污染 KotlinCompile Compose inline metadata）。
 **8 个 AAR**（`libs/aars/` + `libs/maven/`，2026-08-12 起随 `libs/` 全部提交入 git）：
 animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
 
-**构建**：`libs/` 已提交入 git，新 clone 可直接构建；仅在需要重新生成 AOSP 产物时才跑
+**构建依赖**：`libs/` 已提交入 git，新 clone 无需重新生成 AOSP 产物即可复现当前构建基线；
+当前尚不能成功产出 APK。仅在需要更新 AOSP 产物时才跑
 `python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py`。
 
 ---
 
 ## 5. 待解决
 
-1. **修复 2 个 pre-existing Kotlin 错误**：`concurrent` / `GuardedBy` 未解析
-2. 取得稳定 Kotlin 错误基线后逐包击破
-3. 最终以 `:app:assembleDebug` 验证 APK 里程碑
+1. **补 AOSP 已声明的 `jsr305` 官方依赖**，解决 `GuardedBy` 两个 core Kotlin 错误
+2. **修正 aconfig JAR 语义**：SettingsLib flags 使用 `compileOnly`；SystemUI shared flags 换完整 javac JAR
+3. **修复 WM-Shell AAR 交集**：去除主 AAR 中由 shared AAR 交付的 12 个 AIDL 生成类
+4. **修复 release KSP → debug AIDL 的错误任务依赖**
+5. 验证 AGP 9.3.1，并清理版本注释/README 漂移
+6. 重新运行 `:app:assembleDebug`，记录真实下一基线
+
+执行计划：[`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md)
 
 ---
 
