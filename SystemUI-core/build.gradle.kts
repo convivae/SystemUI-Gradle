@@ -68,12 +68,12 @@ android {
             java.srcDirs("src-debug")
             kotlin.srcDirs("src-debug")
             // AIDL 生成的 Java 源码加入 kotlin sourceSet，使 KSP 能解析 AIDL 接口
-            kotlin.srcDir(layout.buildDirectory.dir("generated/aidl_source_output_dir/debug/out"))
+            kotlin.srcDir("build/generated/aidl_source_output_dir/debug/out")
         }
         getByName("release") {
             java.srcDirs("src-release")
             kotlin.srcDirs("src-release")
-            kotlin.srcDir(layout.buildDirectory.dir("generated/aidl_source_output_dir/release/out"))
+            kotlin.srcDir("build/generated/aidl_source_output_dir/release/out")
         }
     }
 
@@ -309,9 +309,8 @@ dependencies {
     //     全量重编 0 报错，无需再排除或拆独立模块。
 }
 
-// builtInKotlin 下 KSP 任务默认不依赖 compileDebugAidl，导致 AIDL 生成的接口
-// （如 IHomeControlsRemoteProxy）在 KSP 处理 Dagger 时不可见。
-tasks.matching { it.name.startsWith("ksp") }.configureEach {
-    dependsOn("compileDebugAidl")
-}
+// builtInKotlin 下 KSP 任务默认不依赖 AIDL 编译任务，导致 AIDL 生成的接口
+// （如 IHomeControlsRemoteProxy）在 KSP 处理 Dagger 时不可见。按 variant 精确接线。
+tasks.matching { it.name == "kspDebugKotlin" }.configureEach { dependsOn("compileDebugAidl") }
+tasks.matching { it.name == "kspReleaseKotlin" }.configureEach { dependsOn("compileReleaseAidl") }
 

@@ -384,3 +384,37 @@ python3 tools/install_aar_to_maven.py
 ./gradlew :app:checkDebugDuplicateClasses --rerun-tasks --console=plain
 # BUILD SUCCESSFUL；无 Duplicate class
 ```
+
+### Task 4：variant-aware KSP/AIDL wiring（2026-08-12）
+
+**变更**：
+
+- `kspDebugKotlin → compileDebugAidl`；
+- `kspReleaseKotlin → compileReleaseAidl`；
+- 移除 `android.sourceset.disallowProvider=false`；
+- AIDL 生成目录改为项目相对路径，避免 sourceSets provider API。
+
+**实现调整**：计划中的 `tasks.named("kspDebugKotlin")` 在 KSP 任务注册完成前解析会失败；
+实际改用 `tasks.matching { it.name == ...configureEach` 保持 lazy registration，
+同时仍按 variant 精确映射，不回到 `startsWith("ksp") → compileDebugAidl`。
+
+**验证命令与结果**：
+
+```bash
+./gradlew :SystemUI-core:kspReleaseKotlin --dry-run --console=plain
+# 包含 :SystemUI-core:compileReleaseAidl，不包含 :SystemUI-core:compileDebugAidl
+
+./gradlew :SystemUI-core:kspDebugKotlin --console=plain
+# BUILD SUCCESSFUL；Kotlin errors: 0
+
+./gradlew :SystemUI-core:kspReleaseKotlin --console=plain
+# BUILD SUCCESSFUL；Kotlin errors: 0
+
+# 两条实际构建均无 android.sourceset.disallowProvider deprecation warning
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+# 60 tests passed
+```
+
+**诊断记录**：一次性执行 debug+release 且加 `--rerun-tasks` 会在同一 Gradle daemon 中
+同时运行两套完整链，KSP worker 因 4 GiB heap 耗尽失败。分别停止 daemon 后单独验证
+两个 variant，均成功；这不是源码错误或 wiring 回归，未增加任何 workaround。
