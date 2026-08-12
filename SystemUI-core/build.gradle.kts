@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp")
 }
 
@@ -219,6 +220,8 @@ dependencies {
 
     // AndroidX
     implementation(libs.androidx.annotation)
+    // AOSP SystemUI-core static_libs: "jsr305"; provides javax.annotation.concurrent.GuardedBy.
+    implementation(libs.jsr305)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.cardview)
     implementation(libs.androidx.asynclayoutinflater)

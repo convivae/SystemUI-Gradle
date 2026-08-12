@@ -9,6 +9,7 @@ compose = "1.11.4"
 composeMaterialIcons = "1.7.8"
 androidxCore = "1.19.0"
 androidxAnnotation = "1.11.0-alpha01"
+jsr305 = "3.0.2"
 material = "1.14.0"
 material3 = "1.5.0-alpha18"
 kotlinxCoroutines = "1.11.0"
@@ -59,6 +60,7 @@ androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidxCore
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-core-animation = { module = "androidx.core:core-animation", version = "1.0.0" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
+jsr305 = { module = "com.google.code.findbugs:jsr305", version.ref = "jsr305" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
 androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "androidxCardview" }
 androidx-concurrent-futures = { module = "androidx.concurrent:concurrent-futures", version.ref = "androidxConcurrent" }

@@ -291,3 +291,29 @@ tasks.matching { it.name.startsWith("ksp") }.configureEach {
 - 13-module/AOSP 对齐：保持正确；
 - Python 工具测试：57/57 通过；
 - APK：尚未生成，不得声明 build successful。
+
+## 八、实施记录
+
+### Task 1：JSR-305 依赖与 Compose compiler plugin（2026-08-12）
+
+**变更**：
+
+- `gradle/libs.versions.toml` 新增 `com.google.code.findbugs:jsr305:3.0.2`；
+- `SystemUI-core/build.gradle.kts` 新增 `implementation(libs.jsr305)`；
+- `SystemUI-core/build.gradle.kts` 新增 `alias(libs.plugins.kotlin.compose)`。
+
+**验证命令与结果**：
+
+```bash
+./gradlew :SystemUI-core:compileDebugKotlin --console=plain
+# 变更前：BUILD FAILED；CommunalAppWidgetHost.kt 仅有 concurrent/GuardedBy 2 个错误
+
+./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --rerun-tasks --console=plain
+# 变更后：BUILD SUCCESSFUL；Kotlin errors: 0
+```
+
+**额外根因**：补 JSR-305 后，编译第一次进入 backend codegen，暴露
+`Couldn't inline method call: Box$default`。AOSP Soong 在
+`build/soong/java/base.go` 中对包含 `androidx.compose.runtime_runtime` static lib 的模块自动追加
+`kotlin-compose-compiler-plugin`；`SystemUI-core` 符合该条件且含 154 个 `@Composable` Kotlin 文件，
+但 Gradle 模块此前未应用 Compose compiler plugin。应用插件后 Box inline IR 错误消失。
