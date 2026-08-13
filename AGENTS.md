@@ -355,7 +355,7 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 
 - **KSP 编译**: debug/release 均 BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
 - **Kotlin 编译**: `:SystemUI-core:compileDebugKotlin` BUILD SUCCESSFUL，0 错误
-- **APK 编译**: core javac 已 0 错误（2026-08-13 里程碑）；`:app:assembleDebug` 仅剩 `:app:processDebugResources` 阻塞——WM-Shell manifest `android:featureFlag` 不在 AAPT `--feature_flags` 中（调研 `docs/architecture/2026-08-13-aapt-feature-flags-options.md`，推荐 AGP `androidResources.additionalParameters`，待用户批准），APK 未生成
+- **APK 编译**: core javac 已 0 错误；featureFlag 阻塞已修（`8ab860e9`，AGP `additionalParameters("--feature-flags", ...)`）；`:app:assembleDebug` 当前阻塞于 `:app:processDebugResources` 的 **`androidprv:` 框架私有资源缺失**（§2.4 第 2 条已知缺口：SysUISdk `android.jar` 缺 framework-res.apk 资源；此前被 featureFlag abort 遮蔽），修复方向已明确（framework-res.apk → SysUISdk），待用户批准
 - **WM-Shell AAR**: 主/shared class-set 交集为 0，`:app:checkDebugDuplicateClasses` 通过
 - **flag JAR**: `systemui-shared-flags.jar` 已换 Soong `javac` 完整 JAR；`settingslib-flags.jar` 为 `compileOnly`；D8 `Absent Code attribute` 消失
 - **单元测试**: 60 个全部通过
@@ -384,7 +384,7 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 
 ### 4.4 待解决
 
-1. 实施 featureFlag 修复（调研推荐：`app/build.gradle.kts` 加 `androidResources.additionalParameters("--feature-flags", "com.android.wm.shell.enable_retrievable_bubbles=true")`，待用户批准），然后重跑 `:app:assembleDebug` 建立 APK 里程碑
+1. 实施 androidprv 私有资源修复（framework-res.apk 的 `resources.arsc` + `res/` 写入 SysUISdk `android.jar`，§2.4 第 2 条先例，待用户批准），然后重跑 `:app:assembleDebug` 建立 APK 里程碑
 2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 ### 4.5 已解决

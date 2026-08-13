@@ -184,7 +184,7 @@ SystemUI-Gradle/
 - **已修复**: `jsr305` 依赖；flag JAR runtime 语义；WM-Shell AAR 重复类；release KSP/AIDL 变体依赖；AGP 9.3.1 已验证。
 - **Task 7 结果**: `:app:assembleDebug` 在 core javac 阶段失败（42 errors）。根因归属为 8 组真实依赖/产物缺口：`NeverCompile`、setupcompat、Wi‑Fi/WM‑Shell flags、zxing、unfold/shared Dagger factory、过期 `SystemUI-tags.jar`、`androidx.media` 版本约束。
 - **详情**: `docs/issues/2026-08-12-current-progress-standards-review.md`
-- **下一步**: 用户批准 featureFlag 修复方案（调研推荐：`androidResources.additionalParameters("--feature-flags", ...)` 于 `app/build.gradle.kts`，见 `docs/architecture/2026-08-13-aapt-feature-flags-options.md`）→ 实施 → 重跑 `:app:assembleDebug` 建立 APK 里程碑。
+- **下一步**: 用户批准 androidprv 私有资源修复（framework-res.apk → SysUISdk `android.jar`，AGENTS.md §2.4 第 2 条；错误清单见 `docs/issues/2026-08-12-current-progress-standards-review.md` featureFlag 修复小节）→ 开 brief 实施 → 重跑 `:app:assembleDebug` 建立 APK 里程碑。
 
 ---
 
