@@ -24,3 +24,11 @@
 2026-08-13 15:28 | w3:p1 | 002 | review-pass | jars byte-identical to AOSP; architect re-run: 3 target groups = 0 matches; 64/64 tests; NOTE worker log was OOM-invalid, architect re-ran acceptance
 2026-08-13 15:28 | w4:p1 | 003 | review-pass | 3 factories generated; architect verified factory group = 0 on real javac log
 2026-08-13 15:28 | main | 002+003 | merge | task-002, task-003 merged (conflict on issue record resolved keeping both notes); main javac: 4/7 groups eliminated, remaining NeverCompile/setupcompat/media
+2026-08-13 15:29 | w6:p1 | 004 | dispatch | w004 in worktree wt-004 (branch task-004)
+2026-08-13 15:32 | w6:p1 | 004 | contract-ok | w004 CONTRACT confirmed (session file)
+2026-08-13 15:50 | w6:p1 | 004 | review-pass | AAR 126 classes + manifest/R.txt/res verified; toml +1 line only; setupcompat group = 0; remaining = NeverCompile + media
+2026-08-13 15:50 | main | 004 | merge | task-004 merged and pushed
+2026-08-13 15:53 | w7:p1 | 006 | dispatch | w006 in worktree wt-006 (branch task-006)
+2026-08-13 15:56 | w7:p1 | 006 | contract-ok | w006 CONTRACT confirmed (session file)
+2026-08-13 16:04 | w7:p1 | 006 | review-pass | toml +3 lines (media only); insight 1.8.0; media group = 0; remaining 20 distinct = NeverCompile only
+2026-08-13 16:04 | main | 006 | merge | task-006 merged and pushed

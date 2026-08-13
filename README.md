@@ -4,8 +4,10 @@ A standalone, self-contained Gradle build of the Android SystemUI source tree �
 
 > **Status:** active development — see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for the live snapshot.
 > As of the 2026-08-12 implementation checkpoints (Tasks 1–7): debug/release KSP and
-> core Kotlin compilation pass with **0 errors**. `:app:assembleDebug` now reaches core Java
-> compilation but fails there with **42 javac errors**, so no APK is produced yet. See the
+> core Kotlin compilation pass with **0 errors**. As of 2026-08-13, seven of the eight
+> javac root-cause groups are fixed; `:app:assembleDebug` is now blocked by the WM-Shell
+> `android:featureFlag` resource-linking gap and the remaining NeverCompile javac group
+> (20 errors), so no APK is produced yet. See the
 > [standards review](docs/issues/2026-08-12-current-progress-standards-review.md).
 
 ---

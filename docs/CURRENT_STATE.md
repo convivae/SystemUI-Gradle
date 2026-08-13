@@ -1,6 +1,6 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **当前阶段（2026-08-12 实施检查点）**：**Task 1–7 已完成：KSP/Kotlin 保持 0 错误；`:app:assembleDebug` 首次到达 core Java 编译阶段，被 42 个 javac 错误阻塞，APK 尚未生成**。
+> **当前阶段（2026-08-13 修复波次后）**：**Task 7 八组 javac 根因已修复七组（zxing、wifi/wm-shell flags、unfold Dagger、setupcompat、media、SystemUI-tags）；`:app:assembleDebug` 现被两个阻塞卡住——`:app:processDebugResources` 的 WM-Shell `android:featureFlag` AAPT 链接错误（新浮出，非回归）与 core javac 的 NeverCompile 组（20 个错误，调研已完成待决策），APK 尚未生成**。
 
 ---
 
@@ -11,7 +11,7 @@
 | KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误（debug/release 均验证） |
 | KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
 | Kotlin 编译 | **BUILD SUCCESSFUL**，0 个 Kotlin 错误 |
-| APK 编译 | **未生成**：`:app:assembleDebug` 在 core javac 阶段失败（42 errors） |
+| APK 编译 | **未生成**：`:app:assembleDebug` 现被 `processDebugResources`（WM-Shell featureFlag）与 core javac NeverCompile 组（20 errors）阻塞 |
 | 单元测试 | 60 个全部通过 |
 | 实施基线 | Task 1–7 已完成 |
 
@@ -22,9 +22,9 @@
 **Compose inline 问题已消失**；Task 1 补齐 JSR-305 与 Compose compiler plugin 后，core Kotlin 编译达到 0 错误。
 
 **2026-08-12 后置审查补充**：fresh checkout 已复验 KSP 成功；首次运行
-`:app:assembleDebug` 证明 APK 曾被 WM-Shell AAR class-set 重叠及两个不可执行的
+`2026-08-13` 编排修复波次消除 7/8 组 javac 根因（详见 issue 记录 Wave 修复验证小节）。此前 `:app:assembleDebug` 证明 APK 曾被 WM-Shell AAR class-set 重叠及两个不可执行的
 header flag JAR 阻塞。Task 1–5 已逐项修复这些阻塞；Task 6 完成构建脚本与维护文档一致性清理；Task 7 完整验证链
-确认 KSP/Kotlin 仍通过，但 `:app:assembleDebug` 被 core Java classpath 缺口阻塞（42 个 javac 错误）。
+确认 KSP/Kotlin 仍通过；2026-08-13 修复波次后 core javac 仅剩 NeverCompile 组（20 个错误），`:app:assembleDebug` 另被 WM-Shell `android:featureFlag` 资源链接错误阻塞。
 完整证据见
 [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)。
 
@@ -142,7 +142,7 @@ Task 1 补充了 AOSP `Android.bp` 明确声明的 `com.google.code.findbugs:jsr
 3. 两个 header flag JAR 无法 D8 → shared flags 换成 Soong `javac` JAR，SettingsLib flags 改 `compileOnly`。
 
 Task 7 运行 `:app:assembleDebug` 后，构建越过上述阶段，但在
-`:SystemUI-core:compileDebugJavaWithJavac` 失败，共 42 个 javac 错误，`app-debug.apk` 未生成。
+`:SystemUI-core:compileDebugJavaWithJavac` 仍有 NeverCompile 组 20 个错误（2026-08-13 波次已修复其余 7 组）；`:app:processDebugResources` 另有 WM-Shell featureFlag AAPT 链接错误。`app-debug.apk` 未生成。
 错误集中在真实依赖/产物缺口：`NeverCompile`、setupcompat、Wi‑Fi/WM‑Shell aconfig flags、
 zxing、SystemUI-tags 过期 JAR、`:SystemUI-shared` 未运行 Dagger KSP、以及 `androidx.media`
 被传递解析为 1.4.1。逐项根因见
@@ -199,7 +199,7 @@ framework.jar 污染 KotlinCompile Compose inline metadata）。
 animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
 
 **构建依赖**：`libs/` 已提交入 git，新 clone 无需重新生成 AOSP 产物即可复现当前构建基线；
-当前尚不能成功产出 APK：Task 7 记录的首个失败层是 core Java 编译。仅在需要更新 AOSP 产物时才跑
+当前尚不能成功产出 APK：首个失败层是 `:app:processDebugResources`（WM-Shell featureFlag）。仅在需要更新 AOSP 产物时才跑
 `python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py`。
 
 ---

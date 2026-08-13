@@ -51,7 +51,7 @@ echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
 - core Kotlin 编译 BUILD SUCCESSFUL（0 个 Kotlin 错误）
 - Compose inline 问题已解决（Compose 1.11.4 + builtInKotlin + Compose compiler plugin）
 - 审查发现的 WM-Shell 重复类、header flag JAR、release KSP/AIDL 错误依赖均已修复
-- Task 7 已运行 `:app:assembleDebug`：在 `:SystemUI-core:compileDebugJavaWithJavac` 失败，42 个 javac 错误，APK 未生成
+- 2026-08-13 编排修复波次：Task 7 八组 javac 根因已修复七组（commit `2662423b`/`e454feda`/`f870be99`/`ddd334fb`）；`:app:assembleDebug` 现被 `processDebugResources`（WM-Shell `android:featureFlag` AAPT 链接错误）+ core javac NeverCompile 组（20 errors）阻塞，APK 未生成
 - 60 个单元测试全部通过
 - 完整审查与实施记录：`docs/issues/2026-08-12-current-progress-standards-review.md`
 - 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
@@ -179,12 +179,12 @@ SystemUI-Gradle/
 - **ISystemUiProxy.aidl** 属于 `:SystemUI-shared` 模块，由 `OverviewProxyService.java` 使用
 
 ### 4.6 全依赖升级 + builtInKotlin 迁移（2026-08-12，KSP/Kotlin 里程碑）
-- **状态**: Task 1–7 已完成；KSP/Kotlin 里程碑保持通过，APK 仍未生成
+- **状态**: Task 1–7 完成；2026-08-13 修复波次消除 7/8 组 javac 根因；KSP/Kotlin 保持通过，APK 仍未生成
 - **要点**: 迁移到 AGP 9.3.1 `builtInKotlin=true`（Kotlin 2.2.10 内置）；KSP 0 错误；core Kotlin 0 错误；Compose inline 问题消失。
 - **已修复**: `jsr305` 依赖；flag JAR runtime 语义；WM-Shell AAR 重复类；release KSP/AIDL 变体依赖；AGP 9.3.1 已验证。
 - **Task 7 结果**: `:app:assembleDebug` 在 core javac 阶段失败（42 errors）。根因归属为 8 组真实依赖/产物缺口：`NeverCompile`、setupcompat、Wi‑Fi/WM‑Shell flags、zxing、unfold/shared Dagger factory、过期 `SystemUI-tags.jar`、`androidx.media` 版本约束。
 - **详情**: `docs/issues/2026-08-12-current-progress-standards-review.md`
-- **下一步**: 新建后续计划修复 Task 7 记录的 Java classpath/产物缺口，再重跑 `:app:assembleDebug`。
+- **下一步**: (1) 用户对 NeverCompile 调研推荐方案拍板（`docs/architecture/2026-08-13-nevercompile-classpath-options.md`，推荐补 SysUISdk）；(2) 调查 WM-Shell `android:featureFlag` 的 AAPT `--feature_flags` 缺口（候选：SysUISdk feature-flags 声明）；然后重跑 `:app:assembleDebug`。
 
 ---
 

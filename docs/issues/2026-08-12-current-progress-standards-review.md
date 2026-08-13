@@ -860,3 +860,32 @@ grep -c 'DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE' /tmp/task006.log || echo 
   阶段 OOM（Task 002/004 已记录）；该文件属 Part 5.4 红线相邻、不在本任务
   allowed_paths，未改文件，改用 CLI `-Dorg.gradle.jvmargs="-Xmx12g …" --no-daemon`
   覆盖（与 Task 002/003/004 同例）。
+
+### Wave 修复验证（2026-08-13，架构师亲验）
+
+编排工作流修复波次（briefs 002–006，herdr worktree + worker，架构师审查后合并）结果：
+
+| 根因组 | 修复 | 验证 |
+|--------|------|------|
+| zxing / Wi-Fi flags / WM-Shell flags | brief 002：`package_aconfig_jars.py` 打包 3 个 JAR（`2662423b`） | 架构师重跑 javac：3 组 grep = 0 |
+| unfold Dagger factories | brief 003：`:SystemUI-shared` 接 KSP+Dagger（`e454feda`） | 3 个 factory 生成，组内 0 |
+| setupcompat | brief 004：AAR + 本地 Maven + catalog alias（`f870be99`） | 126 类 + res 齐，组内 0 |
+| androidx.media | brief 006：显式 pin 1.8.0（`ddd334fb`） | dependencyInsight 1.8.0，组内 0 |
+| SystemUI-tags.jar | pilot brief 001（`8cc85f74`） | 此前已修复 |
+| NeverCompile | **未修**：调研完成（brief 005，`d7eccecb`），等用户对方案拍板 | 仍 20 个 distinct 错误 |
+
+**当前 `:app:assembleDebug` 阻塞（按任务图顺序）**：
+
+1. `:app:processDebugResources` — **新浮出**（非回归；Task 7 时 javac 先失败、该任务未调度）：
+   WM-Shell AAR manifest 含 `android:featureFlag="com.android.wm.shell.enable_retrievable_bubbles"`
+   （AOSP `frameworks/base/libs/WindowManager/Shell/AndroidManifest.xml:39,53`），
+   AAPT `--feature_flags` 参数中没有该 flag。候选方向：SysUISdk 缺 feature-flags 声明 /
+   AGP feature-flags 机制对齐。待调查。
+2. `:SystemUI-core:compileDebugJavaWithJavac` — NeverCompile 组 20 个错误。
+   w005 调研结论：该类**存在**于已接线 compileOnly 的 `libs/android_module_lib_stubs_current.jar`，
+   但被 bootclasspath split-package 遮蔽；推荐方案 = 按 AGENTS.md §2.4 先例补 SysUISdk `android.jar`。
+
+验证命令（main，2026-08-13）：
+`./gradlew :app:assembleDebug` → FAILED at `:app:processDebugResources`（/tmp/waveC-app.log）；
+`./gradlew :SystemUI-core:compileDebugJavaWithJavac` → FAILED，40 error: 行（20 distinct，全为 NeverCompile 组，/tmp/waveC-javac.log）；
+`python3 -m unittest discover -s tools/tests` → 65/65 OK；`check_source_alignment.py --strict` → 0/0/0（MODIFIED 1 为已知 CONV 偏差）。
