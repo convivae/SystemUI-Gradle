@@ -32,3 +32,4 @@
 2026-08-13 15:56 | w7:p1 | 006 | contract-ok | w006 CONTRACT confirmed (session file)
 2026-08-13 16:04 | w7:p1 | 006 | review-pass | toml +3 lines (media only); insight 1.8.0; media group = 0; remaining 20 distinct = NeverCompile only
 2026-08-13 16:04 | main | 006 | merge | task-006 merged and pushed
+2026-08-13 16:11 | main | waveA+B | done | 002/003/004/005/006 all merged+pushed; architect verification: 7/8 javac groups eliminated; remaining blockers: processDebugResources featureFlag + NeverCompile (20 errors)
