@@ -7,9 +7,9 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|-----------|----------|-------|-------|
-| w3:p1 | w002 | `tasks/002-package-zxing-and-flags-jars.md` | wt-002 (branch task-002) | dispatched | 2026-08-13 |
-| w4:p1 | w003 | `tasks/003-shared-ksp-dagger.md` | wt-003 (branch task-003) | dispatched | 2026-08-13 |
-| w5:p1 | w005 | `tasks/005-nevercompile-research.md` | wt-005 (branch task-005) | dispatched | 2026-08-13 |
+| w3:p1 | w002 | `tasks/002-...` | wt-002 | **done, merged** | 2026-08-13 |
+| w4:p1 | w003 | `tasks/003-...` | wt-003 | **done, merged** | 2026-08-13 |
+| w5:p1 | w005 | `tasks/005-...` | wt-005 | **done, merged** | 2026-08-13 |
 
 ## Queue
 
@@ -25,4 +25,4 @@
 
 ## Last Updated
 
-2026-08-13 — architect session (wave A dispatched)
+2026-08-13 — architect session (wave A merged; wave B next)

@@ -18,3 +18,9 @@
 2026-08-13 14:42 | w3:p1 | 002 | contract-ok | w002 CONTRACT block confirmed
 2026-08-13 14:46 | w4:p1 | 003 | contract-ok | w003 CONTRACT confirmed (scrollback)
 2026-08-13 14:46 | w5:p1 | 005 | contract-ok | w005 CONTRACT confirmed (session file; terminal scrollback rotated)
+2026-08-13 15:08 | w5:p1 | 005 | review-pass | architect verified: 3 allowed files, 3 options + recommendation, command evidence present
+2026-08-13 15:08 | main | 005 | merge | task-005 merged and pushed (8ff8fa83 merge)
+2026-08-13 15:08 | w5:p1 | 005 | done | research delivered; finding: NeverCompile present in android_module_lib_stubs_current.jar but shadowed via bootclasspath split-package; recommendation = patch SysUISdk
+2026-08-13 15:28 | w3:p1 | 002 | review-pass | jars byte-identical to AOSP; architect re-run: 3 target groups = 0 matches; 64/64 tests; NOTE worker log was OOM-invalid, architect re-ran acceptance
+2026-08-13 15:28 | w4:p1 | 003 | review-pass | 3 factories generated; architect verified factory group = 0 on real javac log
+2026-08-13 15:28 | main | 002+003 | merge | task-002, task-003 merged (conflict on issue record resolved keeping both notes); main javac: 4/7 groups eliminated, remaining NeverCompile/setupcompat/media
