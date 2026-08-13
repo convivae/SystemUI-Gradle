@@ -134,8 +134,8 @@ CONTRACT:
 
 ### Completion report (four parts, all required)
 
-1. English commit (or, in REDLINE state, the uncommitted diff plus an
-   explanation).
+1. English commit (**never push** — the architect pushes after review; or, in
+   REDLINE state, the uncommitted diff plus an explanation).
 2. All brief checkboxes ticked, each with the **real** verification command
    output — fabricated success claims are a firing offense (PITFALLS §8.1).
 3. `docs/issues/` day record updated (rule D).

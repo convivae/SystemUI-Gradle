@@ -152,7 +152,7 @@ worker 不确定是否触红线时**默认视为触红线**（宁可误报）。
 5. 输出 `CONTRACT:` 段复述：任务目标、允许动的路径、禁止动的路径、验收命令、提交权限——架构师通过 `agent read` 验证该段存在才算派发成功
 
 **上报四件套**（缺一不可）：
-1. 英文 commit（或 REDLINE 状态下的未提交 diff + 说明）
+1. 英文 commit（**禁止 push**——架构师审查后才推送；或 REDLINE 状态下的未提交 diff + 说明）
 2. brief checkbox 全部勾选 + 每条验证命令的真实输出摘要（禁止虚假成功声明）
 3. `docs/issues/` 当日记录更新（规则 D）
 4. `HANDOFF:` 终端结尾段（做了什么/验证了什么/遗留什么），供 `agent read` 抓取
@@ -171,7 +171,7 @@ worker 不确定是否触红线时**默认视为触红线**（宁可误报）。
 - 每个任务生成 `docs/orchestration/tasks/NNN-<slug>.md`，格式 = 现有 plan 模板（Global Constraints + File Map + checkbox steps）外加：
 
 ```markdown
-## Authority            # self-commit | redline-gated（列出预计触碰的红线）
+## Authority            # self-commit (commit 但禁止 push，架构师审查后推送) | redline-gated（列出预计触碰的红线）
 ## Allowed Paths        # 允许修改的路径白名单
 ## Forbidden Paths      # 明确禁止的路径
 ## Acceptance           # 验收命令 + 期望输出（禁止"构建成功"这类虚词）
