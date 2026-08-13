@@ -44,14 +44,14 @@ echo "KSP errors: $(grep -c 'e: \\[ksp\\]' /tmp/build.log)"
 echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
 ```
 
-**当前状态（2026-08-12 实施检查点，Task 1–6）**：
+**当前状态（2026-08-12 实施检查点，Task 1–7）**：
 - 依赖升级与 AGP builtInKotlin 迁移完成；Kotlin 2.2.10 由 AGP 9.3.1 内置
 - KSP 编译 BUILD SUCCESSFUL（0 个 KSP 错误，2933 个文件生成）；fresh checkout 已复验
 - `DaggerReferenceGlobalRootComponent.java` 已生成
 - core Kotlin 编译 BUILD SUCCESSFUL（0 个 Kotlin 错误）
 - Compose inline 问题已解决（Compose 1.11.4 + builtInKotlin + Compose compiler plugin）
 - 审查发现的 WM-Shell 重复类、header flag JAR、release KSP/AIDL 错误依赖均已修复
-- 最终 `:app:assembleDebug` 尚未复验，待 Task 7 记录真实结果
+- Task 7 已运行 `:app:assembleDebug`：在 `:SystemUI-core:compileDebugJavaWithJavac` 失败，42 个 javac 错误，APK 未生成
 - 60 个单元测试全部通过
 - 完整审查与实施记录：`docs/issues/2026-08-12-current-progress-standards-review.md`
 - 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
@@ -178,12 +178,13 @@ SystemUI-Gradle/
   服务于两个不同编译阶段，互补不可替代。详见 `docs/issues/2026-07-29-aidl-animationlib-app.md §一`
 - **ISystemUiProxy.aidl** 属于 `:SystemUI-shared` 模块，由 `OverviewProxyService.java` 使用
 
-### 4.6 全依赖升级 + builtInKotlin 迁移（2026-08-12，KSP 里程碑）
-- **状态**: KSP/Kotlin 里程碑及审查阻塞 Task 1–6 已完成
+### 4.6 全依赖升级 + builtInKotlin 迁移（2026-08-12，KSP/Kotlin 里程碑）
+- **状态**: Task 1–7 已完成；KSP/Kotlin 里程碑保持通过，APK 仍未生成
 - **要点**: 迁移到 AGP 9.3.1 `builtInKotlin=true`（Kotlin 2.2.10 内置）；KSP 0 错误；core Kotlin 0 错误；Compose inline 问题消失。
 - **已修复**: `jsr305` 依赖；flag JAR runtime 语义；WM-Shell AAR 重复类；release KSP/AIDL 变体依赖；AGP 9.3.1 已验证。
+- **Task 7 结果**: `:app:assembleDebug` 在 core javac 阶段失败（42 errors）。根因归属为 8 组真实依赖/产物缺口：`NeverCompile`、setupcompat、Wi‑Fi/WM‑Shell flags、zxing、unfold/shared Dagger factory、过期 `SystemUI-tags.jar`、`androidx.media` 版本约束。
 - **详情**: `docs/issues/2026-08-12-current-progress-standards-review.md`
-- **下一步**: 执行计划 Task 7，最终以 `:app:assembleDebug` 记录真实 APK 基线。
+- **下一步**: 新建后续计划修复 Task 7 记录的 Java classpath/产物缺口，再重跑 `:app:assembleDebug`。
 
 ---
 

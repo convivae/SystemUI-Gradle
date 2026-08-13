@@ -458,3 +458,68 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'
 ./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --console=plain
 # BUILD SUCCESSFUL；Kotlin errors: 0
 ```
+
+### Task 7：完整验证链与真实 APK 阻塞（2026-08-12）
+
+**验证命令与结果**：
+
+```bash
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+# 60 tests passed
+
+python3 tools/check_source_alignment.py --strict
+# MISSING=0 MISPLACED=0 EXTRA=0 APP=0 RES-MISS=0 RES-EXTRA=0
+# 已知允许偏差：1 个 src MODIFIED、86 个 res byte-diff；strict 通过
+
+git diff --check
+# 无输出
+
+./gradlew :SystemUI-core:clean
+./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --console=plain
+# BUILD SUCCESSFUL；KSP 2933 files；Kotlin errors: 0
+
+./gradlew :app:assembleDebug --console=plain
+# BUILD FAILED
+# 首个失败任务：:SystemUI-core:compileDebugJavaWithJavac
+# 42 errors；app-debug.apk 未生成
+```
+
+**结论**：KSP/Kotlin 里程碑保持通过，但最终 APK 仍未生成。新的首个失败层是
+core Java 编译，不是 Kotlin、KSP、D8 duplicate-class 或资源打包阶段。完整日志为
+`/tmp/final-app.log`。
+
+**42 个 javac 错误的根因归属**（本任务只调查与记录，不添加依赖、不改源码）：
+
+| 组别 | 首个错误 | AOSP owner / 实际解析来源 | 类别 | 根因 |
+|------|----------|---------------------------|------|------|
+| `NeverCompile` | `import dalvik.annotation.optimization.NeverCompile` | `libcore/dalvik/src/main/java/dalvik/annotation/optimization/NeverCompile.java`；Soong `core-libart` JAR 含该类 | JAR/SDK classpath | 该类不在 SysUISdk `android.jar`、`core-for-system-modules.jar` 或项目 `framework.jar` 中；现有 `keepanno-annotations.jar` 只含 `com.android.tools.r8.keepanno.*`，不含 `dalvik.annotation.optimization.*` |
+| setupcompat | `com.google.android.setupcompat.util.WizardManagerHelper` | `external/setupcompat` 的 `android_library "setupcompat"` | AAR/传递依赖 | SettingsLib 在 Soong 中经 `setupdesign -> setupcompat` 获得 compile classpath；本地 `SettingsLib.aar` 的 POM 骨架没有传递依赖，AAR classes 也不含 setupcompat |
+| Wi‑Fi flags | `import com.android.wifi.flags.Flags` | `packages/modules/Wifi/flags:wifi_aconfig_flags_lib` 的 Soong javac JAR | aconfig JAR | WifiTrackerLib 的 `static_libs` 依赖未进入本项目 classpath；现有 `WifiTrackerLib.aar` 不含该生成 flags 类 |
+| zxing | `import com.google.zxing.WriterException` | `external/zxing:zxing-core` 的 Soong javac JAR | JAR/传递依赖 | SettingsLib 声明 `zxing-core` static lib；本地 SettingsLib AAR/POM 未携带该依赖 |
+| WM‑Shell flags | `import static com.android.wm.shell.Flags.enableTaskbarOnPhones` | `frameworks/base/libs/WindowManager/Shell/aconfig:com_android_wm_shell_flags_lib` 的 Soong javac JAR | aconfig JAR | WindowManager-Shell 的 `static_libs` 依赖未进入本项目 classpath |
+| unfold Dagger factories | `SystemUnfoldSharedModule_Companion_ProvideBgLooperFactory` | `SystemUI/shared/src/com/android/systemui/unfold/system/SystemUnfoldSharedModule.kt`；AOSP `SystemUISharedLib` 声明 `plugins: ["dagger2-compiler"]` | 注解处理配置 | Gradle `:SystemUI-shared` 未运行 KSP/Dagger；`:SystemUI-unfold` 的 KSP 只处理自身源码，无法为 shared 源码生成这些 factory。AOSP `SystemUISharedLib` javac JAR 确认包含 3 个缺失 factory |
+| `SystemUI-tags` | `EventLogTags.writeSysuiKeyguard(int,int)` | `SystemUI-tags` 由 `SystemUI-core/src/com/android/systemui/EventLogTags.logtags` 生成 | 生成 JAR 过期 | 项目 `libs/SystemUI-tags.jar`（2026 bytes）缺少 `SYSUI_KEYGUARD`/`writeSysuiKeyguard`；当前 AOSP Soong javac JAR（2086 bytes）包含该方法 |
+| media completion extra | `MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE` | AOSP prebuilt `androidx.media_media` 为 `1.7.0-alpha02`；公网 `androidx.media:media` 1.7.0 与最新 1.8.0 均含该常量 | Maven 版本约束 | 项目没有直接声明 `androidx.media:media`；`mediarouter:1.9.0-alpha01` 将其解析到 1.4.1，而 1.4.1 不含该常量 |
+
+**后续合规调查/修复入口**（留给后续实施计划）：
+
+```bash
+# media 版本链证据
+./gradlew :SystemUI-core:dependencyInsight \
+  --configuration debugCompileClasspath --dependency androidx.media:media
+
+# SystemUI-tags 过期证据
+javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags
+javap -classpath /home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/packages/SystemUI/SystemUI-tags/android_common/javac/SystemUI-tags.jar \
+  com.android.systemui.EventLogTags
+
+# shared Dagger factory 缺失证据
+find SystemUI-shared/build/generated/ksp/debug -type f
+unzip -l /home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/packages/SystemUI/shared/SystemUISharedLib/android_common/javac/SystemUISharedLib.jar \
+  | grep 'SystemUnfoldSharedModule'
+```
+
+**下一步**：为这些 Java classpath 缺口建立新的实施计划：补齐真实 AOSP JAR/AAR 或官方 Maven 约束、
+让 `:SystemUI-shared` 按 AOSP `SystemUISharedLib` 的 `plugins: ["dagger2-compiler"]` 运行 KSP/Dagger、
+重新生成 `SystemUI-tags.jar`，然后再运行 `:app:assembleDebug`。禁止用 stub、排除源码、伪造资源
+或关闭 D8/javac 校验绕过这些错误。

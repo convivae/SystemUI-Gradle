@@ -347,12 +347,13 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 | 2026-08-11 | KSP: 0 | KSP + Dagger 2.55 useBindingGraphFix 首次通过（commit `05ea2064`） |
 | **2026-08-12** | **KSP: 0 / Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移（commit `e3548016`）** |
 | **2026-08-12 实施** | **KSP: 0 / Kotlin: 0** | **Task 1–6：jsr305、aconfig JAR、WM-Shell AAR、variant KSP/AIDL、AGP 9.3.1、文档/格式清理** |
+| **2026-08-12 验证** | **KSP: 0 / Kotlin: 0 / javac: 42** | **Task 7：完整验证链；`:app:assembleDebug` 在 core Java 编译阶段失败，APK 未生成，8 组根因已归属** |
 
-### 4.2 当前构建状态（2026-08-12 实施检查点，Task 1–6）
+### 4.2 当前构建状态（2026-08-12 实施检查点，Task 1–7）
 
 - **KSP 编译**: debug/release 均 BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
 - **Kotlin 编译**: `:SystemUI-core:compileDebugKotlin` BUILD SUCCESSFUL，0 错误
-- **APK 编译**: 审查发现的 3 类前置阻塞已修复；最终 `:app:assembleDebug` 尚未复验
+- **APK 编译**: Task 7 已运行 `:app:assembleDebug`，在 `:SystemUI-core:compileDebugJavaWithJavac` 失败（42 个 javac 错误，8 组根因已归属），APK 未生成；修复计划待建
 - **WM-Shell AAR**: 主/shared class-set 交集为 0，`:app:checkDebugDuplicateClasses` 通过
 - **flag JAR**: `systemui-shared-flags.jar` 已换 Soong `javac` 完整 JAR；`settingslib-flags.jar` 为 `compileOnly`；D8 `Absent Code attribute` 消失
 - **单元测试**: 60 个全部通过
@@ -381,7 +382,7 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 
 ### 4.4 待解决
 
-1. 运行 `:app:assembleDebug`，以实际结果建立 APK 里程碑
+1. 修复 Task 7 记录的 8 组 Java classpath/产物缺口（setupcompat/zxing/flags JAR、SystemUI-shared 的 KSP Dagger、SystemUI-tags 刷新、media 版本约束、NeverCompile 方案），然后重跑 `:app:assembleDebug` 建立 APK 里程碑
 2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 ### 4.5 已解决

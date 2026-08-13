@@ -1,6 +1,6 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **当前阶段（2026-08-12 实施检查点）**：**审查阻塞 Task 1–5 已完成：core Kotlin 0 错误，WM-Shell 重复类与 header flag JAR 已修复，AGP 9.3.1 验证通过；等待最终 `:app:assembleDebug` 基线**。
+> **当前阶段（2026-08-12 实施检查点）**：**Task 1–7 已完成：KSP/Kotlin 保持 0 错误；`:app:assembleDebug` 首次到达 core Java 编译阶段，被 42 个 javac 错误阻塞，APK 尚未生成**。
 
 ---
 
@@ -11,20 +11,20 @@
 | KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误（debug/release 均验证） |
 | KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
 | Kotlin 编译 | **BUILD SUCCESSFUL**，0 个 Kotlin 错误 |
-| APK 编译 | 前置阻塞已修复；最终 `:app:assembleDebug` 待复验 |
+| APK 编译 | **未生成**：`:app:assembleDebug` 在 core javac 阶段失败（42 errors） |
 | 单元测试 | 60 个全部通过 |
-| 实施基线 | Task 1–6 已完成 |
+| 实施基线 | Task 1–7 已完成 |
 
 **前一次里程碑（commit `05ea2064`）**：KSP + Dagger 2.55 useBindingGraphFix 首次通过，
 但 Kotlin 编译被 Compose inline 问题（`Couldn't inline method call: Box$default`）阻塞。
 
 **本次关键突破**：通过升级 Compose 到 1.11.4 + 迁移到 AGP `builtInKotlin=true`，
-**Compose inline 问题已消失**，Kotlin 编译可运行并仅剩 2 个 pre-existing 错误。
+**Compose inline 问题已消失**；Task 1 补齐 JSR-305 与 Compose compiler plugin 后，core Kotlin 编译达到 0 错误。
 
 **2026-08-12 后置审查补充**：fresh checkout 已复验 KSP 成功；首次运行
 `:app:assembleDebug` 证明 APK 曾被 WM-Shell AAR class-set 重叠及两个不可执行的
-header flag JAR 阻塞。Task 1–5 已逐项修复这些阻塞；Task 6 完成构建脚本与维护文档一致性清理。
-最终 APK 结果待 Task 7 记录。
+header flag JAR 阻塞。Task 1–5 已逐项修复这些阻塞；Task 6 完成构建脚本与维护文档一致性清理；Task 7 完整验证链
+确认 KSP/Kotlin 仍通过，但 `:app:assembleDebug` 被 core Java classpath 缺口阻塞（42 个 javac 错误）。
 完整证据见
 [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)。
 
@@ -133,15 +133,20 @@ AGP 建议用 `android.builtInKotlin=true` 迁移到 AGP 内置 Kotlin。
 Task 1 补充了 AOSP `Android.bp` 明确声明的 `com.google.code.findbugs:jsr305:3.0.2`，
 并应用了 Soong 等价的 Compose compiler plugin；此前的 `GuardedBy` 与 Box inline 错误均消失。
 
-### 2.3 APK 入口前置阻塞（已修复，最终 APK 待复验）
+### 2.3 APK 入口（Task 7 已复验，当前被 core javac 阻塞）
 
-审查阶段发现的 3 类阻塞已逐项修复：
+审查阶段发现的 3 类前置阻塞已逐项修复：
 
 1. `jsr305` 缺失 → 官方 `com.google.code.findbugs:jsr305:3.0.2` 已接入；
 2. WM-Shell 12 个重复 shared AIDL 类 → 主/shared AAR class-set 交集已为 0；
 3. 两个 header flag JAR 无法 D8 → shared flags 换成 Soong `javac` JAR，SettingsLib flags 改 `compileOnly`。
 
-下一步是运行 `:app:assembleDebug` 建立真实 APK 基线；不得预先声明成功。
+Task 7 运行 `:app:assembleDebug` 后，构建越过上述阶段，但在
+`:SystemUI-core:compileDebugJavaWithJavac` 失败，共 42 个 javac 错误，`app-debug.apk` 未生成。
+错误集中在真实依赖/产物缺口：`NeverCompile`、setupcompat、Wi‑Fi/WM‑Shell aconfig flags、
+zxing、SystemUI-tags 过期 JAR、`:SystemUI-shared` 未运行 Dagger KSP、以及 `androidx.media`
+被传递解析为 1.4.1。逐项根因见
+[`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md#task-7完整验证链与真实-apk-阻塞2026-08-12)。
 
 ### 2.4 Compose inline 问题已解决
 
@@ -194,14 +199,14 @@ framework.jar 污染 KotlinCompile Compose inline metadata）。
 animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
 
 **构建依赖**：`libs/` 已提交入 git，新 clone 无需重新生成 AOSP 产物即可复现当前构建基线；
-当前尚不能成功产出 APK。仅在需要更新 AOSP 产物时才跑
+当前尚不能成功产出 APK：Task 7 记录的首个失败层是 core Java 编译。仅在需要更新 AOSP 产物时才跑
 `python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py`。
 
 ---
 
 ## 5. 待解决
 
-1. **运行 `:app:assembleDebug`**，记录真实 APK 基线或下一阻塞
+1. **修复 Task 7 记录的 8 组 Java classpath/产物缺口**，然后重新运行 `:app:assembleDebug`
 2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 执行计划：[`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md)
@@ -221,6 +226,7 @@ animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell�
 | 2026-08-11 | — | KSP + Dagger 2.55 useBindingGraphFix 首次通过（0 KSP 错误） |
 | **2026-08-12** | **KSP: 0, Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移** |
 | **2026-08-12 实施** | **KSP: 0, Kotlin: 0** | **Task 1–6：jsr305、aconfig JAR、WM-Shell AAR、variant KSP/AIDL、AGP 9.3.1、文档/格式清理** |
+| **2026-08-12 验证** | **KSP: 0, Kotlin: 0, javac: 42** | **Task 7：完整验证链；`:app:assembleDebug` 在 core Java 编译阶段失败，APK 未生成** |
 
 > **注意**：错误数仅作诊断参考，不是提交/回滚/审批门槛（规则 I）。
 

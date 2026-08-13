@@ -3,9 +3,9 @@
 A standalone, self-contained Gradle build of the Android SystemUI source tree — designed to compile independently of the AOSP build system while remaining compatible with it.
 
 > **Status:** active development — see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for the live snapshot.
-> As of the 2026-08-12 implementation checkpoints (Tasks 1–6): debug/release KSP and
-> core Kotlin compilation pass with **0 errors**. The review-identified APK pre-blockers are fixed;
-> the final `:app:assembleDebug` baseline is pending. See the
+> As of the 2026-08-12 implementation checkpoints (Tasks 1–7): debug/release KSP and
+> core Kotlin compilation pass with **0 errors**. `:app:assembleDebug` now reaches core Java
+> compilation but fails there with **42 javac errors**, so no APK is produced yet. See the
 > [standards review](docs/issues/2026-08-12-current-progress-standards-review.md).
 
 ---
@@ -183,9 +183,14 @@ As of 2026-08-12 the verified blockers are tracked in
 [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) and the
 [standards review](docs/issues/2026-08-12-current-progress-standards-review.md):
 
-- **Final APK assembly is pending.** The previous blockers have been fixed: `jsr305` is now
-  declared; WM-Shell AAR class overlap is zero; shared SettingsLib/SystemUI flags use the correct
-  compile/runtime forms; release KSP is wired to release AIDL; AGP 9.3.1 is verified.
+- **Final APK assembly is blocked at core Java compilation.** The previous blockers have been
+  fixed: `jsr305` is now declared; WM-Shell AAR class overlap is zero; shared SettingsLib/SystemUI
+  flags use the correct compile/runtime forms; release KSP is wired to release AIDL; AGP 9.3.1 is
+  verified. Task 7 then exposed eight real dependency/artifact gaps: `NeverCompile`, setupcompat,
+  Wi-Fi/WM-Shell aconfig flags, zxing, missing Dagger factories from `:SystemUI-shared`, a stale
+  `SystemUI-tags.jar`, and an `androidx.media` version constraint.
+- **No APK is produced yet.** The next work is a standards-compliant follow-up plan that supplies
+  the real AOSP JARs/AARs or Maven constraints and reruns `:app:assembleDebug`.
 - **Non-blocking warnings remain.** Room schema export is unconfigured, Kotlin 2.3 warns about
   future data-class copy visibility, and manifest merging reports duplicate permissions. These are
   deferred follow-ups, not current build blockers.

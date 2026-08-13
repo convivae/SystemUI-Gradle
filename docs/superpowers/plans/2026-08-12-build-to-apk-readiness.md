@@ -1,6 +1,6 @@
 # Build-to-APK Readiness Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Remove the currently proven core-compile and APK-packaging blockers while preserving AOSP provenance, then establish a truthful `:app:assembleDebug` baseline.
 
@@ -52,7 +52,7 @@
 - Consumes: AOSP `SystemUI/Android.bp` static dependency named `jsr305`.
 - Produces: `libs.jsr305` resolving `javax.annotation.concurrent.GuardedBy` from `com.google.code.findbugs:jsr305:3.0.2`.
 
-- [ ] **Step 1: Preserve the failing compiler evidence**
+- [x] **Step 1: Preserve the failing compiler evidence**
 
 Run:
 
@@ -63,7 +63,7 @@ grep -E "Unresolved reference '(concurrent|GuardedBy)'" /tmp/task1-before.log
 
 Expected: exactly the two existing errors in `CommunalAppWidgetHost.kt`.
 
-- [ ] **Step 2: Add the public dependency to the version catalog**
+- [x] **Step 2: Add the public dependency to the version catalog**
 
 Add under `[versions]`:
 
@@ -77,7 +77,7 @@ Add under `[libraries]`:
 jsr305 = { module = "com.google.code.findbugs:jsr305", version.ref = "jsr305" }
 ```
 
-- [ ] **Step 3: Add the dependency to SystemUI-core**
+- [x] **Step 3: Add the dependency to SystemUI-core**
 
 Add next to the other AOSP-declared annotation/runtime dependencies:
 
@@ -88,7 +88,7 @@ implementation(libs.jsr305)
 
 Do not change `CommunalAppWidgetHost.kt`; its import matches AOSP.
 
-- [ ] **Step 4: Verify the core compiler and KSP**
+- [x] **Step 4: Verify the core compiler and KSP**
 
 Run:
 
@@ -98,7 +98,7 @@ Run:
 
 Expected: both tasks complete successfully and the two `GuardedBy` errors disappear.
 
-- [ ] **Step 5: Record and commit**
+- [x] **Step 5: Record and commit**
 
 Append the command and actual result to the issue record, then run:
 
@@ -125,7 +125,7 @@ git commit -m "build: add AOSP jsr305 dependency"
 - Produces tracked runtime JAR: `libs/systemui-shared-flags.jar`.
 - Keeps `libs/settingslib-flags.jar` as a compile header because its runtime implementation is platform-provided.
 
-- [ ] **Step 1: Write unit tests for canonical source policy**
+- [x] **Step 1: Write unit tests for canonical source policy**
 
 Create `tools/tests/test_package_aconfig_jars.py` with this complete test module:
 
@@ -161,7 +161,7 @@ class TestAconfigJarPackaging(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), source.read_bytes())
 ```
 
-- [ ] **Step 2: Run the new tests and verify they fail before the script exists**
+- [x] **Step 2: Run the new tests and verify they fail before the script exists**
 
 Run:
 
@@ -171,7 +171,7 @@ python3 -m unittest tools.tests.test_package_aconfig_jars -v
 
 Expected: import/file failure for `tools/package_aconfig_jars.py`.
 
-- [ ] **Step 3: Implement the focused Python packager**
+- [x] **Step 3: Implement the focused Python packager**
 
 Create `tools/package_aconfig_jars.py` with this complete implementation:
 
@@ -221,7 +221,7 @@ if __name__ == "__main__":
 
 The script performs a byte-preserving copy of the canonical AOSP javac output; no shell script or generated source is added.
 
-- [ ] **Step 4: Make dependency scopes match AOSP semantics**
+- [x] **Step 4: Make dependency scopes match AOSP semantics**
 
 In `SystemUI-core/build.gradle.kts`, change only SettingsLib flags:
 
@@ -233,7 +233,7 @@ compileOnly(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
 
 Keep `systemui-shared-flags.jar` as `implementation`, because Task 2 replaces it with concrete bytecode.
 
-- [ ] **Step 5: Package and verify the concrete shared flags JAR**
+- [x] **Step 5: Package and verify the concrete shared flags JAR**
 
 Run:
 
@@ -245,7 +245,7 @@ javap -classpath libs/systemui-shared-flags.jar -p -c \
 
 Expected: `javap` prints a `Code:` block for a flag method.
 
-- [ ] **Step 6: Verify D8 no longer rejects flag JARs**
+- [x] **Step 6: Verify D8 no longer rejects flag JARs**
 
 Run:
 
@@ -257,7 +257,7 @@ Run:
 
 Expected: no `Absent Code attribute` error.
 
-- [ ] **Step 7: Run all Python tests and commit**
+- [x] **Step 7: Run all Python tests and commit**
 
 Run:
 
@@ -284,7 +284,7 @@ git commit -m "build: package concrete shared aconfig flags"
 - Consumes: the main and shared Soong javac/kotlin JARs already declared in `CONFIGS`.
 - Produces: two AARs whose `classes.jar` entry sets have an empty intersection.
 
-- [ ] **Step 1: Add a failing exclusion test**
+- [x] **Step 1: Add a failing exclusion test**
 
 Add this complete method to `TestAssembleAar`:
 
@@ -328,7 +328,7 @@ def test_excluded_prefix_is_omitted_but_other_classes_remain(self):
         self.assertIn("com/android/wm/shell/ShellTaskOrganizer.class", names)
 ```
 
-- [ ] **Step 2: Run the focused test and verify failure**
+- [x] **Step 2: Run the focused test and verify failure**
 
 Run:
 
@@ -339,7 +339,7 @@ python3 -m unittest \
 
 Expected: failure because `assemble_aar` does not yet accept `exclude_prefixes`.
 
-- [ ] **Step 3: Implement deterministic exclusion**
+- [x] **Step 3: Implement deterministic exclusion**
 
 Extend the function signature without changing existing rejection behavior:
 
@@ -376,7 +376,7 @@ Add these exact prefixes only to the main `WindowManager-Shell` config:
 
 Pass `cfg.get("exclude_prefixes", [])` from `build_artifact` to `assemble_aar`. Do not exclude the whole `com/android/wm/shell/shared/` package.
 
-- [ ] **Step 4: Run tests and regenerate the affected AAR delivery**
+- [x] **Step 4: Run tests and regenerate the affected AAR delivery**
 
 Run:
 
@@ -386,7 +386,7 @@ python3 tools/package_aosp_aar.py WindowManager-Shell
 python3 tools/install_aar_to_maven.py
 ```
 
-- [ ] **Step 5: Verify zero class overlap**
+- [x] **Step 5: Verify zero class overlap**
 
 Use a Python ZIP check that reads each AAR's `classes.jar` and computes the set intersection. Expected output:
 
@@ -402,7 +402,7 @@ Then run:
 
 Expected: `BUILD SUCCESSFUL` and no WM-Shell duplicate classes.
 
-- [ ] **Step 6: Commit source, tests and regenerated artifacts**
+- [x] **Step 6: Commit source, tests and regenerated artifacts**
 
 ```bash
 git add tools/package_aosp_aar.py tools/tests/test_package_aosp_aar.py \
@@ -426,7 +426,7 @@ git commit -m "build: deduplicate WM Shell AIDL classes"
 - Produces task mapping `kspDebugKotlin → compileDebugAidl` and `kspReleaseKotlin → compileReleaseAidl`.
 - Removes the need for `android.sourceset.disallowProvider=false`.
 
-- [ ] **Step 1: Preserve the failing release task graph**
+- [x] **Step 1: Preserve the failing release task graph**
 
 Run:
 
@@ -437,7 +437,7 @@ Run:
 
 Expected before the fix: `compileDebugAidl` appears and `compileReleaseAidl` does not.
 
-- [ ] **Step 2: Stop passing Provider objects to the Kotlin source-set API**
+- [x] **Step 2: Stop passing Provider objects to the Kotlin source-set API**
 
 Replace the two provider-based generated source directories with project-relative strings:
 
@@ -454,7 +454,7 @@ android.sourceset.disallowProvider=false
 
 Keep `android.disallowKotlinSourceSets=false`; KSP still requires it under built-in Kotlin.
 
-- [ ] **Step 3: Replace the all-KSP debug dependency with explicit mappings**
+- [x] **Step 3: Replace the all-KSP debug dependency with explicit mappings**
 
 Replace the current `startsWith("ksp")` block with:
 
@@ -467,7 +467,7 @@ tasks.matching { it.name == "kspReleaseKotlin" }.configureEach {
 }
 ```
 
-- [ ] **Step 4: Verify both task graphs and actual KSP tasks**
+- [x] **Step 4: Verify both task graphs and actual KSP tasks**
 
 Run:
 
@@ -487,7 +487,7 @@ Expected:
 - both KSP tasks complete successfully;
 - the AGP warning about `android.sourceset.disallowProvider=false` disappears.
 
-- [ ] **Step 5: Update the pitfall record and commit**
+- [x] **Step 5: Update the pitfall record and commit**
 
 Document the variant mapping and removal of the deprecated property, then run:
 
@@ -510,7 +510,7 @@ git commit -m "build: wire KSP to variant AIDL tasks"
 - Consumes: AGP 9.3.1, whose POM is already documented as embedding Kotlin 2.2.10.
 - Preserves: Kotlin 2.2.10 and KSP 2.2.10-2.0.2.
 
-- [ ] **Step 1: Update both AGP version declarations atomically**
+- [x] **Step 1: Update both AGP version declarations atomically**
 
 Set:
 
@@ -527,7 +527,7 @@ agp = "9.3.1"
 
 Do not change Kotlin or KSP in this task.
 
-- [ ] **Step 2: Verify configuration and the known milestones**
+- [x] **Step 2: Verify configuration and the known milestones**
 
 Run:
 
@@ -541,7 +541,7 @@ Run:
 
 Expected: all commands complete successfully after Tasks 1–4.
 
-- [ ] **Step 3: Handle the result without overstating it**
+- [x] **Step 3: Handle the result without overstating it**
 
 If all commands pass, record AGP 9.3.1 as verified and commit:
 
@@ -579,7 +579,7 @@ git commit -m "docs: record AGP 9.3.1 compatibility blocker"
 - Consumes the actual versions and task results from Tasks 1–5.
 - Produces a single truthful handoff/status description.
 
-- [ ] **Step 1: Correct build-script comments**
+- [x] **Step 1: Correct build-script comments**
 
 Replace stale references with the actual verified matrix:
 
@@ -590,11 +590,11 @@ Replace stale references with the actual verified matrix:
 
 Comments must explain constraints rather than claim a newer unconfigured version.
 
-- [ ] **Step 2: Correct the root README resource mapping**
+- [x] **Step 2: Correct the root README resource mapping**
 
 State that `SystemUI-res/res`, `SystemUI-res/res-keyguard`, and `SystemUI-res/res-product` own the AOSP resource copies. Remove the obsolete claim that these directories are under `SystemUI-core` or gitignored.
 
-- [ ] **Step 3: Synchronize maintained status documents**
+- [x] **Step 3: Synchronize maintained status documents**
 
 Update the maintained documents with actual results from the prior tasks:
 
@@ -604,7 +604,7 @@ Update the maintained documents with actual results from the prior tasks:
 - variant-aware KSP/AIDL wiring;
 - current known `:app:assembleDebug` blockers from the standards review, explicitly marking final post-fix APK verification as pending Task 7.
 
-- [ ] **Step 4: Fix whitespace defects and compile-SDK warning configuration**
+- [x] **Step 4: Fix whitespace defects and compile-SDK warning configuration**
 
 Remove the EOF/trailing whitespace reported by `git diff --check`. Update:
 
@@ -614,7 +614,7 @@ android.suppressUnsupportedCompileSdk=JdJkcSdk,SysUISdk
 
 only if the active AGP still emits the preview-SDK warning with that exact recommendation.
 
-- [ ] **Step 5: Verify documentation consistency**
+- [x] **Step 5: Verify documentation consistency**
 
 Run:
 
@@ -627,7 +627,7 @@ rg -n "SystemUI-core/res-keyguard|SystemUI-core/res-product" README.md docs AGEN
 
 Expected: all three commands produce no stale matches or whitespace errors, except historical documents that explicitly label old versions as superseded.
 
-- [ ] **Step 6: Commit documentation hygiene**
+- [x] **Step 6: Commit documentation hygiene**
 
 ```bash
 git add build.gradle.kts SystemUI-core/build.gradle.kts gradle/libs.versions.toml \
@@ -650,7 +650,7 @@ git commit -m "docs: align build guidance with verified toolchain"
 - Consumes all corrected dependencies and artifacts from Tasks 1–6.
 - Produces either a verified debug APK or a fully recorded next blocker with no false success claim.
 
-- [ ] **Step 1: Run non-build integrity checks**
+- [x] **Step 1: Run non-build integrity checks**
 
 ```bash
 python3 -m unittest discover -s tools/tests -p 'test_*.py'
@@ -664,7 +664,7 @@ Expected:
 - `MISSING=0`, `MISPLACED=0`, `EXTRA=0`;
 - no whitespace errors.
 
-- [ ] **Step 2: Run annotation processing and core compilation from a clean project state**
+- [x] **Step 2: Run annotation processing and core compilation from a clean project state**
 
 ```bash
 ./gradlew :SystemUI-core:clean
@@ -674,7 +674,7 @@ Expected:
 
 Expected: `BUILD SUCCESSFUL`, 2933 KSP files unless upstream processor output legitimately changes, and no Kotlin compiler errors.
 
-- [ ] **Step 3: Run the APK task**
+- [x] **Step 3: Run the APK task**
 
 ```bash
 ./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/final-app.log
@@ -686,7 +686,7 @@ Success condition:
 test -f app/build/outputs/apk/debug/app-debug.apk
 ```
 
-- [ ] **Step 4: Record the actual endpoint**
+- [x] **Step 4: Record the actual endpoint**
 
 If the APK exists, record its path, size, SHA-256 and successful command in all maintained status documents.
 
@@ -700,7 +700,7 @@ If a new error appears, record:
 
 Stop at that recorded baseline. Do not add exclusions, stubs, generated resources, or source edits in this verification task.
 
-- [ ] **Step 5: Commit and push the verified state**
+- [x] **Step 5: Commit and push the verified state**
 
 ```bash
 git add AGENTS.md docs

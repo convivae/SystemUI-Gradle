@@ -13,9 +13,10 @@
 | 2 | [`../AGENTS.md`](../AGENTS.md) | 项目规则（必读） |
 | 3 | [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) | 当前状态快照（构建状态、版本矩阵、待解决） |
 
-**当前里程碑（2026-08-12 实施检查点，Task 1–6）**：依赖升级 + AGP `builtInKotlin` 迁移完成；
+**当前里程碑（2026-08-12 实施检查点，Task 1–7）**：依赖升级 + AGP `builtInKotlin` 迁移完成；
 debug/release KSP 0 错误；core Kotlin 0 错误。审查发现的 `jsr305`、WM-Shell AAR 交集、
-header flag JAR 与 release KSP/AIDL 依赖问题均已修复；最终 `:app:assembleDebug` 基线待 Task 7 记录。
+header flag JAR 与 release KSP/AIDL 依赖问题均已修复；Task 7 的 `:app:assembleDebug`
+在 core Java 编译阶段失败（42 个 javac 错误，APK 未生成）。
 详见 [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)，
 后续按 [`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md) 执行。
 
