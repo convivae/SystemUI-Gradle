@@ -554,3 +554,60 @@ javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags | grep
 `SystemUI-core/src/com/android/systemui/EventLogTags.logtags` 生成）。
 本次未运行 Gradle 构建（单一产物替换，javap 已验证方法签名到位；
 `:app:assembleDebug` 复验留待其余根因修复后统一进行）。
+
+### Task 003（2026-08-13）：`:SystemUI-shared` 经 KSP 运行 Dagger
+
+对应 Task 7 八组根因中的 "unfold Dagger factories" 组。AOSP
+`frameworks/base/packages/SystemUI/shared/Android.bp` 的 `SystemUISharedLib`
+声明 `plugins: ["dagger2-compiler"]`；Gradle `:SystemUI-shared` 此前只有
+`implementation(libs.dagger)` 而未运行注解处理器，导致
+`SystemUI/shared/src/com/android/systemui/unfold/system/SystemUnfoldSharedModule.kt`
+的 3 个 `@Provides` factory 未生成，被 `:SystemUI-unfold` 源码（编译进 core javac）
+引用时报 "cannot find symbol"。
+
+操作（镜像 `:SystemUI-unfold` 的 KSP 模式，仅改 `SystemUI-shared/build.gradle.kts`）：
+
+- plugins 块追加 `id("com.google.devtools.ksp")`；
+- dependencies 块在 tier② compileOnly 与 tier③ implementation 之间追加
+  `ksp(libs.dagger.compiler)`，注释对齐 AOSP `SystemUISharedLib`
+  `plugins: ["dagger2-compiler"]`。未改版本、未加其它处理器、未触碰源码/资源/版本目录。
+
+验证命令与结果：
+
+```bash
+./gradlew :SystemUI-shared:kspDebugKotlin --console=plain 2>&1 | tail -5
+# BUILD SUCCESSFUL in 26s；52 actionable tasks: 52 executed
+
+find SystemUI-shared/build/generated/ksp -name 'SystemUnfoldSharedModule*Factory*' | sort
+# SystemUI-shared/build/generated/ksp/debug/java/com/android/systemui/unfold/system/SystemUnfoldSharedModule_Companion_ProvideBgLooperFactory.java
+# SystemUI-shared/build/generated/ksp/debug/java/com/android/systemui/unfold/system/SystemUnfoldSharedModule_Companion_UnfoldBgDispatcherFactory.java
+# SystemUI-shared/build/generated/ksp/debug/java/com/android/systemui/unfold/system/SystemUnfoldSharedModule_Companion_UnfoldBgProgressHandlerFactory.java
+
+./gradlew :SystemUI-core:compileDebugJavaWithJavac --console=plain 2>&1 | tee /tmp/task003.log >/dev/null
+grep -cE 'SystemUnfoldSharedModule_.*Factory|UnfoldBg(Dispatcher|ProgressHandler)Factory' /tmp/task003.log || echo '0 (factory group gone)'
+# 0 (factory group gone)
+```
+
+说明：brief 列出的短名 `UnfoldBgDispatcherFactory` / `UnfoldBgProgressHandlerFactory`
+实际生成名为 `SystemUnfoldSharedModule_Companion_UnfoldBgDispatcherFactory` /
+`..._UnfoldBgProgressHandlerFactory`（`@Provides` 方法位于 `Companion` 对象）；
+brief 的 `SystemUnfoldSharedModule*Factory*` glob 命中全部 3 个，与预期一致。
+
+错误组归属与 delta：
+
+- `:SystemUI-shared:compileDebugJavaWithJavac` UP-TO-DATE（factory 与 shared 源码一同编译通过）；
+  `:SystemUI-core:compileDebugJavaWithJavac` 实际执行（非 SKIPPED）后 FAILED。
+- core javac 剩余错误 0 处涉及 unfold/factory 符号；Task 7 八组中 "SystemUI-tags"
+  组亦因 Task 001 修复在本构建中消失（0 命中）。其余错误全部落在 Task 7 已归属的另外 6 组：
+  `NeverCompile`（`dalvik.annotation.optimization.NeverCompile`）、setupcompat
+  （`WizardManagerHelper.SETTINGS_SECURE_USER_SETUP_COMPLETE`）、`com.android.wifi.flags`、
+  `com.google.zxing`（`WriterException`）、`com.android.wm.shell.Flags`
+  （`enableTaskbarOnPhones` / `enableTaskbarNavbarUnification`）、
+  `MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE`。
+- 错误数变化：Task 7 基线 42；本次 core javac "error:" 行 70（= 35 条 raw javac +
+  35 条 AGP 失败摘要重印），即 35 条去重错误，**较基线下降**，与 "unfold Dagger factories"
+  组被解决一致。按规则 I，错误数仅作诊断；本改动结构上对齐 AOSP `Android.bp` 且未引入新错误组。
+- 整体 `:app:assembleDebug` 仍因其余 6 组阻塞，APK 未生成（不在本任务范围）。
+- 资源争用备注：本任务 Step 4 首次运行（900s）因与 sibling worker（wt-002）争用同一 Gradle
+  daemon 且 core javac 较重而超时；待 wt-002 构建结束后重跑，1m19s 完成（Kotlin/KSP UP-TO-DATE，
+  仅 javac 实跑）。非源码或 wiring 问题。
