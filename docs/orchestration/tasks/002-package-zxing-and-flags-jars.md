@@ -12,7 +12,7 @@ Forbidden Paths: everything else; especially `SystemUI-*/src/**`, `SystemUI-*/re
 
 Steps:
 
-- [ ] 1. Verify the three AOSP sources exist and are valid zips:
+- [x] 1. Verify the three AOSP sources exist and are valid zips:
 
 ```bash
 ls -l /home/conv/myspace/aosp/out/soong/.intermediates/external/zxing/zxing-core/android_common/javac/zxing-core.jar
@@ -22,7 +22,7 @@ ls -l /home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/libs/Wind
 
 Expected: three files listed. If any is missing, stop and report (do not substitute another artifact).
 
-- [ ] 2. Add three entries to `CONFIGS` in `tools/package_aconfig_jars.py`, following the existing `"systemui-shared-flags"` pattern (source `Path` constants at module top, turbine guard already in `copy_jar`):
+- [x] 2. Add three entries to `CONFIGS` in `tools/package_aconfig_jars.py`, following the existing `"systemui-shared-flags"` pattern (source `Path` constants at module top, turbine guard already in `copy_jar`):
 
 ```python
 "zxing-core": (ZXING_CORE_JAVAC, Path("libs/zxing-core.jar")),
@@ -30,9 +30,9 @@ Expected: three files listed. If any is missing, stop and report (do not substit
 "wm-shell-flags": (WM_SHELL_FLAGS_JAVAC, Path("libs/wm-shell-flags.jar")),
 ```
 
-- [ ] 3. Extend `tools/tests/test_package_aconfig_jars.py`: for each new config assert (a) the source path contains `/javac/` and not `turbine`, (b) destination is under `libs/` with the expected name, (c) `copy_jar` produces a byte-identical copy (reuse the existing test helpers/patterns).
+- [x] 3. Extend `tools/tests/test_package_aconfig_jars.py`: for each new config assert (a) the source path contains `/javac/` and not `turbine`, (b) destination is under `libs/` with the expected name, (c) `copy_jar` produces a byte-identical copy (reuse the existing test helpers/patterns).
 
-- [ ] 4. Run the tool tests:
+- [x] 4. Run the tool tests:
 
 ```bash
 python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tail -3
@@ -40,7 +40,7 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tail -3
 
 Expected: `OK`, test count > 60 (new tests included).
 
-- [ ] 5. Run the packager and verify content:
+- [x] 5. Run the packager and verify content:
 
 ```bash
 python3 tools/package_aconfig_jars.py --all   # use the real CLI flag from --help if different
@@ -51,7 +51,7 @@ unzip -l libs/wm-shell-flags.jar | grep 'com/android/wm/shell/Flags.class'
 
 Expected: zxing classes present; both `Flags.class` entries present.
 
-- [ ] 6. Wire into `SystemUI-core/build.gradle.kts` dependencies, next to the existing flags-jar lines, with comments matching house style:
+- [x] 6. Wire into `SystemUI-core/build.gradle.kts` dependencies, next to the existing flags-jar lines, with comments matching house style:
 
 ```kotlin
 // zxing-core: static lib of SettingsLib (packaged into the APK in AOSP)
@@ -64,7 +64,7 @@ compileOnly(files("${rootProject.projectDir}/libs/wm-shell-flags.jar"))
 
 Rationale to keep in the issue note: zxing is a Soong `static_libs` entry whose classes are dexed into the APK (`implementation`); aconfig flags classes are provided by the system image (`compileOnly`), matching the `settingslib-flags.jar` precedent.
 
-- [ ] 7. Acceptance run (from repo root):
+- [x] 7. Acceptance run (from repo root):
 
 ```bash
 ./gradlew :SystemUI-core:compileDebugJavaWithJavac --console=plain 2>&1 | tee /tmp/task002.log | grep -cE 'error:'
@@ -73,9 +73,9 @@ grep -cE 'com\.google\.zxing|com\.android\.wifi\.flags|com\.android\.wm\.shell\.
 
 Expected: build still fails overall (other groups remain — that is fine, rule I), but the second command prints `0` matches for the three target groups. Record both numbers.
 
-- [ ] 8. Update `docs/issues/2026-08-12-current-progress-standards-review.md` (append a dated note under the Task 7 section: what was packaged, source paths, scopes chosen, javap/unzip evidence, error-group delta).
+- [x] 8. Update `docs/issues/2026-08-12-current-progress-standards-review.md` (append a dated note under the Task 7 section: what was packaged, source paths, scopes chosen, javap/unzip evidence, error-group delta).
 
-- [ ] 9. Worker commit (never push):
+- [x] 9. Worker commit (never push):
 
 ```bash
 git add tools/package_aconfig_jars.py tools/tests/test_package_aconfig_jars.py \

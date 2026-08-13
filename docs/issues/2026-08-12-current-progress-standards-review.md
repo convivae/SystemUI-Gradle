@@ -554,3 +554,64 @@ javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags | grep
 `SystemUI-core/src/com/android/systemui/EventLogTags.logtags` 生成）。
 本次未运行 Gradle 构建（单一产物替换，javap 已验证方法签名到位；
 `:app:assembleDebug` 复验留待其余根因修复后统一进行）。
+
+### Task 002（2026-08-13）：打包 zxing-core / wifi-flags / wm-shell-flags JAR
+
+对应 Task 7 八组根因中的 “zxing”、“Wi‑Fi flags”、“WM‑Shell flags” 三组。
+三组都是 Soong `static_libs` 传递依赖未进入 Gradle classpath（CHARTER Part 3
+机制警告）：本地 `SettingsLib.aar` / `WifiTrackerLib.aar` / `WindowManager-Shell.aar`
+的 POM 骨架不携带传递依赖，AAR classes 也不含这些生成 flags / 第三方库类。
+
+**AOSP 来源**（均为 Soong `javac` 产物，非 turbine；`copy_jar` 有 turbine 守卫）：
+
+| config | AOSP javac jar | 目标 | scope |
+|--------|----------------|------|-------|
+| `zxing-core` | `external/zxing/zxing-core/android_common/javac/zxing-core.jar`（608370 B，314 个 `com/google/zxing/` 类） | `libs/zxing-core.jar` | `implementation`（Soong `static_libs`，dex 进 APK） |
+| `wifi-flags` | `packages/modules/Wifi/flags/wifi_aconfig_flags_lib/android_common/javac/wifi_aconfig_flags_lib.jar`（15664 B，含 `com/android/wifi/flags/Flags.class`） | `libs/wifi-flags.jar` | `compileOnly`（平台镜像在设备上提供） |
+| `wm-shell-flags` | `frameworks/base/libs/WindowManager/Shell/aconfig/com_android_wm_shell_flags_lib/android_common/javac/com_android_wm_shell_flags_lib.jar`（13314 B，含 `com/android/wm/shell/Flags.class`） | `libs/wm-shell-flags.jar` | `compileOnly`（平台镜像在设备上提供） |
+
+操作：
+
+1. `tools/package_aconfig_jars.py` 的 `CONFIGS` 新增三条（顶部分别声明
+   `ZXING_CORE_JAVAC` / `WIFI_FLAGS_JAVAC` / `WM_SHELL_FLAGS_JAVAC` 常量，沿用
+   `systemui-shared-flags` 既有模式；`copy_jar` 复用既有 turbine 守卫与
+   `zipfile.is_zipfile` 校验）。
+2. `tools/tests/test_package_aconfig_jars.py` 为每条新 config 断言
+   (a) 源路径含 `/javac/` 且不含 `turbine`，(b) 目的地在 `libs/` 下且名称正确，
+   并新增 `test_copy_preserves_bytes_for_each_config` 用 `subTest` 对所有 CONFIGS
+   逐一验证字节一致拷贝。
+3. `python3 -m unittest discover -s tools/tests -p 'test_*.py'` → `Ran 64 tests ... OK`（60 → 64）。
+4. 逐条 `python3 tools/package_aconfig_jars.py <name>`；`cmp` 确认三个 jar 与源 jar 字节一致。
+5. `SystemUI-core/build.gradle.kts` 在 `systemui-shared-flags.jar` 行后新增三条，
+   注释说明 scope 选择依据：zxing 为 Soong `static_libs`（`implementation`，dex 进 APK），
+   两个 aconfig flags 为平台镜像提供（`compileOnly`，与 `settingslib-flags.jar` 同例）。
+
+**验证**（rule D 如实记录）：
+
+```bash
+./gradlew :SystemUI-core:compileDebugJavaWithJavac --console=plain \
+  -Dorg.gradle.jvmargs="-Xmx12g -Dfile.encoding=UTF-8" --no-daemon 2>&1 | tee /tmp/task002.log
+# BUILD FAILED（首失败仍为 :SystemUI-core:compileDebugJavaWithJavac）
+
+# 错误总数：62（Task 7 基线为 42）
+grep -cE 'error:' /tmp/task002.log   # 62
+
+# 三组目标根因已清零
+grep -cE 'com\.google\.zxing|com\.android\.wifi\.flags|com\.android\.wm\.shell\.Flags' /tmp/task002.log
+# 0
+```
+
+**错误数 42 → 62 的解释（rule I，非回归）**：三组目标的 import 语句原先在
+javac 早期即报错，使编译器中止处理相关源文件，下游 "cannot find symbol" 被抑制；
+现在这三组 import 全部解析成功，javac 得以深入这些文件，从而**更完整地暴露**
+其余根因组（`NeverCompile`、`setupcompat`、`SystemUnfoldSharedModule_*Factory`、
+`DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE`、`SETTINGS_SECURE_USER_SETUP_COMPLETE`）
+的全部出现位置。逐条核对 62 个错误的 `symbol:` / `location:`，全部归属 Task 7
+已记录的八组根因，未引入任何新根因组，也未出现与 zxing / wifi-flags / wm-shell-flags
+相关的新符号错误。结构向前推进，无回归。
+
+**环境备注**：首次运行 `:SystemUI-core:compileDebugJavaWithJavac`（默认 4G daemon）
+在 `compileDebugKotlin` 阶段 `OutOfMemoryError: Java heap space` 失败，未到达 javac。
+这是环境资源问题，非代码问题；`gradle.properties` 的 `org.gradle.jvmargs=-Xmx4g`
+属 Part 5.4 红线相邻，不在本任务 allowed_paths 内，故未改文件，改用 CLI
+`-Dorg.gradle.jvmargs=-Xmx12g ... --no-daemon` 覆盖重跑通过。建议后续统一调大堆。

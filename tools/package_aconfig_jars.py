@@ -9,8 +9,25 @@ AOSP_JAVAC = Path(
     "aconfig/com_android_systemui_shared_flags_lib/android_common/javac/"
     "com_android_systemui_shared_flags_lib.jar"
 )
+ZXING_CORE_JAVAC = Path(
+    "/home/conv/myspace/aosp/out/soong/.intermediates/external/zxing/"
+    "zxing-core/android_common/javac/zxing-core.jar"
+)
+WIFI_FLAGS_JAVAC = Path(
+    "/home/conv/myspace/aosp/out/soong/.intermediates/packages/modules/Wifi/"
+    "flags/wifi_aconfig_flags_lib/android_common/javac/"
+    "wifi_aconfig_flags_lib.jar"
+)
+WM_SHELL_FLAGS_JAVAC = Path(
+    "/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/libs/"
+    "WindowManager/Shell/aconfig/com_android_wm_shell_flags_lib/"
+    "android_common/javac/com_android_wm_shell_flags_lib.jar"
+)
 CONFIGS = {
     "systemui-shared-flags": (AOSP_JAVAC, Path("libs/systemui-shared-flags.jar")),
+    "zxing-core": (ZXING_CORE_JAVAC, Path("libs/zxing-core.jar")),
+    "wifi-flags": (WIFI_FLAGS_JAVAC, Path("libs/wifi-flags.jar")),
+    "wm-shell-flags": (WM_SHELL_FLAGS_JAVAC, Path("libs/wm-shell-flags.jar")),
 }
 
 
