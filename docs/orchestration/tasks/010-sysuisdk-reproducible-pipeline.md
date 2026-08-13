@@ -25,15 +25,18 @@ Key facts (architect-verified; re-verify during the audit):
 
 Steps:
 
-- [ ] 1. **Audit**: diff `android.jar.orig` vs live `android.jar` (entry names + CRCs), diff `core-for-system-modules.jar.orig` vs live, diff `framework.aidl.bak-preaidl` vs live. Identify the base stock platform. Record every delta in `docs/architecture/2026-08-13-sysuisdk-reproducible-build.md` with command evidence (this doc is the audit + pipeline spec).
-- [ ] 2. Implement `tools/build_sysuisdk.py` (Python, ADR 0002) with explicit stages and a `--target` directory (default `~/Android/Sdk/platforms/android-SysUISdk-staging`):
+- [x] 1. **Audit**: diff `android.jar.orig` vs live `android.jar` (entry names + CRCs), diff `core-for-system-modules.jar.orig` vs live, diff `framework.aidl.bak-preaidl` vs live. Identify the base stock platform. Record every delta in `docs/architecture/2026-08-13-sysuisdk-reproducible-build.md` with command evidence (this doc is the audit + pipeline spec).
+  - Done. Base = `android-37.0` (byte-identical to live `.orig`/`.bak-preaidl`). S1 GAP found: live `android.jar` = `framework.jar ∪ orig` + **1266 orphaned entries** (source `libs/android-merged.jar` deleted in `683ef39a`, unrecoverable from any tracked/AOSP jar). See arch doc §2.4, §6.
+- [x] 2. Implement `tools/build_sysuisdk.py` (Python, ADR 0002) with explicit stages and a `--target` directory (default `~/Android/Sdk/platforms/android-SysUISdk-staging`):
+  - Done. S0/S1/S2/S3/S5 implemented; live-SDK hard-fail guard; idempotent; `.orig`/`.bak-preaidl` backups; S1 manifest pinned to audited live bytes; S2 reuses `install_sdk.patch_framework_aidl`; S3 reuses `patch_sdk_dalvik_annotations.patch_target` + defensive manifest normalization.
   - S0: copy the base platform to `--target` (skip if target exists and `--clean` not given; `--clean` removes the staging dir only — hard-fail if target resolves to the live SDK path), rewrite `package.xml` `localPackage path` to `platforms;android-SysUISdk` semantics for the staging name, copy `build.prop`.
   - S1: deterministic framework.jar merge replicating the audited semantics (source: `libs/framework.jar`, tracked in git).
   - S2: run the framework.aidl patch against the staging dir (reuse `install_sdk.py` logic by import or subprocess; do not duplicate the declaration lists — keep a single source of truth).
   - S3: run the dalvik-annotations patch against the staging dir (same reuse rule).
   - S5: `--verify` mode — compare staging vs live SDK: entry inventories (names+CRC) of `android.jar` and `core-for-system-modules.jar`, byte-equality of `framework.aidl`, presence/shape of `package.xml`, `build.prop`, `data/`, `optional/`. Print a per-file PASS/DIFF report and exit non-zero on any DIFF.
   - All stages idempotent; every mutating stage creates `.orig`-style backups inside the staging dir on first mutation.
-- [ ] 3. Implement `tools/tests/test_build_sysuisdk.py`: stage behavior on fixture trees (temp dirs), idempotency, backup creation, live-SDK path hard-fail guard, verify-mode PASS/DIFF logic. Never touch the real SDK in tests.
+- [x] 3. Implement `tools/tests/test_build_sysuisdk.py`: stage behavior on fixture trees (temp dirs), idempotency, backup creation, live-SDK path hard-fail guard, verify-mode PASS/DIFF logic. Never touch the real SDK in tests.
+  - Done. 26 tests, all PASS. Full suite 103 tests OK (>77).
 
 ```bash
 python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tail -3
@@ -41,7 +44,8 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tail -3
 
 Expected: `OK`, count > 77.
 
-- [ ] 4. **Full staging run** (the reproducibility proof):
+- [~] 4. **Full staging run** (the reproducibility proof):
+  - Build SUCCEEDED (S0–S3 clean). Verify returned exit 1: `android.jar DIFF (staging=36258 live=37524 missing=1266 extra=0 crc_diff=0)`; the other 6 files PASS. The 1266 missing are the orphaned S1 source gap (step 1); no stage-semantics fix exists within `libs/framework.jar`. **Escalated (redline-gated):** resolving requires a user decision on S1's source (arch doc §7). Full report in arch doc §6.
 
 ```bash
 python3 tools/build_sysuisdk.py --clean --target /home/conv/Android/Sdk/platforms/android-SysUISdk-staging
@@ -50,9 +54,11 @@ python3 tools/build_sysuisdk.py --verify --target /home/conv/Android/Sdk/platfor
 
 Expected: build completes; verify prints PASS for every compared file, exit 0. If a DIFF is found, investigate and fix the stage semantics until verify passes — that is the point of this brief. Record the full report in the architecture doc.
 
-- [ ] 5. Finish the architecture doc: provenance table (every file in the live SDK → which stage produces it → source artifact path), the audit findings, pipeline usage (fresh-machine instructions: clone repo → run S0–S3 → verify → rename staging to `android-SysUISdk`), and the note that S4 (framework-res) lands in the next brief.
-- [ ] 6. Append a dated process note to `docs/issues/2026-08-13-sysuisdk-reproducible-build.md` (rule D).
-- [ ] 7. Worker commit (never push):
+- [x] 5. Finish the architecture doc: provenance table (every file in the live SDK → which stage produces it → source artifact path), the audit findings, pipeline usage (fresh-machine instructions: clone repo → run S0–S3 → verify → rename staging to `android-SysUISdk`), and the note that S4 (framework-res) lands in the next brief.
+  - Done. `docs/architecture/2026-08-13-sysuisdk-reproducible-build.md`.
+- [x] 6. Append a dated process note to `docs/issues/2026-08-13-sysuisdk-reproducible-build.md` (rule D).
+  - Done. §5 results appended.
+- [x] 7. Worker commit (never push):
 
 ```bash
 git add tools/build_sysuisdk.py tools/tests/test_build_sysuisdk.py tools/install_sdk.py tools/patch_sdk_dalvik_annotations.py \

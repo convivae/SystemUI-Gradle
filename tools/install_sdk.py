@@ -9,6 +9,7 @@
       （framework.aidl 支持 `interface X;` 声明），等价于"重新生成 SysUISdk"。
 幂等：重复执行只会补一次。
 """
+from pathlib import Path
 import os
 import sys
 
@@ -26,6 +27,52 @@ HIDDEN_PARCELABLES = [
 ]
 
 
+def patch_framework_aidl(aidl_path):
+    """Append the hidden interface/parcelable declarations to framework.aidl.
+
+    Idempotent: re-running reports "already present" and mutates nothing. A
+    `<aidl>.bak-preaidl` backup is created on first mutation (matching the
+    live-SDK precedent) and never overwritten.
+
+    Returns a dict:
+      appended: list of decl strings added (in order)
+      already:  list of decl strings already present
+      backup:    backup path created, or None
+    Designed to be importable by tools/build_sysuisdk.py for the staging SDK;
+    main() below keeps the original CLI behavior (targets the live SDK).
+    """
+    aidl_path = Path(aidl_path)
+    if not aidl_path.is_file():
+        raise FileNotFoundError(f"framework.aidl not found: {aidl_path}")
+
+    with open(aidl_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    to_append = []
+    already = []
+    for iface in HIDDEN_IFACES:
+        decl = f"interface {iface};"
+        (already if decl in content else to_append).append(decl)
+    for parcel in HIDDEN_PARCELABLES:
+        decl = f"parcelable {parcel};"
+        (already if decl in content else to_append).append(decl)
+
+    backup = None
+    if to_append:
+        bak = aidl_path.with_name(aidl_path.name + ".bak-preaidl")
+        if not bak.exists():
+            import shutil
+            shutil.copy2(aidl_path, bak)
+            backup = str(bak)
+        with open(aidl_path, "a", encoding="utf-8") as f:
+            if content and not content.endswith("\n"):
+                f.write("\n")
+            for decl in to_append:
+                f.write(decl + "\n")
+
+    return {"appended": to_append, "already": already, "backup": backup}
+
+
 def main() -> int:
     sdk_root = (
         os.environ.get("ANDROID_HOME")
@@ -39,36 +86,13 @@ def main() -> int:
     print(f"SysUISdk OK: {target}")
 
     fw = os.path.join(target, "framework.aidl")
-    if not os.path.isfile(fw):
-        print(f"ERROR: {fw} not found.", file=sys.stderr)
-        return 1
-
-    with open(fw, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    to_append = []
-    for iface in HIDDEN_IFACES:
-        decl = f"interface {iface};"
-        if decl in content:
-            print(f"  已存在: {decl}")
-        else:
-            to_append.append(decl)
-            print(f"  待补齐: {decl}")
-    for parcel in HIDDEN_PARCELABLES:
-        decl = f"parcelable {parcel};"
-        if decl in content:
-            print(f"  已存在: {decl}")
-        else:
-            to_append.append(decl)
-            print(f"  待补齐: {decl}")
-
-    if to_append:
-        with open(fw, "a", encoding="utf-8") as f:
-            if content and not content.endswith("\n"):
-                f.write("\n")
-            for decl in to_append:
-                f.write(decl + "\n")
-
+    res = patch_framework_aidl(Path(fw))
+    for decl in res["already"]:
+        print(f"  已存在: {decl}")
+    for decl in res["appended"]:
+        print(f"  待补齐: {decl}")
+    if res["backup"]:
+        print(f"  backup:   {res['backup']}")
     print(f"framework.aidl patched: {fw}")
     return 0
 
