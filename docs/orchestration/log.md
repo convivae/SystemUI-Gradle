@@ -45,3 +45,8 @@
 2026-08-13 18:02 | wA:p1 | 009 | contract-ok | w009 CONTRACT confirmed (session file)
 2026-08-13 18:07 | wA:p1 | 009 | review-pass | +8 lines in app/build.gradle.kts as specced; feature-flag errors 2->0; new surfaced layer = androidprv private resources
 2026-08-13 18:07 | main | 009 | merge | task-009 merged+pushed; processDebugResources advanced to androidprv resource gap
+2026-08-13 18:28 | wB:p1 | 010 | dispatch | w010 in worktree wt-010 (branch task-010); staging-only SDK rule emphasized
+2026-08-13 18:32 | wB:p1 | 010 | contract-ok | w010 CONTRACT confirmed (session file)
+2026-08-13 20:40 | wB:p1 | 010b | dispatch | user approved re-tracking android-merged.jar; brief 010b in worktree
+2026-08-13 20:51 | wB:p1 | 010+010b | review-pass | SHA-256 match; verify 7/7 PASS exit 0 (architect re-run); 104/104 tests; commits within Allowed Paths
+2026-08-13 20:51 | main | 010+010b | merge | SysUISdk now reproducible from scratch: build_sysuisdk.py S0-S3+S5, android-merged.jar re-tracked
