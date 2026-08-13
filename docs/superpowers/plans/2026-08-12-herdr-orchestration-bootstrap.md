@@ -1,6 +1,6 @@
 # Herdr Orchestration Bootstrap Implementation Plan
 
-> **For agentic workers:** This plan is executed **inline by the architect session** (pi-subagent has been removed; subagent-driven-development is unavailable). Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** This plan is executed **inline by the architect session** (pi-subagent has been removed; subagent-driven-development is unavailable). Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Bootstrap the herdr orchestration workflow (spec: `docs/superpowers/specs/2026-08-12-herdr-orchestration-design.md`): create `docs/orchestration/` (CHARTER/STATE/log/tasks), write the `orchestrator` and `worker-contract` pi skills, and validate the whole workflow with one real pilot task dispatched to a herdr worker pane.
 
@@ -44,7 +44,7 @@
 **Interfaces:**
 - Produces: the three files every later task (and every future session) reads. `CHARTER.md` section order must be exactly Part 1–8 as in spec §3.
 
-- [ ] **Step 1: Write `docs/orchestration/CHARTER.md`**
+- [x] **Step 1: Write `docs/orchestration/CHARTER.md`**
 
 Materialize spec §3 Parts 1–8 into a full document. Structure and required content (section headings verbatim; body expands each spec bullet into 1–3 sentences, citing the AGENTS.md/PITFALLS/ADR anchors listed in the spec — do not copy rule full text):
 
@@ -84,7 +84,7 @@ HANDOFF:
 - remaining: <what is left, or "none">
 ```
 
-- [ ] **Step 2: Write `docs/orchestration/STATE.md`**
+- [x] **Step 2: Write `docs/orchestration/STATE.md`**
 
 Exact initial content:
 
@@ -113,7 +113,7 @@ Exact initial content:
 2026-08-12 — architect session (bootstrap)
 ```
 
-- [ ] **Step 3: Write `docs/orchestration/log.md`**
+- [x] **Step 3: Write `docs/orchestration/log.md`**
 
 Exact initial content:
 
@@ -128,7 +128,7 @@ Exact initial content:
 2026-08-12 | w2:p1 | bootstrap | dispatch | orchestration files initialized (Task 1)
 ```
 
-- [ ] **Step 4: Verify structure**
+- [x] **Step 4: Verify structure**
 
 ```bash
 ls docs/orchestration/ docs/orchestration/tasks/ 2>&1
@@ -140,7 +140,7 @@ git diff --check                                    # expect: no output
 
 Expected: CHARTER exists with 8 `## Part` headings; STATE and log exist; no whitespace errors. (`docs/orchestration/tasks/` may not exist yet — Task 4 creates it; `ls` error for it is acceptable here.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/orchestration/
@@ -158,7 +158,7 @@ git commit -m "docs: initialize orchestration charter, state, and log"
 - Consumes: `docs/orchestration/CHARTER.md` Part 5/7 (Task 1).
 - Produces: skill name `worker-contract` that the architect references in dispatch prompts (Task 5).
 
-- [ ] **Step 1: Write the skill file**
+- [x] **Step 1: Write the skill file**
 
 Frontmatter exactly:
 
@@ -179,7 +179,7 @@ Body (~100 lines max), sections in this order:
 6. `## Completion Report` — the four parts from CHARTER Part 7 (English commit / brief checkboxes with real verification output / `docs/issues/` update / `HANDOFF:` block), including the exact `HANDOFF:` template.
 7. `## Never Do` — one line each: no stubs; no `res/` edits; no `@Suppress`; no disabling javac/D8/KSP checks; no source exclusions to hide errors; no scope expansion beyond the brief.
 
-- [ ] **Step 2: Validate the skill**
+- [x] **Step 2: Validate the skill**
 
 ```bash
 python3 - <<'EOF'
@@ -198,7 +198,7 @@ EOF
 
 Expected: `worker-contract skill OK` with ≤130 lines.
 
-- [ ] **Step 3: No repo commit**
+- [x] **Step 3: No repo commit**
 
 The skill lives outside the repo. Nothing to commit; note the file path in `docs/orchestration/log.md` via Task 4's commit instead (keeps this task atomic).
 
@@ -213,7 +213,7 @@ The skill lives outside the repo. Nothing to commit; note the file path in `docs
 - Consumes: spec §4 (lifecycle protocol), CHARTER (Task 1), `worker-contract` skill name (Task 2).
 - Produces: skill name `orchestrator`; the architect's six-stage checklist used in Task 5.
 
-- [ ] **Step 1: Write the skill file**
+- [x] **Step 1: Write the skill file**
 
 Frontmatter exactly:
 
@@ -247,7 +247,7 @@ Body (~150 lines max), sections in this order:
 10. `## Failure Handling` — the four-row table from spec §4 (stuck worker / repeated failure / architect compaction / unknown state).
 11. `## Red-Line Relay Template` — fixed format for reporting to the user: `REDLINE from <pane>: area=<area>; worker intended=<what>; my recommendation=<option>; awaiting your decision.`
 
-- [ ] **Step 2: Validate the skill**
+- [x] **Step 2: Validate the skill**
 
 ```bash
 python3 - <<'EOF'
@@ -266,7 +266,7 @@ EOF
 
 Expected: `orchestrator skill OK` with ≤180 lines.
 
-- [ ] **Step 3: No repo commit** (skill outside repo; see Task 2 Step 3 note)
+- [x] **Step 3: No repo commit** (skill outside repo; see Task 2 Step 3 note)
 
 ---
 
@@ -279,7 +279,7 @@ Expected: `orchestrator skill OK` with ≤180 lines.
 - Consumes: CHARTER (Task 1); Task 7 root-cause evidence in `docs/issues/2026-08-12-current-progress-standards-review.md` (group 7: stale `SystemUI-tags.jar`).
 - Produces: the brief dispatched to the pilot worker in Task 5.
 
-- [ ] **Step 1: Verify the evidence is still true**
+- [x] **Step 1: Verify the evidence is still true**
 
 ```bash
 javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags | grep -c writeSysuiKeyguard || echo 'absent in libs jar'
@@ -288,7 +288,7 @@ javap -classpath /home/conv/myspace/aosp/out/soong/.intermediates/frameworks/bas
 
 Expected: first command prints `0` (or "absent"); second prints the `writeSysuiKeyguard(int,int)` method. If the AOSP jar path is missing, stop and report — do not substitute another source.
 
-- [ ] **Step 2: Write the brief**
+- [x] **Step 2: Write the brief**
 
 Exact content skeleton (fill `<...>` from Step 1 output):
 
@@ -319,13 +319,13 @@ self-commit (no red-line areas expected)
   `**/build.gradle.kts`, `gradle/**`, `AGENTS.md`, `docs/adr/**`
 
 ## Steps
-- [ ] 1. Confirm the stale jar lacks the method:
+- [x] 1. Confirm the stale jar lacks the method:
   `javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags | grep -c writeSysuiKeyguard` → expect `0`
-- [ ] 2. Copy the AOSP jar over: `cp <aosp-jar-path> libs/SystemUI-tags.jar`
-- [ ] 3. Confirm the new jar has the method:
+- [x] 2. Copy the AOSP jar over: `cp <aosp-jar-path> libs/SystemUI-tags.jar`
+- [x] 3. Confirm the new jar has the method:
   `javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags | grep writeSysuiKeyguard` → expect the method signature
-- [ ] 4. Append a dated note to the issue record stating old/new sizes and the javap evidence
-- [ ] 5. Commit: `git add libs/SystemUI-tags.jar docs/issues/2026-08-12-current-progress-standards-review.md`
+- [x] 4. Append a dated note to the issue record stating old/new sizes and the javap evidence
+- [x] 5. Commit: `git add libs/SystemUI-tags.jar docs/issues/2026-08-12-current-progress-standards-review.md`
   message: `fix(libs): refresh SystemUI-tags.jar from AOSP Soong output`
 
 ## Acceptance
@@ -337,7 +337,7 @@ no other modified files outside Allowed Paths.
 Architect appends one line to `docs/orchestration/log.md` on completion.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/orchestration/tasks/001-refresh-systemui-tags-jar.md
@@ -356,7 +356,7 @@ git commit -m "docs: add pilot task brief for SystemUI-tags.jar refresh"
 - Consumes: everything from Tasks 1–4.
 - Produces: pilot verdict recorded in log.md; merged commit from the worker (or a documented abort).
 
-- [ ] **Step 1: Verify herdr command syntax against the installed binary**
+- [x] **Step 1: Verify herdr command syntax against the installed binary**
 
 ```bash
 herdr pane split --help
@@ -368,7 +368,7 @@ herdr agent read --help
 
 Record the real flag syntax; use it (not this plan's templates) in Steps 2–4.
 
-- [ ] **Step 2: Dispatch (serial — current checkout, no worktree)**
+- [x] **Step 2: Dispatch (serial — current checkout, no worktree)**
 
 Split a pane, start pi in it, then prompt (exact prompt body):
 
@@ -382,17 +382,17 @@ Then print your CONTRACT: block and start work.
 
 Update STATE.md (Active Workers row: pane id, task 001, stage=dispatched) and append a `dispatch` line to log.md.
 
-- [ ] **Step 3: Confirm the contract**
+- [x] **Step 3: Confirm the contract**
 
 `herdr agent read <target>` until the `CONTRACT:` block appears. If it does not appear after the worker's first response, re-send the prompt once; if it still fails, abort the pilot and record `abort` in log.md with the reason.
 
 Append a `contract-ok` line to log.md; set STATE stage=working.
 
-- [ ] **Step 4: Monitor to completion**
+- [x] **Step 4: Monitor to completion**
 
 `herdr agent wait <target> --state blocked,idle` (with the real flag syntax). On `blocked`: `agent read`, classify per CHARTER (REDLINE → relay to user; in-brief problem → let it debug). On `idle/done`: proceed to review.
 
-- [ ] **Step 5: Review (architect personally re-runs acceptance)**
+- [x] **Step 5: Review (architect personally re-runs acceptance)**
 
 ```bash
 git log --oneline -3
@@ -404,7 +404,7 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tail -1
 
 Expected: worker commit has an English message; only the two allowed files changed; javap prints the method; tests `OK`. Any violation → send the concrete issue list back to the worker via `herdr agent prompt`; log `review-fail`.
 
-- [ ] **Step 6: Wrap up**
+- [x] **Step 6: Wrap up**
 
 - STATE.md: clear Active Workers row, note task 001 done.
 - log.md: append `review-pass`, `merge` (trivial — already on main), `done` lines plus a one-line pilot verdict (what worked, what surprised).
@@ -416,7 +416,7 @@ git add docs/orchestration/
 git commit -m "docs: record pilot orchestration run for task 001"
 ```
 
-- [ ] **Step 7: Final push and report**
+- [x] **Step 7: Final push and report**
 
 ```bash
 git push
