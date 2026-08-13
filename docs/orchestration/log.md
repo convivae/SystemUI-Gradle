@@ -50,3 +50,7 @@
 2026-08-13 20:40 | wB:p1 | 010b | dispatch | user approved re-tracking android-merged.jar; brief 010b in worktree
 2026-08-13 20:51 | wB:p1 | 010+010b | review-pass | SHA-256 match; verify 7/7 PASS exit 0 (architect re-run); 104/104 tests; commits within Allowed Paths
 2026-08-13 20:51 | main | 010+010b | merge | SysUISdk now reproducible from scratch: build_sysuisdk.py S0-S3+S5, android-merged.jar re-tracked
+2026-08-13 20:53 | wC:p1 | 011 | dispatch | w011 in worktree wt-011 (branch task-011); S4 framework-res overlay; live-apply pre-approved
+2026-08-13 20:56 | wC:p1 | 011 | contract-ok | w011 CONTRACT confirmed (session file)
+2026-08-13 21:31 | wC:p1 | 011 | review-pass | S4 applied to live SDK: symbols present, res=8202, arsc matches framework-res.apk; 116 tests; Factor 2 (merger drops xmlns:androidprv) escalated
+2026-08-13 21:31 | main | 011 | merge | task-011 merged+pushed; S4 live-applied; processDebugResources blocked by Factor 2 (AGP MergeResources namespace drop)
