@@ -24,6 +24,8 @@ androidxLeanback = "1.3.0-alpha02"
 androidxLeanbackPreference = "1.2.0"
 androidxSlice = "1.1.0-alpha02"
 androidxMedia = "1.9.0-alpha01"
+# androidx.media:media library (distinct from androidxMedia = mediarouter); pinned 1.8.0
+media = "1.8.0"
 androidxConcurrent = "1.4.0-alpha01"
 androidxExifinterface = "1.4.2"
 androidxCardview = "1.0.0"
@@ -55,6 +57,7 @@ androidx-media3-common = { group = "androidx.media3", name = "media3-common", ve
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+androidx-media = { group = "androidx.media", name = "media", version.ref = "media" }
 # AndroidX Core
 androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }

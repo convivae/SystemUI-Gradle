@@ -784,3 +784,79 @@ grep -cE 'WizardManagerHelper|SETTINGS_SECURE_USER_SETUP_COMPLETE' /tmp/task004.
   阶段 OOM（Task 002 已记录）；该文件属 Part 5.4 红线相邻、不在本任务 allowed_paths，未改文件，
   改用 CLI `-Dorg.gradle.jvmargs="-Xmx12g …" --no-daemon` 覆盖。`--no-daemon` 亦规避与
   sibling worker 争用同一 Gradle daemon（Task 003 已记录该争用）。
+
+### Task 006（2026-08-13）：Pin androidx.media 1.8.0
+
+对应 Task 7 八组根因中的 "media completion extra" 组。项目未直接声明
+`androidx.media:media`；`mediarouter:1.9.0-alpha01` 将其传递解析到 1.4.1，
+而 1.4.1 不含 `MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE`，
+导致 `MediaDataUtils.java:80,82` 报 cannot find symbol。公网
+`androidx.media:media` 1.7.0 与最新 1.8.0 均含该常量。
+
+**授权**：用户 2026-08-13 预批准 `androidx.media = 1.8.0` 的 toml 版本矩阵
+编辑（CHARTER Part 5.4 红线，仅此一项）。authority = redline-gated。
+
+**AOSP / Maven 来源核对（CHARTER Part 3 决策树）**：
+
+```text
+$ curl -s https://dl.google.com/dl/android/maven2/androidx/media/media/maven-metadata.xml | grep -E '<latest>|<release>'
+    <latest>1.8.0</latest>
+    <release>1.8.0</release>
+```
+
+1.8.0 为公网最高稳定版（高于 1.4.1），属 tier ③ 官方 Maven 坐标，
+非 AOSP fork。规则③优先官方依赖，符合 AGENTS.md §1.5。
+
+**变更**（均在 allowed_paths 内，仅触及 media 条目）：
+
+1. `gradle/libs.versions.toml`：
+   - [versions] 新增 `media = "1.8.0"`（紧邻 `androidxMedia`，注释标明与 mediarouter
+     alias 区别；**未改** `androidxMedia = "1.9.0-alpha01"`）；
+   - [libraries] 新增 `androidx-media = { group = "androidx.media", name = "media", version.ref = "media" }`（紧邻 media3 条目，沿用 group/name 风格）。
+2. `SystemUI-core/build.gradle.kts`：在 `implementation(libs.androidx.mediarouter)` 后
+   新增 `implementation(libs.androidx.media)`，注释说明 pin 原因。
+
+**验证命令与结果**：
+
+```bash
+# Step 1：变更前解析证据（应为 1.4.1 via mediarouter）
+./gradlew :SystemUI-core:dependencyInsight --configuration debugCompileClasspath \
+  --dependency androidx.media:media 2>&1 | grep -E '1\.4\.1|1\.8\.0' | head -5
+# androidx.media:media:1.4.1
+#       - By conflict resolution: between versions 1.4.1 and 1.0.0
+# androidx.media:media:1.0.0 -> 1.4.1
+
+# Step 4a：变更后解析证据（应选中 1.8.0）
+./gradlew :SystemUI-core:dependencyInsight --configuration debugCompileClasspath \
+  --dependency androidx.media:media --console=plain 2>&1 | grep -E 'androidx.media:media' | head -3
+# androidx.media:media:1.8.0
+# androidx.media:media:1.8.0
+# androidx.media:media:1.0.0 -> 1.8.0
+
+# Step 4b：core javac + 常量错误 grep
+./gradlew :SystemUI-core:compileDebugJavaWithJavac --console=plain \
+  -Dorg.gradle.jvmargs="-Xmx12g -Dfile.encoding=UTF-8" --no-daemon 2>&1 | tee /tmp/task006.log >/dev/null
+grep -c 'DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE' /tmp/task006.log || echo '0 (media group gone)'
+# 0
+# 0 (media group gone)
+```
+
+**错误组归属与 delta（rule I，仅诊断）**：
+
+- media 组：**0 命中，已清零**。Task 7 八组中 "media completion extra"
+  （`MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE`，
+  MediaDataUtils.java:80,82 共 2 处）随 1.8.0 pin 落地而解析。
+- 去重错误数：Task 7 基线 42 → Task 002 62 → Task 003 35 → Task 004 22
+  → **Task 006 20**。本次清除 media 组 2 处（22 − 20），与该组错误数一致。
+  （`grep -cE 'error:'` 原始计数 40 = 20 raw + 20 AGP 摘要重印。）
+- **未引入新错误组**：20 条去重错误全部为 `symbol: class NeverCompile`
+  （`dalvik.annotation.optimization.NeverCompile`），跨 Task 7 已归属的同一组
+  10 文件（VolumeDialogControllerImpl / CentralSurfacesImpl / NetworkControllerImpl /
+  QuickSettingsControllerImpl / NotificationPanelViewController / QSImpl /
+  NavigationBarControllerImpl / SysUiState / ScreenDecorations / KeyguardUpdateMonitor）。
+- 整体 `:app:assembleDebug` 仍因 NeverCompile 组阻塞，APK 未生成
+  （不在本任务范围；NeverCompile 由后续任务处理，需 keepanno 或 core-libart JAR）。
+- 环境备注：`gradle.properties` 的 `org.gradle.jvmargs=-Xmx4g` 默认 daemon 在 core javac
+  阶段 OOM（Task 002/004 已记录）；该文件属 Part 5.4 红线相邻、不在本任务
+  allowed_paths，未改文件，改用 CLI `-Dorg.gradle.jvmargs="-Xmx12g …" --no-daemon`
+  覆盖（与 Task 002/003/004 同例）。

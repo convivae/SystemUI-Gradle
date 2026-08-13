@@ -256,6 +256,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.service)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.mediarouter)
+    // explicit pin: mediarouter 1.9.0-alpha01 transitively resolves media 1.4.1 which lacks DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE
+    implementation(libs.androidx.media)
     implementation(libs.androidx.palette)
     implementation(libs.androidx.preference)
     implementation(libs.androidx.recyclerview)
