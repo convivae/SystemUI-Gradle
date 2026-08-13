@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -67,6 +68,10 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
     // view_capture（frameworks/libs/systemui/viewcapturelib，tier② prebuilt jar）
     compileOnly(files("${rootProject.projectDir}/libs/view_capture.jar"))
+
+    // Dagger 组件（SystemUnfoldSharedModule 的 factory）由 KSP 在本项目内生成。
+    // 对齐 AOSP shared/Android.bp SystemUISharedLib plugins: ["dagger2-compiler"]；Dagger 2.59.2 + useBindingGraphFix 默认启用（2.58+）。
+    ksp(libs.dagger.compiler)
 
     // tier③ 标准第三方（maven 版本依赖）
     implementation(libs.androidx.annotation)
