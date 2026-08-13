@@ -108,3 +108,109 @@ errors, tracked separately in `docs/architecture/2026-08-13-nevercompile-classpa
 - The NeverCompile javac group (separate task/issue).
 - Whether `additionalParameters` should be hoisted into a convention plugin if
   more modules later need it — defer until observed.
+
+---
+
+## 2026-08-13 update — Option (b) applied (Task 009)
+
+> Follow-up implementation note (rule D). Brief:
+> `docs/orchestration/tasks/009-feature-flags-additional-parameters.md`.
+> Branch: `task-009`. Authority: redline-gated; the `app/build.gradle.kts`
+> AAPT-config edit was pre-approved by the user on 2026-08-13.
+
+### Applied diff (`app/build.gradle.kts`, inside the existing `android { }` block)
+
+```kotlin
+    // AOSP bp: use_resource_processor: true → automatic with AGP aapt2
+    // WM-Shell AAR manifest uses android:featureFlag (AOSP original); supply the
+    // flag to aapt2 link. See docs/architecture/2026-08-13-aapt-feature-flags-options.md
+    androidResources {
+        additionalParameters(
+            "--feature-flags",
+            "com.android.wm.shell.enable_retrievable_bubbles=true"
+        )
+    }
+```
+
+No other files touched (Allowed Paths respected: only `app/build.gradle.kts`
+for code; this doc for the record).
+
+### Acceptance run (Step 3)
+
+```
+$ ./gradlew :app:processDebugResources --console=plain
+BUILD FAILED in 10s
+$ grep -c 'feature_flags\|enable_retrievable_bubbles' /tmp/task009.log   # || echo fallback
+0
+0 (featureFlag errors gone)
+```
+
+**Feature-flag errors: 2 → 0.** Option (b) is confirmed working — the
+`com.android.wm.shell.enable_retrievable_bubbles` flag is now recognized by
+aapt2 and the `fail_on_unrecognized_flags` default no longer trips. The two
+WM-Shell `<activity>` elements are kept (minSdk 35 > 34 ⇒
+`remove_disabled_elements=false`), preserving AOSP manifest fidelity (rule C).
+
+However, `:app:processDebugResources` still BUILD FAILED — on a **different,
+newly-exposed layer**, not the feature-flag issue.
+
+### Newly-surfaced layer: `androidprv:` private framework resources not found
+
+Cross-check against the prior research reproduction (`/tmp/task007.log`) shows
+**0** matches for `androidprv` / `not found.` there. Conclusion: the
+feature-flag error previously **aborted AAPT2 link inside the
+FeatureFlagsFilter** (`Link.cpp:2052-2063`, run on the merged manifest)
+**before the resource-resolution phase**. Clearing it lets aapt2 proceed to
+resource linking, which now surfaces the next latent gap.
+
+Distinct missing resources now emitted by `:app:processDebugResources`
+(`com.android.systemui.app-mergeDebugResources-85:/values*/values*.xml`):
+
+- `androidprv:attr/materialColorPrimary` (×4)
+- `androidprv:attr/materialColorOnSurface` (×4)
+- `androidprv:attr/materialColorOnPrimaryContainer`
+- `androidprv:attr/materialColorSecondary`
+- `androidprv:attr/materialColorSurfaceBright`
+- `androidprv:attr/materialColorSurfaceContainerHighest`
+- `androidprv:attr/textColorOnAccent`
+- `androidprv:color/system_under_surface_light`
+- `androidprv:color/system_under_surface_dark`
+- `androidprv:style/AlertDialog.DeviceDefault`
+- `androidprv:style/DeviceDefault.ButtonBar.AlertDialog`
+- `android:dimen/notification_content_margin_end`
+
+Plus ~8 `warn: removing resource com.android.systemui:string/... without
+required default value` (car/tv locale-variant strings; warnings, not the
+cause of failure).
+
+This is the AGENTS.md §2.4 item-2 problem class ("framework-res.apk adds
+private resource IDs"): the `androidprv:` prefix denotes `@*android:` private
+framework resources, and the SysUISdk `android.jar` resource set does not yet
+carry them. The material-color attrs and `system_under_surface_*` colors are
+platform Material You / system-theme private resources.
+
+### assembleDebug diagnostics (Step 4)
+
+```
+$ ./gradlew :app:assembleDebug --console=plain
+> Task :app:processDebugResources FAILED
+* What went wrong:
+Execution failed for task ':app:processDebugResources'.
+  > Android resource linking failed
+BUILD FAILED in 6s
+```
+
+`:app:assembleDebug` fails at the same `:app:processDebugResources` task;
+APK **not produced**.
+
+### Out of scope — reported, not actioned
+
+The `androidprv:` private-resource layer is **out of scope** for Task 009
+(brief Allowed Paths = `app/build.gradle.kts` + docs only; Forbidden =
+SDK changes). It is a SysUISdk resource-patching task (AGENTS.md §2.4 item 2 /
+`framework-res.apk`) for the architect/user to schedule. Per the brief's
+Step 4, no fix was attempted.
+
+The Option (b) change itself is correct and complete and is committed on
+`task-009` (never pushed): it cleared its specific blocker and advanced the
+build one layer deeper, exactly as forward progress intends (rule I).

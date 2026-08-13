@@ -12,8 +12,8 @@ Forbidden Paths: everything else — no manifest edits, no AAR repackaging, no S
 
 Steps:
 
-- [ ] 1. Read the Option (b) section of `docs/architecture/2026-08-13-aapt-feature-flags-options.md` (lines ~271 onward) for the exact DSL and the rationale.
-- [ ] 2. Apply to `app/build.gradle.kts`, inside the existing `android { }` block, with a short comment referencing the research doc:
+- [x] 1. Read the Option (b) section of `docs/architecture/2026-08-13-aapt-feature-flags-options.md` (lines ~271 onward) for the exact DSL and the rationale.
+- [x] 2. Apply to `app/build.gradle.kts`, inside the existing `android { }` block, with a short comment referencing the research doc:
 
 ```kotlin
 androidResources {
@@ -26,7 +26,7 @@ androidResources {
 }
 ```
 
-- [ ] 3. Acceptance run:
+- [x] 3. Acceptance run:
 
 ```bash
 ./gradlew :app:processDebugResources --console=plain 2>&1 | tee /tmp/task009.log >/dev/null
@@ -36,11 +36,11 @@ grep -c 'feature_flags\|enable_retrievable_bubbles' /tmp/task009.log || echo '0 
 
 Expected: BUILD SUCCESSFUL and `0` feature-flag errors.
 
-- [ ] 4. Diagnostics (not acceptance): run `./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/task009-app.log >/dev/null` and truthfully record the outcome — if it fails, capture the failing task and first error lines for the architect. Do NOT attempt to fix anything beyond this brief's scope.
+- [x] 4. Diagnostics (not acceptance): run `./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/task009-app.log >/dev/null` and truthfully record the outcome — if it fails, capture the failing task and first error lines for the architect. Do NOT attempt to fix anything beyond this brief's scope.
 
-- [ ] 5. Append a dated note to `docs/issues/2026-08-13-aapt-feature-flags-research.md`: the applied diff, acceptance output, and the assembleDebug diagnostics result.
+- [x] 5. Append a dated note to `docs/issues/2026-08-13-aapt-feature-flags-research.md`: the applied diff, acceptance output, and the assembleDebug diagnostics result.
 
-- [ ] 6. Worker commit (never push):
+- [x] 6. Worker commit (never push):
 
 ```bash
 git add app/build.gradle.kts docs/issues/2026-08-13-aapt-feature-flags-research.md docs/orchestration/tasks/009-feature-flags-additional-parameters.md

@@ -61,6 +61,14 @@ android {
     }
     // AOSP bp: dxflags: ["--multi-dex"] → automatic with minSdk 21+, no flag needed
     // AOSP bp: use_resource_processor: true → automatic with AGP aapt2
+    // WM-Shell AAR manifest uses android:featureFlag (AOSP original); supply the
+    // flag to aapt2 link. See docs/architecture/2026-08-13-aapt-feature-flags-options.md
+    androidResources {
+        additionalParameters(
+            "--feature-flags",
+            "com.android.wm.shell.enable_retrievable_bubbles=true"
+        )
+    }
 }
 
 // AOSP bp: kotlincflags: ["-Xjvm-default=all"]
