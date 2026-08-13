@@ -13,10 +13,14 @@
 
 1. (empty)
 
+## Done
+
+- 001-refresh-systemui-tags-jar → commit `8cc85f74`，review-pass，已 push
+
 ## Blocked
 
 (none)
 
 ## Last Updated
 
-2026-08-12 — architect session (bootstrap)
+2026-08-12 — architect session (pilot complete)
