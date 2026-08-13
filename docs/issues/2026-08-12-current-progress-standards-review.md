@@ -523,3 +523,34 @@ unzip -l /home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/packag
 让 `:SystemUI-shared` 按 AOSP `SystemUISharedLib` 的 `plugins: ["dagger2-compiler"]` 运行 KSP/Dagger、
 重新生成 `SystemUI-tags.jar`，然后再运行 `:app:assembleDebug`。禁止用 stub、排除源码、伪造资源
 或关闭 D8/javac 校验绕过这些错误。
+
+---
+
+## 后续修复记录
+
+### Task 001（2026-08-13）：刷新 `libs/SystemUI-tags.jar`
+
+对应 Task 7 八组根因中的 "SystemUI-tags" 组。`libs/SystemUI-tags.jar`
+为 2026 字节的过期版本，缺少 `EventLogTags.writeSysuiKeyguard(int,int)`；
+AOSP Soong `javac` 产物为 2086 字节且包含该方法。
+
+操作：
+
+```bash
+# 1) 旧 jar 缺方法
+javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags | grep -c writeSysuiKeyguard
+# 0
+
+# 2) 用 AOSP Soong javac jar 覆盖
+cp /home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/packages/SystemUI/SystemUI-tags/android_common/javac/SystemUI-tags.jar libs/SystemUI-tags.jar
+# 旧大小 2026 → 新大小 2086
+
+# 3) 新 jar 含方法
+javap -classpath libs/SystemUI-tags.jar com.android.systemui.EventLogTags | grep writeSysuiKeyguard
+#   public static void writeSysuiKeyguard(int, int);
+```
+
+来源单一可信：AOSP Soong `SystemUI-tags` 模块 `javac` 产物（由
+`SystemUI-core/src/com/android/systemui/EventLogTags.logtags` 生成）。
+本次未运行 Gradle 构建（单一产物替换，javap 已验证方法签名到位；
+`:app:assembleDebug` 复验留待其余根因修复后统一进行）。
