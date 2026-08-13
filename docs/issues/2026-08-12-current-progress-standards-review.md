@@ -906,3 +906,17 @@ Task 7 的 8 组 javac 根因全部清零**。
 
 剩余唯一阻塞：`:app:processDebugResources` 的 WM-Shell `android:featureFlag`（调研结论：
 推荐 AGP `androidResources.additionalParameters("--feature-flags", ...)`，待用户批准后实施）。
+
+### featureFlag 修复（2026-08-13，架构师亲验）
+
+用户批准调研推荐方案 (b)。brief 009（worker `8ab860e9`）：`app/build.gradle.kts` 的
+`android {}` 块内新增 `androidResources { additionalParameters("--feature-flags",
+"com.android.wm.shell.enable_retrievable_bubbles=true") }`（+8 行，与调研 spec 一致）。
+
+架构师亲验：feature-flag 错误 2→0（/tmp/task009.log）。`:app:processDebugResources` 推进到
+下一层并暴露**新阻塞**：`androidprv:` 框架私有资源缺失（`materialColor*` attrs、
+`system_under_surface_*` colors、`AlertDialog.DeviceDefault` styles、
+`android:dimen/notification_content_margin_end` 等）——即 AGENTS.md §2.4 第 2 条记录的
+SysUISdk `android.jar` 缺 framework-res.apk 私有资源的已知缺口，此前被 featureFlag abort 遮蔽
+（Task 7 日志 0 次 androidprv 匹配可证）。修复方向：把 AOSP/设备 `framework-res.apk` 的
+`resources.arsc` + `res/` 写入 SysUISdk `android.jar`（§2.4 先例），待用户批准。

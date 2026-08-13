@@ -41,3 +41,7 @@
 2026-08-13 17:49 | w9:p1 | 008 | contract-ok | w008 CONTRACT confirmed (session file)
 2026-08-13 17:56 | w9:p1 | 008 | review-pass | SDK patch verified: 6 classes each jar, idempotent no-op, 77/77 tests; architect re-ran javac on main: BUILD SUCCESSFUL 0 errors
 2026-08-13 17:56 | main | 008 | merge | task-008 merged+pushed; JAVAC MILESTONE: all 8 Task 7 root-cause groups resolved
+2026-08-13 17:59 | wA:p1 | 009 | dispatch | w009 in worktree wt-009 (branch task-009); user pre-approved Option (b)
+2026-08-13 18:02 | wA:p1 | 009 | contract-ok | w009 CONTRACT confirmed (session file)
+2026-08-13 18:07 | wA:p1 | 009 | review-pass | +8 lines in app/build.gradle.kts as specced; feature-flag errors 2->0; new surfaced layer = androidprv private resources
+2026-08-13 18:07 | main | 009 | merge | task-009 merged+pushed; processDebugResources advanced to androidprv resource gap
