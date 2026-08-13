@@ -196,6 +196,10 @@ dependencies {
     implementation(libs.systemui.settingslib)
     // SettingsLib-full.jar 含 SettingsLib 子模块类（与 AAR javac 0 重叠），保留
     compileOnly(files("${rootProject.projectDir}/libs/SettingsLib-full.jar"))
+    // setupcompat：AOSP SettingsLib 经 setupdesign→setupcompat 传递获得 compile classpath
+    // （com.google.android.setupcompat.util.WizardManagerHelper.SETTINGS_SECURE_USER_SETUP_COMPLETE 等）；
+    // external/setupcompat android_library（含 res），tier② AAR 经本地 Maven 交付。
+    implementation(libs.systemui.setupcompat)
     implementation(libs.systemui.iconloader)
     implementation(libs.systemui.wmshell)
     // WindowManager-Shell-shared：WM-Shell 的 static_libs 子模块（ShellTransitions/TransitionUtil 等），

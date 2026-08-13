@@ -671,3 +671,116 @@ brief 的 `SystemUnfoldSharedModule*Factory*` glob 命中全部 3 个，与预�
 - 资源争用备注：本任务 Step 4 首次运行（900s）因与 sibling worker（wt-002）争用同一 Gradle
   daemon 且 core javac 较重而超时；待 wt-002 构建结束后重跑，1m19s 完成（Kotlin/KSP UP-TO-DATE，
   仅 javac 实跑）。非源码或 wiring 问题。
+
+### Task 004（2026-08-13）：setupcompat AAR 经本地 Maven 交付
+
+对应 Task 7 八组根因中的 “setupcompat” 组。AOSP `external/setupcompat` 是
+`android_library "setupcompat"`（`resource_dirs: ["main/res"]`）；SettingsLib 在
+Soong 中经 `setupdesign -> setupcompat` 获得 compile classpath，而本地 `SettingsLib.aar`
+的 POM 骨架不带传递依赖、AAR classes 也不含 setupcompat，导致
+`com.google.android.setupcompat.util.WizardManagerHelper`（及
+`WizardManagerHelper.SETTINGS_SECURE_USER_SETUP_COMPLETE`）无法解析。
+
+**用户决策（2026-08-13，本任务 brief 引用）**：因 setupcompat 含资源
+（`resource_dirs: ["main/res"]`），采用 AAR 交付，jar-only 方案对本模块豁免。
+`gradle/libs.versions.toml` 的 catalog-alias 增加为本任务唯一预授权的 toml 改动。
+
+**AOSP 来源**（均为 Soong `javac` 产物 + 原始 res，无 turbine）：
+
+| 输入 | AOSP 路径 |
+|------|-----------|
+| code | `external/setupcompat/setupcompat/android_common/javac/setupcompat.jar`（206400 B，126 个 `com/google/android/setupcompat/**` 类，无 R.class/R$） |
+| res | `external/setupcompat/main/res`（`Android.bp resource_dirs: ["main/res"]`） |
+| manifest | `external/setupcompat/AndroidManifest.xml`（788 B） |
+| R.txt | `external/setupcompat/setupcompat/android_common/R.txt` |
+
+**变更**（均在 allowed_paths 内）：
+
+1. `tools/package_aosp_aar.py` 的 `CONFIGS` 新增 `"setupcompat"` 条目（code/res/manifest/rtxt/output；
+   无 `exclude_prefixes`、无 `reject_sysui`——setupcompat 是 `com.google.android.setupcompat`，
+   无 `com/android/systemui/` 类）。
+2. `tools/tests/test_package_aosp_aar.py` 新增 `test_setupcompat_config_paths`（断言 javac 路径、
+   不含 turbine、res/manifest/rtxt 路径、output 名、不 reject_sysui）；并把
+   `test_configs_covers_six_artifacts` 的 CONFIGS 集合从 8 更新到 9（加入 "setupcompat"）。
+3. `gradle/libs.versions.toml` 在 `systemui-settingslib-color` 行后新增
+   `systemui-setupcompat = { group = "com.android.systemui", name = "setupcompat", version = "1.0.0" }`
+   （与既有 `systemui-*` alias 同模式，inline version，未动 [versions] 块）。
+4. `SystemUI-core/build.gradle.kts` 在 `implementation(libs.systemui.settingslib)` /
+   `compileOnly(…/SettingsLib-full.jar)` 之后、`implementation(libs.systemui.iconloader)` 之前，
+   新增 `implementation(libs.systemui.setupcompat)`（注释说明 setupdesign→setupcompat 传递来源）。
+
+**`install_aar_to_maven.py` 不在 allowed_paths 的处理**：`tools/install_aar_to_maven.py` 使用
+静态 `ARTIFACTS` dict（无 setupcompat）且不在本任务 allowed_paths 内，不得编辑。故不运行
+`install_aar_to_maven.py` 全量安装（会改写既有 8 个 AAR 的 maven 副本，虽字节一致仍越界），
+改为复用其 `install_aar()` 函数经 `python3 -c` import 直装 setupcompat 到
+`libs/maven/com/android/systemui/setupcompat/1.0.0/`（AAR + POM 骨架），POM 字节与模板一致。
+产物路径为 slashed `com/android/systemui/`（installer `group.replace(".", "/")`），brief 中
+dotted `libs/maven/com.android.systemui/setupcompat/**` 为简写。未改 `install_aar_to_maven.py`，
+`ARTIFACTS` 暂不含 setupcompat——**遗留**：后续需把 setupcompat 加入 `ARTIFACTS` 以支持
+`install_aar_to_maven.py` 全量重装（需把该脚本纳入对应任务的 allowed_paths）。
+
+**打包范围**：仅 `python3 tools/package_aosp_aar.py setupcompat`（不 `--all`），避免重写
+allowed_paths 之外的既有 AAR。
+
+**验证命令与结果**：
+
+```bash
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+# Ran 65 tests ... OK（Task 002 后为 64；+1 test_setupcompat_config_paths → 65）
+
+python3 tools/package_aosp_aar.py setupcompat
+# setupcompat AAR → libs/aars/setupcompat.aar (194066 bytes)
+
+# install_aar() import（不编辑 install_aar_to_maven.py）
+python3 -c "import sys; sys.path.insert(0,'tools'); from pathlib import Path; \
+from install_aar_to_maven import install_aar; \
+install_aar(Path('libs/aars/setupcompat.aar'),'com.android.systemui','setupcompat','1.0.0',Path('libs/maven'))"
+# installed: libs/maven/com/android/systemui/setupcompat/1.0.0/setupcompat-1.0.0.aar (194066 bytes)
+#            libs/maven/com/android/systemui/setupcompat/1.0.0/setupcompat-1.0.0.pom
+
+unzip -l libs/aars/setupcompat.aar | grep -E 'classes.jar|AndroidManifest.xml|res/' | head -5
+# AndroidManifest.xml (788 B) / classes.jar (201834 B) / res/color-v23/... / res/layout/... / res/layout-sw600dp/...
+
+# Maven AAR 的 classes.jar 内 setupcompat 类计数（AAR 类嵌在 classes.jar，须先解 classes.jar；
+# brief step-4e 的 `unzip -l <aar> | grep -c 'com/google/...'` 对任何标准 AAR 均返回 0——
+# classes 在嵌套 classes.jar 内，非 AAR 顶层；既有 SettingsLib.aar 同样返回 0，属验证形式问题）
+unzip -p libs/maven/com/android/systemui/setupcompat/1.0.0/setupcompat-1.0.0.aar classes.jar \
+  > /tmp/maven_sc_classes.jar && unzip -l /tmp/maven_sc_classes.jar | grep -c 'com/google/android/setupcompat/'
+# 126
+# 含 com/google/android/setupcompat/util/WizardManagerHelper.class + $SuwLifeCycleEnum.class
+
+cmp libs/aars/setupcompat.aar libs/maven/com/android/systemui/setupcompat/1.0.0/setupcompat-1.0.0.aar
+# IDENTICAL
+```
+
+**Step 6 acceptance（core javac）**：
+
+```bash
+./gradlew :SystemUI-core:compileDebugJavaWithJavac --console=plain \
+  -Dorg.gradle.jvmargs="-Xmx12g -Dfile.encoding=UTF-8" --no-daemon 2>&1 | tee /tmp/task004.log
+# BUILD FAILED in 2m16s（首失败仍为 :SystemUI-core:compileDebugJavaWithJavac）
+# javac summary: 22 errors
+
+grep -c 'setupcompat' /tmp/task004.log   # 0（brief step-6 grep）
+grep -cE 'WizardManagerHelper|SETTINGS_SECURE_USER_SETUP_COMPLETE' /tmp/task004.log   # 0
+```
+
+**错误组归属与 delta**：
+
+- setupcompat 组：**0 命中，已清零**。Task 7 八组中 “setupcompat”
+  （`WizardManagerHelper` / `SETTINGS_SECURE_USER_SETUP_COMPLETE`）随本任务 AAR 落地而解析。
+- 去重错误数：Task 7 基线 42 → Task 002（zxing/wifi/wm-shell-flags）62（升，已解释）→
+  Task 003（unfold factories）35 → **Task 004 22**。Task 004 清除 setupcompat 组约 13 处错误
+  （35 − 22）。按规则 I，错误数仅作诊断；本改动新增真实 AOSP AAR 产物、结构对齐 AOSP `Android.bp`
+  且未引入新错误组。
+- 剩余 22 条去重错误全部落在 Task 7 已归属的另外两组（均不在本任务范围）：
+  - `NeverCompile`（`dalvik.annotation.optimization.NeverCompile`，20 处，跨 10 文件：
+    VolumeDialogControllerImpl / CentralSurfacesImpl / NetworkControllerImpl /
+    QuickSettingsControllerImpl / NotificationPanelViewController / QSImpl /
+    NavigationBarControllerImpl / SysUiState / ScreenDecorations / KeyguardUpdateMonitor）；
+  - `MediaConstants.DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE`（2 处，MediaDataUtils.java:80,82）。
+- 整体 `:app:assembleDebug` 仍因 NeverCompile + MediaConstants 两组阻塞，APK 未生成（不在本任务范围）。
+- 环境备注：`gradle.properties` 的 `org.gradle.jvmargs=-Xmx4g` 默认 daemon 在 core javac
+  阶段 OOM（Task 002 已记录）；该文件属 Part 5.4 红线相邻、不在本任务 allowed_paths，未改文件，
+  改用 CLI `-Dorg.gradle.jvmargs="-Xmx12g …" --no-daemon` 覆盖。`--no-daemon` 亦规避与
+  sibling worker 争用同一 Gradle daemon（Task 003 已记录该争用）。

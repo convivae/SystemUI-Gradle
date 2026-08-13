@@ -237,6 +237,18 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertTrue(str(cfg["manifest"]).endswith("Color/AndroidManifest.xml"))
         self.assertIn("SettingsLibColor/android_common/R.txt", str(cfg["rtxt"]))
 
+    def test_setupcompat_config_paths(self):
+        cfg = paar.CONFIGS["setupcompat"]
+        code = str(cfg["code"])
+        self.assertIn("setupcompat/android_common/javac/setupcompat.jar", code)
+        self.assertNotIn("turbine", code)  # 必须是 javac 产物，非 turbine header
+        self.assertIn("setupcompat/main/res", str(cfg["res"]))
+        self.assertTrue(str(cfg["manifest"]).endswith("setupcompat/AndroidManifest.xml"))
+        self.assertIn("setupcompat/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertEqual(cfg["output"], "libs/aars/setupcompat.aar")
+        # setupcompat 是 com.google.android.setupcompat，无 com/android/systemui 类，无需 reject_sysui
+        self.assertFalse(cfg.get("reject_sysui", False))
+
 class TestAbsentInputFails(unittest.TestCase):
     """Step 1: 缺输入报 FileNotFoundError。"""
 
@@ -338,12 +350,12 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 8 个 artifact（与 install_aar_to_maven.py ARTIFACTS 对齐）
+        # 确认 CONFIGS 含 9 个 artifact（setupcompat 经本地 Maven 交付）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
              "SettingsLib", "WindowManager-Shell", "WindowManager-Shell-shared",
-             "LowLightDreamLib", "SettingsLibColor"})
+             "LowLightDreamLib", "SettingsLibColor", "setupcompat"})
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

@@ -131,6 +131,16 @@ CONFIGS = {
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/Color/SettingsLibColor/android_common/R.txt",
         "output": "libs/aars/SettingsLibColor.aar",
     },
+    "setupcompat": {
+        # external/setupcompat android_library（含 res；AOSP SettingsLib 经 setupdesign→setupcompat
+        # 传递获得 compile classpath）。package com.google.android.setupcompat；
+        # WizardManagerHelper.SETTINGS_SECURE_USER_SETUP_COMPLETE / isUserSetupComplete 等。
+        "code": [SOONG_DIR / "external/setupcompat/setupcompat/android_common/javac/setupcompat.jar"],
+        "res": [AOSP_ROOT / "external/setupcompat/main/res"],
+        "manifest": AOSP_ROOT / "external/setupcompat/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "external/setupcompat/setupcompat/android_common/R.txt",
+        "output": "libs/aars/setupcompat.aar",
+    },
 }
 
 
