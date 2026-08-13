@@ -1,36 +1,48 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Reproducible SysUISdk build pipeline (S0–S3 + S5 verify, staging-only).
+"""Reproducible SysUISdk build pipeline (S0–S4 build + S5 verify, staging-only).
 
 Rebuilds the SysUISdk platform into a STAGING directory from tracked artifacts
 and verifies inventory-level equivalence with the live SDK. The live SDK at
 ``~/Android/Sdk/platforms/android-SysUISdk`` is NEVER written to, renamed, or
-deleted — this orchestrator hard-fails if the target resolves to it.
+deleted by the build/verify path — this orchestrator hard-fails if ``--target``
+resolves to it. The only sanctioned live mutation is ``--apply`` (user
+pre-approval 2026-08-13), which syncs a staging result onto the live SDK with
+timestamped backups of every overwritten file.
 
 Stages (see docs/architecture/2026-08-13-sysuisdk-reproducible-build.md):
   S0  copy the base platform (android-37.0) to --target, rewrite package.xml
       for the staging name, copy build.prop / data / optional verbatim.
-  S1  deterministic framework.jar merge into android.jar (framework is master;
-      android.jar fills the gaps; MANIFEST.MF pinned to the audited live bytes).
-      Source: libs/framework.jar (tracked).
+  S1  copy libs/android-merged.jar wholesale as android.jar (the 2026-07-22
+      merge product; strict superset of live-minus-4-dalvik; carries the stale
+      May-27 resources.arsc + res/). MANIFEST.MF pinned to audited live bytes.
   S2  framework.aidl hidden-iface/parcelable patch (reuses tools/install_sdk.py).
   S3  dalvik.annotation.optimization patch into both jars (reuses
       tools/patch_sdk_dalvik_annotations.py; source: AOSP core-libart javac jar).
+  S4  overlay the current AOSP framework-res.apk resources.arsc + res/** onto
+      android.jar, replacing S1's stale May-27 snapshot — fixes androidprv:
+      private-resource linking (AGENTS.md §2.4 point 2). Opt-in via --stages;
+      deterministic, idempotent, .bak-preres backup on first mutation.
   S5  --verify: compare staging vs live (entry inventories names+CRC for the two
       jars, byte-equality for framework.aidl, presence/shape for package.xml /
       build.prop / data / optional). Prints a per-file PASS/DIFF report and
-      exits non-zero on any DIFF.
+      exits non-zero on any DIFF. ``--expect-s4-delta`` allows an android.jar
+      resource delta after a build with s4 (non-resource entries stay strict);
+      without it the strict 7/7 check (pre-S4 reproduction) is unchanged.
 
-Authority: redline-gated (user pre-approval 2026-08-13, staging-only).
+Authority: redline-gated (user pre-approval 2026-08-13); --apply is the only
+live-mutation path.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import shutil
 import sys
 import tempfile
 import zipfile
+from datetime import datetime
 from pathlib import Path
 
 # Make sibling tool modules importable when run as a script.
@@ -53,6 +65,7 @@ DEFAULT_CORE_LIBART_JAR = Path(
     "/home/conv/myspace/aosp/out/soong/.intermediates/libcore/"
     "core-libart/android_common_apex31/javac/core-libart.jar"
 )
+DEFAULT_FRAMEWORK_RES_APK = _REPO_ROOT / "libs" / "framework-res.apk"
 
 STAGING_DIR_NAME = "android-SysUISdk-staging"
 STAGING_PKG_PATH = "platforms;android-SysUISdk-staging"
@@ -74,7 +87,7 @@ ANDROID_MANIFEST_BYTES = (
 # backup of the freshly-copied base, matching the live SDK's backup pattern.
 _BASE_SKIP_SUFFIXES = (".orig", ".bak-preaidl")
 
-ALL_STAGES = ("s0", "s1", "s2", "s3")
+ALL_STAGES = ("s0", "s1", "s2", "s3", "s4")
 
 
 # --- Helpers ---------------------------------------------------------------
@@ -309,6 +322,91 @@ def stage_s3(target: Path, core_libart_jar: Path) -> None:
     print("S3: normalized android.jar MANIFEST.MF to audited live bytes")
 
 
+# --- S4: framework-res resource overlay ------------------------------------
+
+RESOURCE_ENTRY_NAME = "resources.arsc"
+
+
+def _is_resource_entry(name: str) -> bool:
+    """An entry S4 owns: the flattened resource table or any res/ file."""
+    return name == RESOURCE_ENTRY_NAME or name.startswith("res/")
+
+
+def _copy_zipinfo(out: zipfile.ZipFile, info: zipfile.ZipInfo, data: bytes) -> None:
+    """Write ``data`` under a fresh ZipInfo cloned from ``info`` so the entry's
+    stored CRC (computed over uncompressed bytes) matches the source exactly,
+    independent of jar-level compression/ordering. Same pattern as S1/S3."""
+    new_info = zipfile.ZipInfo(info.filename, info.date_time)
+    new_info.compress_type = info.compress_type
+    new_info.external_attr = info.external_attr
+    new_info.create_system = info.create_system
+    out.writestr(new_info, data)
+
+
+def _overlay_framework_res(android_jar: Path, framework_res_apk: Path) -> dict:
+    """Strip ``resources.arsc`` + ``res/**`` from ``android_jar`` then add the
+    same entries from ``framework_res_apk``.
+
+    Non-resource entries (classes, ``META-INF/MANIFEST.MF``, …) are preserved
+    from ``android_jar`` with their original CRCs. The apk's non-resource
+    entries (``AndroidManifest.xml``, ``META-INF/*``, ``assets/``) are NOT
+    carried over — only resources are overlaid. Idempotent: a second run strips
+    the just-overlaid resources and re-adds them, yielding the same bytes.
+    Returns counts: {stripped_res, stripped_arsc, added_res, added_arsc, kept}.
+    """
+    with zipfile.ZipFile(android_jar, "r") as az:
+        all_infos = [i for i in az.infolist() if not i.is_dir()]
+        kept_infos = [i for i in all_infos if not _is_resource_entry(i.filename)]
+        kept_data = {i.filename: az.read(i.filename) for i in kept_infos}
+        stripped_res = sum(1 for i in all_infos if i.filename.startswith("res/"))
+        stripped_arsc = sum(
+            1 for i in all_infos if i.filename == RESOURCE_ENTRY_NAME)
+    with zipfile.ZipFile(framework_res_apk, "r") as fz:
+        res_infos = [i for i in fz.infolist()
+                     if not i.is_dir() and _is_resource_entry(i.filename)]
+        res_data = {i.filename: fz.read(i.filename) for i in res_infos}
+    added_res = sum(1 for i in res_infos if i.filename.startswith("res/"))
+    added_arsc = sum(1 for i in res_infos if i.filename == RESOURCE_ENTRY_NAME)
+
+    tmp = android_jar.with_suffix(".jar.tmp")
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out:
+        for info in kept_infos:
+            _copy_zipinfo(out, info, kept_data[info.filename])
+        for info in res_infos:
+            _copy_zipinfo(out, info, res_data[info.filename])
+    os.replace(tmp, android_jar)
+    return {
+        "stripped_res": stripped_res,
+        "stripped_arsc": stripped_arsc,
+        "added_res": added_res,
+        "added_arsc": added_arsc,
+        "kept": len(kept_infos),
+    }
+
+
+def stage_s4(target: Path, framework_res_apk: Path) -> None:
+    """Overlay AOSP ``framework-res.apk`` resources onto staging ``android.jar``.
+
+    Replaces the stale May-27 ``resources.arsc`` + ``res/**`` snapshot carried
+    by ``libs/android-merged.jar`` (S1) with the current AOSP
+    ``framework-res.apk`` resources — resolving the ``androidprv:`` private-
+    resource linking errors (AGENTS.md §2.4 point 2). Preserves all non-resource
+    entries (incl. the pinned ``META-INF/MANIFEST.MF``). Creates
+    ``android.jar.bak-preres`` on first mutation.
+    """
+    _ensure_file(framework_res_apk, "framework-res.apk (S4 source)")
+    android = target / "android.jar"
+    _ensure_file(android, "staging android.jar")
+    backup = _backup_if_needed(android, ".bak-preres")
+    if backup:
+        print(f"S4: backup {backup}")
+    res = _overlay_framework_res(android, framework_res_apk)
+    print(f"S4: stripped {res['stripped_res']} res/ + {res['stripped_arsc']} "
+          f"resources.arsc from android.jar; added {res['added_res']} res/ + "
+          f"{res['added_arsc']} resources.arsc from framework-res.apk; kept "
+          f"{res['kept']} non-resource entries")
+
+
 # --- S5: verify ------------------------------------------------------------
 
 def _cmp_jar_inventory(label: str, staging_jar: Path, live_jar: Path) -> tuple:
@@ -331,6 +429,45 @@ def _cmp_jar_inventory(label: str, staging_jar: Path, live_jar: Path) -> tuple:
         print(f"     crc-diff sample: {crc_diff[:6]}")
     return status, {"missing": len(missing), "extra": len(extra),
                     "crc_diff": len(crc_diff)}
+
+
+def _cmp_jar_split_resource(label: str, staging_jar: Path, live_jar: Path) -> tuple:
+    """Compare android.jar with the expected S4 resource delta.
+
+    Non-resource entries (everything except ``resources.arsc`` and ``res/**``)
+    must match the live SDK strictly (names + CRC). Resource entries are
+    reported as a delta and do NOT gate the result — S4 intentionally replaces
+    the stale merged-jar resources with the current AOSP framework-res.
+    Returns (status, detail) where status is PASS only if non-resource matches.
+    """
+    s = _jar_inventory(staging_jar)
+    l = _jar_inventory(live_jar)
+    s_nr = {k: v for k, v in s.items() if not _is_resource_entry(k)}
+    l_nr = {k: v for k, v in l.items() if not _is_resource_entry(k)}
+    missing = sorted(set(l_nr) - set(s_nr))
+    extra = sorted(set(s_nr) - set(l_nr))
+    crc_diff = sorted(n for n in (set(s_nr) & set(l_nr)) if s_nr[n] != l_nr[n])
+    ok = not (missing or extra or crc_diff)
+    status = "PASS" if ok else "DIFF"
+    print(f"S5: {label}: {status} (non-resource strict; S4 resource delta allowed)  "
+          f"(staging_nr={len(s_nr)} live_nr={len(l_nr)} missing={len(missing)} "
+          f"extra={len(extra)} crc_diff={len(crc_diff)})")
+    s_r = {k: v for k, v in s.items() if _is_resource_entry(k)}
+    l_r = {k: v for k, v in l.items() if _is_resource_entry(k)}
+    r_missing = len(set(l_r) - set(s_r))
+    r_extra = len(set(s_r) - set(l_r))
+    r_crc = sum(1 for n in (set(s_r) & set(l_r)) if s_r[n] != l_r[n])
+    print(f"     resource delta (resources.arsc + res/**): "
+          f"staging={len(s_r)} live={len(l_r)} missing={r_missing} "
+          f"extra={r_extra} crc_diff={r_crc})")
+    if missing:
+        print(f"     missing-in-staging (non-res) sample: {missing[:6]}")
+    if extra:
+        print(f"     extra-in-staging (non-res) sample: {extra[:6]}")
+    if crc_diff:
+        print(f"     crc-diff (non-res) sample: {crc_diff[:6]}")
+    return status, {"non_resource_ok": ok, "missing": len(missing),
+                    "extra": len(extra), "crc_diff": len(crc_diff)}
 
 
 def _cmp_bytes(label: str, staging: Path, live: Path) -> tuple:
@@ -379,13 +516,20 @@ def _check_package_xml_shape(label: str, pkg_xml: Path) -> tuple:
     return status, detail
 
 
-def stage_verify(target: Path, live: Path) -> int:
+def stage_verify(target: Path, live: Path, expect_s4_delta: bool = False) -> int:
     _ensure_dir(target, "staging target")
     _ensure_dir(live, "live SDK")
-    print(f"S5: verifying staging {target} vs live {live}")
+    mode = (" (--expect-s4-delta: android.jar resource delta allowed)"
+            if expect_s4_delta else "")
+    print(f"S5: verifying staging {target} vs live {live}{mode}")
     results = []
-    results.append(_cmp_jar_inventory("android.jar",
-                                       target / "android.jar", live / "android.jar"))
+    if expect_s4_delta:
+        results.append(_cmp_jar_split_resource("android.jar",
+                                               target / "android.jar",
+                                               live / "android.jar"))
+    else:
+        results.append(_cmp_jar_inventory("android.jar",
+                                          target / "android.jar", live / "android.jar"))
     results.append(_cmp_jar_inventory("core-for-system-modules.jar",
                                        target / "core-for-system-modules.jar",
                                        live / "core-for-system-modules.jar"))
@@ -401,7 +545,12 @@ def stage_verify(target: Path, live: Path) -> int:
     statuses = [s for s, _ in results]
     print("")
     if all(s == "PASS" for s in statuses):
-        print("S5: ALL PASS — staging is inventory-equivalent to the live SDK.")
+        if expect_s4_delta:
+            print("S5: ALL PASS (non-resource strict) — android.jar resource "
+                  "delta is the expected S4 overlay; staging is otherwise "
+                  "equivalent to live.")
+        else:
+            print("S5: ALL PASS — staging is inventory-equivalent to the live SDK.")
         return 0
     failed = [name for name, (s, _) in zip(
         ["android.jar", "core-for-system-modules.jar", "framework.aidl",
@@ -410,10 +559,66 @@ def stage_verify(target: Path, live: Path) -> int:
     return 1
 
 
+# --- apply: sync staging onto the live SDK (pre-approved) ------------------
+
+# The artifact files the pipeline patches and that --apply syncs onto live.
+# Identity-bearing files (package.xml, source.properties, sdk.properties) are
+# NOT touched — staging carries the staging name, the live SDK carries the real
+# SysUISdk identity.
+APPLY_FILES = ("android.jar", "core-for-system-modules.jar", "framework.aidl")
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def apply_to_live(source: Path) -> int:
+    """Sync staging artifacts onto the live SDK (user pre-approval 2026-08-13).
+
+    Copies each of ``APPLY_FILES`` from the staging ``source`` to the live SDK,
+    creating a timestamped backup (``<name>.bak-<ts>``) of every live file that
+    actually differs. Identical files are skipped (no backup, no overwrite).
+    This is the ONLY sanctioned live-SDK mutation path; it is deliberately
+    separate from the staging build/verify path (which hard-fails on the live
+    SDK via ``_live_guard``).
+    """
+    _ensure_dir(source, "staging source")
+    live = _resolve(LIVE_SDK_DIR)
+    _ensure_dir(live, "live SDK")
+    _live_guard(source)  # refuse if --source is/inside the live SDK
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    print(f"apply: source={source} live={live} ts={ts}")
+    applied: list[str] = []
+    skipped: list[str] = []
+    for name in APPLY_FILES:
+        s = source / name
+        l = live / name
+        _ensure_file(s, f"staging {name}")
+        _ensure_file(l, f"live {name}")
+        if _sha256(s) == _sha256(l):
+            skipped.append(name)
+            print(f"apply: {name}: identical (skip)")
+            continue
+        bak = l.with_name(f"{name}.bak-{ts}")
+        shutil.copy2(l, bak)
+        print(f"apply: {name}: backup {bak}")
+        shutil.copy2(s, l)
+        applied.append(name)
+        print(f"apply: {name}: synced")
+    print(f"apply: done — synced {len(applied)} "
+          f"({', '.join(applied) or 'none'}), skipped {len(skipped)} identical")
+    return 0
+
+
 # --- main ------------------------------------------------------------------
 
 def _run_stages(stages: list[str], base: Path, target: Path,
-                merged_jar: Path, core_libart_jar: Path, clean: bool) -> None:
+                merged_jar: Path, core_libart_jar: Path,
+                framework_res_apk: Path, clean: bool) -> None:
     if "s0" in stages:
         stage_s0(base, target, clean)
     if "s1" in stages:
@@ -422,6 +627,8 @@ def _run_stages(stages: list[str], base: Path, target: Path,
         stage_s2(target)
     if "s3" in stages:
         stage_s3(target, core_libart_jar)
+    if "s4" in stages:
+        stage_s4(target, framework_res_apk)
 
 
 def main() -> int:
@@ -434,19 +641,36 @@ def main() -> int:
                     help="S1 android-merged.jar source (default libs/android-merged.jar)")
     ap.add_argument("--core-libart-jar", default=str(DEFAULT_CORE_LIBART_JAR),
                     help="S3 core-libart javac jar source")
+    ap.add_argument("--framework-res-apk", default=str(DEFAULT_FRAMEWORK_RES_APK),
+                    help="S4 framework-res.apk source (default libs/framework-res.apk)")
     ap.add_argument("--clean", action="store_true",
                     help="remove the staging target before S0 (S0 only)")
     ap.add_argument("--stages", default="s0,s1,s2,s3",
-                    help="comma-separated stages to run (default s0,s1,s2,s3)")
+                    help="comma-separated stages to run (default s0,s1,s2,s3; "
+                         "append s4 for the framework-res overlay)")
     ap.add_argument("--verify", action="store_true",
                     help="run S5 verify against the live SDK and exit")
+    ap.add_argument("--expect-s4-delta", action="store_true",
+                    help="with --verify: allow android.jar resource delta from S4 "
+                         "(non-resource entries stay strict); use after a build with s4")
+    ap.add_argument("--apply", action="store_true",
+                    help="sync staging artifacts onto the live SDK (pre-approved "
+                         "2026-08-13); --source selects the staging dir")
+    ap.add_argument("--source", default=str(DEFAULT_TARGET),
+                    help=f"staging source dir for --apply (default {DEFAULT_TARGET})")
     args = ap.parse_args()
 
     target = Path(args.target)
+
+    if args.apply:
+        _live_guard(_resolve(Path(args.source)))
+        return apply_to_live(_resolve(Path(args.source)))
+
     _live_guard(target)
 
     if args.verify:
-        return stage_verify(_resolve(target), _resolve(LIVE_SDK_DIR))
+        return stage_verify(_resolve(target), _resolve(LIVE_SDK_DIR),
+                            expect_s4_delta=args.expect_s4_delta)
 
     stages = [s.strip().lower() for s in args.stages.split(",") if s.strip()]
     for s in stages:
@@ -454,7 +678,8 @@ def main() -> int:
             sys.exit(f"ERROR: unknown stage {s!r}; choose from {ALL_STAGES}")
     _run_stages(stages, _resolve(Path(args.base)), _resolve(target),
                 _resolve(Path(args.merged_jar)),
-                _resolve(Path(args.core_libart_jar)), args.clean)
+                _resolve(Path(args.core_libart_jar)),
+                _resolve(Path(args.framework_res_apk)), args.clean)
     print("")
     print("Done. Run with --verify to compare staging against the live SDK.")
     return 0

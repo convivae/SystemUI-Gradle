@@ -19,8 +19,11 @@ User requirement (2026-08-13): *"SysUISDK 的构建必须是可以复现的…�
 the proof.
 
 This brief covers stages S0–S3 + S5 (reproduce the CURRENT live SDK exactly).
-The framework-res stage (S4, `androidprv:` private resource IDs) lands in the
-next brief — do not add it here.
+Stage S4 (overlay the current AOSP `framework-res.apk` resources onto
+`android.jar`, to fix `androidprv:` private-resource linking) was added in task
+011 (2026-08-13); see §8. S4 is opt-in (`--stages s0,s1,s2,s3,s4`); the
+strict 7/7 pre-S4 reproducibility proof (default `--stages s0,s1,s2,s3` +
+`--verify`) is unchanged.
 
 ## 2. Audit findings
 
@@ -177,23 +180,29 @@ Verify checks **presence/shape**, not byte-equality, for `package.xml`.
 
 | live SDK file | produced by | source artifact | reproducible? |
 |---------------|-------------|-----------------|---------------|
-| `android.jar` | S1 + S3 | S1: `libs/android-merged.jar` wholesale copy (MANIFEST.MF pinned); S3: AOSP `core-libart.jar` (4 dalvik classes) | **yes** (7/7 PASS, §6) |
+| `android.jar` | S1 + S3 + S4 | S1: `libs/android-merged.jar` wholesale copy (MANIFEST.MF pinned; carries the stale May-27 `resources.arsc`+`res/`); S3: AOSP `core-libart.jar` (4 dalvik classes); S4 (opt-in): overlay `libs/framework-res.apk` `resources.arsc`+`res/` | **yes** pre-S4 (7/7 PASS, §6); post-S4 use `--verify --expect-s4-delta` |
 | `core-for-system-modules.jar` | S3 | base `core-for-system-modules.jar` + 4 dalvik classes from AOSP `core-libart.jar` | **yes** |
 | `framework.aidl` | S2 | base `framework.aidl` + 2 decls from `tools/install_sdk.py` | **yes** |
 | `package.xml` | S0 | base `package.xml`, 4 fields rewritten for staging name | **yes** (shape) |
 | `build.prop` | S0 | base `build.prop` (copied verbatim; base == live) | **yes** |
 | `data/`, `optional/` | S0 | base subtrees (copied verbatim; base == live) | **yes** |
-| `android.jar.orig`, `core-for-system-modules.jar.orig`, `framework.aidl.bak-preaidl` | S1/S3/S2 | created on first mutation (== pre-stage base) | **yes** (parity) |
+| `android.jar.orig`, `android.jar.bak-preres`, `core-for-system-modules.jar.orig`, `framework.aidl.bak-preaidl` | S1/S4/S3/S2 | created on first mutation (== pre-stage base) | **yes** (parity) |
 
 AOSP build-output sources (not tracked in git, sourced from the local AOSP tree):
 - `core-libart.jar` (S3): `/home/conv/myspace/aosp/out/soong/.intermediates/libcore/core-libart/android_common_apex31/javac/core-libart.jar`
 - base platform `android-37.0`: `~/Android/Sdk/platforms/android-37.0` (stock SDK install)
 
-Tracked in git (task 010b, 2026-08-13):
-- `libs/android-merged.jar` (S1 source): SHA-256
+Tracked in git:
+- `libs/android-merged.jar` (S1 source, task 010b 2026-08-13): SHA-256
   `67ceccc5cd9d610189d45596481b1f8fefe557c8b41a2820d9d74df536770d79`; recovered
   from git history blob at commit `5836ec44` (originally committed `5836ec4`,
   deleted `683ef39a`, re-tracked `2026-08-13`). See §2.4.3.
+- `libs/framework-res.apk` (S4 source, task 011 2026-08-13): SHA-256
+  `7e76ce7d9de50d47a47396d36f4d0fd10a9d15048b6aef498d7ad434b018bef7`,
+  36 079 832 B; copied from the canonical AOSP Soong product
+  `frameworks/base/core/res/framework-res/android_common/framework-res.apk`.
+  Regeneration: `cp <that path> libs/framework-res.apk` (requires a built AOSP
+  tree; the tracked copy makes the SDK rebuildable without `out/`).
 
 ## 4. The pipeline (`tools/build_sysuisdk.py`)
 
@@ -210,10 +219,26 @@ S3  inject dalvik.annotation.optimization classes into both jars (reuses
     tools/patch_sdk_dalvik_annotations.py patch_target; source: core-libart.jar).
     Creates core-for-system-modules.jar.orig on first run; normalizes android.jar
     MANIFEST.MF to the audited live bytes after jar uf.
+S4  (opt-in, --stages s0,s1,s2,s3,s4) overlay the current AOSP framework-res.apk
+    resources.arsc + res/** onto android.jar, replacing S1's stale May-27
+    snapshot — fixes the framework-table half of the androidprv: linking gap
+    (AGENTS.md §2.4 point 2). Strips resources.arsc + res/** from android.jar,
+    adds the same from libs/framework-res.apk (non-resource entries incl. the
+    pinned MANIFEST.MF preserved; the apk's AndroidManifest.xml/META-INF/assets
+    are NOT carried over). Creates android.jar.bak-preres on first run.
+    Deterministic, idempotent. NOTE: S4 alone does NOT clear androidprv: build
+    errors — see §8.2 (Factor 2: AGP merger drops xmlns:androidprv).
 S5  --verify: entry inventories (names+CRC) for the two jars; byte-equality for
     framework.aidl and build.prop; presence/shape for package.xml; file-set
     equality for data/ and optional/. Per-file PASS/DIFF report; exit non-zero
-    on any DIFF.
+    on any DIFF. --expect-s4-delta: after a build with s4, android.jar non-
+    resource entries stay strict (must match live) while its resource entries
+    (resources.arsc + res/**) are reported as the expected S4 delta (not gating);
+    the other 6 files remain strict. The pre-S4 strict 7/7 check is unchanged.
+--apply (pre-approved 2026-08-13): sync staging artifacts (android.jar,
+    core-for-system-modules.jar, framework.aidl) onto the live SDK with
+    timestamped per-file backups (<name>.bak-<ts>); skips identical files; never
+    touches package.xml/source.properties/sdk.properties (identity files).
 ```
 
 All stages idempotent. Live-SDK hard-fail guard on `--target`. Stdlib-only
@@ -230,23 +255,32 @@ All stages idempotent. Live-SDK hard-fail guard on `--target`. Stdlib-only
 ## 5. Fresh-machine usage
 
 ```bash
-# 1. Clone the repo (libs/ is committed, including libs/android-merged.jar;
-#    no AOSP build needed for S0–S2; S3 needs core-libart.jar, an AOSP build
-#    output — if the AOSP tree is not present locally, point --core-libart-jar
-#    at a copy).
-# 2. Build the staging SDK:
+# 1. Clone the repo (libs/ is committed, including libs/android-merged.jar and
+#    libs/framework-res.apk; no AOSP build needed for S0–S2; S3 needs
+#    core-libart.jar, an AOSP build output — if the AOSP tree is not present
+#    locally, point --core-libart-jar at a copy).
+# 2a. Build the staging SDK reproducing the CURRENT live SDK exactly
+#     (pre-S4 reproducibility proof — default stages):
 python3 tools/build_sysuisdk.py --clean \
   --target ~/Android/Sdk/platforms/android-SysUISdk-staging
-# 3. Verify against the live SDK (proof of reproducibility — exits 0, 7/7 PASS):
 python3 tools/build_sysuisdk.py --verify \
+  --target ~/Android/Sdk/platforms/android-SysUISdk-staging   # 7/7 PASS, exit 0
+# 2b. Build the FIXED staging SDK (with the framework-res overlay, S4):
+python3 tools/build_sysuisdk.py --clean --stages s0,s1,s2,s3,s4 \
   --target ~/Android/Sdk/platforms/android-SysUISdk-staging
-# 4. To use staging as the compile SDK, rename it to android-SysUISdk.
+python3 tools/build_sysuisdk.py --verify --expect-s4-delta \
+  --target ~/Android/Sdk/platforms/android-SysUISdk-staging
+    # android.jar non-resource strict PASS + resource delta (expected); exit 0
+# 3. To use staging as the compile SDK, rename it to android-SysUISdk, OR sync
+#    a built staging onto the live SDK with timestamped backups (pre-approved):
+python3 tools/build_sysuisdk.py --apply \
+  --source ~/Android/Sdk/platforms/android-SysUISdk-staging
 ```
 
 Tests (never touch the real SDK):
 
 ```bash
-python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 104 tests, OK
+python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 116 tests, OK
 ```
 
 ## 6. Verify result (2026-08-13 run, task 010b) — the reproducibility proof
@@ -287,6 +321,26 @@ missing=1266 extra=0 crc_diff=0)` — 6/7 PASS. The 1266 missing entries were th
 had been deleted in `683ef39a`. Task 010b re-tracked that blob (§2.4.3); the
 DIFF is now gone. This subsection is retained for provenance only.
 
+### 6.2 Post-S4 verify (task 011, 2026-08-13) — `--expect-s4-delta`
+
+A staging build WITH s4 intentionally diverges from the live SDK in
+`android.jar`'s resource entries (the whole point of S4 is to replace the
+stale May-27 resources with the current AOSP framework-res). Plain `--verify`
+therefore reports `android.jar DIFF` after s4. `--verify --expect-s4-delta`
+splits the android.jar comparison: non-resource entries stay strict (must
+match live names+CRC) while resource entries (`resources.arsc` + `res/**`) are
+reported as the expected delta. The 2026-08-13 run:
+
+```
+S5: android.jar: PASS (non-resource strict)  (staging_nr=29159 live_nr=29159 missing=0 extra=0 crc_diff=0)
+     resource delta (resources.arsc + res/**): staging=8203 live=8365 missing=230 extra=68 crc_diff=1039
+S5: core-for-system-modules.jar: PASS  ... 6 other files PASS ...
+S5: ALL PASS (non-resource strict)   exit 0
+```
+
+The pre-S4 strict proof (`--stages s0,s1,s2,s3` + `--verify`) remains 7/7 PASS,
+exit 0 — the strict check is **not** weakened.
+
 ## 7. S1 source decision — RESOLVED (2026-08-13)
 
 The redline-gated escalation from task 010 is **resolved by user decision
@@ -297,9 +351,73 @@ is committed under `libs/` as the declared S1 source. S1 now copies it wholesale
 (§2.4.2); `--verify` exits 0 with 7/7 PASS (§6). No further action needed on
 this item. (Options 2 and 3 from the original escalation are moot.)
 
-## 8. S4 (framework-res) — next brief
+## 8. S4 (framework-res overlay) — implemented (task 011, 2026-08-13)
 
-The `androidprv:` framework private-resource gap (AGENTS.md §2.4 point 2;
-`docs/issues/2026-08-12-current-progress-standards-review.md`) is **not** part of
-this brief. S4 will merge `framework-res.apk`'s `resources.arsc` + `res/` into
-the SysUISdk `android.jar` and is tracked separately.
+### 8.1 What S4 does
+
+Stage S4 (`stage_s4` + `_overlay_framework_res` in `tools/build_sysuisdk.py`)
+strips the existing `resources.arsc` + `res/**` from staging `android.jar` (the
+stale May-27 snapshot carried by `libs/android-merged.jar`, S1) and adds
+`resources.arsc` + `res/**` from `libs/framework-res.apk` (the current AOSP
+Soong product of `frameworks/base/core/res`). Non-resource entries (classes,
+the pinned `META-INF/MANIFEST.MF`) are preserved; the apk's `AndroidManifest.xml`,
+`META-INF/*`, `assets/` are NOT carried over. Deterministic (per-entry CRC via
+`_copy_zipinfo`), idempotent, `.bak-preres` backup on first mutation. See
+`docs/issues/2026-08-13-sysuisdk-reproducible-build.md` §8 for the full audit.
+
+### 8.2 The androidprv: gap has TWO independent factors (S4 fixes only one)
+
+The brief hypothesized a single root cause ("stale May-27 resources.arsc
+missing the androidprv symbols"). Systematic debugging found **two independent
+factors**, confirmed by minimal `aapt2 link` tests against the live/staging jar:
+
+**Factor 1 — stale framework resource TABLE (S4 fixes this).** The stale
+`android.jar` `resources.arsc` lacked the attr *entries* (the symbols exist in
+the string pool but not as resolvable `<attr>` entries). The attrs are defined
+in AOSP `frameworks/base/core/res/res/values/attrs.xml` (e.g.
+`attrs.xml:1298 <attr name="materialColorSurfaceContainerHighest" format="color"/>`)
+and compiled into `framework-res.apk` with valid IDs
+(`materialColorSurfaceContainerHighest` = `0x011200d7`). Proof: with
+`xmlns:androidprv` declared, `aapt2 link` against the STALE backup jar fails
+`resource android:attr/materialColorSurfaceContainerHighest not found`; against
+the OVERLAID (fresh) jar it SUCCEEDS. **S4 is necessary and sufficient for
+this half.**
+
+**Factor 2 — AGP `MergeResources` DROPS `xmlns:androidprv` (NOT addressed by
+S4; out of scope for task 011).** Source `SystemUI-res/res/values/colors.xml`
+declares `xmlns:androidprv="http://schemas.android.com/apk/prv/res/android"`
+on `<resources>` (164 SystemUI res files use `androidprv:`, only inside
+*values*, never as XML attribute prefixes). AGP's merger emits a merged
+`values.xml` whose root declares only `xmlns:android`, `xmlns:ns1` (tools),
+`xmlns:xliff` — `xmlns:androidprv` is dropped (0 occurrences of `prv/res/android`
+in the merged file despite 81 `androidprv:` references). AAPT2's
+`ExtractPackageFromNamespace` (aapt2 `xml/XmlUtil.cpp`) maps the *URI*
+`http://schemas.android.com/apk/prv/res/android` → package `android`, private;
+without the declaration the `androidprv:` prefix in a value is unresolved →
+`resource androidprv:attr/X not found`. Proof (overlaid jar):
+```
+Variant C (androidprv: WITHOUT xmlns:androidprv): link exit 1
+   resC/values/colors.xml:3: error: resource androidprv:attr/materialColorSurfaceContainerHighest not found.
+Variant D (androidprv: WITH xmlns:androidprv):    link exit 0  (SUCCESS)
+Variant E (ALL 11 failing symbols, WITH declaration, overlaid jar): link exit 0
+```
+Variant C reproduces the full-build error byte-for-byte; Variant E proves
+**overlay + declaration together resolve every failing symbol**. The merger
+strips the declaration because the prefix is only used inside attribute
+*values* (XML serializers drop namespace declarations they consider "unused").
+CarSystemUIGradle (which also uses `androidprv:` in 9 files) has no special
+merger config and no built intermediates — it has not solved this either.
+
+### 8.3 Verdict & escalation
+
+- S4 (overlay) is **correct, necessary, tested (116 OK), and applied to live**
+  (pre-approved). It fixes Factor 1. Live `android.jar` hash `9c4deb78…` →
+  `f72b92e4…`; timestamped backups on the live SDK.
+- Task-011 Step-5 acceptance (**0 androidprv errors**) is **NOT met** — Factor 2
+  is the sole remaining blocker for `:app:processDebugResources` (20 errors,
+  all `androidprv:...not found`). Fixing Factor 2 requires build/merger
+  configuration (`build.gradle.kts` / `gradle.properties` — CHARTER Part 5.4)
+  or res changes (rule R — Part 5.1/5.2), both **outside task 011's Allowed
+  Paths**. **Escalated as REDLINE** — the worker did not attempt it.
+- `:app:assembleDebug` (Step 6 diagnostics) fails at the same
+  `:app:processDebugResources`; no APK produced.

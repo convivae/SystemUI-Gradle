@@ -18,15 +18,15 @@ Key facts (architect-verified):
 
 Steps:
 
-- [ ] 1. Track the input (reproducibility requirement — the SDK must be rebuildable even without the AOSP `out/` dir):
+- [x] 1. Track the input (reproducibility requirement — the SDK must be rebuildable even without the AOSP `out/` dir):
 
 ```bash
 cp /home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/core/res/framework-res/android_common/framework-res.apk libs/framework-res.apk
 sha256sum libs/framework-res.apk
 ```
 
-- [ ] 2. Implement S4 in `tools/build_sysuisdk.py`: strip the existing `resources.arsc` + `res/**` entries from the target `android.jar`, then add `resources.arsc` + `res/**` from `libs/framework-res.apk` (deterministic, idempotent, `.orig`-style backup on first mutation, consistent with existing stages). S4 runs after S1 (which wholesale-copies `android-merged.jar`) and before S5. Extend `--verify` so a staging build WITH S4 is expected to differ from the live SDK **only** in `android.jar`'s resource entries until the patch is applied to live — model this as an explicit `--expect-s4-delta` mode or per-stage verify reporting; do not weaken the strict 7/7 check for pre-S4 reproduction.
-- [ ] 3. Tests: fixture-level S4 tests (strip+add semantics, idempotency, backup, determinism). Full suite:
+- [x] 2. Implement S4 in `tools/build_sysuisdk.py`: strip the existing `resources.arsc` + `res/**` entries from the target `android.jar`, then add `resources.arsc` + `res/**` from `libs/framework-res.apk` (deterministic, idempotent, `.orig`-style backup on first mutation, consistent with existing stages). S4 runs after S1 (which wholesale-copies `android-merged.jar`) and before S5. Extend `--verify` so a staging build WITH S4 is expected to differ from the live SDK **only** in `android.jar`'s resource entries until the patch is applied to live — model this as an explicit `--expect-s4-delta` mode or per-stage verify reporting; do not weaken the strict 7/7 check for pre-S4 reproduction.
+- [x] 3. Tests: fixture-level S4 tests (strip+add semantics, idempotency, backup, determinism). Full suite:
 
 ```bash
 python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tail -3
@@ -34,8 +34,8 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tail -3
 
 Expected: `OK`, count > 104.
 
-- [ ] 4. Build staging with S4 and sanity-check the resource inventory (e.g. confirm `resources.arsc` differs from the pre-S4 one and `res/` entry count matches `libs/framework-res.apk`).
-- [ ] 5. **Apply to the live SDK** (pre-approved): implement/use an `--apply` step that syncs the staging result onto `/home/conv/Android/Sdk/platforms/android-SysUISdk` with a timestamped backup of every overwritten file (or document and execute an equivalent safe rename). Then run the real acceptance:
+- [x] 4. Build staging with S4 and sanity-check the resource inventory (e.g. confirm `resources.arsc` differs from the pre-S4 one and `res/` entry count matches `libs/framework-res.apk`).
+- [~] 5. **Apply to the live SDK** (pre-approved): apply DONE (timestamped backups created; live android.jar synced). Acceptance NOT MET: `:app:processDebugResources` still fails with 20 `androidprv:` errors — a SECOND root cause (AGP merger drops `xmlns:androidprv`) is the sole remaining blocker, out of scope (build config). See issue doc §8.4–§8.5 & arch doc §8.2. REDLINE escalated. implement/use an `--apply` step that syncs the staging result onto `/home/conv/Android/Sdk/platforms/android-SysUISdk` with a timestamped backup of every overwritten file (or document and execute an equivalent safe rename). Then run the real acceptance:
 
 ```bash
 ./gradlew :app:processDebugResources --console=plain 2>&1 | tee /tmp/task011.log >/dev/null
@@ -44,9 +44,9 @@ grep -c 'androidprv' /tmp/task011.log || echo '0 (androidprv errors gone)'
 ```
 
 Expected: `0` androidprv errors. If BUILD still fails on a NEW layer, capture the failing task + first errors and report — do not fix beyond this brief.
-- [ ] 6. Diagnostics (not acceptance): `./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/task011-app.log >/dev/null` — record how far it gets (failing task + first error lines, or the APK path on success).
-- [ ] 7. Docs: architecture doc — S4 spec, input provenance (`libs/framework-res.apk` ← AOSP Soong path above + regeneration note), the live-apply procedure, fresh-machine instructions updated (pipeline now S0–S5). Issue doc — dated note with all command outputs and the apply record.
-- [ ] 8. Worker commit (never push):
+- [x] 6. Diagnostics (not acceptance): `./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/task011-app.log >/dev/null` — record how far it gets (failing task + first error lines, or the APK path on success).
+- [x] 7. Docs: architecture doc — S4 spec, input provenance (`libs/framework-res.apk` ← AOSP Soong path above + regeneration note), the live-apply procedure, fresh-machine instructions updated (pipeline now S0–S5). Issue doc — dated note with all command outputs and the apply record.
+- [x] 8. Worker commit (never push):
 
 ```bash
 git add libs/framework-res.apk tools/build_sysuisdk.py tools/tests/test_build_sysuisdk.py \
