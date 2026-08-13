@@ -33,6 +33,7 @@ ARTIFACTS = {
     "iconloader": {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.0"},
     "LowLightDreamLib": {"group": "com.android.systemui", "name": "LowLightDreamLib", "version": "1.0.0"},
     "SettingsLibColor": {"group": "com.android.settingslib", "name": "color", "version": "1.0.0"},
+    "setupcompat": {"group": "com.android.systemui", "name": "setupcompat", "version": "1.0.0"},
 }
 
 POM_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
