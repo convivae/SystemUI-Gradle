@@ -84,8 +84,13 @@ def _make_base_platform(root: Path) -> Path:
     return root
 
 
-def _make_framework_jar(path: Path) -> Path:
-    """framework.jar fixture: B.class (master, different bytes), C.class, manifest."""
+def _make_merged_jar(path: Path) -> Path:
+    """android-merged.jar fixture: B.class (master, different bytes) + C.class (new).
+
+    Stands in for the real android-merged.jar (2026-07-22 merge product): a
+    self-contained jar S1 copies wholesale as android.jar. B.class has master
+    bytes distinct from base's B; C.class is a new entry absent from base.
+    """
     _make_jar(path, {
         "android/B.class": b"\xCA\xFE\xBA\xBEfwB-master",
         "android/C.class": b"\xCA\xFE\xBA\xBEfwC",
@@ -114,7 +119,7 @@ class _FixtureCase(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         root = Path(self.tmp.name)
         self.base = _make_base_platform(root / "android-37.0")
-        self.fw = _make_framework_jar(root / "framework.jar")
+        self.merged = _make_merged_jar(root / "android-merged.jar")
         self.corelib = _make_core_libart_jar(root / "core-libart.jar")
         self.staging = root / "android-SysUISdk-staging"
 
@@ -124,14 +129,14 @@ class _FixtureCase(unittest.TestCase):
         """
         live = Path(self.tmp.name) / "android-SysUISdk-live"
         b.stage_s0(self.base, live, clean=True)
-        b.stage_s1(live, self.fw)
+        b.stage_s1(live, self.merged)
         b.stage_s2(live)
         b.stage_s3(live, self.corelib)
         return live
 
     def _build_staging(self, clean: bool = True) -> None:
         b.stage_s0(self.base, self.staging, clean=clean)
-        b.stage_s1(self.staging, self.fw)
+        b.stage_s1(self.staging, self.merged)
         b.stage_s2(self.staging)
         b.stage_s3(self.staging, self.corelib)
 
@@ -217,42 +222,66 @@ class StageS0Test(_FixtureCase):
 
 # --- S1 tests --------------------------------------------------------------
 
+class S1ConfigTest(unittest.TestCase):
+    """Regression guard: the S1 source must be libs/android-merged.jar.
+
+    Task 010b re-tracked the recovered 2026-07-22 merge product as the declared
+    S1 source (replacing libs/framework.jar). This test pins the default so a
+    future change cannot silently revert S1 to the incomplete framework.jar
+    (which reproduced only 25869 of 27139 merge deltas — see architecture doc).
+    """
+
+    def test_default_merged_jar_points_at_android_merged(self):
+        self.assertEqual(b.DEFAULT_MERGED_JAR.name, "android-merged.jar")
+        self.assertEqual(b.DEFAULT_MERGED_JAR.parent.name, "libs")
+
+
 class StageS1Test(_FixtureCase):
-    def test_merges_framework_master(self):
+    def test_copies_merged_wholesale(self):
         b.stage_s0(self.base, self.staging, clean=True)
-        b.stage_s1(self.staging, self.fw)
+        b.stage_s1(self.staging, self.merged)
         entries = _jar_entries(self.staging / "android.jar")
-        # A.class kept from base (not in framework)
-        self.assertIn("android/A.class", entries)
-        # C.class added from framework
+        merged_entries = _jar_entries(self.merged)
+        # S1 = wholesale copy: every non-manifest entry (name + CRC) matches the
+        # merged jar. MANIFEST.MF is intentionally pinned to the audited live
+        # bytes (checked separately below).
+        non_manifest = {k: v for k, v in entries.items()
+                        if k != "META-INF/MANIFEST.MF"}
+        non_manifest_merged = {k: v for k, v in merged_entries.items()
+                               if k != "META-INF/MANIFEST.MF"}
+        self.assertEqual(non_manifest, non_manifest_merged)
+        # MANIFEST.MF pinned to audited live bytes (not the merged jar's).
+        self.assertEqual(entries["META-INF/MANIFEST.MF"],
+                         zipfile.crc32(b.ANDROID_MANIFEST_BYTES) & 0xFFFFFFFF)
+        self.assertNotEqual(entries["META-INF/MANIFEST.MF"],
+                            merged_entries["META-INF/MANIFEST.MF"])
+        # C.class present (new entry from merged).
         self.assertIn("android/C.class", entries)
-        # B.class present; its CRC must equal framework's B (master wins)
-        fw_entries = _jar_entries(self.fw)
-        self.assertEqual(entries["android/B.class"], fw_entries["android/B.class"])
-        # base B bytes overwritten: staging B CRC != base B CRC
+        # B.class bytes are merged's master bytes (not base's).
         base_entries = _jar_entries(self.base / "android.jar")
+        self.assertEqual(entries["android/B.class"], merged_entries["android/B.class"])
         self.assertNotEqual(entries["android/B.class"], base_entries["android/B.class"])
 
     def test_creates_orig_backup(self):
         b.stage_s0(self.base, self.staging, clean=True)
-        b.stage_s1(self.staging, self.fw)
+        b.stage_s1(self.staging, self.merged)
         orig = self.staging / "android.jar.orig"
         self.assertTrue(orig.exists())
-        # backup == base (pre-merge)
+        # backup == base (pre-S1)
         self.assertEqual(_jar_entries(orig), _jar_entries(self.base / "android.jar"))
 
     def test_manifest_pinned_to_live_bytes(self):
         b.stage_s0(self.base, self.staging, clean=True)
-        b.stage_s1(self.staging, self.fw)
+        b.stage_s1(self.staging, self.merged)
         with zipfile.ZipFile(self.staging / "android.jar") as zf:
             mf = zf.read("META-INF/MANIFEST.MF")
         self.assertEqual(mf, b.ANDROID_MANIFEST_BYTES)
 
-    def test_idempotent_remerge_same_result(self):
+    def test_idempotent_recopy_same_result(self):
         b.stage_s0(self.base, self.staging, clean=True)
-        b.stage_s1(self.staging, self.fw)
+        b.stage_s1(self.staging, self.merged)
         first = _jar_entries(self.staging / "android.jar")
-        b.stage_s1(self.staging, self.fw)  # re-run; .orig already exists
+        b.stage_s1(self.staging, self.merged)  # re-run; .orig already exists
         second = _jar_entries(self.staging / "android.jar")
         self.assertEqual(first, second)
 
@@ -290,7 +319,7 @@ class StageS2Test(_FixtureCase):
 class StageS3Test(_FixtureCase):
     def test_injects_dalvik_classes(self):
         b.stage_s0(self.base, self.staging, clean=True)
-        b.stage_s1(self.staging, self.fw)
+        b.stage_s1(self.staging, self.merged)
         b.stage_s3(self.staging, self.corelib)
         entries = _jar_entries(self.staging / "core-for-system-modules.jar")
         for cls in ("NeverCompile", "NeverInline", "DeadReferenceSafe",
@@ -307,7 +336,7 @@ class StageS3Test(_FixtureCase):
 
     def test_normalizes_android_manifest(self):
         b.stage_s0(self.base, self.staging, clean=True)
-        b.stage_s1(self.staging, self.fw)
+        b.stage_s1(self.staging, self.merged)
         b.stage_s3(self.staging, self.corelib)
         with zipfile.ZipFile(self.staging / "android.jar") as zf:
             mf = zf.read("META-INF/MANIFEST.MF")

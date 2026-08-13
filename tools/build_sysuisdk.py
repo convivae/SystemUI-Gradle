@@ -48,7 +48,7 @@ DEFAULT_TARGET = (
     Path.home() / "Android" / "Sdk" / "platforms" / "android-SysUISdk-staging"
 )
 _REPO_ROOT = _TOOLS_DIR.parent
-DEFAULT_FRAMEWORK_JAR = _REPO_ROOT / "libs" / "framework.jar"
+DEFAULT_MERGED_JAR = _REPO_ROOT / "libs" / "android-merged.jar"
 DEFAULT_CORE_LIBART_JAR = Path(
     "/home/conv/myspace/aosp/out/soong/.intermediates/libcore/"
     "core-libart/android_common_apex31/javac/core-libart.jar"
@@ -193,76 +193,57 @@ def stage_s0(base: Path, target: Path, clean: bool) -> None:
 
 # --- S1: deterministic framework.jar merge ---------------------------------
 
-def _merge_framework_master(
-    android_jar: Path, framework_jar: Path, manifest_bytes: bytes
+def _copy_merged_master(
+    android_jar: Path, merged_jar: Path, manifest_bytes: bytes
 ) -> dict:
-    """Merge framework.jar (master) into android.jar.
+    """Copy ``android-merged.jar`` wholesale as ``android.jar``, pinning
+    MANIFEST.MF.
 
-    Semantics (audited, see architecture doc §2.4): the merged jar =
-    framework.jar entries (master, framework bytes win the intersection) ∪
-    base-android.jar entries absent from framework.jar, with MANIFEST.MF pinned
-    to the audited live bytes. Implemented with stdlib ``zipfile`` so per-entry
-    CRCs match the sources exactly (CRC is over uncompressed bytes), independent
-    of jar-level compression/ordering.
+    Semantics (audited 2026-08-13, see architecture doc §2.4): ``android-merged.jar``
+    is the complete 2026-07-22 merge product (``framework.jar`` ∪ base
+    ``android.jar`` ∪ 1266 device-framework inner classes) and is a strict
+    superset of the live ``android.jar`` minus the 4 S3 dalvik classes (0 CRC
+    diffs on the 38892-entry intersection; ``merged - live = 0``; ``live -
+    merged = 4`` = exactly the S3 dalvik set). It already carries
+    ``resources.arsc`` + ``res/`` (8451 entries, matching live), so the base jar
+    is not consulted for gaps. S1 therefore = copy merged verbatim (MANIFEST.MF
+    pinned for JDK-determinism); S3 then adds the 4 dalvik classes → live.
 
-    Returns a dict: {framework, base_only, manifest, total}.
+    Implemented with stdlib ``zipfile`` so per-entry CRCs match the source
+    exactly (CRC is over uncompressed bytes), independent of jar-level
+    compression/ordering. Directory entries are dropped (consistent with
+    ``_jar_inventory`` / ``_rewrite_manifest_entry``; the live SDK's
+    inventory-level verify also ignores directories).
+
+    Returns a dict: {merged, manifest}.
     """
-    with zipfile.ZipFile(framework_jar, "r") as fwzf:
-        fw_infos = {i.filename: i for i in fwzf.infolist() if not i.is_dir()}
-    with zipfile.ZipFile(android_jar, "r") as basezf:
-        base_infos = {i.filename: i for i in basezf.infolist() if not i.is_dir()}
-
-    # merged entry plan: name -> ("fw", info) | ("base", info)
-    merged: dict[str, tuple] = {}
-    for name, info in fw_infos.items():
-        merged[name] = ("fw", info)
-    base_only = 0
-    for name, info in base_infos.items():
-        if name not in merged:
-            merged[name] = ("base", info)
-            base_only += 1
-    # manifest override
-    merged["META-INF/MANIFEST.MF"] = ("manifest", None)
-
+    with zipfile.ZipFile(merged_jar, "r") as mz:
+        m_infos = [i for i in mz.infolist() if not i.is_dir()]
     tmp = android_jar.with_suffix(".jar.tmp")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out:
-        with zipfile.ZipFile(framework_jar, "r") as fwzf, \
-                zipfile.ZipFile(android_jar, "r") as basezf:
-            for name, (kind, info) in merged.items():
-                if kind == "manifest":
-                    bytes_to_write = manifest_bytes
-                    src_info = base_infos.get("META-INF/MANIFEST.MF")
-                elif kind == "fw":
-                    bytes_to_write = fwzf.read(name)
-                    src_info = info
-                else:  # base
-                    bytes_to_write = basezf.read(name)
-                    src_info = info
-                new_info = zipfile.ZipInfo(src_info.filename, src_info.date_time)
-                new_info.compress_type = src_info.compress_type
-                new_info.external_attr = src_info.external_attr
-                new_info.create_system = src_info.create_system
-                out.writestr(new_info, bytes_to_write)
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out, \
+            zipfile.ZipFile(merged_jar, "r") as mz:
+        for info in m_infos:
+            data = manifest_bytes if info.filename == "META-INF/MANIFEST.MF" \
+                else mz.read(info.filename)
+            new_info = zipfile.ZipInfo(info.filename, info.date_time)
+            new_info.compress_type = info.compress_type
+            new_info.external_attr = info.external_attr
+            new_info.create_system = info.create_system
+            out.writestr(new_info, data)
     os.replace(tmp, android_jar)
-    return {
-        "framework": len(fw_infos),
-        "base_only": base_only,
-        "manifest": "META-INF/MANIFEST.MF",
-        "total": len(merged),
-    }
+    return {"merged": len(m_infos), "manifest": "META-INF/MANIFEST.MF"}
 
 
-def stage_s1(target: Path, framework_jar: Path) -> None:
-    _ensure_file(framework_jar, "framework.jar (S1 source)")
+def stage_s1(target: Path, merged_jar: Path) -> None:
+    _ensure_file(merged_jar, "android-merged.jar (S1 source)")
     android = target / "android.jar"
     _ensure_file(android, "staging android.jar")
     backup = _backup_if_needed(android, ".orig")
     if backup:
         print(f"S1: backup {backup}")
-    res = _merge_framework_master(android, framework_jar, ANDROID_MANIFEST_BYTES)
-    print(f"S1: merged framework.jar (master, {res['framework']} entries) + "
-          f"base-only ({res['base_only']}) = {res['total']} entries; "
-          f"MANIFEST.MF pinned to audited live bytes")
+    res = _copy_merged_master(android, merged_jar, ANDROID_MANIFEST_BYTES)
+    print(f"S1: copied android-merged.jar wholesale ({res['merged']} entries) "
+          f"as android.jar; MANIFEST.MF pinned to audited live bytes")
 
 
 # --- S2: framework.aidl patch ---------------------------------------------
@@ -432,11 +413,11 @@ def stage_verify(target: Path, live: Path) -> int:
 # --- main ------------------------------------------------------------------
 
 def _run_stages(stages: list[str], base: Path, target: Path,
-                framework_jar: Path, core_libart_jar: Path, clean: bool) -> None:
+                merged_jar: Path, core_libart_jar: Path, clean: bool) -> None:
     if "s0" in stages:
         stage_s0(base, target, clean)
     if "s1" in stages:
-        stage_s1(target, framework_jar)
+        stage_s1(target, merged_jar)
     if "s2" in stages:
         stage_s2(target)
     if "s3" in stages:
@@ -449,8 +430,8 @@ def main() -> int:
                     help=f"staging platform dir (default {DEFAULT_TARGET})")
     ap.add_argument("--base", default=str(DEFAULT_BASE_PLATFORM),
                     help="base stock platform to copy in S0")
-    ap.add_argument("--framework-jar", default=str(DEFAULT_FRAMEWORK_JAR),
-                    help="S1 framework.jar source (default libs/framework.jar)")
+    ap.add_argument("--merged-jar", default=str(DEFAULT_MERGED_JAR),
+                    help="S1 android-merged.jar source (default libs/android-merged.jar)")
     ap.add_argument("--core-libart-jar", default=str(DEFAULT_CORE_LIBART_JAR),
                     help="S3 core-libart javac jar source")
     ap.add_argument("--clean", action="store_true",
@@ -472,7 +453,7 @@ def main() -> int:
         if s not in ALL_STAGES:
             sys.exit(f"ERROR: unknown stage {s!r}; choose from {ALL_STAGES}")
     _run_stages(stages, _resolve(Path(args.base)), _resolve(target),
-                _resolve(Path(args.framework_jar)),
+                _resolve(Path(args.merged_jar)),
                 _resolve(Path(args.core_libart_jar)), args.clean)
     print("")
     print("Done. Run with --verify to compare staging against the live SDK.")

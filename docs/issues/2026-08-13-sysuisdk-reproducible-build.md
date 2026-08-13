@@ -217,3 +217,56 @@ around.
 
 Staging artifact `~/Android/Sdk/platforms/android-SysUISdk-staging/` is left in
 place for architect inspection (outside the repo, not committed).
+
+---
+
+## 7. Update (2026-08-13, task 010b) — REDLINE RESOLVED, 7/7 PASS
+
+The task-010 REDLINE (§2.4 S1 source gap) is **resolved by user decision
+(2026-08-13)**: option 1 — re-track the recovered `libs/android-merged.jar` as
+the declared S1 source.
+
+### 7.1 What changed
+
+- `libs/android-merged.jar` (new, 44846603 B) recovered from git history blob at
+  commit `5836ec44`. SHA-256
+  `67ceccc5cd9d610189d45596481b1f8fefe557c8b41a2820d9d74df536770d79` — matches
+  the architect-expected value; covers 100% of the 2638 missing entries from the
+  task-010 verify DIFF.
+- `tools/build_sysuisdk.py` S1 rewritten: **wholesale copy** of
+  `android-merged.jar` as `android.jar` (MANIFEST.MF pinned; dir entries
+  dropped). The base jar is no longer consulted for gaps — the merged jar is a
+  strict superset of live-minus-4-dalvik (0 CRC diffs on 38892-entry
+  intersection; 0 extra). CLI option renamed `--framework-jar` → `--merged-jar`;
+  constant `DEFAULT_FRAMEWORK_JAR` → `DEFAULT_MERGED_JAR`.
+- `tools/tests/test_build_sysuisdk.py`: fixture `_make_framework_jar` →
+  `_make_merged_jar`; S1 tests rewritten for wholesale-copy semantics; added
+  `S1ConfigTest` regression guard pinning the default S1 source to
+  `libs/android-merged.jar`.
+- Architecture doc §2.4/§3/§4/§6/§7 updated (new §2.4.2 semantics, §2.4.3
+  provenance chain, §6 7/7 PASS, §7 RESOLVED).
+
+### 7.2 Verify report (fresh `--clean` rebuild)
+
+```
+$ python3 tools/build_sysuisdk.py --clean --target .../android-SysUISdk-staging
+S1: copied android-merged.jar wholesale (37520 entries) as android.jar
+S3: android.jar +4 dalvik; core-for-system-modules.jar +4 dalvik
+build exit: 0
+
+$ python3 tools/build_sysuisdk.py --verify --target .../android-SysUISdk-staging
+S5: android.jar:                  PASS  (staging=37524 live=37524 missing=0 extra=0 crc_diff=0)
+S5: core-for-system-modules.jar:  PASS  (staging=1789  live=1789  missing=0 extra=0 crc_diff=0)
+S5: framework.aidl:               PASS  (staging=136009B live=136009B)
+S5: build.prop:                   PASS  (staging=4360B live=4360B)
+S5: package.xml:                  PASS  (path=platforms;android-SysUISdk-staging ...)
+S5: data/:                        PASS  (staging=11204 live=11204)
+S5: optional/:                    PASS  (staging=16    live=16)
+S5: ALL PASS — staging is inventory-equivalent to the live SDK.
+verify exit: 0
+```
+
+### 7.3 Tests
+
+`python3 -m unittest discover -s tools/tests -p 'test_*.py'` → **Ran 104 tests,
+OK** (>103). Live SDK mtimes unchanged (staging-only discipline maintained).

@@ -68,57 +68,103 @@ dalvik/annotation/optimization/{NeverCompile,NeverInline,DeadReferenceSafe,Reach
 CRC-match `core-libart.jar`). `CriticalNative`/`FastNative` were already in the
 base.
 
-### 2.4 S1 — `framework.jar` merge (PARTIALLY reproducible — GAP)
+### 2.4 S1 — `android-merged.jar` wholesale copy (RESOLVED 2026-08-13)
+
+> **Update 2026-08-13 (task 010b):** the S1 source gap documented in the
+> original audit is **resolved**. The user decided to re-track the recovered
+> `libs/android-merged.jar` as the declared S1 source. `--verify` now reaches
+> 7/7 PASS (§6). The historical `libs/framework.jar`-based audit is retained
+> below as `§2.4.1` for provenance; the current semantics are in `§2.4.2`.
+
+#### 2.4.1 Historical audit (original gap, 2026-08-13)
 
 The 2026-07-22 manual merge (`docs/issues/2026-07-22-sdk-android-jar-merge.md`)
-used the semantics: **framework.jar is master; android.jar fills the gaps**
-(`merged = framework_all ∪ android_only`, framework bytes win the intersection,
-repackaged with `jar cf`). `libs/framework.jar` is byte-identical to AOSP
-`frameworks/base/framework/android_common/turbine-combined/framework.jar`
+originally used the semantics: **framework.jar is master; android.jar fills the
+gaps** (`merged = framework_all ∪ android_only`, framework bytes win the
+intersection, repackaged with `jar cf`). `libs/framework.jar` is byte-identical
+to AOSP `frameworks/base/framework/android_common/turbine-combined/framework.jar`
 (25918 entries — core framework, **no** apex modules).
 
-Audit arithmetic on the live `android.jar`:
+The original merge *product* was `libs/android-merged.jar` (commit `5836ec4`,
+44846603 B, SHA-256
+`67ceccc5cd9d610189d45596481b1f8fefe557c8b41a2820d9d74df536770d79`) — the
+actual S1 source of truth. It was **deleted in commit `683ef39a`**
+("chore(Phase A): 清理死依赖"), so the first pipeline run (task 010) had only
+`libs/framework.jar` available and reported:
 
 ```
 live entries  = 37524
-orig entries  = 14826
-ADDED         = 22698    (in live, not in orig)
-OVERWRITTEN   = 4441     (same name, diff CRC)
-REMOVED       = 0
-
 framework.jar ∪ orig = 25918 + 14826 − 4490(intersection) = 36254
-live                 = 36254 + 1270(orphaned) − 4(S3 dalvik in the 1270)
-                     = 36254 + 1266(truly orphaned) + 4(S3-reproducible) + MANIFEST.MF
-                     = 37524
+live                 = 36254 + 1266(truly orphaned) + 4(S3-reproducible) + MANIFEST.MF
 ```
 
-Of the 1270 ADDED entries absent from `libs/framework.jar`, **1266 have no
-tracked source and no AOSP build-tree source** (scanned 57 `framework*.jar` javac
-variants: 0 covered by CRC); the remaining 4 are the S3 dalvik classes
-(reproducible via `core-libart.jar`). Buckets of the 1266: `com/android/*` 268,
-`android/bluetooth` 226, `android/hardware` 138, `android/net` 137, `android/app`
-100, `android/media` 74, `android/view` 58, `android/nfc` 53, `android/uwb` 24,
-… — full-bytecode device-framework inner classes (e.g.
+The 1266 "orphaned" entries (full-bytecode device-framework inner classes:
+bluetooth/nfc/uwb/`com.android.internal`/SystemUI-relevant — e.g.
 `ActivityManager$ISystemBarListenerImpl`, `ActivityMetricsLaunchObserver`,
-`IInterceptor`, `BluetoothA2dp$OptionalCodecsPreferenceStatus`,
-`BLASTBufferQueue$TransactionCompleteCallback`).
+`BluetoothA2dp$OptionalCodecsPreferenceStatus`,
+`BLASTBufferQueue$TransactionCompleteCallback`) existed in no tracked jar and
+no AOSP build-tree jar (scanned 57 `framework*.jar` javac variants: 0 covered by
+CRC). They were, however, present in the deleted `libs/android-merged.jar`.
 
-**Provenance of the gap:** the original merge product
-`libs/android-merged.jar` (commit `5836ec4`, 44846603 B) — which was the actual
-S1 source of truth — was **deleted in commit `683ef39a`** ("chore(Phase A):
-清理死依赖"). It is no longer tracked. The 1 overwritten CRC mismatch is
-`META-INF/MANIFEST.MF` (jar-tool artifact; see §2.5).
+#### 2.4.2 Current semantics (task 010b, 2026-08-13)
+
+**S1 source = `libs/android-merged.jar`** (re-tracked). Empirical audit of the
+recovered blob against the live `android.jar`:
+
+```
+merged entries (incl dirs) = 38892
+live   entries (incl dirs) = 38896
+live - merged              = 4   (exactly the S3 dalvik classes)
+merged - live              = 0   (nothing to drop)
+live ∩ merged              = 38892
+CRC diffs on intersection  = 0
+merged res/ entries        = 8451  (== live res/ count; merged carries
+                                   resources.arsc + res/ verbatim)
+```
+
+`android-merged.jar` is a **strict superset** of the live `android.jar` minus
+the 4 S3 dalvik classes, with **0 CRC mismatches** on the 38892-entry
+intersection and **0 extra entries**. It already carries `resources.arsc` +
+`res/` (8451 entries, matching live), so the base jar is **not** consulted for
+gaps.
+
+**New S1 = copy `android-merged.jar` wholesale as `android.jar`** (MANIFEST.MF
+pinned to the audited live bytes for JDK-determinism; directory entries dropped
+— consistent with `_jar_inventory`/`_rewrite_manifest_entry`, and the live SDK's
+inventory-level verify ignores directories). No base merge. S3 then adds the 4
+dalvik classes → 37520 + 4 = 37524 = live.
+
+#### 2.4.3 Provenance chain for `libs/android-merged.jar`
+
+```
+libs/android-merged.jar
+  ← recovered from git history (blob at commit 5836ec44, 2026-08-13)
+  ← originally committed 2026-07-22 (commit 5836ec4) as the merge product of
+     the on-device/AOSP framework jar ∪ the base android.jar (the 2026-07-22
+     manual SDK build; see docs/issues/2026-07-22-sdk-android-jar-merge.md)
+  ← deleted 2026-07-29 in commit 683ef39a ("chore(Phase A): 清理死依赖")
+  ← re-tracked 2026-08-13 (task 010b, user decision) as the declared S1 source
+  ← SHA-256 67ceccc5cd9d610189d45596481b1f8fefe557c8b41a2820d9d74df536770d79
+     (architect-verified; covers 100% of the 2638 missing entries from the
+     task-010 verify DIFF)
+```
+
+`libs/framework.jar` remains in the tree (it is the AOSP core-framework
+turbine-combined stubs and is still referenced by `build.gradle.kts` for
+bootclasspath/classpath injection per AGENTS.md §2.4), but it is **no longer the
+S1 source**. The CLI option `--merged-jar` (default `libs/android-merged.jar`)
+governs S1.
 
 ### 2.5 MANIFEST.MF detail
 
 - live `android.jar` MANIFEST.MF: `Manifest-Version: 1.0\r\nCreated-By: 25.0.2 (Oracle Corporation)\r\n\r\n` (CRLF; JDK `jar cf`, 2026-07-22).
 - live `core-for-system-modules.jar` MANIFEST.MF: `Manifest-Version: 1.0\nCreated-By: soong_zip\n\n` (LF; original soong_zip, preserved by `jar uf` during S3).
 
-S1 (Python `zipfile` merge) writes the android.jar manifest to the exact live
-bytes; S3 (`jar uf`) preserves it, and a defensive post-S3 manifest
-re-normalization (`_rewrite_manifest_entry`) guarantees the CRC matches
-regardless of the local JDK version. `core-for-system-modules.jar` keeps
-`soong_zip` because it is only ever `jar uf`'d.
+S1 (Python `zipfile` wholesale copy of `android-merged.jar`) writes the
+android.jar manifest to the exact live bytes; S3 (`jar uf`) preserves it, and a
+defensive post-S3 manifest re-normalization (`_rewrite_manifest_entry`)
+guarantees the CRC matches regardless of the local JDK version.
+`core-for-system-modules.jar` keeps `soong_zip` because it is only ever `jar uf`'d.
 
 ### 2.6 `package.xml` rewrite (S0)
 
@@ -131,7 +177,7 @@ Verify checks **presence/shape**, not byte-equality, for `package.xml`.
 
 | live SDK file | produced by | source artifact | reproducible? |
 |---------------|-------------|-----------------|---------------|
-| `android.jar` | S1 + S3 | S1: `libs/framework.jar` (master) ∪ base `android.jar`; S3: AOSP `core-libart.jar` (4 dalvik classes); MANIFEST.MF pinned | **NO** — 1266 entries orphaned (deleted `libs/android-merged.jar`, commit `683ef39a`) |
+| `android.jar` | S1 + S3 | S1: `libs/android-merged.jar` wholesale copy (MANIFEST.MF pinned); S3: AOSP `core-libart.jar` (4 dalvik classes) | **yes** (7/7 PASS, §6) |
 | `core-for-system-modules.jar` | S3 | base `core-for-system-modules.jar` + 4 dalvik classes from AOSP `core-libart.jar` | **yes** |
 | `framework.aidl` | S2 | base `framework.aidl` + 2 decls from `tools/install_sdk.py` | **yes** |
 | `package.xml` | S0 | base `package.xml`, 4 fields rewritten for staging name | **yes** (shape) |
@@ -143,14 +189,21 @@ AOSP build-output sources (not tracked in git, sourced from the local AOSP tree)
 - `core-libart.jar` (S3): `/home/conv/myspace/aosp/out/soong/.intermediates/libcore/core-libart/android_common_apex31/javac/core-libart.jar`
 - base platform `android-37.0`: `~/Android/Sdk/platforms/android-37.0` (stock SDK install)
 
+Tracked in git (task 010b, 2026-08-13):
+- `libs/android-merged.jar` (S1 source): SHA-256
+  `67ceccc5cd9d610189d45596481b1f8fefe557c8b41a2820d9d74df536770d79`; recovered
+  from git history blob at commit `5836ec44` (originally committed `5836ec4`,
+  deleted `683ef39a`, re-tracked `2026-08-13`). See §2.4.3.
+
 ## 4. The pipeline (`tools/build_sysuisdk.py`)
 
 ```
 S0  copy base platform (android-37.0) → --target; skip *.orig/*.bak-preaidl;
     rewrite package.xml for the staging name; build.prop/data/optional verbatim.
-S1  merge libs/framework.jar (master) into android.jar via stdlib zipfile
-    (framework bytes win the intersection; base fills the gaps; MANIFEST.MF
-    pinned to the audited live bytes). Creates android.jar.orig on first run.
+S1  copy libs/android-merged.jar wholesale as android.jar via stdlib zipfile
+    (merged is a strict superset of live-minus-4-dalvik; carries resources.arsc
+    + res/ verbatim; MANIFEST.MF pinned to the audited live bytes; directory
+    entries dropped). Creates android.jar.orig on first run.
 S2  patch framework.aidl (reuses tools/install_sdk.py patch_framework_aidl).
     Creates framework.aidl.bak-preaidl on first run.
 S3  inject dalvik.annotation.optimization classes into both jars (reuses
@@ -177,87 +230,72 @@ All stages idempotent. Live-SDK hard-fail guard on `--target`. Stdlib-only
 ## 5. Fresh-machine usage
 
 ```bash
-# 1. Clone the repo (libs/ is committed; no AOSP build needed for S0–S3 except
-#    the core-libart.jar source for S3, which is an AOSP build output — if the
-#    AOSP tree is not present locally, point --core-libart-jar at a copy).
+# 1. Clone the repo (libs/ is committed, including libs/android-merged.jar;
+#    no AOSP build needed for S0–S2; S3 needs core-libart.jar, an AOSP build
+#    output — if the AOSP tree is not present locally, point --core-libart-jar
+#    at a copy).
 # 2. Build the staging SDK:
 python3 tools/build_sysuisdk.py --clean \
   --target ~/Android/Sdk/platforms/android-SysUISdk-staging
-# 3. Verify against the live SDK (proof of reproducibility):
+# 3. Verify against the live SDK (proof of reproducibility — exits 0, 7/7 PASS):
 python3 tools/build_sysuisdk.py --verify \
   --target ~/Android/Sdk/platforms/android-SysUISdk-staging
-# 4. (After the S1 source gap is resolved — see §6 — verify exits 0.)
-#    To use staging as the compile SDK, rename it to android-SysUISdk.
+# 4. To use staging as the compile SDK, rename it to android-SysUISdk.
 ```
 
 Tests (never touch the real SDK):
 
 ```bash
-python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 103 tests, OK
+python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 104 tests, OK
 ```
 
-## 6. Verify result (2026-08-13 run) — the reproducibility proof
+## 6. Verify result (2026-08-13 run, task 010b) — the reproducibility proof
 
 ```
 $ python3 tools/build_sysuisdk.py --clean --target .../android-SysUISdk-staging
 S0: copying base platform android-37.0 -> android-SysUISdk-staging
-S1: merged framework.jar (master, 25918 entries) + base-only (10336) = 36254 entries
+S1: copied android-merged.jar wholesale (37520 entries) as android.jar
+S2: appended 2 decls to framework.aidl
 S3: android.jar +4 dalvik; core-for-system-modules.jar +4 dalvik
 
 $ python3 tools/build_sysuisdk.py --verify --target .../android-SysUISdk-staging
-S5: android.jar:                  DIFF  (staging=36258 live=37524 missing=1266 extra=0 crc_diff=0)
-S5: core-for-system-modules.jar:  PASS  (staging=1789  live=1789  missing=0    extra=0 crc_diff=0)
+S5: android.jar:                  PASS  (staging=37524 live=37524 missing=0 extra=0 crc_diff=0)
+S5: core-for-system-modules.jar:  PASS  (staging=1789  live=1789  missing=0 extra=0 crc_diff=0)
 S5: framework.aidl:               PASS  (staging=136009B live=136009B)
 S5: build.prop:                   PASS  (staging=4360B live=4360B)
 S5: package.xml:                  PASS  (path=platforms;android-SysUISdk-staging api-level=37 codename=SysUISdk)
 S5: data/:                        PASS  (staging=11204 live=11204 missing=0 extra=0)
 S5: optional/:                    PASS  (staging=16    live=16    missing=0 extra=0)
-S5: DIFF in 1 file(s): android.jar
-exit code: 1
+S5: ALL PASS — staging is inventory-equivalent to the live SDK.
+exit code: 0
 ```
 
-**6 of 7 compared files PASS.** The single DIFF is `android.jar`, missing
-exactly **1266 entries** with **0 CRC mismatches** — i.e. the merge semantics are
-correct and every reproducible entry matches; the gap is purely the 1266
-orphaned entries whose source (`libs/android-merged.jar`) was deleted in
-`683ef39a` and is not recoverable from any tracked or AOSP-build-tree jar.
+**7 of 7 compared files PASS; `--verify` exits 0.** The staging SDK is
+inventory-equivalent to the live SDK: every reproducible entry (name + CRC)
+matches across `android.jar` (37524 entries, 0 missing, 0 extra, 0 CRC diff),
+`core-for-system-modules.jar`, `framework.aidl`, `build.prop`, `package.xml`,
+`data/`, and `optional/`. The SysUISdk is now fully reproducible from scratch
+from tracked artifacts (`libs/android-merged.jar` + base `android-37.0` + AOSP
+`core-libart.jar` + the scripted S2/S3 patches).
 
-### 6.1 Why `--verify` cannot exit 0 with `libs/framework.jar` as the S1 source
+### 6.1 Historical: the task-010 DIFF (resolved)
 
-`libs/framework.jar` (25918 entries, the AOSP core-framework turbine-combined
-stubs) reproduces 25869 of the 27139 merge deltas (21428 added + 4441
-overwritten = 25869, +49 no-op = 25918). The remaining 1266 entries are
-full-bytecode device-framework inner classes (bluetooth/nfc/uwb/`com.android.
-internal`/SystemUI-relevant) present in the live `android.jar` but in **no
-tracked jar and no AOSP build-tree jar**. No stage-semantics change can conjure
-them; resolving the DIFF requires a decision on S1's source (§7).
+The first pipeline run (task 010, commit `a9d3c472`) used `libs/framework.jar`
+as the S1 source and reported `android.jar DIFF (staging=36258 live=37524
+missing=1266 extra=0 crc_diff=0)` — 6/7 PASS. The 1266 missing entries were the
+"orphaned" device-framework inner classes whose source (`libs/android-merged.jar`)
+had been deleted in `683ef39a`. Task 010b re-tracked that blob (§2.4.3); the
+DIFF is now gone. This subsection is retained for provenance only.
 
-## 7. Escalation (redline-gated) — S1 source decision needed
+## 7. S1 source decision — RESOLVED (2026-08-13)
 
-The brief's acceptance (`--verify` exit 0) cannot be met with `libs/framework.jar`
-as the S1 source. Resolving it touches `libs/` (forbidden path for this worker)
-and/or a brief-spec / dependency decision (CHARTER Part 5.4, rule H.5). Options
-for the user:
-
-1. **Re-track the merge source.** Re-extract the full on-device/combined
-   framework jar (the source that produced the deleted `libs/android-merged.jar`)
-   and commit it under `libs/` as the S1 source (replacing or supplementing
-   `libs/framework.jar`). Then S1 reproduces all 37524 entries and verify exits 0.
-   Cost: a larger tracked jar (~44 MB); requires identifying the exact 2026-07-22
-   source (device `framework.jar` or an AOSP `framework-minus-apex` combined
-   variant — note the AOSP `combined/framework.jar` scanned here did NOT contain
-   the 1266, so the source is likely a device extraction).
-2. **Accept the documented delta.** Keep `libs/framework.jar` as the S1 source,
-   document the 1266 orphaned entries as a known historical artifact, and relax
-   `--verify` to "PASS with documented exceptions" (exit 0 when the only DIFF is
-   the known orphaned set). The pipeline stays honest about what it reproduces
-   (97% of `android.jar` + everything else).
-3. **Recover the original source from history/device.** Archaeology on the
-   2026-07-22 merge (commit `5836ec4`) to identify what `framework.jar` was
-   actually merged, then re-track it.
-
-The pipeline, tests, audit, and honest verify report are delivered regardless;
-this section is the decision the user must make for full reproducibility.
+The redline-gated escalation from task 010 is **resolved by user decision
+(2026-08-13)**: option 1 (re-track the merge source) was chosen. The recovered
+`libs/android-merged.jar` (blob from git history `5836ec44`, SHA-256
+`67ceccc5…770d79`, architect-verified to cover 100% of the 2638 missing entries)
+is committed under `libs/` as the declared S1 source. S1 now copies it wholesale
+(§2.4.2); `--verify` exits 0 with 7/7 PASS (§6). No further action needed on
+this item. (Options 2 and 3 from the original escalation are moot.)
 
 ## 8. S4 (framework-res) — next brief
 
