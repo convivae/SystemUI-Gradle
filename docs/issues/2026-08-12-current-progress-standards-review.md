@@ -889,3 +889,20 @@ grep -c 'DESCRIPTION_EXTRAS_KEY_COMPLETION_PERCENTAGE' /tmp/task006.log || echo 
 `./gradlew :app:assembleDebug` → FAILED at `:app:processDebugResources`（/tmp/waveC-app.log）；
 `./gradlew :SystemUI-core:compileDebugJavaWithJavac` → FAILED，40 error: 行（20 distinct，全为 NeverCompile 组，/tmp/waveC-javac.log）；
 `python3 -m unittest discover -s tools/tests` → 65/65 OK；`check_source_alignment.py --strict` → 0/0/0（MODIFIED 1 为已知 CONV 偏差）。
+
+### NeverCompile 修复 + javac 里程碑（2026-08-13，架构师亲验）
+
+用户 2026-08-13 批准调研推荐方案 (a)（`docs/issues/2026-08-13-nevercompile-research.md`）。
+brief 008（worker `a35906f4`）：新增 `tools/patch_sdk_dalvik_annotations.py`（幂等、`.orig` 备份、
+仅注入缺失类），将 AOSP `core-libart` javac JAR 的 4 个 `dalvik.annotation.optimization.*`
+类（NeverCompile/NeverInline/DeadReferenceSafe/ReachabilitySensitive）补入 SysUISdk
+`android.jar` 与 `core-for-system-modules.jar`。
+
+架构师亲验（main）：SDK 两 jar 各含 6 个目标类；工具重跑 no-op；`python3 -m unittest` 77/77 OK；
+**`:SystemUI-core:compileDebugJavaWithJavac` BUILD SUCCESSFUL，0 错误（/tmp/milestone-javac.log）——
+Task 7 的 8 组 javac 根因全部清零**。
+
+注意：SysUISdk 不在 git，新机器/重装 SDK 后必须重跑 `python3 tools/patch_sdk_dalvik_annotations.py`。
+
+剩余唯一阻塞：`:app:processDebugResources` 的 WM-Shell `android:featureFlag`（调研结论：
+推荐 AGP `androidResources.additionalParameters("--feature-flags", ...)`，待用户批准后实施）。

@@ -1,6 +1,6 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **当前阶段（2026-08-13 修复波次后）**：**Task 7 八组 javac 根因已修复七组（zxing、wifi/wm-shell flags、unfold Dagger、setupcompat、media、SystemUI-tags）；`:app:assembleDebug` 现被两个阻塞卡住——`:app:processDebugResources` 的 WM-Shell `android:featureFlag` AAPT 链接错误（新浮出，非回归）与 core javac 的 NeverCompile 组（20 个错误，调研已完成待决策），APK 尚未生成**。
+> **当前阶段（2026-08-13 javac 里程碑）**：**Task 7 八组 javac 根因全部修复（最后一块：补 SysUISdk dalvik annotations，`a35906f4`）；`:SystemUI-core:compileDebugJavaWithJavac` 0 错误；`:app:assembleDebug` 仅剩 `:app:processDebugResources` 的 WM-Shell `android:featureFlag` AAPT 链接阻塞（修复方案已调研，待用户批准），APK 尚未生成**。注意：SysUISdk 不在 git，新机器须重跑 `python3 tools/patch_sdk_dalvik_annotations.py`。
 
 ---
 
@@ -11,7 +11,7 @@
 | KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误（debug/release 均验证） |
 | KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
 | Kotlin 编译 | **BUILD SUCCESSFUL**，0 个 Kotlin 错误 |
-| APK 编译 | **未生成**：`:app:assembleDebug` 现被 `processDebugResources`（WM-Shell featureFlag）与 core javac NeverCompile 组（20 errors）阻塞 |
+| APK 编译 | **未生成**：core javac 已 0 错误；仅剩 `processDebugResources`（WM-Shell featureFlag）阻塞 |
 | 单元测试 | 60 个全部通过 |
 | 实施基线 | Task 1–7 已完成 |
 

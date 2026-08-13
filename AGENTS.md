@@ -349,12 +349,13 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 | **2026-08-12 实施** | **KSP: 0 / Kotlin: 0** | **Task 1–6：jsr305、aconfig JAR、WM-Shell AAR、variant KSP/AIDL、AGP 9.3.1、文档/格式清理** |
 | **2026-08-12 验证** | **KSP: 0 / Kotlin: 0 / javac: 42** | **Task 7：完整验证链；`:app:assembleDebug` 在 core Java 编译阶段失败，APK 未生成，8 组根因已归属** |
 | **2026-08-13 修复波次** | **javac: 20（仅 NeverCompile 组）** | **编排工作流修复 7/8 组根因（`2662423b`/`e454feda`/`f870be99`/`ddd334fb`）；新浮出 `processDebugResources` featureFlag 阻塞** |
+| **2026-08-13 里程碑** | **javac: 0** | **brief 008 补 SysUISdk dalvik annotations（`a35906f4`）；`:SystemUI-core:compileDebugJavaWithJavac` 0 错误，8 组根因全部清零；仅剩 featureFlag 资源链接阻塞** |
 
 ### 4.2 当前构建状态（2026-08-12 实施检查点，Task 1–7）
 
 - **KSP 编译**: debug/release 均 BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
 - **Kotlin 编译**: `:SystemUI-core:compileDebugKotlin` BUILD SUCCESSFUL，0 错误
-- **APK 编译**: 2026-08-13 修复波次后 `:app:assembleDebug` 被两层阻塞：`:app:processDebugResources`（WM-Shell manifest `android:featureFlag` 不在 AAPT `--feature_flags` 中，Task 7 时未调度到、非回归）与 `:SystemUI-core:compileDebugJavaWithJavac` 的 NeverCompile 组（20 个错误；调研见 `docs/architecture/2026-08-13-nevercompile-classpath-options.md`，推荐补 SysUISdk），APK 未生成
+- **APK 编译**: core javac 已 0 错误（2026-08-13 里程碑）；`:app:assembleDebug` 仅剩 `:app:processDebugResources` 阻塞——WM-Shell manifest `android:featureFlag` 不在 AAPT `--feature_flags` 中（调研 `docs/architecture/2026-08-13-aapt-feature-flags-options.md`，推荐 AGP `androidResources.additionalParameters`，待用户批准），APK 未生成
 - **WM-Shell AAR**: 主/shared class-set 交集为 0，`:app:checkDebugDuplicateClasses` 通过
 - **flag JAR**: `systemui-shared-flags.jar` 已换 Soong `javac` 完整 JAR；`settingslib-flags.jar` 为 `compileOnly`；D8 `Absent Code attribute` 消失
 - **单元测试**: 60 个全部通过
@@ -383,7 +384,7 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 
 ### 4.4 待解决
 
-1. NeverCompile 方案待用户拍板（调研推荐：按 §2.4 先例补 SysUISdk `android.jar`）；调查 WM-Shell `android:featureFlag` 的 AAPT `--feature_flags` 缺口（候选：SysUISdk feature-flags 声明）；然后重跑 `:app:assembleDebug` 建立 APK 里程碑
+1. 实施 featureFlag 修复（调研推荐：`app/build.gradle.kts` 加 `androidResources.additionalParameters("--feature-flags", "com.android.wm.shell.enable_retrievable_bubbles=true")`，待用户批准），然后重跑 `:app:assembleDebug` 建立 APK 里程碑
 2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 ### 4.5 已解决

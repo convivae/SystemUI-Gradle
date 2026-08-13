@@ -33,3 +33,11 @@
 2026-08-13 16:04 | w7:p1 | 006 | review-pass | toml +3 lines (media only); insight 1.8.0; media group = 0; remaining 20 distinct = NeverCompile only
 2026-08-13 16:04 | main | 006 | merge | task-006 merged and pushed
 2026-08-13 16:11 | main | waveA+B | done | 002/003/004/005/006 all merged+pushed; architect verification: 7/8 javac groups eliminated; remaining blockers: processDebugResources featureFlag + NeverCompile (20 errors)
+2026-08-13 17:15 | w8:p1 | 007 | dispatch | w007 in worktree wt-007 (branch task-007)
+2026-08-13 17:18 | w8:p1 | 007 | contract-ok | w007 CONTRACT confirmed (session file)
+2026-08-13 17:44 | w8:p1 | 007 | review-pass | 3 docs files; command evidence present; recommendation = AGP additionalParameters --feature-flags (Option b)
+2026-08-13 17:44 | main | 007 | merge | task-007 merged and pushed
+2026-08-13 17:46 | w9:p1 | 008 | dispatch | w008 in worktree wt-008 (branch task-008); user pre-approved SysUISdk patch (Option a)
+2026-08-13 17:49 | w9:p1 | 008 | contract-ok | w008 CONTRACT confirmed (session file)
+2026-08-13 17:56 | w9:p1 | 008 | review-pass | SDK patch verified: 6 classes each jar, idempotent no-op, 77/77 tests; architect re-ran javac on main: BUILD SUCCESSFUL 0 errors
+2026-08-13 17:56 | main | 008 | merge | task-008 merged+pushed; JAVAC MILESTONE: all 8 Task 7 root-cause groups resolved
