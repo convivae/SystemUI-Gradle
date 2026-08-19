@@ -7,13 +7,12 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| pending | w015 | `tasks/015-settingslib-per-target-aars.md` | wt-015 | dispatching | 2026-08-19 |
-| pending | w017 | `tasks/017-aar-dependency-audit.md` | wt-017 | dispatching | 2026-08-19 |
+| w2:pV | w015g53 | `tasks/015-settingslib-per-target-aars.md` | wt-015 | implementing (GLM 5.3) | 2026-08-19 |
 
 ## Queue
 
 1. Task 015 (dispatched): implement B2 — 7 new per-target AARs + SettingsLib POM transitive deps; user approved 2026-08-19.
-2. Task 017 (dispatched): read-only audit of all AAR deps (migrate-to-Maven / delete candidates); deletions need later user approval.
+2. Task 017 (merged): audit done — all 10 consumed AARs have usage evidence; 0 direct files() AAR refs; delete candidates: SystemUISharedLib orphan AAR, duplicate flags maven jar, deprecated tools (gen_aar_maven/rebuild_settingslib_aar/clean_aar_maven). 4 items pending user decision.
 
 ## Done
 
@@ -31,4 +30,4 @@
 
 ## Last Updated
 
-2026-08-19 — user approved B2 (7 new AARs) and ordered a full AAR dependency audit; tasks 015 (implementation) and 017 (read-only audit) dispatched in parallel.
+2026-08-19 — task 017 audit merged (4 user-decision items pending); task 015 B2 implementation in progress (7 AARs already generated+installed).

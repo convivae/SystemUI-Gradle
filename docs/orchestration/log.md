@@ -74,3 +74,5 @@
 2026-08-19 19:21 | main | 016 | merge | task-016-research merged; B2 (7 new AARs) pending user approval
 2026-08-19 19:40 | main | 015 | user-decision | B2 approved: 7 new per-target AARs (SelectorWithWidget/RestrictedLockUtils/ActionButtons/ProgressBar/TwoTarget/Layout/AdaptiveIcon) + SettingsLib POM transitive deps; 7 targets verified direct static_libs of main bp
 2026-08-19 19:41 | main | 017 | user-request | full AAR dependency audit ordered: find non-Maven-managed and unused AARs; deletions need later approval
+2026-08-19 20:10 | w2:pW | 017 | review-pass | 9657b5d2; GLM-5.2; 3 doc files; 10/10 consumed AARs have evidence; 0 direct files() AAR refs; delete candidates SystemUISharedLib/flags-jar-dup/3 deprecated tools
+2026-08-19 20:11 | main | 017 | merge | task-017-audit merged; 4 user-decision items queued
