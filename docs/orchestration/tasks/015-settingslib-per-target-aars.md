@@ -62,3 +62,20 @@
 ## Report
 
 完成后汇报：commit、逐条 checklist（含真实命令输出）、issue 更新、新发现、HANDOFF 块。
+
+## Checklist
+
+- [x] CONTRACT printed
+- [x] RED tests observed first (11 focused failures: 7 missing CONFIGS / 7 missing ARTIFACTS / missing POM deps support; no unrelated failures)
+- [x] 7 res-only configs + 7 Maven coordinates + POM `<dependencies>` rendering implemented (GREEN)
+- [x] 7 AARs generated and installed; SettingsLib POM re-issued with exactly 7 dependency edges
+- [x] provenance verified: res byte-exact vs AOSP (92/87/15/10/7/6/3 files), direct == Maven SHA-256 for all 7
+- [x] 7 catalog aliases added (registry only; no consumer build-file changes; theme/Color wiring untouched)
+- [x] full Python suite passes: Ran 148 tests, OK (baseline 137)
+- [x] `./gradlew :app:clean :app:processDebugResources` → BUILD SUCCESSFUL in 25s, exit 0; `not found` = 0; `settingslib_switch_` = 0
+- [x] `./gradlew :app:assembleDebug` → BUILD SUCCESSFUL in 2m 46s, exit 0; first APK: app-debug.apk, 158775460 bytes, SHA-256 35c7e3f6881328a4e26c1ea3ddf6ae8f844ef5e1599f082ae1b70a87c0336e86
+- [x] CHARTER Part 3 + AGENTS.md §3.2 wording sync only (POM skeleton → default skeleton + ADR 0005 exception)
+- [x] issue doc updated with real results and hashes
+- [x] `git diff --check` clean
+- [x] English commit created; no push
+- [x] terminal-final `HANDOFF:` printed

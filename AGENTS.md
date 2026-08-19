@@ -270,7 +270,9 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 ### 3.2 libs/ 内容
 
 > **AAR 统一管理（2026-08-11 建立；2026-08-12 起提交入 git）**：所有 AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`，
-> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（AAR + POM 骨架），
+> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（AAR + POM 骨架，默认无传递依赖；
+> 唯一例外见 ADR 0005：SettingsLib 资源闭包的 `SettingsLib` POM 携带 7 条机械镜像
+> `Android.bp static_libs` 的 per-target 依赖边），
 > 在 `libs.versions.toml` 声明 catalog alias（如 `libs.systemui.settingslib`）统一引用。
 > build.gradle.kts 中不再直接 `files("libs/aars/xxx.aar")`。
 > **2026-08-12 起 `libs/`（含 jar/aars/maven）全部提交入 git**（用户明确要求），新 clone 可直接构建；

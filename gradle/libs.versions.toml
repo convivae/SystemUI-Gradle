@@ -149,5 +149,14 @@ systemui-iconloader = { group = "com.android.systemui", name = "iconloader", ver
 systemui-lowlight-dream-lib = { group = "com.android.systemui", name = "LowLightDreamLib", version = "1.0.0" }
 systemui-settingslib-color = { group = "com.android.settingslib", name = "color", version = "1.0.0" }
 systemui-settingslib-theme = { group = "com.android.systemui", name = "SettingsLibSettingsTheme", version = "1.0.0" }
+# Task 015（B2 可达性最小集，ADR 0005）：SettingsLib per-target res-only AAR，
+# 经 SettingsLib POM 传递依赖获得，未被 build 文件直接引用（仅作注册表登记）
+systemui-settingslib-selector-with-widget-preference = { group = "com.android.systemui", name = "SettingsLibSelectorWithWidgetPreference", version = "1.0.0" }
+systemui-settingslib-restricted-lock-utils = { group = "com.android.systemui", name = "SettingsLibRestrictedLockUtils", version = "1.0.0" }
+systemui-settingslib-action-buttons-preference = { group = "com.android.systemui", name = "SettingsLibActionButtonsPreference", version = "1.0.0" }
+systemui-settingslib-progress-bar = { group = "com.android.systemui", name = "SettingsLibProgressBar", version = "1.0.0" }
+systemui-settingslib-two-target-preference = { group = "com.android.systemui", name = "SettingsLibTwoTargetPreference", version = "1.0.0" }
+systemui-settingslib-layout-preference = { group = "com.android.systemui", name = "SettingsLibLayoutPreference", version = "1.0.0" }
+systemui-settingslib-adaptive-icon = { group = "com.android.systemui", name = "SettingsLibAdaptiveIcon", version = "1.0.0" }
 systemui-setupcompat = { group = "com.android.systemui", name = "setupcompat", version = "1.0.0" }
 

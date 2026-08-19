@@ -262,6 +262,27 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertEqual(cfg["output"], "libs/aars/SettingsLibSettingsTheme.aar")
         self.assertFalse(cfg.get("reject_sysui", False))
 
+    def test_settingslib_closure_seven_target_configs(self):
+        """Task 015（B2）：7 个 per-target res-only 配置（code=[]，res/manifest/R.txt 源自各自 AOSP 目录）。"""
+        expected = {
+            "SettingsLibSelectorWithWidgetPreference": "SelectorWithWidgetPreference",
+            "SettingsLibRestrictedLockUtils": "RestrictedLockUtils",
+            "SettingsLibActionButtonsPreference": "ActionButtonsPreference",
+            "SettingsLibProgressBar": "ProgressBar",
+            "SettingsLibTwoTargetPreference": "TwoTargetPreference",
+            "SettingsLibLayoutPreference": "LayoutPreference",
+            "SettingsLibAdaptiveIcon": "AdaptiveIcon",
+        }
+        for target, subdir in expected.items():
+            cfg = paar.CONFIGS[target]
+            self.assertEqual(cfg["code"], [], f"{target} 应为 res-only")
+            self.assertEqual(cfg["res"],
+                             [paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"])
+            self.assertTrue(str(cfg["manifest"]).endswith(f"{subdir}/AndroidManifest.xml"))
+            self.assertIn(f"{target}/android_common/R.txt", str(cfg["rtxt"]))
+            self.assertEqual(cfg["output"], f"libs/aars/{target}.aar")
+            self.assertFalse(cfg.get("reject_sysui", False))
+
 
 class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
     """Task 013：完整 res 树逐字节溯源——不漏、不多、不改。"""
@@ -318,6 +339,88 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
             time.sleep(2)
             paar.build_artifact("SettingsLibSettingsTheme", second)
             self.assertEqual(first.read_bytes(), second.read_bytes())
+
+class TestSettingsLibPerTargetProvenance(unittest.TestCase):
+    """Task 015（B2）：7 个 per-target AAR 的 res 树逐字节溯源——不漏、不多、不改。"""
+
+    TARGETS = [
+        "SettingsLibSelectorWithWidgetPreference",
+        "SettingsLibRestrictedLockUtils",
+        "SettingsLibActionButtonsPreference",
+        "SettingsLibProgressBar",
+        "SettingsLibTwoTargetPreference",
+        "SettingsLibLayoutPreference",
+        "SettingsLibAdaptiveIcon",
+    ]
+
+    def _build(self, target: str, tmpdir: Path) -> Path:
+        out = tmpdir / f"{target}.aar"
+        paar.build_artifact(target, out)
+        return out
+
+    def test_res_entries_match_aosp_tree_exactly(self):
+        for target in self.TARGETS:
+            subdir = target[len("SettingsLib"):]
+            src_root = paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"
+            source = {
+                f"res/{p.relative_to(src_root)}": p.read_bytes()
+                for p in sorted(src_root.rglob("*")) if p.is_file()
+            }
+            with tempfile.TemporaryDirectory() as d:
+                out = self._build(target, Path(d))
+                with zipfile.ZipFile(out) as z:
+                    aar_res = {n: z.read(n) for n in z.namelist() if n.startswith("res/")}
+            self.assertEqual(set(aar_res), set(source),
+                             f"{target} res entry 集与 AOSP 源树不一致")
+            for name, data in source.items():
+                self.assertEqual(aar_res[name], data,
+                                 f"{target}/{name} 字节与 AOSP 源不一致")
+
+    def test_closure_keystone_resources_present(self):
+        """Task 013 浮出的 3 类缺失资源 + AdaptiveIcon 主资源必须在各自 AAR 中。"""
+        keystone = {
+            "SettingsLibProgressBar": [
+                "res/interpolator/progress_indeterminate_horizontal_rect2_translatex_copy.xml",
+            ],
+            "SettingsLibActionButtonsPreference": [
+                "res/values/styles.xml",
+            ],
+            "SettingsLibTwoTargetPreference": [
+                "res/layout/preference_two_target_divider.xml",
+            ],
+        }
+        for target, names in keystone.items():
+            with tempfile.TemporaryDirectory() as d:
+                out = self._build(target, Path(d))
+                with zipfile.ZipFile(out) as z:
+                    have = set(z.namelist())
+            for n in names:
+                self.assertIn(n, have, f"{target} 缺 {n}")
+
+    def test_no_code_entries(self):
+        from io import BytesIO
+        for target in self.TARGETS:
+            with tempfile.TemporaryDirectory() as d:
+                out = self._build(target, Path(d))
+                with zipfile.ZipFile(out) as z:
+                    self.assertIn("classes.jar", z.namelist())
+                    with zipfile.ZipFile(BytesIO(z.read("classes.jar"))) as cj:
+                        self.assertEqual(
+                            [n for n in cj.namelist()
+                             if not n.endswith("/") and n != "META-INF/MANIFEST.MF"],
+                            [], f"{target} 应为 res-only")
+
+    def test_rebuild_is_byte_identical(self):
+        import time
+        for target in self.TARGETS:
+            with tempfile.TemporaryDirectory() as d:
+                d = Path(d)
+                first = self._build(target, d / "first.aar")
+                time.sleep(2)
+                second = self._build(target, d / "second.aar")
+                self.assertEqual(first.read_bytes(), second.read_bytes(),
+                                 f"{target} 重复打包字节不一致")
+
 
 class TestAbsentInputFails(unittest.TestCase):
     """Step 1: 缺输入报 FileNotFoundError。"""
@@ -420,14 +523,21 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 10 个 artifact（setupcompat 经本地 Maven 交付；
-        # SettingsLibSettingsTheme 为 Task 013 新增 res-only target）
+        # 确认 CONFIGS 含 17 个 artifact（Task 015 新增 7 个 SettingsLib per-target
+        # res-only target：B2 可达性最小集）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
              "SettingsLib", "WindowManager-Shell", "WindowManager-Shell-shared",
              "LowLightDreamLib", "SettingsLibColor", "setupcompat",
-             "SettingsLibSettingsTheme"})
+             "SettingsLibSettingsTheme",
+             "SettingsLibSelectorWithWidgetPreference",
+             "SettingsLibRestrictedLockUtils",
+             "SettingsLibActionButtonsPreference",
+             "SettingsLibProgressBar",
+             "SettingsLibTwoTargetPreference",
+             "SettingsLibLayoutPreference",
+             "SettingsLibAdaptiveIcon"})
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）
