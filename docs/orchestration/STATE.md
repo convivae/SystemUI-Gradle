@@ -7,23 +7,24 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| wF:p1 | w012g53 | `tasks/012-preserve-androidprv-namespace.md` | wt-012 | dispatched (GLM 5.3) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
-1. (empty)
+1. Task 013 candidate: repackage SettingsLib AAR with AOSP SettingsTheme switch drawable variants; awaiting user approval.
 
 ## Done
 
-- 001–011 merged and pushed.
+- 001–012 merged and pushed.
 - Task 008: core javac milestone, 0 errors.
 - Tasks 010/010b: reproducible SysUISdk S0–S3+S5, strict verify 7/7 PASS.
-- Task 011: S4 framework-res overlay implemented and applied; 116 tests; Factor 1 fixed.
+- Task 011: S4 framework-res overlay implemented and applied; Factor 1 fixed.
+- Task 012: AGP `androidprv` namespace loss fixed at build-intermediate layer; architect verified 131/131 tests, helper `419/8/8 unresolved=0`, and `androidprv` 20→0.
 
 ## Blocked
 
-- `:app:processDebugResources`: Factor 2 — AGP MergeResources drops `xmlns:androidprv`; task 012 approved to repair at build-logic layer without source/res edits.
+- `:app:processDebugResources`: tracked SettingsLib AAR lacks AOSP `SettingsTheme/res/drawable-v31/settingslib_switch_{track,thumb}.xml` (track also has v34). Repackaging the dependency artifact is outside task 012 and awaits user approval.
 
 ## Last Updated
 
-2026-08-19 — initial w012 dispatch aborted before edits (disallowed GPT-5.6 and herdr created a LingerLane worktree); incorrect worktree removed, correct SystemUI worktree recreated manually at `33a2e6ff`, and task redispatched as w012g53 using GLM 5.3.
+2026-08-19 — task 012 reviewed, merged, and pushed. GLM-5.3 worker/worktree closed; no active worker. APK still not produced.

@@ -51,8 +51,8 @@ echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
 - core Kotlin 编译 BUILD SUCCESSFUL（0 个 Kotlin 错误）
 - Compose inline 问题已解决（Compose 1.11.4 + builtInKotlin + Compose compiler plugin）
 - 审查发现的 WM-Shell 重复类、header flag JAR、release KSP/AIDL 错误依赖均已修复
-- 2026-08-13 javac 里程碑：Task 7 八组 javac 根因全部修复（末块 `a35906f4` 补 SysUISdk dalvik annotations）；core javac 0 错误；`:app:assembleDebug` 仅剩 `processDebugResources` 的 WM-Shell featureFlag 阻塞（修复方案待用户批准）。注意：SysUISdk 不在 git，新机器须重跑 `python3 tools/patch_sdk_dalvik_annotations.py`
-- 60 个单元测试全部通过
+- 2026-08-19 resource-link 波次：core javac 0 错误；brief 009–012 已修 featureFlag、建立可复现 SysUISdk（S0–S5）、覆盖 framework-res，并修复 AGP 丢失 `androidprv` namespace。架构师亲验 `androidprv` 20→0、131/131 Python tests OK。`:app:assembleDebug` 当前仅被 SettingsLib AAR 缺 `settingslib_switch_{track,thumb}` 阻塞。SysUISdk 从零重建见 `docs/architecture/2026-08-13-sysuisdk-reproducible-build.md`
+- Python 工具测试 131/131 通过（task 012 架构师亲验）
 - 完整审查与实施记录：`docs/issues/2026-08-12-current-progress-standards-review.md`
 - 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
 
@@ -179,12 +179,12 @@ SystemUI-Gradle/
 - **ISystemUiProxy.aidl** 属于 `:SystemUI-shared` 模块，由 `OverviewProxyService.java` 使用
 
 ### 4.6 全依赖升级 + builtInKotlin 迁移（2026-08-12，KSP/Kotlin 里程碑）
-- **状态**: Task 1–7 完成；2026-08-13 修复波次消除 7/8 组 javac 根因；KSP/Kotlin 保持通过，APK 仍未生成
-- **要点**: 迁移到 AGP 9.3.1 `builtInKotlin=true`（Kotlin 2.2.10 内置）；KSP 0 错误；core Kotlin 0 错误；Compose inline 问题消失。
-- **已修复**: `jsr305` 依赖；flag JAR runtime 语义；WM-Shell AAR 重复类；release KSP/AIDL 变体依赖；AGP 9.3.1 已验证。
-- **Task 7 结果**: `:app:assembleDebug` 在 core javac 阶段失败（42 errors）。根因归属为 8 组真实依赖/产物缺口：`NeverCompile`、setupcompat、Wi‑Fi/WM‑Shell flags、zxing、unfold/shared Dagger factory、过期 `SystemUI-tags.jar`、`androidx.media` 版本约束。
-- **详情**: `docs/issues/2026-08-12-current-progress-standards-review.md`
-- **下一步**: 用户批准 androidprv 私有资源修复（framework-res.apk → SysUISdk `android.jar`，AGENTS.md §2.4 第 2 条；错误清单见 `docs/issues/2026-08-12-current-progress-standards-review.md` featureFlag 修复小节）→ 开 brief 实施 → 重跑 `:app:assembleDebug` 建立 APK 里程碑。
+- **状态**: Task 1–12 完成；KSP/Kotlin/core javac 保持通过，resource link 已越过 featureFlag 与 `androidprv`，APK 仍未生成
+- **要点**: AGP 9.3.1 `builtInKotlin=true`；KSP 0；core Kotlin/javac 0；SysUISdk 可从 tracked inputs 从零重建。
+- **已修复**: `jsr305`、flag JAR、WM-Shell AAR 重复类、release KSP/AIDL、NeverCompile、featureFlag、framework-res 和 AGP `androidprv` namespace。
+- **当前阻塞**: SettingsLib AAR 缺 AOSP `SettingsTheme/res/drawable-v31/settingslib_switch_{track,thumb}.xml`（track 另有 v34）。
+- **详情**: `docs/issues/2026-08-13-agp-androidprv-namespace-fix.md`
+- **下一步**: 用户批准重新打包 SettingsLib AAR → 安装本地 Maven 产物 → 重跑 `:app:processDebugResources` / `:app:assembleDebug`。
 
 ---
 

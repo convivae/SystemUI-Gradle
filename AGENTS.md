@@ -350,15 +350,16 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 | **2026-08-12 验证** | **KSP: 0 / Kotlin: 0 / javac: 42** | **Task 7：完整验证链；`:app:assembleDebug` 在 core Java 编译阶段失败，APK 未生成，8 组根因已归属** |
 | **2026-08-13 修复波次** | **javac: 20（仅 NeverCompile 组）** | **编排工作流修复 7/8 组根因（`2662423b`/`e454feda`/`f870be99`/`ddd334fb`）；新浮出 `processDebugResources` featureFlag 阻塞** |
 | **2026-08-13 里程碑** | **javac: 0** | **brief 008 补 SysUISdk dalvik annotations（`a35906f4`）；`:SystemUI-core:compileDebugJavaWithJavac` 0 错误，8 组根因全部清零；仅剩 featureFlag 资源链接阻塞** |
+| **2026-08-19 资源链接波次** | **androidprv: 0** | **brief 009–012 修复 featureFlag、可复现 SysUISdk/S4 framework-res 及 AGP namespace 丢失；131 个工具测试通过；新浮出 SettingsLib AAR 缺两个 switch drawable** |
 
 ### 4.2 当前构建状态（2026-08-12 实施检查点，Task 1–7）
 
 - **KSP 编译**: debug/release 均 BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
 - **Kotlin 编译**: `:SystemUI-core:compileDebugKotlin` BUILD SUCCESSFUL，0 错误
-- **APK 编译**: core javac 已 0 错误；featureFlag 阻塞已修（`8ab860e9`，AGP `additionalParameters("--feature-flags", ...)`）；`:app:assembleDebug` 当前阻塞于 `:app:processDebugResources` 的 **`androidprv:` 框架私有资源缺失**（§2.4 第 2 条已知缺口：SysUISdk `android.jar` 缺 framework-res.apk 资源；此前被 featureFlag abort 遮蔽），修复方向已明确（framework-res.apk → SysUISdk），待用户批准
+- **APK 编译**: core javac 已 0 错误；featureFlag、SysUISdk framework-res 与 AGP `androidprv` namespace 丢失均已修（brief 009–012）。架构师亲验 `patchDebugAndroidPrvMergedResources` 为 `scanned=419 patched=8 compiled=8 unresolved=0`、`androidprv` 20→0；`:app:processDebugResources` 当前仅被 **SettingsLib AAR 缺 `drawable/settingslib_switch_{track,thumb}`** 阻塞。两个资源均来自 AOSP `packages/SettingsLib/SettingsTheme/res/drawable-v31/`（track 另有 v34），但当前 AAR 未打包；待用户批准重新打包 SettingsLib AAR
 - **WM-Shell AAR**: 主/shared class-set 交集为 0，`:app:checkDebugDuplicateClasses` 通过
 - **flag JAR**: `systemui-shared-flags.jar` 已换 Soong `javac` 完整 JAR；`settingslib-flags.jar` 为 `compileOnly`；D8 `Absent Code attribute` 消失
-- **单元测试**: 60 个全部通过
+- **单元测试**: Python 工具测试 131 个全部通过（task 012 架构师亲验）
 - 错误数只作诊断，不构成提交、回滚或审批条件
 - 审查与实施记录：`docs/issues/2026-08-12-current-progress-standards-review.md`
 - 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
@@ -384,7 +385,7 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 
 ### 4.4 待解决
 
-1. 实施 androidprv 私有资源修复（framework-res.apk 的 `resources.arsc` + `res/` 写入 SysUISdk `android.jar`，§2.4 第 2 条先例，待用户批准），然后重跑 `:app:assembleDebug` 建立 APK 里程碑
+1. 用户批准后重新打包 SettingsLib AAR，将 AOSP `SettingsLib/SettingsTheme/res/drawable-v31/`（以及对应 v34 变体）纳入既有 SettingsLib 产物；重新安装本地 Maven AAR并跑 `:app:processDebugResources` / `:app:assembleDebug`
 2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 ### 4.5 已解决

@@ -1,6 +1,6 @@
 # SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
 
-> **当前阶段（2026-08-13 javac 里程碑后）**：**Task 7 八组 javac 根因全部修复，core javac 0 错误；featureFlag 阻塞已修（AGP `additionalParameters`，`8ab860e9`）；`:app:assembleDebug` 当前阻塞于 `:app:processDebugResources` 的 `androidprv:` 框架私有资源缺失（SysUISdk `android.jar` 缺 framework-res.apk 资源，AGENTS.md §2.4 第 2 条已知缺口，修复方向明确、待用户批准），APK 尚未生成**。注意：SysUISdk 不在 git，新机器须重跑 `python3 tools/patch_sdk_dalvik_annotations.py`。
+> **当前阶段（2026-08-19 resource-link 波次）**：core javac 0 错误；featureFlag、可复现 SysUISdk、framework-res overlay 和 AGP `androidprv` namespace 丢失均已修。架构师亲验 `androidprv` 20→0、Python 工具测试 131/131 OK。`:app:processDebugResources` 当前仅被 SettingsLib AAR 缺 `drawable/settingslib_switch_{track,thumb}` 阻塞，APK 尚未生成。SysUISdk 从零重建流程见 `docs/architecture/2026-08-13-sysuisdk-reproducible-build.md`。
 
 ---
 
@@ -11,8 +11,8 @@
 | KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误（debug/release 均验证） |
 | KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
 | Kotlin 编译 | **BUILD SUCCESSFUL**，0 个 Kotlin 错误 |
-| APK 编译 | **未生成**：core javac 0 错误；featureFlag 已修；`processDebugResources` 现被 `androidprv:` 私有资源缺失阻塞 |
-| 单元测试 | 60 个全部通过 |
+| APK 编译 | **未生成**：core javac 0 错误；featureFlag/framework-res/androidprv namespace 已修；`processDebugResources` 现被 SettingsLib AAR 缺两个 switch drawable 阻塞 |
+| Python 工具测试 | **131/131 OK**（task 012 架构师亲验） |
 | 实施基线 | Task 1–7 已完成 |
 
 **前一次里程碑（commit `05ea2064`）**：KSP + Dagger 2.55 useBindingGraphFix 首次通过，
@@ -21,12 +21,8 @@
 **本次关键突破**：通过升级 Compose 到 1.11.4 + 迁移到 AGP `builtInKotlin=true`，
 **Compose inline 问题已消失**；Task 1 补齐 JSR-305 与 Compose compiler plugin 后，core Kotlin 编译达到 0 错误。
 
-**2026-08-12 后置审查补充**：fresh checkout 已复验 KSP 成功；首次运行
-`2026-08-13` 编排修复波次消除 7/8 组 javac 根因（详见 issue 记录 Wave 修复验证小节）。此前 `:app:assembleDebug` 证明 APK 曾被 WM-Shell AAR class-set 重叠及两个不可执行的
-header flag JAR 阻塞。Task 1–5 已逐项修复这些阻塞；Task 6 完成构建脚本与维护文档一致性清理；Task 7 完整验证链
-确认 KSP/Kotlin 仍通过；2026-08-13 修复波次后 core javac 仅剩 NeverCompile 组（20 个错误），`:app:assembleDebug` 另被 WM-Shell `android:featureFlag` 资源链接错误阻塞。
-完整证据见
-[`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)。
+**2026-08-19 resource-link 补充**：brief 008 已将 core javac 清零；brief 009 修复 WM-Shell featureFlag；brief 010/010b 建立可复现 SysUISdk S0–S3+S5（strict verify 7/7 PASS）；brief 011 加入 S4 framework-res overlay；brief 012 修复 AGP 9.3.1 丢弃 `xmlns:androidprv` 的问题。架构师亲验 helper `scanned=419 patched=8 compiled=8 unresolved=0`、`androidprv` 20→0、131/131 tests OK。当前新浮出层为 SettingsLib AAR 缺两个 AOSP SettingsTheme switch drawable。完整证据见
+[`issues/2026-08-13-agp-androidprv-namespace-fix.md`](./issues/2026-08-13-agp-androidprv-namespace-fix.md)。
 
 ---
 
@@ -133,20 +129,13 @@ AGP 建议用 `android.builtInKotlin=true` 迁移到 AGP 内置 Kotlin。
 Task 1 补充了 AOSP `Android.bp` 明确声明的 `com.google.code.findbugs:jsr305:3.0.2`，
 并应用了 Soong 等价的 Compose compiler plugin；此前的 `GuardedBy` 与 Box inline 错误均消失。
 
-### 2.3 APK 入口（Task 7 已复验，当前被 core javac 阻塞）
+### 2.3 APK 入口（资源链接阶段）
 
-审查阶段发现的 3 类前置阻塞已逐项修复：
-
-1. `jsr305` 缺失 → 官方 `com.google.code.findbugs:jsr305:3.0.2` 已接入；
-2. WM-Shell 12 个重复 shared AIDL 类 → 主/shared AAR class-set 交集已为 0；
-3. 两个 header flag JAR 无法 D8 → shared flags 换成 Soong `javac` JAR，SettingsLib flags 改 `compileOnly`。
-
-Task 7 运行 `:app:assembleDebug` 后，构建越过上述阶段，但在
-`:SystemUI-core:compileDebugJavaWithJavac` 仍有 NeverCompile 组 20 个错误（2026-08-13 波次已修复其余 7 组）；`:app:processDebugResources` 另有 WM-Shell featureFlag AAPT 链接错误。`app-debug.apk` 未生成。
-错误集中在真实依赖/产物缺口：`NeverCompile`、setupcompat、Wi‑Fi/WM‑Shell aconfig flags、
-zxing、SystemUI-tags 过期 JAR、`:SystemUI-shared` 未运行 Dagger KSP、以及 `androidx.media`
-被传递解析为 1.4.1。逐项根因见
-[`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md#task-7完整验证链与真实-apk-阻塞2026-08-12)。
+- `:SystemUI-core:compileDebugJavaWithJavac`：BUILD SUCCESSFUL，0 errors。
+- WM-Shell featureFlag：已通过 AGP `androidResources.additionalParameters` 修复。
+- SysUISdk：S0–S5 可由受控输入从零重建；S4 已覆盖 AOSP framework resources。
+- AGP `androidprv` namespace：task 012 以受控 post-merge/pre-link AAPT2 重编译修复；架构师亲验 `scanned=419 patched=8 compiled=8 unresolved=0`，错误 20→0。
+- 当前首个失败层：SettingsLib AAR 未包含 AOSP `SettingsTheme/res/drawable-v31/settingslib_switch_{track,thumb}.xml`（track 另有 v34）。`app-debug.apk` 尚未生成。
 
 ### 2.4 Compose inline 问题已解决
 
@@ -199,14 +188,14 @@ framework.jar 污染 KotlinCompile Compose inline metadata）。
 animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
 
 **构建依赖**：`libs/` 已提交入 git，新 clone 无需重新生成 AOSP 产物即可复现当前构建基线；
-当前尚不能成功产出 APK：首个失败层是 `:app:processDebugResources`（WM-Shell featureFlag）。仅在需要更新 AOSP 产物时才跑
+当前尚不能成功产出 APK：首个失败层是 `:app:processDebugResources`（SettingsLib AAR 缺两个 SettingsTheme switch drawable）。仅在需要更新 AOSP 产物时才跑
 `python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py`。
 
 ---
 
 ## 5. 待解决
 
-1. **修复 Task 7 记录的 8 组 Java classpath/产物缺口**，然后重新运行 `:app:assembleDebug`
+1. 用户批准后重新打包 SettingsLib AAR，将 AOSP `SettingsLib/SettingsTheme` 的 switch drawable 变体纳入产物，再运行 `:app:processDebugResources` 和 `:app:assembleDebug`
 2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
 
 执行计划：[`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md)

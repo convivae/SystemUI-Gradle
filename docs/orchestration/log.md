@@ -58,3 +58,5 @@
 2026-08-19 11:24 | wE:p1 | 012 | abort | GPT-5.6 disallowed by user model whitelist; herdr also created wrong LingerLane worktree; no files modified
 2026-08-19 11:24 | wF:p1 | 012 | redispatch | correct SystemUI worktree at 33a2e6ff; w012g53 explicitly started with joycode/GLM-5.3
 2026-08-19 11:27 | wF:p1 | 012 | contract-ok | GLM-5.3 modelId verified; correct SystemUI origin verified; CONTRACT confirmed
+2026-08-19 11:51 | wF:p1 | 012 | review-pass | GLM-5.3; 7 Allowed-Path files; 131/131 tests; helper 419/8/8 unresolved=0; androidprv 20->0; next layer SettingsLib drawables
+2026-08-19 11:51 | main | 012 | merge | task-012 merged; androidprv Factor 2 fixed; processDebugResources now blocked only by SettingsLib switch drawable packaging gap
