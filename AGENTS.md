@@ -67,7 +67,7 @@
 
 - `CarSystemUIGradle` 项目（同用户私有项目）是参考实现
 - 参考文档：`CarSystemUIGradle/docs/GRADLE_MIGRATION.md`、`DEPENDENCIES.md`、`README.md`
-- `tools/install_aar_to_maven.py` 负责把 `libs/aars/*.aar` 安装为 `libs/maven/` 下的本地 Maven AAR（AAR + POM 骨架）；`tools/gen_aar_maven.py` 是旧脚本（R.jar 合并失败实验，已废弃）
+- `tools/install_aar_to_maven.py` 负责把 `libs/aars/*.aar` 安装为 `libs/maven/` 下的本地 Maven AAR（AAR + POM 骨架）
 - 关键资源：参考 `CarSystemUIGradle/SystemUI-core/build.gradle.kts` 的依赖引入方式
 - 本项目对参考项目机制的“为什么”记录：`docs/architecture/2026-08-06-reference-project-rationale.md`
 
@@ -308,9 +308,6 @@ libs/
     │   ├── WindowManager-Shell-shared/1.0.0/  # libs.systemui.wmshell.shared
     │   ├── WifiTrackerLib/1.0.0/        # libs.systemui.wifitrackerlib
     │   ├── animationlib/1.0.0/          # libs.systemui.animationlib
-    │   └── SystemUISharedLib/1.0.0/     # [旧] 遗留，待清理
-    ├── com.android.systemui.flags/
-    │   └── flags/1.0.0/
     └── com.android.server.notification/
         └── Flags/1.0.0/
 ```

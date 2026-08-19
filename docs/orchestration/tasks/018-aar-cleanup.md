@@ -54,3 +54,17 @@
 ## Report
 
 完成后汇报：commit、逐条 checklist（真实输出）、issue 更新、新发现、HANDOFF 块。
+
+## Completion
+
+- [x] 删除孤儿 AAR `libs/maven/com/android/systemui/SystemUISharedLib/`（git rm AAR+POM）
+- [x] 删除 Maven 侧 flags jar `libs/maven/com/android/systemui/flags/`（git rm jar+POM；`libs/systemui-flags.jar` 未动）
+- [x] 删除 3 个废弃脚本 `tools/{gen_aar_maven,rebuild_settingslib_aar,clean_aar_maven}.py`
+- [x] `tools/tests/` 无引用被删脚本的测试（grep 验证，未改动）
+- [x] catalog 删 `systemui-sharedlib`、`android-systemui-flags` 两行 alias（连带删悬空重复段落头）
+- [x] AGENTS.md §3.2 清单同步；§1.4 删 gen_aar_maven 对应描述；tools 表本无这 3 条，无需改
+- [x] 删除前基线：unittests `Ran 148 tests / OK`；Gradle `BUILD SUCCESSFUL`（0 错误）
+- [x] 验收：unittests `Ran 148 tests / OK`（无回归）；Gradle `BUILD SUCCESSFUL in 47s`（0 错误）
+- [x] 验收 grep 无残留（除已上报发现：`tools/install_aar_to_maven.py` docstring 仍提及已删脚本——架构师范围纠正后回退，仅上报；及 AOSP Soong 源码模块名 SystemUISharedLib，非已删产物引用，见 issue 文档）
+- [x] `git diff --check` 干净；英文 commit；未 push
+- [x] 范围纠正：`tools/install_aar_to_maven.py` 不在 Allowed Paths，已 `git checkout --` 回退，残留 docstring 作为发现上报
