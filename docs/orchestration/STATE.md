@@ -7,12 +7,13 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:pV | w015g53 | `tasks/015-settingslib-per-target-aars.md` | wt-015 | implementing (GLM 5.3) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
-1. Task 015 (dispatched): implement B2 — 7 new per-target AARs + SettingsLib POM transitive deps; user approved 2026-08-19.
-2. Task 017 (merged): audit done — all 10 consumed AARs have usage evidence; 0 direct files() AAR refs; delete candidates: SystemUISharedLib orphan AAR, duplicate flags maven jar, deprecated tools (gen_aar_maven/rebuild_settingslib_aar/clean_aar_maven). 4 items pending user decision.
+1. Task 018 (briefed, pending dispatch): execute approved AAR cleanup (delete SystemUISharedLib orphan AAR, maven flags jar, 3 deprecated tools).
+2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes SHA-256 35c7e3f6881328a4e26c1ea3ddf6ae8f844ef5e1599f082ae1b70a87c0336e86; 148/148 tests; 7 B2 AARs provenance-verified.
+3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
 
 ## Done
 
@@ -26,8 +27,8 @@
 
 ## Blocked
 
-- `:app:processDebugResources`: blocked by SettingsLib static-lib resource gaps. Task 014 research delivered the architecture options; awaiting user decision between monolithic merge (rejected: rule R) and per-target res-only AARs (recommended Option C).
+无构建阻塞：`:app:processDebugResources` 与 `:app:assembleDebug` 均已 BUILD SUCCESSFUL（2026-08-19，Task 015）。剩余：APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-19 — task 017 audit merged (4 user-decision items pending); task 015 B2 implementation in progress (7 AARs already generated+installed).
+2026-08-19 — **APK MILESTONE**: task 015 merged; first app-debug.apk built (151.5 MB). Task 017 audit merged; user approved cleanup (task 018 next).
