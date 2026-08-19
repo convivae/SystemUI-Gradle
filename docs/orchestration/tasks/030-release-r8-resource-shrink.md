@@ -20,7 +20,9 @@ optimize/shrink 与资源收缩，消费 app AOSP flags 链和 Task 029 的 plug
    - 保留 byte-exact AOSP `proguard.flags` 链及 plugin-core flags
 2. **不**显式设置 `android.enableR8.fullMode`，采用 AGP 9.3.1 默认行为。
 3. **不**加入 AOSP 未 export 的 SystemUIFlagsLib ParcelableFlag keep 规则。
-4. 运行 `:app:assembleRelease`，系统性诊断任何 R8/shrinker 失败。
+4. 运行 `:app:assembleRelease`，系统性诊断任何 R8/shrinker 失败。已知本机并行默认值会让
+   Gradle 16G daemon 与 Kotlin daemon 叠加导致环境 OOM；验证命令使用
+   `-Dorg.gradle.workers.max=4`（仅命令行并发限制，不修改 `gradle.properties`）。
 5. 只允许：核对/接入 AOSP 原始 flags、修正已批准通道的机械接线。
    禁止自创宽泛 keep、`-dontwarn **`、关闭 R8/shrink/check、排除源码或改 res。
    若 AOSP 原规则不足，停止并报告 `REDLINE`，不得猜规则。
@@ -44,7 +46,7 @@ optimize/shrink 与资源收缩，消费 app AOSP flags 链和 Task 029 的 plug
 ## Acceptance
 
 ```bash
-./gradlew :app:assembleRelease
+./gradlew :app:assembleRelease -Dorg.gradle.workers.max=4
 # expected: BUILD SUCCESSFUL，app-release.apk 非零
 
 # 签名
@@ -63,7 +65,7 @@ grep -E 'SystemUIInitializerImpl|plugins\.\*\*|RuntimeVisible.*Annotation' \
 # 必查：SystemUIApplication、SystemUIService、SystemUIInitializerImpl、VendorServices、
 # DaggerReferenceGlobalRootComponent*；并抽查 plugin API 包。
 
-./gradlew :app:assembleDebug
+./gradlew :app:assembleDebug -Dorg.gradle.workers.max=4
 python3 -m unittest discover -s tools/tests -p 'test_*.py'
 # expected: debug BUILD SUCCESSFUL；Ran 147 tests / OK
 
