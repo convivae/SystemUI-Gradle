@@ -50,3 +50,21 @@
 ## Report
 
 完成后汇报：commit、逐条 checklist（真实输出）、5.json 对比结论、issue 更新、新发现、HANDOFF 块。
+
+## Verification（2026-08-19 实施，worker 020）
+
+- [x] `python3 -m unittest discover -s tools/tests -p 'test_*.py'` OK（148 基线）
+      → `Ran 148 tests in 33.605s` / `OK`
+- [x] `./gradlew :SystemUI-core:kspDebugKotlin` BUILD SUCCESSFUL
+      → `BUILD SUCCESSFUL in 37s`，88 actionable tasks executed（--rerun-tasks）
+- [x] 5 个历史 JSON 与 AOSP byte-exact（SHA-256 对照表入 issue）
+      → 见 issue §2 表，五个 SHA-256 与 AOSP 逐一相同
+- [x] 构建后 5.json 与 AOSP 结构一致（对比结果入 issue）
+      → Room 重导出 5.json 与 AOSP byte-identical（SHA `c82f260a...`）；仓内 5.json 被
+      isSchemaEqual 判定一致后未重写，保持 AOSP 原样；详见 issue §3
+- [x] 5.json 无 diff 情形记录（“保留 Room 版”分支未触发）
+- [x] issue 文档更新 → `docs/issues/2026-08-19-room-schema-export.md` §结果已填
+
+补充发现（超出 brief 假设）：Room 2.8.4 + KSP2 下仅 `room.schemaLocation` 不导出，
+需另传 `room.internal.schemaInput`（内部参数，见 issue §1）；未引入 Room Gradle
+Plugin（红线 5.4 + 超允许路径）。
