@@ -8,6 +8,9 @@
 
 ## 1. 背景
 
+> 深度分析（AOSP release 配置逐项 + gap 表 + 对齐建议）见
+> `docs/architecture/2026-08-20-aosp-release-config-analysis.md`（Task 028，只读研究）。
+
 - 工作树：`/home/conv/myspace/SystemUI-Gradle-wt-025`，分支 `task-025`，起点 HEAD `e05318e5`。
 - 目标：首次运行 `:app:assembleRelease`，验证 release 变体是否可构建。
 - release 专有输入（brief 已知背景，已逐一核实存在）：
