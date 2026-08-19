@@ -7,7 +7,7 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| — | — | — | — | — | — |
+| w2:p16 | w028g53 | `tasks/028-aosp-release-config-analysis.md` | wt-028 | dispatched (GLM 5.3, own tab) | 2026-08-20 |
 
 ## Queue
 
@@ -17,7 +17,7 @@
 4. Task 023 (merged): experiment concluded — disallowKotlinSourceSets=false is REQUIRED (KSP config error without it); flag stays, documented.
 5. Task 024 (merged): heap now 16G; default-config assembleDebug SUCCESS (2m54s), no OOM; historical javac OOM point re-verified clean.
 6. Tasks 026+027 (merged): official-Maven audit (49 artifacts) landed — zxing 3.5.4 (latest, full build passed), protobuf-javanano 3.1.0, dynamicanimation 1.1.0; 4 jars retired (3 replaced + SettingsLib-javac orphan); tooling entry retired; test baseline now 147 (zxing packaging test retired with it).
-7. Task 028 (dispatched): AOSP release-build config deep analysis (bp compile/optimize/obfuscation/debug-vs-release source sets) + comparison with our Gradle release, report-only. Release fix follows after user reviews.
+7. Task 028 (dispatched): AOSP release-build config deep analysis (a: compiled code, b: optimize, c: obfuscation, d/e: debug-vs-release source sets, f: dex/signing) + gap table + release config recommendation, report-only. Release fix follows after user reviews.
 6. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Item 10 approved (16G heap, task 024). Next: 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
