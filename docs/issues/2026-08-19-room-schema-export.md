@@ -75,3 +75,10 @@ Deferred Follow-up 之一。AOSP `SystemUI/Android.bp` 对 SystemUI-core 设
 - 若将来升级 Room 或引入官方 Room Gradle Plugin，应移除 `room.internal.schemaInput`
   内部参数改为 `room { schemaDirectory(...) }`（需用户批准动版本矩阵）。
 - DB v6+ 需要 AutoMigration 时，schema 历史链已就绪（1–5.json 在仓）。
+
+## 后续：官方插件迁移（Task 022）
+
+Task 020 用手写 `room.internal.schemaInput` 解决导出（Room 2.8.4 + KSP2 下
+`room.schemaLocation` 单独不生效的机制发现）。用户 2026-08-19 批准迁移到官方
+Room Gradle Plugin（`alias(libs.plugins.androidx.room)` +
+`room { schemaDirectory(...) }`），删除内部参数；catalog 管理版本，不动 settings。
