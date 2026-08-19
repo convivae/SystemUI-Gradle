@@ -92,3 +92,4 @@
 2026-08-19 23:40 | w2:p12 | 023 | dispatch | disallowKotlinSourceSets removal experiment (user approved); GLM-5.2 own tab
 2026-08-19 23:55 | w2:p11 | 022 | review-pass+merge | Room official plugin migration; room.internal gone; schemas byte-exact; APK SUCCESS (architect re-verified)
 2026-08-19 23:55 | w2:p12 | 023 | review-pass+merge | experiment: switch REQUIRED (config error without); gradle.properties restored; docs only
+2026-08-20 00:05 | w2:p13 | 024 | dispatch | heap 16G (user approved); default-config assembleDebug verification
