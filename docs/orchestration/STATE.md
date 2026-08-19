@@ -7,11 +7,13 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| — | — | — | — | — | — |
+| pending | w015 | `tasks/015-settingslib-per-target-aars.md` | wt-015 | dispatching | 2026-08-19 |
+| pending | w017 | `tasks/017-aar-dependency-audit.md` | wt-017 | dispatching | 2026-08-19 |
 
 ## Queue
 
-1. Task 015: implement SettingsLib resource closure. Task 016 recommends B2: 7 new per-target AARs (link-closed reachability set: SelectorWithWidgetPreference, RestrictedLockUtils, ActionButtonsPreference, ProgressBar, TwoTargetPreference, LayoutPreference, AdaptiveIcon) via ADR 0005 POM transitive deps. Awaiting user decision.
+1. Task 015 (dispatched): implement B2 — 7 new per-target AARs + SettingsLib POM transitive deps; user approved 2026-08-19.
+2. Task 017 (dispatched): read-only audit of all AAR deps (migrate-to-Maven / delete candidates); deletions need later user approval.
 
 ## Done
 
@@ -29,4 +31,4 @@
 
 ## Last Updated
 
-2026-08-19 — task 016 research merged: minimum conflict-free merge is 12 AARs (12-clique proven) with 39 dormant runtime bombs; reachability-closed B2 needs only 7 new AARs with compile-time fail-fast; R-only AARs unsafe (Q4). Awaiting user granularity decision.
+2026-08-19 — user approved B2 (7 new AARs) and ordered a full AAR dependency audit; tasks 015 (implementation) and 017 (read-only audit) dispatched in parallel.

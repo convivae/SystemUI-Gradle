@@ -72,3 +72,5 @@
 2026-08-19 18:06 | main | 016 | dispatch | consolidation research briefed; GLM-5.3 worker; read-only docs-only
 2026-08-19 19:20 | w2:pT | 016 | review-pass | 0d456c1b; 3 doc files; Q1 k=12 clique-proven; Q2 39 dormant/0 reachable; Q3 link-closed 10 targets=7 new AARs; Q4 R-only unsafe; recommend B2
 2026-08-19 19:21 | main | 016 | merge | task-016-research merged; B2 (7 new AARs) pending user approval
+2026-08-19 19:40 | main | 015 | user-decision | B2 approved: 7 new per-target AARs (SelectorWithWidget/RestrictedLockUtils/ActionButtons/ProgressBar/TwoTarget/Layout/AdaptiveIcon) + SettingsLib POM transitive deps; 7 targets verified direct static_libs of main bp
+2026-08-19 19:41 | main | 017 | user-request | full AAR dependency audit ordered: find non-Maven-managed and unused AARs; deletions need later approval
