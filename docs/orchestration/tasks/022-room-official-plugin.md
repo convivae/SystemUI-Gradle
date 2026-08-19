@@ -56,3 +56,18 @@
 
 完成后汇报：commit、逐条 checklist（真实输出）、官方插件实际设置的任务/参数、
 issue 更新、新发现、HANDOFF 块。
+
+## Checklist（2026-08-19 实施完成）
+
+- [x] `libs.versions.toml` `[plugins]` 新增 `androidx-room`（version.ref 复用 `androidxRoom = "2.8.4"`）
+- [x] `SystemUI-core/build.gradle.kts` plugins 块加 `alias(libs.plugins.androidx.room)`
+- [x] 删除手写 `ksp { arg(...) }` 块，改为 `room { schemaDirectory(...) }`
+- [x] `settings.gradle.kts` 未改动（`git diff d152837f^ d152837f -- settings.gradle.kts` 为空）
+- [x] `python3 -m unittest discover -s tools/tests -p 'test_*.py'` → Ran 148 tests, OK
+- [x] `./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:kspReleaseKotlin` → BUILD SUCCESSFUL（首次运行递到瞬态 KSP worker `Java heap space`，原样重试即成功；与改动无关）
+- [x] `./gradlew :app:assembleDebug` → BUILD SUCCESSFUL in 1m 29s（216 tasks）
+- [x] schemas 5 个 JSON SHA-256 迁移前后完全一致（表格见 issue）
+- [x] `git grep -n "room.internal" -- '*.gradle.kts'` → 无匹配
+- [x] 任务图出现官方 Room 任务：`copyRoomSchemas`（NO-SOURCE）、`copyRoomSchemasToAndroidTestAssetsDebugAndroidTest`；另创建 `build/intermediates/room/schemas/ksp{Debug,Release}Kotlin/` 输出目录
+- [x] issue 文档更新（`docs/issues/2026-08-19-room-schema-export.md` 追加“迁移结果”）
+- [x] 英文 commit `d152837f`，未 push
