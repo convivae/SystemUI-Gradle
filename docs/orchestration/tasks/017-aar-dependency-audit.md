@@ -72,3 +72,46 @@ Task 015 的 7 个新 AAR 属于已批准增量。
 ## Report
 
 完成后汇报：commit、逐条 checklist、issue 更新、新发现、HANDOFF 块。
+
+## Checklist (worker-completed, 2026-08-19)
+
+brief Required Findings + Acceptance 逐条勾选，附**真实**验证命令输出摘要
+（非伪造；遵循 worker-contract PITFALLS §8.1）：
+
+- [x] **F1 全量 inventory 表** — architecture doc §1.1/§1.2（10 `libs/aars` +
+  11 maven AAR；SHA-256/size/provider（CONFIGS/ARTIFACTS）/consumer/POM 骨架齐全）。
+  验证：`sha256sum libs/aars/*.aar` + `find libs/maven -name "*.aar" -exec sha256sum {} \;`
+  （10 个逐一 SHA 匹配 + SystemUISharedLib 独立 SHA `db8be736...`）+ `cat` 全部 POM
+  （均无 `<dependencies>`）。
+- [x] **F2 直接 files() AAR 引用清单** — architecture doc §2。结论 **0 条**。
+  验证：`grep -rn -E "files\(|fileTree|\.aar" build.gradle.kts */build.gradle.kts`
+  → 所有 `files(...)` 参数均 `.jar` 结尾或变量名，**无 `.aar` 路径**，无 `fileTree`。
+  （AGENTS.md §3.2 "不再直接 files(libs/aars/xxx.aar)" 主张核实为真。）
+- [x] **F3 使用性判定** — architecture doc §4。10 个被消费 AAR 各 ≥1 引用证据。
+  验证：`grep -rln "<pkg>" SystemUI-*/src`（res-only AAR 用 `SystemUI-*/res SystemUI-*/src`）
+  → animationlib 149 / SettingsLib 289 / WM-Shell 75 / iconloader 8 / WifiTrackerLib 9 /
+  LowLightDreamLib 4 / setupcompat 3 / SettingsLibColor 1 / SettingsLibSettingsTheme 17 /
+  WM-Shell-shared 11（PhysicsAnimator/ShellTransitions）。
+- [x] **F4 冗余/重叠判定** — architecture doc §5。SystemUISharedLib fat jar（1105 类）
+  与 WM-Shell(177 条 com/android/wm/shell)/animationlib(5) 类重叠；WM-Shell 主 vs
+  shared 类集交集 = 0（`comm -12` LC_ALL=C）；flags jar 与顶层 jar SHA 完全相同
+  （`3644731e...`）；SettingsLib-full.jar vs SettingsLib AAR = 0 重叠（互补）。
+- [x] **F5 结论表 + 建议** — architecture doc §6（15 行 keep/migrate/delete-candidate
+  表 + 每条回滚方式 + 风险从低到高排序的清理顺序）。
+- [x] **F6 置信度标注** — architecture doc §4 每行标"高"；§5.1 SystemUISharedLib
+  删除风险明示"因禁跑 Gradle 无法 100% 排除遗漏类，删前需 `:app:assembleDebug`
+  验证"；不确定处写"未证实"/"推测"，不猜测。
+- [x] **Acceptance: `test -s`** — `test -s docs/architecture/2026-08-19-aar-dependency-audit.md`
+  → **PASS (exit 0, 21510 bytes)**。
+- [x] **Acceptance: rg 实质命中** — `grep -nE "keep|migrate|delete-candidate|files\("
+  docs/architecture/2026-08-19-aar-dependency-audit.md` → **29 行命中**（§2/§5/§6）。
+- [x] **Acceptance: `git diff --check` 干净 + 仅 Allowed Paths** — `git diff --check`
+  → **exit 0**（无 whitespace 错误）；`git status --short` → 仅
+  `M docs/issues/2026-08-19-aar-dependency-audit.md` +
+  `?? docs/architecture/2026-08-19-aar-dependency-audit.md` + 本 brief（3 个均 Allowed）。
+- [x] **Execution Hints**：worker-contract `CONTRACT:` 已输出；research skill 方法
+  （一手来源、file:line 引用）已用；临时解包均置 `/tmp/audit_*`（未污染仓库）；
+  每条结论带证据（文件:行号 或 命令输出摘要）。
+- [x] **Non-goals 遵守**：未删/移/改任何 AAR/POM/构建脚本/catalog/源码/res；
+  **未运行任何 `./gradlew`**（用户 + brief 明令禁止）；jar 仅作相邻发现
+  （architecture doc §5.2/§5.3/§5.5，不纳入主结论表）。

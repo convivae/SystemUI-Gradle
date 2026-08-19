@@ -32,4 +32,50 @@
 
 ## 结果
 
-待填。
+审查完成，产出 `docs/architecture/2026-08-19-aar-dependency-audit.md`
+（17.2KB）。基线 worktree `task-017-audit` @ commit `de0f2151`；未运行任何
+Gradle；仅改 3 个 Allowed Path 文件（architecture doc 新建、本 issue 更新、
+brief checklist 勾选）。
+
+### 关键结论
+
+- **(a) 迁移候选 = 0**：零直接 `files("*.aar")` 绕过 Maven 的引用；
+  AGENTS.md §3.2 主张核实为真。全部 AAR 经 catalog + 本地 Maven 消费
+  （§3 列出每个 alias 的 模块:行号:配置）。
+- **(b) 删除候选**：
+  1. `com.android.systemui:SystemUISharedLib`（maven 孤儿 AAR：无源 AAR、
+     无消费、AGENTS.md §3.2 标"[旧] 遗留，待清理"、fat jar 1105 类与
+     WM-Shell(177)/animationlib(5) 类重叠、规则 S 下已被 `:SystemUI-shared`
+     源码取代）。删前需 `:app:assembleDebug` 验证无遗漏类。
+  2. `com.android.systemui.flags:flags`（相邻 jar：catalog alias
+     `android-systemui-flags` 无消费者；与 `libs/systemui-flags.jar` SHA 完全
+     相同 = 内容重复；实际消费走顶层 jar。涉版本矩阵红线 #4，需用户决策
+     删哪边）。
+  3. 废弃脚本 `tools/gen_aar_maven.py`（文件头自警"失败实验"；
+     AGENTS.md §1.4 标废弃）、`tools/rebuild_settingslib_aar.py`
+     （2026-07-30 一次性补丁、硬编码非 worktree 路径、功能被
+     CONFIGS["SettingsLib"] 取代、不解决当前阻塞点）、`tools/clean_aar_maven.py`
+     （仅服务 gen_aar_maven 产物，随其废弃）。
+- **keep（10 个被消费 AAR）**：全部有 ≥1 条实际引用证据——
+  animationlib 149 文件、SettingsLib 289、WM-Shell 75、iconloader 8、
+  WifiTrackerLib 9、LowLightDreamLib 4、setupcompat 3、SettingsLibColor 1
+  （SideFpsOverlayViewModel.kt）、SettingsLibSettingsTheme 17 res（settingslib_switch）、
+  WM-Shell-shared 11（PhysicsAnimator/ShellTransitions）。
+- **重叠验证**：WM-Shell 主 vs shared 类集交集 = 0（AGENTS.md §4.2 主张为真）；
+  SettingsLib-full.jar vs SettingsLib AAR = 0 重叠（互补，非删除依据，
+  core:198 注释"0 重叠"为真）。
+- **POM 全骨架**：11 个 maven AAR 的 POM 均无 `<dependencies>`（印证
+  CHARTER Part 3 "POMs are dependency-free skeletons"）。
+
+### 待用户决策（CHARTER Part 5 红线，需 architect 转呈）
+
+1. 删 SystemUISharedLib（含删前 `:app:assembleDebug` 验证方案）。
+2. flags 重复 jar：删 maven 坐标 + alias，还是删顶层 `libs/systemui-flags.jar`
+   改走 Maven？（红线 #4 版本矩阵 + 依赖策略）
+3. 废弃脚本三连删（`gen_aar_maven.py` / `rebuild_settingslib_aar.py` /
+   `clean_aar_maven.py`）？
+4. SettingsLib AAR 缺 `SettingsTheme/res/drawable-v31/settingslib_switch_{track,thumb}`
+   （AGENTS.md §4.2 已记录，与本次审查正交；确认 SettingsLibSettingsTheme AAR
+   是这些 drawable 的正确归属，待 Task 015/重新打包补齐）。
+
+详见 `docs/architecture/2026-08-19-aar-dependency-audit.md` §6 结论表 + §7 待决策。
