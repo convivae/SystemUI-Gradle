@@ -249,6 +249,76 @@ class TestArtifactConfigs(unittest.TestCase):
         # setupcompat 是 com.google.android.setupcompat，无 com/android/systemui 类，无需 reject_sysui
         self.assertFalse(cfg.get("reject_sysui", False))
 
+    def test_settingslib_settings_theme_config_paths(self):
+        """SettingsLibSettingsTheme 是独立 Soong target，res-only AAR（Task 013）。
+
+        其代码类已由 SettingsLib.aar 的 static_libs javac 合并交付，这里只补 res。
+        """
+        cfg = paar.CONFIGS["SettingsLibSettingsTheme"]
+        self.assertEqual(cfg["code"], [])
+        self.assertIn("SettingsLib/SettingsTheme/res", str(cfg["res"]))
+        self.assertTrue(str(cfg["manifest"]).endswith("SettingsTheme/AndroidManifest.xml"))
+        self.assertIn("SettingsLibSettingsTheme/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertEqual(cfg["output"], "libs/aars/SettingsLibSettingsTheme.aar")
+        self.assertFalse(cfg.get("reject_sysui", False))
+
+
+class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
+    """Task 013：完整 res 树逐字节溯源——不漏、不多、不改。"""
+
+    AOSP_THEME_RES = Path("/home/conv/myspace/aosp/frameworks/base/packages/SettingsLib/SettingsTheme/res")
+
+    def _source_files(self) -> dict:
+        return {
+            f"res/{p.relative_to(self.AOSP_THEME_RES)}": p.read_bytes()
+            for p in sorted(self.AOSP_THEME_RES.rglob("*")) if p.is_file()
+        }
+
+    def test_res_entries_match_aosp_tree_exactly(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "SettingsLibSettingsTheme.aar"
+            paar.build_artifact("SettingsLibSettingsTheme", out)
+            with zipfile.ZipFile(out) as z:
+                aar_res = {n: z.read(n) for n in z.namelist() if n.startswith("res/")}
+        source = self._source_files()
+        self.assertEqual(set(aar_res), set(source),
+                         "AAR res entry 集与 AOSP SettingsTheme res 树不一致")
+        for name, data in source.items():
+            self.assertEqual(aar_res[name], data, f"{name} 字节与 AOSP 源不一致")
+
+    def test_switch_drawable_entries_present(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "SettingsLibSettingsTheme.aar"
+            paar.build_artifact("SettingsLibSettingsTheme", out)
+            with zipfile.ZipFile(out) as z:
+                names = set(z.namelist())
+        self.assertIn("res/drawable-v31/settingslib_switch_track.xml", names)
+        self.assertIn("res/drawable-v31/settingslib_switch_thumb.xml", names)
+        self.assertIn("res/drawable-v34/settingslib_switch_track.xml", names)
+
+    def test_no_code_entries(self):
+        """res-only：classes.jar 应为空 JAR（无 code 输入）。"""
+        from io import BytesIO
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "SettingsLibSettingsTheme.aar"
+            paar.build_artifact("SettingsLibSettingsTheme", out)
+            with zipfile.ZipFile(out) as z:
+                self.assertIn("classes.jar", z.namelist())
+                with zipfile.ZipFile(BytesIO(z.read("classes.jar"))) as cj:
+                    self.assertEqual([n for n in cj.namelist()
+                                      if not n.endswith("/") and n != "META-INF/MANIFEST.MF"], [])
+
+    def test_rebuild_is_byte_identical(self):
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            first = d / "first.aar"
+            second = d / "second.aar"
+            paar.build_artifact("SettingsLibSettingsTheme", first)
+            time.sleep(2)
+            paar.build_artifact("SettingsLibSettingsTheme", second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+
 class TestAbsentInputFails(unittest.TestCase):
     """Step 1: 缺输入报 FileNotFoundError。"""
 
@@ -350,12 +420,14 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 9 个 artifact（setupcompat 经本地 Maven 交付）
+        # 确认 CONFIGS 含 10 个 artifact（setupcompat 经本地 Maven 交付；
+        # SettingsLibSettingsTheme 为 Task 013 新增 res-only target）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
              "SettingsLib", "WindowManager-Shell", "WindowManager-Shell-shared",
-             "LowLightDreamLib", "SettingsLibColor", "setupcompat"})
+             "LowLightDreamLib", "SettingsLibColor", "setupcompat",
+             "SettingsLibSettingsTheme"})
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

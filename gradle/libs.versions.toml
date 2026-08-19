@@ -148,5 +148,6 @@ systemui-animationlib = { group = "com.android.systemui", name = "animationlib",
 systemui-iconloader = { group = "com.android.systemui", name = "iconloader", version = "1.0.0" }
 systemui-lowlight-dream-lib = { group = "com.android.systemui", name = "LowLightDreamLib", version = "1.0.0" }
 systemui-settingslib-color = { group = "com.android.settingslib", name = "color", version = "1.0.0" }
+systemui-settingslib-theme = { group = "com.android.systemui", name = "SettingsLibSettingsTheme", version = "1.0.0" }
 systemui-setupcompat = { group = "com.android.systemui", name = "setupcompat", version = "1.0.0" }
 

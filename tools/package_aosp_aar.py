@@ -131,6 +131,17 @@ CONFIGS = {
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/Color/SettingsLibColor/android_common/R.txt",
         "output": "libs/aars/SettingsLibColor.aar",
     },
+    "SettingsLibSettingsTheme": {
+        # SettingsLib/SettingsTheme：独立 Soong android_library target（res + src），
+        # 但其代码类已由 SettingsLib.aar 的 static_libs javac 合并交付；
+        # 此处 res-only 补齐 SettingsTheme/res 资源（89 个同路径文件不得与 SettingsLib/res 合并，
+        # 保持 Soong target 边界，Task 013）
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/SettingsTheme/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/SettingsTheme/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsTheme/SettingsLibSettingsTheme/android_common/R.txt",
+        "output": "libs/aars/SettingsLibSettingsTheme.aar",
+    },
     "setupcompat": {
         # external/setupcompat android_library（含 res；AOSP SettingsLib 经 setupdesign→setupcompat
         # 传递获得 compile classpath）。package com.google.android.setupcompat；

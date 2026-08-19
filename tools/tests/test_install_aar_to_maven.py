@@ -75,6 +75,15 @@ class InstallAarTest(unittest.TestCase):
                 self.assertEqual(z.read("classes.jar"), b"new")
 
 
+class ArtifactRegistryTest(unittest.TestCase):
+    def test_settingslib_settings_theme_coordinate(self):
+        """Task 013：SettingsLibSettingsTheme 固定本地坐标。"""
+        self.assertEqual(
+            iam.ARTIFACTS["SettingsLibSettingsTheme"],
+            {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.0"},
+        )
+
+
 class InstallAllTest(unittest.TestCase):
     def test_install_all_default_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
