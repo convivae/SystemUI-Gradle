@@ -95,3 +95,5 @@
 2026-08-20 00:05 | w2:p13 | 024 | dispatch | heap 16G (user approved); default-config assembleDebug verification
 2026-08-20 00:25 | w2:p13 | 024 | review-pass+merge | heap 16g; default assembleDebug SUCCESS no OOM; javac OOM point clean; 148/148 tests
 2026-08-20 00:30 | w2:p14+w2:p15 | 025+026 | dispatch | release verification (GLM-5.2) + official-Maven audit (GLM-5.3); parallel, own tabs
+2026-08-20 01:10 | w2:p14 | 025 | review-pass+merge | release failure diagnosed: dangling consumer-rules.pro since 2026-07-18; AOSP has no lib-level proguard; fix queued as 028
+2026-08-20 01:10 | w2:p15 | 026->027 | extend | audit report merged-pending; worker extended to land 3 official deps (zxing latest-first) + retire 4 jars + tooling/comment cleanup

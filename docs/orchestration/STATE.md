@@ -7,8 +7,7 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:p14 | w025g52 | `tasks/025-assemble-release-verification.md` | wt-025 | dispatched (GLM 5.2, own tab) | 2026-08-20 |
-| w2:p15 | w026g53 | `tasks/026-official-maven-audit.md` | wt-026 | dispatched (GLM 5.3, own tab) | 2026-08-20 |
+| w2:p15 | w026g53 | `tasks/027-official-deps-landing.md` | wt-026 | extended to landing+cleanup (GLM 5.3) | 2026-08-20 |
 
 ## Queue
 
@@ -17,7 +16,7 @@
 3. Task 022 (merged): Room official Gradle plugin migration done; room.internal.* removed; 5 schemas byte-exact; APK builds.
 4. Task 023 (merged): experiment concluded — disallowKotlinSourceSets=false is REQUIRED (KSP config error without it); flag stays, documented.
 5. Task 024 (merged): heap now 16G; default-config assembleDebug SUCCESS (2m54s), no OOM; historical javac OOM point re-verified clean.
-6. Tasks 025 (assembleRelease verify+diagnose, no fixes) and 026 (official-Maven audit + trial replacements, report-only; official>Maven>jar priority per user) dispatched in parallel.
+6. Task 025 (merged): release fails on dangling consumer-rules.pro (never existed, inherited from reference project); AOSP has NO library-level proguard config — app-level proguard.flags chain already byte-identical; fix = remove dangling refs at core (AOSP-consistent). Task 026 (merged report): 49 artifacts audited, 3 official replacements trial-passed. Task 027 (dispatched to w026): land 3 replacements (zxing try latest first) + jar retirement + thorough cleanup. Task 028 (release fix) dispatches AFTER 027 merges (both touch core build file).
 6. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Item 10 approved (16G heap, task 024). Next: 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
