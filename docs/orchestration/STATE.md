@@ -12,7 +12,7 @@
 ## Queue
 
 1. Cleanup done (task 018 merged). Deferred: install_aar_to_maven.py docstring references deleted gen_aar_maven.py (needs brief); scripts/extract_prebuilts.sh is legacy .sh (ADR 0002); device/runtime verification of the first APK.
-2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes SHA-256 35c7e3f6881328a4e26c1ea3ddf6ae8f844ef5e1599f082ae1b70a87c0336e86; 148/148 tests; 7 B2 AARs provenance-verified.
+2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
 
 ## Done
