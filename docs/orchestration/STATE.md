@@ -7,15 +7,16 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:pS | w014g53 | `tasks/014-settingslib-resource-closure-research.md` | wt-014 | dispatched (GLM 5.3) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
-1. Task 015 candidate: implement the SettingsLib resource-closure architecture after Task 014 research is reviewed and the user chooses the design.
+1. Task 015 candidate: implement the SettingsLib resource-closure architecture. Task 014 research recommends Option C (~30 per-target res-only AARs, explicit consumer deps); monolithic merged AAR (Option A) is rule-R non-compliant per reference-project evidence. Awaiting user decision.
 
 ## Done
 
-- 001–013 merged and pushed.
+- 001–014 merged and pushed.
+- Task 014: reference-project research done — CarSystemUIGradle uses a monolithic merged SettingsLib AAR via content-rewriting res concatenation + v31 deletion (rule-R non-compliant); Soong has no reusable merged artifact; closure = 33 res targets / 1512 files / 101 duplicate-path groups; latent child-R-class runtime defect found in merged classes.jar; recommended Option C.
 - Task 013: `SettingsLibSettingsTheme` res-only AAR is byte-identical to all 174 AOSP resources; switch drawable errors are 0; 137/137 tests pass.
 - Task 008: core javac milestone, 0 errors.
 - Tasks 010/010b: reproducible SysUISdk S0–S3+S5, strict verify 7/7 PASS.
@@ -24,8 +25,8 @@
 
 ## Blocked
 
-- `:app:processDebugResources`: Task 013 exposed the first 3 SettingsLib static-lib resource gaps (`ProgressBar`, `ActionButtonsPreference`, `TwoTargetPreference`). Task 014 research is investigating the reference project and AOSP/Soong primary sources before the user chooses the implementation architecture.
+- `:app:processDebugResources`: blocked by SettingsLib static-lib resource gaps. Task 014 research delivered the architecture options; awaiting user decision between monolithic merge (rejected: rule R) and per-target res-only AARs (recommended Option C).
 
 ## Last Updated
 
-2026-08-19 — task 014 research dispatched to w014g53 in the correct SystemUI worktree with explicit GLM-5.3; read-only docs-only scope.
+2026-08-19 — task 014 research reviewed, merged, and pushed. Key findings: reference project merges all res into one AAR via content rewriting + v31 deletion (rule-R non-compliant); Soong has no reusable merged artifact; Option C (per-target res-only AARs, explicit consumer deps) recommended; latent child-R-class runtime defect discovered.

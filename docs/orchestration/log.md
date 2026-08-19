@@ -66,3 +66,5 @@
 2026-08-19 13:01 | main | 013 | merge | task-013 merged; SettingsLibSettingsTheme artifact tracked; processDebugResources now blocked by ProgressBar/ActionButtonsPreference/TwoTargetPreference resources
 2026-08-19 13:09 | main | 014 | audit | SettingsLib direct static_libs contain 29 resource-owning targets; recommend full per-target resource closure design instead of only fixing the first 3 linker-visible groups; awaiting user approval
 2026-08-19 17:10 | w2:pS | 014 | dispatch | user requested reference-project research; w014g53 in correct SystemUI wt-014 with explicit joycode/GLM-5.3; docs-only read-only scope
+2026-08-19 17:45 | w2:pS | 014 | review-pass | 637cad9c; 3 doc files only; reference=monolithic AAR via content rewrite+v31 deletion (rule-R violation); Soong has no merged artifact; closure 33 targets/1512 files/101 dup-path groups; latent child-R runtime defect; Option C recommended
+2026-08-19 17:46 | main | 014 | merge | task-014-research merged; architecture decision pending user
