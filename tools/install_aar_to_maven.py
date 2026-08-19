@@ -10,9 +10,7 @@ POM 默认为骨架（只声明 groupId/artifactId/version/packaging=aar，无�
 由消费方显式声明）；例外（ADR 0005）：SettingsLib 闭包的 POM 携带机械镜像
 Android.bp static_libs 的 <dependencies>（当前仅 SettingsLib 主 POM 的 7 条边）。
 
-与 gen_aar_maven.py 的区别：
-  - gen_aar_maven.py 把 R.jar 错误合并进 classes.jar（已废弃的失败实验）
-  - 本工具只做文件复制 + POM 生成，不修改 AAR 字节内容
+本工具只做文件复制 + POM 生成，不修改 AAR 字节内容。
 """
 
 import argparse

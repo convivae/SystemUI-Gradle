@@ -291,25 +291,43 @@ libs/
 ├── settingslib-media-flags.jar         # com.android.settingslib.media.flags.Flags
 ├── device-state-flags.jar              # com.android.server.policy.feature.flags.Flags
 ├── libprotobuf-java-nano.jar           # com.google.protobuf.nano.MessageNano (SystemUI-proto 依赖)
-├── WindowManager-Shell-shared.jar      # [已删] 合并入 libs/aars/WindowManager-Shell-shared.aar
 ├── aars/                               # 直接 AAR（package_aosp_aar.py 生成；2026-08-12 起提交入 git）
-│   ├── animationlib.aar                  # frameworks/libs/systemui:animationlib
-│   ├── WifiTrackerLib.aar                # frameworks/opt/net/wifi/libs/WifiTrackerLib
-│   ├── iconloader.aar                    # frameworks/libs/systemui:iconloaderlib
-│   ├── SettingsLib.aar                    # frameworks/base/packages/SettingsLib（含 32 个子模块合并）
-│   ├── WindowManager-Shell.aar           # frameworks/base/libs/WindowManager/Shell
-│   └── WindowManager-Shell-shared.aar    # WM-Shell static_libs 子模块（javac+kotlin 合并，含 PhysicsAnimator）
+│   ├── animationlib.aar                # frameworks/libs/systemui:animationlib
+│   ├── WifiTrackerLib.aar              # frameworks/opt/net/wifi/libs/WifiTrackerLib
+│   ├── iconloader.aar                  # frameworks/libs/systemui:iconloaderlib
+│   ├── SettingsLib.aar                 # frameworks/base/packages/SettingsLib（含 32 个子模块合并）
+│   ├── WindowManager-Shell.aar         # frameworks/base/libs/WindowManager/Shell
+│   ├── WindowManager-Shell-shared.aar  # WM-Shell static_libs 子模块（javac+kotlin 合并，含 PhysicsAnimator）
+│   ├── LowLightDreamLib.aar            # frameworks/base/libs/dream/lowlight:LowLightDreamLib
+│   ├── setupcompat.aar                 # external/setupcompat:setupcompat
+│   ├── SettingsLibColor.aar            # SettingsLib/Color（Maven 坐标 com.android.settingslib:color）
+│   ├── SettingsLibSettingsTheme.aar    # SettingsLib/SettingsTheme
+│   └── SettingsLib{ActionButtonsPreference,AdaptiveIcon,LayoutPreference,ProgressBar,
+│       RestrictedLockUtils,SelectorWithWidgetPreference,TwoTargetPreference}.aar
+│                                       # 7 个 per-target res-only AAR（Task 015/ADR 0005）
 ├── prebuilts/                          # 历史 prebuilt jar（逐步清理中）
 └── maven/                              # 本地 Maven 仓库（install_aar_to_maven.py 安装；2026-08-12 起提交入 git）
     ├── com.android.systemui/
-    │   ├── SettingsLib/1.0.0/            # libs.systemui.settingslib
-    │   ├── iconloader/1.0.0/            # libs.systemui.iconloader
-    │   ├── WindowManager-Shell/1.0.0/   # libs.systemui.wmshell
-    │   ├── WindowManager-Shell-shared/1.0.0/  # libs.systemui.wmshell.shared
-    │   ├── WifiTrackerLib/1.0.0/        # libs.systemui.wifitrackerlib
-    │   ├── animationlib/1.0.0/          # libs.systemui.animationlib
-    └── com.android.server.notification/
-        └── Flags/1.0.0/
+    │   ├── SettingsLib/1.0.0/                          # libs.systemui.settingslib（POM 携 7 条传递依赖边，ADR 0005）
+    │   ├── SettingsLibSettingsTheme/1.0.0/             # libs.systemui.settingslib.theme
+    │   ├── LowLightDreamLib/1.0.0/                     # libs.systemui.lowlight.dream.lib
+    │   ├── WifiTrackerLib/1.0.0/                       # libs.systemui.wifitrackerlib
+    │   ├── WindowManager-Shell/1.0.0/                  # libs.systemui.wmshell
+    │   ├── WindowManager-Shell-shared/1.0.0/           # libs.systemui.wmshell.shared
+    │   ├── animationlib/1.0.0/                         # libs.systemui.animationlib
+    │   ├── iconloader/1.0.0/                           # libs.systemui.iconloader
+    │   ├── setupcompat/1.0.0/                          # libs.systemui.setupcompat
+    │   ├── SettingsLibActionButtonsPreference/1.0.0/   # libs.systemui.settingslib.action.buttons.preference（经 SettingsLib POM 传递依赖，ADR 0005）
+    │   ├── SettingsLibAdaptiveIcon/1.0.0/              # libs.systemui.settingslib.adaptive.icon（同上）
+    │   ├── SettingsLibLayoutPreference/1.0.0/          # libs.systemui.settingslib.layout.preference（同上）
+    │   ├── SettingsLibProgressBar/1.0.0/               # libs.systemui.settingslib.progress.bar（同上）
+    │   ├── SettingsLibRestrictedLockUtils/1.0.0/       # libs.systemui.settingslib.restricted.lock.utils（同上）
+    │   ├── SettingsLibSelectorWithWidgetPreference/1.0.0/  # libs.systemui.settingslib.selector.with.widget.preference（同上）
+    │   └── SettingsLibTwoTargetPreference/1.0.0/       # libs.systemui.settingslib.two.target.preference（同上）
+    ├── com.android.settingslib/
+    │   └── color/1.0.0/                # libs.systemui.settingslib.color
+    └── com.android.server/
+        └── notification-flags/1.0.0/   # libs.android.server.notification.flags
 ```
 ```
 
