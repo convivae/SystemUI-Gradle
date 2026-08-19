@@ -17,12 +17,6 @@ class TestAconfigJarPackaging(unittest.TestCase):
         self.assertNotIn("turbine", str(source))
         self.assertEqual(destination, Path("libs/systemui-shared-flags.jar"))
 
-    def test_zxing_core_config(self):
-        source, destination = module.CONFIGS["zxing-core"]
-        self.assertIn("/javac/", str(source))
-        self.assertNotIn("turbine", str(source))
-        self.assertEqual(destination, Path("libs/zxing-core.jar"))
-
     def test_wifi_flags_config(self):
         source, destination = module.CONFIGS["wifi-flags"]
         self.assertIn("/javac/", str(source))

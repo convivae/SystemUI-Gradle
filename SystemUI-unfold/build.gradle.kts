@@ -50,10 +50,10 @@ kotlin {
 dependencies {
     // Framework APIs（allprojects 已注入，此处显式声明便于阅读）
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
-    // unfold 依赖 androidx.dynamicanimation 1.1.0-alpha04（AOSP 内部 prebuilt，公网 maven 无此版本）：
-    // 用到 SpringAnimation.scheduler 属性与 FrameCallbackScheduler 接口。作 compileOnly（tier② 例外），
-    // 运行时由 app 提供的真实 androidx 提供；不引 maven 1.0.0 以免 API 版本冲突
-    compileOnly(files("${rootProject.projectDir}/libs/dynamicanimation-1.1.0-alpha04.jar"))
+    // androidx.dynamicanimation：官方 1.1.0（tier③；task 027 弃用本地 alpha04 prebuilt——
+    // 审计已证两者 class 清单完全一致，消除编译/运行版本混挂）。作 compileOnly，
+    // 运行时由 app 提供的真实 androidx 提供
+    compileOnly(libs.androidx.dynamicanimation)
 
     // Dagger 组件（DaggerUnfold/RemoteUnfoldSharedComponent）由 KSP 在本项目内生成。
     // 对齐 core：Dagger 2.59.2 + useBindingGraphFix 默认启用（2.58+）。

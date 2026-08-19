@@ -293,7 +293,6 @@ libs/
 ├── settingslib-flags.jar               # com.android.settingslib.flags.Flags (aconfig)
 ├── settingslib-media-flags.jar         # com.android.settingslib.media.flags.Flags
 ├── device-state-flags.jar              # com.android.server.policy.feature.flags.Flags
-├── libprotobuf-java-nano.jar           # com.google.protobuf.nano.MessageNano (SystemUI-proto 依赖)
 ├── aars/                               # 直接 AAR（package_aosp_aar.py 生成；2026-08-12 起提交入 git）
 │   ├── animationlib.aar                # frameworks/libs/systemui:animationlib
 │   ├── WifiTrackerLib.aar              # frameworks/opt/net/wifi/libs/WifiTrackerLib

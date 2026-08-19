@@ -213,16 +213,17 @@ dependencies {
     // com.android.systemui.shared.Flags（KeyboardTouchpadTutorialCoreStartable 等使用）
     implementation(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // zxing-core: SettingsLib 的 Soong static_libs（com.google.zxing.WriterException 等），
-    // AOSP 把它的 classes dex 进 APK，故用 implementation（tier② jar）
-    implementation(files("${rootProject.projectDir}/libs/zxing-core.jar"))
+    // AOSP 把它的 classes dex 进 APK，故用 implementation（tier③ 官方坐标，task 027；本地 jar 已退役）
+    implementation(libs.zxing.core)
     // Wi-Fi aconfig flags（com.android.wifi.flags.Flags；WifiTrackerLib static_libs），
     // 平台镜像在设备上提供，仅编译期需要（与 settingslib-flags.jar 同例）
     compileOnly(files("${rootProject.projectDir}/libs/wifi-flags.jar"))
     // WM-Shell aconfig flags（com.android.wm.shell.Flags；WindowManager-Shell static_libs），
     // 平台镜像在设备上提供，仅编译期需要（与 settingslib-flags.jar 同例）
     compileOnly(files("${rootProject.projectDir}/libs/wm-shell-flags.jar"))
-    // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖）
-    implementation(files("${rootProject.projectDir}/libs/libprotobuf-java-nano.jar"))
+    // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖；tier③ 官方坐标，task 027。
+    // AOSP 私有 com.google.protobuf.nano.android.* 3 类全仓零引用，由 framework.jar/platform 兑底）
+    implementation(libs.protobuf.javanano)
     // com.android.server.policy.feature.flags.Flags（ConnectingDisplayViewModel 等使用）
     implementation(files("${rootProject.projectDir}/libs/device-state-flags.jar"))
     implementation(libs.systemui.wifitrackerlib)

@@ -108,7 +108,7 @@ SystemUI-Gradle/
 │   ├── framework.jar         # AOSP 框架（含 @hide API）
 │   ├── framework-statsd.jar / android.car.jar / monet.jar
 │   ├── systemui-flags.jar / systemui-shared-flags.jar / settingslib-flags.jar 等 aconfig flags jar
-│   ├── libprotobuf-java-nano.jar / compilelib-{debug,release}.jar / 其他无资源 jar
+│   ├── compilelib-{debug,release}.jar / 其他无资源 jar（zxing / protobuf-javanano 已换官方坐标，task 027）
 │   ├── aars/                 # 8 个直接 AAR（package_aosp_aar.py 生成；2026-08-12 起提交入 git）
 │   │   └── {animationlib,WifiTrackerLib,iconloader,SettingsLib,WindowManager-Shell,WindowManager-Shell-shared,LowLightDreamLib,SettingsLibColor}.aar
 │   ├── maven/                # 本地 Maven 仓（install_aar_to_maven.py 安装，AAR + POM；2026-08-12 起提交入 git）
