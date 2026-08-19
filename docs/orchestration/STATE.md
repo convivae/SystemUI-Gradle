@@ -11,7 +11,7 @@
 
 ## Queue
 
-1. Task 014 candidate: package three real SettingsLib resource sub-targets (`ProgressBar`, `ActionButtonsPreference`, `TwoTargetPreference`) as separate res-only AARs; awaiting user approval.
+1. Task 014 candidate: design and implement the complete SettingsLib direct/transitive resource closure. Post-Task-013 audit found 29 direct `SettingsLib` static-lib targets with `resource_dirs`; awaiting user approval for the architecture decision (per-target res-only AARs plus transitive POM vs explicit consumer dependencies).
 
 ## Done
 
@@ -24,8 +24,8 @@
 
 ## Blocked
 
-- `:app:processDebugResources`: Task 013 exposed 3 more SettingsLib static-lib resource gaps: `ProgressBar`, `ActionButtonsPreference`, and `TwoTargetPreference` (5 AAPT errors total). Packaging these dependency artifacts is a new red-line task awaiting user approval.
+- `:app:processDebugResources`: Task 013 exposed the first 3 SettingsLib static-lib resource gaps: `ProgressBar`, `ActionButtonsPreference`, and `TwoTargetPreference` (5 AAPT errors total). Architect audit found 29 direct resource-owning sub-targets, so the next step must address/justify the full resource closure rather than silently stopping after the first linker-visible three; awaiting user approval.
 
 ## Last Updated
 
-2026-08-19 — task 013 reviewed and merged. Architect verified 137/137 tests, 174/174 byte-identical resources, identical direct/Maven AAR hashes, switch errors 0, and the next 3-resource-group AAPT layer. APK still not produced.
+2026-08-19 — task 013 reviewed, merged, and pushed. Architect verified 137/137 tests, 174/174 byte-identical resources, identical direct/Maven AAR hashes, switch errors 0, and the next 3-resource-group AAPT layer; follow-up audit found 29 direct resource-owning SettingsLib targets. APK still not produced.

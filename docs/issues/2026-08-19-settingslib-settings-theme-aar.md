@@ -147,7 +147,7 @@ python3 tools/install_aar_to_maven.py SettingsLibSettingsTheme
 
 ## 待解决问题
 
-- 下一层（非 Task 013 范围）：按与 SettingsLibSettingsTheme 相同的独立 AAR 思路，
-  评估为 `SettingsLibProgressBar`、`SettingsLibActionButtonsPreference`、`SettingsLibTwoTargetPreference`
-  等被引用的 SettingsLib 子模块 res 补独立 res-only AAR（需用户/架构师批准后另立任务）。
+- 下一层（非 Task 013 范围）：架构师合并后审计 `SettingsLib` 的直接 `static_libs`，发现不是只有当前报错的 3 个 target，而是 **29 个**直接子 target 拥有 `resource_dirs`。只补 `ProgressBar`、`ActionButtonsPreference`、`TwoTargetPreference` 可以继续推进链接，但不能证明已复制 SettingsLib 的完整 Soong 资源闭包，且未被 XML 直接引用的资源可能直到运行时才暴露。
+- 推荐另立 Task 014：先形成完整 resource-owner/依赖闭包清单，再决定使用“每个真实 Soong target 一个 res-only AAR + SettingsLib POM 传递依赖”还是显式 consumer 依赖；这属于本地 Maven 依赖语义的架构决策，需用户批准后实施。不得把存在重复相对路径的 raw res 静默合并进单一 AAR。
+- 当前已确认的三个首层 target 分别有 10、15、7 个原始资源文件；它们仍应包含在 Task 014 闭包中。
 - Task 013 完成后按真实 `:app:assembleDebug` 输出决定下一层；本次资源链接未通过，APK 未生成。
