@@ -60,3 +60,5 @@
 2026-08-19 11:27 | wF:p1 | 012 | contract-ok | GLM-5.3 modelId verified; correct SystemUI origin verified; CONTRACT confirmed
 2026-08-19 11:51 | wF:p1 | 012 | review-pass | GLM-5.3; 7 Allowed-Path files; 131/131 tests; helper 419/8/8 unresolved=0; androidprv 20->0; next layer SettingsLib drawables
 2026-08-19 11:51 | main | 012 | merge | task-012 merged; androidprv Factor 2 fixed; processDebugResources now blocked only by SettingsLib switch drawable packaging gap
+2026-08-19 12:34 | w2:pR | 013 | dispatch | user approved; w013g53 in correct SystemUI wt-013; explicit joycode/GLM-5.3; separate SettingsLibSettingsTheme AAR due 89 duplicate raw paths
+2026-08-19 12:35 | w2:pR | 013 | contract-ok | terminal model GLM-5.3 verified; correct SystemUI origin/worktree verified; CONTRACT confirmed

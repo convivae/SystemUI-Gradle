@@ -7,11 +7,11 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| — | — | — | — | — | — |
+| w2:pR | w013g53 | `tasks/013-settingslib-settings-theme-aar.md` | wt-013 | dispatched (GLM 5.3) | 2026-08-19 |
 
 ## Queue
 
-1. Task 013 candidate: repackage SettingsLib AAR with AOSP SettingsTheme switch drawable variants; awaiting user approval.
+1. (empty)
 
 ## Done
 
@@ -23,8 +23,8 @@
 
 ## Blocked
 
-- `:app:processDebugResources`: tracked SettingsLib AAR lacks AOSP `SettingsTheme/res/drawable-v31/settingslib_switch_{track,thumb}.xml` (track also has v34). Repackaging the dependency artifact is outside task 012 and awaits user approval.
+- `:app:processDebugResources`: tracked SettingsLib AAR lacks AOSP SettingsTheme switch resources. User approved task 013; GLM-5.3 worker is packaging the real `SettingsLibSettingsTheme` Soong target as a separate res-only AAR.
 
 ## Last Updated
 
-2026-08-19 — task 012 reviewed, merged, and pushed. GLM-5.3 worker/worktree closed; no active worker. APK still not produced.
+2026-08-19 — task 013 approved, planned, and dispatched to w013g53 in the correct SystemUI worktree with explicit GLM-5.3.
