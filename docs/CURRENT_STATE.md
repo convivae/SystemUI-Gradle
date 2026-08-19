@@ -196,7 +196,7 @@ animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell�
 ## 5. 待解决
 
 1. 用户批准后重新打包 SettingsLib AAR，将 AOSP `SettingsLib/SettingsTheme` 的 switch drawable 变体纳入产物，再运行 `:app:processDebugResources` 和 `:app:assembleDebug`
-2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
+2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、~~manifest 重复权限~~（2026-08-19 查实：3 条重复均 AOSP manifest 自带，merger 已去重，按规则 C 不修，关闭）、评估移除 `android.disallowKotlinSourceSets=false`
 
 执行计划：[`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md)
 
