@@ -9,12 +9,14 @@
 |------|-------|------------|----------|-------|-------|
 | w2:pY | w019g53 | `tasks/019-small-cleanups.md` | wt-019 | dispatched (GLM 5.3, own tab) | 2026-08-19 |
 | w2:pZ | w020g53 | `tasks/020-room-schema-export.md` | wt-020 | dispatched (GLM 5.3, own tab) | 2026-08-19 |
+| w2:p0 | w021g52 | `tasks/021-kotlin-23-unlock-check.md` | wt-021 | dispatched (GLM 5.2, own tab) | 2026-08-19 |
 
 ## Queue
 
 1. Task 019 (dispatched): docstring fix + legacy .sh removal + AGENTS.md libs/maven tree sync.
 2. Task 020 (dispatched, user approved): Room schemaLocation + 5 AOSP schema JSONs to repo-root schemas/ (asset_dirs semantics are tests-only in AOSP, skipped).
-3. Device/runtime verification of the first APK still open.
+3. Task 021 (dispatched, user approved): read-only re-poll of AGP/Kotlin/Compose maven metadata for Kotlin 2.3 unlock.
+4. Device/runtime verification of the first APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
 
