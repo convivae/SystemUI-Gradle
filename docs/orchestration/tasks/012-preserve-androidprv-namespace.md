@@ -43,7 +43,7 @@ and stop.
 
 ## Required execution
 
-- [ ] 1. Reproduce the baseline on this branch:
+- [x] 1. Reproduce the baseline on this branch:
 
 ```bash
 ./gradlew :app:processDebugResources --console=plain 2>&1 | tee /tmp/task012-before.log >/dev/null
@@ -53,11 +53,11 @@ grep -c 'androidprv' /tmp/task012-before.log
 
 Expected before fix: BUILD FAILED and about 20 `androidprv` hits. Record the actual values.
 
-- [ ] 2. Audit AGP 9.3.1 public APIs (`SingleArtifact`, `MultipleArtifact`, `Artifacts`, `SdkComponents`) and document the result. Prefer a public transformable merged-resource artifact if one exists. Known fact to verify: `SdkComponents.aapt2.executable` is public; a public `SingleArtifact.MERGED_RES` was not visible in the architect's initial `gradle-api-9.3.1.jar` inspection.
+- [x] 2. Audit AGP 9.3.1 public APIs (`SingleArtifact`, `MultipleArtifact`, `Artifacts`, `SdkComponents`) and document the result. Prefer a public transformable merged-resource artifact if one exists. Known fact to verify: `SdkComponents.aapt2.executable` is public; a public `SingleArtifact.MERGED_RES` was not visible in the architect's initial `gradle-api-9.3.1.jar` inspection.
 
-- [ ] 3. Perform one disposable, minimal hypothesis test before production code: add the declaration only to temporary copies of affected merged values XML, compile those files with AGP's selected AAPT2, replace only the corresponding build-intermediate flats, and retry link. Clean app outputs afterward. If this does not eliminate the 20 errors, return to root-cause analysis; do not stack fixes.
+- [x] 3. Perform one disposable, minimal hypothesis test before production code: add the declaration only to temporary copies of affected merged values XML, compile those files with AGP's selected AAPT2, replace only the corresponding build-intermediate flats, and retry link. Clean app outputs afterward. If this does not eliminate the 20 errors, return to root-cause analysis; do not stack fixes.
 
-- [ ] 4. If the public artifact route is unavailable, implement the concrete fallback in the plan:
+- [x] 4. If the public artifact route is unavailable, implement the concrete fallback in the plan:
   - write fixture tests first;
   - run them and capture the expected RED;
   - implement the Python CLI with `--merged-dir`, `--compiled-dir`, `--aapt2`;
@@ -66,7 +66,7 @@ Expected before fix: BUILD FAILED and about 20 `androidprv` hits. Record the act
   - use AGP's `androidComponents.sdkComponents.aapt2` provider, not a hard-coded build-tools path;
   - wire `merge<Variant>Resources → patch<Variant>AndroidPrvMergedResources → process<Variant>Resources` in `app/build.gradle.kts`.
 
-- [ ] 5. Run unit tests:
+- [x] 5. Run unit tests:
 
 ```bash
 python3 -m unittest discover -s tools/tests -p 'test_*.py' 2>&1 | tee /tmp/task012-tests.log
@@ -75,7 +75,7 @@ grep -E '^(Ran|OK|FAILED)' /tmp/task012-tests.log
 
 Expected: `Ran` greater than 116 and `OK`.
 
-- [ ] 6. Acceptance from a clean app resource state:
+- [x] 6. Acceptance from a clean app resource state:
 
 ```bash
 ./gradlew :app:clean :app:processDebugResources --console=plain 2>&1 | tee /tmp/task012.log >/dev/null
@@ -85,7 +85,7 @@ grep -c 'androidprv' /tmp/task012.log || echo '0 (androidprv errors gone)'
 
 Expected: `BUILD SUCCESSFUL` and 0 `androidprv` hits. The helper log must show `unresolved=0` if the fallback is used.
 
-- [ ] 7. APK diagnostics:
+- [x] 7. APK diagnostics:
 
 ```bash
 ./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/task012-app.log >/dev/null
@@ -94,9 +94,9 @@ grep -E 'BUILD (SUCCESSFUL|FAILED)' /tmp/task012-app.log | tail -1
 
 If successful, record APK path, byte size, and SHA-256. If a new task fails, record the task and first errors, then stop without widening scope.
 
-- [ ] 8. Update the architecture and issue docs with actual evidence; tick the plan/brief checkboxes truthfully. Run `git diff --check`.
+- [x] 8. Update the architecture and issue docs with actual evidence; tick the plan/brief checkboxes truthfully. Run `git diff --check`.
 
-- [ ] 9. Commit in English, never push:
+- [x] 9. Commit in English, never push:
 
 ```bash
 git add app/build.gradle.kts tools/patch_androidprv_merged_resources.py \
@@ -117,3 +117,31 @@ Architect re-runs Steps 5 and 6, checks `git diff --check`, and verifies the com
 ## Reports To
 
 Chief architect in the main herdr pane. Completion requires an English commit, updated docs/checklists, real output, and a terminal-final `HANDOFF:` block.
+
+
+---
+
+## Completion record (worker, 2026-08-19)
+
+- 1: baseline `BUILD FAILED in 18s`, androidprv count **20** (expected ~20 ✓).
+- 2: audit done — no public transformable merged-res artifact in AGP 9.3.1;
+  `SdkComponents.aapt2` public (used by the fallback).
+- 3: disposable test done — androidprv errors eliminated; first attempt's
+  2 `settingslib_switch` errors later proven to be a masked pre-existing layer.
+- 4: fallback implemented exactly as specified (fixture tests RED first, CLI
+  with `--merged-dir/--compiled-dir/--aapt2`, atomic flat replacement, summary
+  line, aapt2 via `sdkComponents` provider, per-variant wiring).
+- 5: `Ran 131 tests … OK` (>116 ✓).
+- 6: `scanned=419 patched=8 compiled=8 unresolved=0`; androidprv count **0**
+  (✓). `BUILD FAILED` remains — **not** androidprv: new masked layer
+  `drawable/settingslib_switch_{track,thumb}` missing from the tracked
+  SettingsLib AAR (AOSP defines them in `SettingsLib/SettingsTheme/res/drawable-v31/`).
+  Fix requires re-packaging a dependency artifact → REDLINE (see below).
+- 7: `:app:assembleDebug` → `BUILD FAILED` at the same layer; no APK.
+- 8: docs updated with actual evidence; `git diff --check` clean.
+- 9: committed in English on `task-012`; not pushed.
+
+REDLINE: SettingsLib AAR missing settingslib_switch_{track,thumb} drawables —
+fixing requires editing the dependency artifact `libs/maven/.../SettingsLib-1.0.0.aar`
+(re-packaging with SettingsTheme res), which is outside this brief's Allowed
+Paths; awaiting architect/user decision.
