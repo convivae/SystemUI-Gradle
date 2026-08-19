@@ -1,9 +1,10 @@
 # Task 015 — SettingsLib per-target res-only AAR 闭包（POM 传递依赖）
 
-> **状态（2026-08-19 更新）**：用户认可方案 B（POM 传递依赖，ADR 0005），
-> 但认为 30 个新 AAR 数量过多，要求先派发 Task 016 调研"合规降数量"的选项
-> （无冲突分组 / 可达性最小集 / R namespace 运行期实证 / AGP 机制）。
-> 本文档中的 30-AAR 清单为上限基线，实施数量待 Task 016 结论与用户再决策。
+> **状态（2026-08-19 实施完成）**：用户采纳 Task 016 推荐的 **B2（可达性驱动最小集）**：
+> 在既有 main/Color/SettingsTheme 三个 AAR 基础上新增 **7 个** per-target res-only AAR
+> （对比原 30-AAR 上限基线降 77%），经 ADR 0005 POM 传递依赖接线。
+> 实施结果见文末「实施结果（2026-08-19 执行）」；`:app:processDebugResources` 与
+> `:app:assembleDebug` 均 BUILD SUCCESSFUL，首个 APK 已产出。
 
 ## 背景
 
@@ -45,19 +46,99 @@ Task 014 调研（`docs/architecture/2026-08-19-settingslib-resource-closure-res
    并与调研文档 §4.2 的 33/30 数字对账；任何差异停下报告。
 4. consumer 只保留 `api(libs.systemui.settingslib)`。
 
-## 验收
+## 实施结果（2026-08-19 执行，B2 方案）
 
-- `python3 -m unittest discover -s tools/tests -p 'test_*.py'` OK（>137）；
-- 每个新 AAR：res 集合/字节与 AOSP 源树一致；direct 与 Maven AAR SHA-256 相同；
-- SettingsLib POM 含 30 条 dependency；子 POM 边与 bp 一致；
-- `:app:clean :app:processDebugResources` exit 0 且 `BUILD SUCCESSFUL`；
-  `not found` 资源错误计数为 0；
-- 其后运行 `:app:assembleDebug` 诊断并如实记录（成功则记录 APK 路径/大小/SHA-256；
-  失败则只记录首个失败任务与首批错误，不扩大范围）。
+### TDD 波次（tools）
+
+1. RED：`tools/tests/test_install_aar_to_maven.py` 新增 4 个用例（7 坐标注册、SettingsLib
+   POM 7 条 deps、闭包成员无 deps、`install_aar` deps 参数渲染 `<dependencies>` +
+   `install_all` 透传 + 骨架 POM 无 `<dependencies>`）；
+   `tools/tests/test_package_aosp_aar.py` 新增 `test_settingslib_closure_seven_target_configs`
+   + `TestSettingsLibPerTargetProvenance`（4 用例：res 逐字节溯源/keystone 资源/res-only/
+   重建字节一致）并把 CONFIGS 集合断言更新为 17。
+   焦点运行：11 个失败/错误，全部为缺少注册/deps 支持，无无关失败。
+2. GREEN：`tools/package_aosp_aar.py` CONFIGS 新增 7 个 res-only 配置（code=[]，
+   res/manifest 取各自 AOSP 子目录，rtxt 取 Soong `android_common/R.txt`）；
+   `tools/install_aar_to_maven.py` ARTIFACTS 新增 7 坐标 + SettingsLib `deps` 字段，
+   POM 模板支持可选 `<dependencies>` 渲染。
+   `python3 -m unittest discover -s tools/tests -p 'test_*.py'` → **Ran 148 tests, OK**
+   （基线 137 + 11 新增）。
+
+### 生成与安装
+
+```
+python3 tools/package_aosp_aar.py SettingsLib<Target>   # 逐个打包 7 个
+python3 tools/install_aar_to_maven.py SettingsLib SettingsLib<Target>...  # 重发 SettingsLib POM + 安装 7 个
+```
+
+产物（libs/aars/ + libs/maven/ 双份）：
+
+| Target | res 文件数 | AAR 字节 |
+|---|---|---|
+| SettingsLibSelectorWithWidgetPreference | 92 | 67343 |
+| SettingsLibRestrictedLockUtils | 87 | 73913 |
+| SettingsLibActionButtonsPreference | 15 | 12524 |
+| SettingsLibProgressBar | 10 | 9794 |
+| SettingsLibTwoTargetPreference | 7 | 7809 |
+| SettingsLibLayoutPreference | 6 | 6194 |
+| SettingsLibAdaptiveIcon | 3 | 2922 |
+
+文件数与 Task 016 调研结论逐一吻合（92/87/15/10/7/6/3）。
+
+### 溯源验证（Python/zipfile + hashlib 实测）
+
+- 7 个 AAR `res/**` 与 AOSP 对应子目录逐文件 byte-exact、文件集完全一致；
+- 7 组 direct AAR 与 Maven AAR SHA-256 相同；
+- `SettingsLib-1.0.0.pom` 含恰好 7 条 `<dependency>`（按 bp static_libs 顺序），无多余；
+- 7 个新 POM 均为骨架（无 `<dependencies>`）；AAR 字节未改（SettingsLib.aar 仅重发 POM）。
+
+### 接线
+
+- `gradle/libs.versions.toml` 仅新增 7 行固定 `1.0.0` alias（注册表登记，未被 build 文件引用）；
+- consumer 未新增依赖行：Task 013 的 `api(libs.systemui.settingslib.theme)` 与 Color 接线保持不变。
+
+### 资源链接验收（真实结果）
+
+```
+./gradlew :app:clean :app:processDebugResources --console=plain
+→ BUILD SUCCESSFUL in 25s（exit 0）
+```
+
+- `grep -c 'not found'` → **0**；`grep -c 'settingslib_switch_'` → **0**。
+
+### APK 诊断（assembleDebug，真实结果）
+
+```
+./gradlew :app:assembleDebug --console=plain
+→ BUILD SUCCESSFUL in 2m 46s（exit 0）
+```
+
+- **首个 SystemUI APK 产出**：`app/build/outputs/apk/debug/app-debug.apk`
+- 大小：158,775,460 bytes（约 151.5 MB）
+- SHA-256：`35c7e3f6881328a4e26c1ea3ddf6ae8f844ef5e1599f082ae1b70a87c0336e86`
+- javac 阶段仅 2 条 warning（SystemApi$Client 注解类缺失的 known warning + dep-ann），无 error。
+
+### 文档同步
+
+- CHARTER Part 3：「POM 是 dependency-free 骨架」→「默认骨架；SettingsLib 闭包例外（ADR 0005，7 条边）」；
+- AGENTS.md §3.2：同步同一事实性措辞（不改规则语义）。
+
+### 合规检查
+
+- 改动路径全部在 brief Allowed Paths 内；未触碰 SystemUI-*/src、res*、AOSP 树、
+  既有 AAR 字节、依赖版本、模块边界、consumer build 文件；
+- `git diff --check` 干净。
 
 ## 错误数演变
 
 | 检查点 | 结果 |
 |---|---|
 | Task 013 后 | switch 0；3 组子模块资源缺失（5 条 AAPT error） |
-| Task 015 后 | 待执行 |
+| Task 015 后（B2） | `:app:processDebugResources` BUILD SUCCESSFUL（not found 0 / switch 0）；`:app:assembleDebug` BUILD SUCCESSFUL，首个 APK 产出 |
+
+## 待解决问题
+
+- Task 017（AAR 依赖审计）：闭包外引用（WifiTrackerLibRes/iconloader/setupdesign）与其它 artifact 的接线审计，不在本任务范围；
+- 首个 APK 未经设备安装/运行验证（smali 完整性、R 类运行期引用等），后续需要真机/模拟器诊断；
+- Deferred Follow-ups 不变（Room schema 导出、Kotlin 2.3 data-class copy、manifest 重复权限、
+  评估移除 `android.disallowKotlinSourceSets=false`）。

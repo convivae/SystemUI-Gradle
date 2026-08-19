@@ -142,6 +142,58 @@ CONFIGS = {
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsTheme/SettingsLibSettingsTheme/android_common/R.txt",
         "output": "libs/aars/SettingsLibSettingsTheme.aar",
     },
+    # ↓↓↓ Task 015（B2 可达性最小集）：7 个 SettingsLib per-target res-only AAR。
+    # 代码类已由 SettingsLib.aar 的 static_libs javac 合并交付，这里只补各自 res；
+    # AAR 经 SettingsLib POM 传递依赖接线（ADR 0005），consumer 不新增依赖行。
+    "SettingsLibSelectorWithWidgetPreference": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/SelectorWithWidgetPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/SelectorWithWidgetPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SelectorWithWidgetPreference/SettingsLibSelectorWithWidgetPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibSelectorWithWidgetPreference.aar",
+    },
+    "SettingsLibRestrictedLockUtils": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/RestrictedLockUtils/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/RestrictedLockUtils/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/RestrictedLockUtils/SettingsLibRestrictedLockUtils/android_common/R.txt",
+        "output": "libs/aars/SettingsLibRestrictedLockUtils.aar",
+    },
+    "SettingsLibActionButtonsPreference": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/ActionButtonsPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/ActionButtonsPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/ActionButtonsPreference/SettingsLibActionButtonsPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibActionButtonsPreference.aar",
+    },
+    "SettingsLibProgressBar": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/ProgressBar/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/ProgressBar/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/ProgressBar/SettingsLibProgressBar/android_common/R.txt",
+        "output": "libs/aars/SettingsLibProgressBar.aar",
+    },
+    "SettingsLibTwoTargetPreference": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/TwoTargetPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/TwoTargetPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/TwoTargetPreference/SettingsLibTwoTargetPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibTwoTargetPreference.aar",
+    },
+    "SettingsLibLayoutPreference": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/LayoutPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/LayoutPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/LayoutPreference/SettingsLibLayoutPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibLayoutPreference.aar",
+    },
+    "SettingsLibAdaptiveIcon": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/AdaptiveIcon/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/AdaptiveIcon/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/AdaptiveIcon/SettingsLibAdaptiveIcon/android_common/R.txt",
+        "output": "libs/aars/SettingsLibAdaptiveIcon.aar",
+    },
     "setupcompat": {
         # external/setupcompat android_library（含 res；AOSP SettingsLib 经 setupdesign→setupcompat
         # 传递获得 compile classpath）。package com.google.android.setupcompat；

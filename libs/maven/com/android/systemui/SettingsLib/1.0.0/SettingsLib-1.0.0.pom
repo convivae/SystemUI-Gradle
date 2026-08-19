@@ -7,4 +7,41 @@
   <artifactId>SettingsLib</artifactId>
   <version>1.0.0</version>
   <packaging>aar</packaging>
+  <dependencies>
+    <dependency>
+      <groupId>com.android.systemui</groupId>
+      <artifactId>SettingsLibSelectorWithWidgetPreference</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.android.systemui</groupId>
+      <artifactId>SettingsLibRestrictedLockUtils</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.android.systemui</groupId>
+      <artifactId>SettingsLibActionButtonsPreference</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.android.systemui</groupId>
+      <artifactId>SettingsLibProgressBar</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.android.systemui</groupId>
+      <artifactId>SettingsLibTwoTargetPreference</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.android.systemui</groupId>
+      <artifactId>SettingsLibLayoutPreference</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.android.systemui</groupId>
+      <artifactId>SettingsLibAdaptiveIcon</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+  </dependencies>
 </project>

@@ -61,6 +61,64 @@ class InstallAarTest(unittest.TestCase):
             self.assertIn("<version>2.0.0</version>", text)
             self.assertIn("<packaging>aar</packaging>", text)
 
+    def test_pom_content_without_deps_has_no_dependencies_element(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            aar = tmp / "src" / "Baz.aar"
+            _make_test_aar(aar)
+            _, pom_dst = iam.install_aar(aar, "com.foo", "Baz", "1.0.0", tmp / "repo")
+            text = pom_dst.read_text()
+            self.assertNotIn("<dependencies>", text)
+            self.assertNotIn("<dependency>", text)
+
+    def test_pom_with_renders_dependencies(self):
+        """Task 015（ADR 0005）：deps 字段按声明顺序渲染 <dependencies>。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            aar = tmp / "src" / "With.aar"
+            _make_test_aar(aar)
+            _, pom_dst = iam.install_aar(
+                aar, "com.foo", "With", "1.0.0", tmp / "repo",
+                deps=[
+                    {"group": "g1", "name": "A", "version": "1.0.0"},
+                    {"group": "g2", "name": "B", "version": "2.0.0"},
+                ])
+            text = pom_dst.read_text()
+            self.assertIn("<packaging>aar</packaging>", text)
+            self.assertIn(
+                """  <dependencies>
+    <dependency>
+      <groupId>g1</groupId>
+      <artifactId>A</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>g2</groupId>
+      <artifactId>B</artifactId>
+      <version>2.0.0</version>
+    </dependency>
+  </dependencies>""",
+                text,
+            )
+
+    def test_install_all_passes_deps_through(self):
+        """install_all 从 ARTIFACTS 读取 deps 并写入 POM。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            src = tmp / "src"
+            _make_test_aar(src / "Parent.aar")
+            _make_test_aar(src / "Child.aar")
+            artifacts = {
+                "Parent": {"group": "g", "name": "Parent", "version": "1.0.0",
+                           "deps": [{"group": "g", "name": "Child", "version": "1.0.0"}]},
+                "Child": {"group": "g", "name": "Child", "version": "1.0.0"},
+            }
+            iam.install_all(src, tmp / "repo", artifacts)
+            parent_pom = (tmp / "repo" / "g" / "Parent" / "1.0.0" / "Parent-1.0.0.pom").read_text()
+            child_pom = (tmp / "repo" / "g" / "Child" / "1.0.0" / "Child-1.0.0.pom").read_text()
+            self.assertIn("<artifactId>Child</artifactId>", parent_pom)
+            self.assertNotIn("<dependencies>", child_pom)
+
     def test_install_overwrites_existing(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
@@ -82,6 +140,49 @@ class ArtifactRegistryTest(unittest.TestCase):
             iam.ARTIFACTS["SettingsLibSettingsTheme"],
             {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.0"},
         )
+
+    def test_settingslib_closure_seven_targets_coordinates(self):
+        """Task 015（B2）：7 个 per-target res-only AAR 固定坐标 com.android.systemui:<Target>:1.0.0。"""
+        expected = {
+            "SettingsLibSelectorWithWidgetPreference",
+            "SettingsLibRestrictedLockUtils",
+            "SettingsLibActionButtonsPreference",
+            "SettingsLibProgressBar",
+            "SettingsLibTwoTargetPreference",
+            "SettingsLibLayoutPreference",
+            "SettingsLibAdaptiveIcon",
+        }
+        for name in expected:
+            self.assertEqual(
+                iam.ARTIFACTS[name],
+                {"group": "com.android.systemui", "name": name, "version": "1.0.0"},
+            )
+
+    def test_settingslib_pom_carries_seven_closure_deps(self):
+        """Task 015（ADR 0005）：SettingsLib POM 依赖边机械镜像主 bp 的 7 个新增直接 static_libs。"""
+        deps = iam.ARTIFACTS["SettingsLib"].get("deps")
+        self.assertEqual(
+            deps,
+            [
+                {"group": "com.android.systemui", "name": "SettingsLibSelectorWithWidgetPreference", "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": "SettingsLibRestrictedLockUtils", "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": "SettingsLibActionButtonsPreference", "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": "SettingsLibProgressBar", "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": "SettingsLibTwoTargetPreference", "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": "SettingsLibLayoutPreference", "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": "SettingsLibAdaptiveIcon", "version": "1.0.0"},
+            ],
+        )
+
+    def test_closure_targets_have_no_deps(self):
+        """7 个新 target 自身 POM 保持骨架（无 deps 边）。"""
+        for name in [
+            "SettingsLibSelectorWithWidgetPreference", "SettingsLibRestrictedLockUtils",
+            "SettingsLibActionButtonsPreference", "SettingsLibProgressBar",
+            "SettingsLibTwoTargetPreference", "SettingsLibLayoutPreference",
+            "SettingsLibAdaptiveIcon", "SettingsLibSettingsTheme", "SettingsLibColor",
+        ]:
+            self.assertNotIn("deps", iam.ARTIFACTS[name], f"{name} 不应携带 deps")
 
 
 class InstallAllTest(unittest.TestCase):
