@@ -6,25 +6,24 @@
 ## Active Workers
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
-|------|-------|-----------|----------|-------|-------|
-| w3:p1 | w002 | `tasks/002-...` | wt-002 | **done, merged** | 2026-08-13 |
-| w6:p1 | w004 | `tasks/004-...` | wt-004 | **done, merged** | 2026-08-13 |
-| w7:p1 | w006 | `tasks/006-...` | wt-006 | **done, merged** | 2026-08-13 |
-| w4:p1 | w003 | `tasks/003-...` | wt-003 | **done, merged** | 2026-08-13 |
-| w5:p1 | w005 | `tasks/005-...` | wt-005 | **done, merged** | 2026-08-13 |
+|------|-------|------------|----------|-------|-------|
+| — | — | — | — | none | 2026-08-13 |
 
 ## Queue
 
-1. (empty)
+1. `tasks/012-preserve-androidprv-namespace.md` — approved; ready to dispatch.
 
 ## Done
 
-- 001-refresh-systemui-tags-jar → commit `8cc85f74`，review-pass，已 push
+- 001–011 merged and pushed.
+- Task 008: core javac milestone, 0 errors.
+- Tasks 010/010b: reproducible SysUISdk S0–S3+S5, strict verify 7/7 PASS.
+- Task 011: S4 framework-res overlay implemented and applied; 116 tests; Factor 1 fixed.
 
 ## Blocked
 
-(none)
+- `:app:processDebugResources`: Factor 2 — AGP MergeResources drops `xmlns:androidprv`; task 012 approved to repair at build-logic layer without source/res edits.
 
 ## Last Updated
 
-2026-08-13 — architect session (waves A+B merged and verified; awaiting user decisions on NeverCompile + featureFlag)
+2026-08-13 — task 012 plan/brief prepared after explicit user approval; dispatch pending.
