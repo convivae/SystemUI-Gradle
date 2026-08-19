@@ -51,6 +51,8 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 # Compose Compiler plugin — 必须与 Kotlin 编译器版本对齐 (Kotlin 2.x)
 # 没有它，Compose 的 inline metadata 不会被生成，导致 "Couldn't inline method call" 内部错误
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# Room Gradle Plugin — 官方 schema 导出/校验接线（替代手写 room.internal.* KSP 参数）
+androidx-room = { id = "androidx.room", version.ref = "androidxRoom" }
 
 [libraries]
 androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
