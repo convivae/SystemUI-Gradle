@@ -7,7 +7,7 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:p13 | w024g53 | `tasks/024-gradle-heap-16g.md` | wt-024 | dispatched (GLM 5.3, own tab) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
@@ -15,7 +15,8 @@
 2. Manifest duplicate-permission item closed (AOSP-inherent, merger dedupes, no fix allowed by rule C).
 3. Task 022 (merged): Room official Gradle plugin migration done; room.internal.* removed; 5 schemas byte-exact; APK builds.
 4. Task 023 (merged): experiment concluded — disallowKotlinSourceSets=false is REQUIRED (KSP config error without it); flag stays, documented.
-5. Task 024 (dispatched): heap 16G, default-config build verification (no CLI override).
+5. Task 024 (merged): heap now 16G; default-config assembleDebug SUCCESS (2m54s), no OOM; historical javac OOM point re-verified clean.
+6. Tasks 025 (assembleRelease verify+diagnose, no fixes) and 026 (official-Maven audit + trial replacements, report-only) dispatching next.
 6. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Item 10 approved (16G heap, task 024). Next: 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
