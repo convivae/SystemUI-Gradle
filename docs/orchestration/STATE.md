@@ -7,12 +7,11 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| pending | w016 | `tasks/016-settingslib-aar-consolidation-research.md` | wt-016 | dispatching | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
-1. Task 016: research consolidating the 30-AAR closure into fewer AARs (user: 30 is too many); user chose POM-transitive delivery (ADR 0005).
-2. Task 015: implement SettingsLib resource closure at the granularity the user picks after Task 016.
+1. Task 015: implement SettingsLib resource closure. Task 016 recommends B2: 7 new per-target AARs (link-closed reachability set: SelectorWithWidgetPreference, RestrictedLockUtils, ActionButtonsPreference, ProgressBar, TwoTargetPreference, LayoutPreference, AdaptiveIcon) via ADR 0005 POM transitive deps. Awaiting user decision.
 
 ## Done
 
@@ -30,4 +29,4 @@
 
 ## Last Updated
 
-2026-08-19 — user approved POM-transitive delivery (ADR 0005) but rejected 30 new AARs as too many; task 016 consolidation research dispatched.
+2026-08-19 — task 016 research merged: minimum conflict-free merge is 12 AARs (12-clique proven) with 39 dormant runtime bombs; reachability-closed B2 needs only 7 new AARs with compile-time fail-fast; R-only AARs unsafe (Q4). Awaiting user granularity decision.

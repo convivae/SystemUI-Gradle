@@ -70,3 +70,5 @@
 2026-08-19 17:46 | main | 014 | merge | task-014-research merged; architecture decision pending user
 2026-08-19 18:05 | main | 015 | user-decision | user chose POM-transitive delivery (ADR 0005) but rejected 30 new AARs as too many
 2026-08-19 18:06 | main | 016 | dispatch | consolidation research briefed; GLM-5.3 worker; read-only docs-only
+2026-08-19 19:20 | w2:pT | 016 | review-pass | 0d456c1b; 3 doc files; Q1 k=12 clique-proven; Q2 39 dormant/0 reachable; Q3 link-closed 10 targets=7 new AARs; Q4 R-only unsafe; recommend B2
+2026-08-19 19:21 | main | 016 | merge | task-016-research merged; B2 (7 new AARs) pending user approval
