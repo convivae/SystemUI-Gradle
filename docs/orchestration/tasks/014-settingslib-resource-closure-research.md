@@ -75,14 +75,20 @@ Expected: first command exits 0; second prints evidence headings; third prints n
 
 ## Checklist
 
-- [ ] CONTRACT printed and model verified by architect
-- [ ] reference-project mechanism identified with primary-source evidence
-- [ ] AOSP/Soong reusable artifact search completed and documented
-- [ ] duplicate-path behavior documented
-- [ ] quantitative closure audit included
-- [ ] three options compared and one recommended
-- [ ] migration/rollback implications for Task 013 documented
-- [ ] issue file updated with truthful execution record
-- [ ] `git diff --check` clean
-- [ ] English commit created; no push
-- [ ] terminal-final `HANDOFF:` printed
+- [x] CONTRACT printed and model verified by architect
+- [x] reference-project mechanism identified with primary-source evidence
+  (gen_aar_maven.py L50-56/L105-135 + AAR/POM 解包实测；详见 architecture 文档 §2)
+- [x] AOSP/Soong reusable artifact search completed and documented
+  (package-res.apk 只含自有 res、无 .aar、R.txt 按包独立；详见 §4.1)
+- [x] duplicate-path behavior documented
+  (参考项目 first-wins/拼接/正则去重；闭包 101 组路径冲突、仅 5 个同名资源；详见 §3/§4.2)
+- [x] quantitative closure audit included
+  (33 res targets / 1512 files / 599 unique paths / 101 duplicate groups；§4.2)
+- [x] three options compared and one recommended
+  (A/B/C 对比表 + 推荐 C；§5)
+- [x] migration/rollback implications for Task 013 documented
+  (C 为零迁移纯增量；A 推倒重来；B 需改 POM 语义；§5)
+- [x] issue file updated with truthful execution record
+- [x] `git diff --check` clean
+- [x] English commit created; no push
+- [x] terminal-final `HANDOFF:` printed
