@@ -49,3 +49,13 @@ experimental 警告）。用户 2026-08-19 授权做移除实验。
 ## Report
 
 完成后汇报：commit、结论（可移除/需保留）、关键输出、issue 更新、HANDOFF 块。
+
+## Outcome (2026-08-20)
+
+- [x] 实验完成。结论：**开关不可移除**（AGP 9.3.1 + KSP 2.2.10-2.0.2 + Gradle 9.5.0 下仍为必需）。
+- [x] 基线 `:SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin` → BUILD SUCCESSFUL in 3m 34s；experimental 警告确认存在（`> Configure project :app` 阶段）。
+- [x] 移除后 `:SystemUI-core:kspDebugKotlin :SystemUI-core:kspReleaseKotlin --rerun-tasks` → BUILD FAILED in 1s（配置阶段）；首条错误：`Using kotlin.sourceSets DSL to add Kotlin sources is not allowed with built-in Kotlin.`，AGP 自身给出的 solution 即重新设置 `android.disallowKotlinSourceSets=false`。
+- [x] `git checkout -- gradle.properties` 恢复，`git diff` 为空（与基线字节一致）。
+- [x] `python3 -m unittest discover -s tools/tests -p 'test_*.py'` → `Ran 148 tests in 34.116s / OK`（exit 0）。
+- [x] 详细记录：`docs/issues/2026-08-19-disallow-kotlin-sourcesets-experiment.md`。
+- 失败路径：仅文档 commit（gradle.properties 已恢复，无代码改动）。
