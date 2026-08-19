@@ -7,15 +7,16 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:pR | w013g53 | `tasks/013-settingslib-settings-theme-aar.md` | wt-013 | dispatched (GLM 5.3) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
-1. (empty)
+1. Task 014 candidate: package three real SettingsLib resource sub-targets (`ProgressBar`, `ActionButtonsPreference`, `TwoTargetPreference`) as separate res-only AARs; awaiting user approval.
 
 ## Done
 
-- 001–012 merged and pushed.
+- 001–013 merged and pushed.
+- Task 013: `SettingsLibSettingsTheme` res-only AAR is byte-identical to all 174 AOSP resources; switch drawable errors are 0; 137/137 tests pass.
 - Task 008: core javac milestone, 0 errors.
 - Tasks 010/010b: reproducible SysUISdk S0–S3+S5, strict verify 7/7 PASS.
 - Task 011: S4 framework-res overlay implemented and applied; Factor 1 fixed.
@@ -23,8 +24,8 @@
 
 ## Blocked
 
-- `:app:processDebugResources`: tracked SettingsLib AAR lacks AOSP SettingsTheme switch resources. User approved task 013; GLM-5.3 worker is packaging the real `SettingsLibSettingsTheme` Soong target as a separate res-only AAR.
+- `:app:processDebugResources`: Task 013 exposed 3 more SettingsLib static-lib resource gaps: `ProgressBar`, `ActionButtonsPreference`, and `TwoTargetPreference` (5 AAPT errors total). Packaging these dependency artifacts is a new red-line task awaiting user approval.
 
 ## Last Updated
 
-2026-08-19 — task 013 approved, planned, and dispatched to w013g53 in the correct SystemUI worktree with explicit GLM-5.3.
+2026-08-19 — task 013 reviewed and merged. Architect verified 137/137 tests, 174/174 byte-identical resources, identical direct/Maven AAR hashes, switch errors 0, and the next 3-resource-group AAPT layer. APK still not produced.
