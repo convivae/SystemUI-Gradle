@@ -79,6 +79,59 @@ kotlin {
     }
 }
 
+// Preserve xmlns:androidprv through the AGP resource pipeline (task 012).
+//
+// AGP 9.3.1 MergeResources reserializes merged values XML and drops the
+// xmlns:androidprv declaration (the prefix only occurs inside attribute
+// VALUES, so serializers consider it unused), leaving 81 androidprv:
+// references unresolvable at AAPT2 link time. AGP 9.3.1 exposes no public
+// transformable merged-resource artifact (SingleArtifact has no MERGED_RES;
+// MultipleArtifact only exposes multidex/native-debug-metadata/symbol-tables/
+// pre-compilation-classes — audited 2026-08-13, see
+// docs/architecture/2026-08-13-agp-androidprv-namespace-fix.md), so the
+// smallest build-only repair is a narrowly ordered post-merge/pre-link task:
+// it patches TEMPORARY copies of the affected merged values XML, recompiles
+// them with AGP's own aapt2 (sdkComponents.aapt2), and atomically replaces
+// only the matching .arsc.flat intermediates. AOSP source resources and the
+// merger's own XML are never modified. The task deliberately does NOT claim
+// ownership of AGP's output directories.
+androidComponents {
+    onVariants { variant ->
+        val cap = variant.name.replaceFirstChar { it.uppercase() }
+        val mergeTaskName = "merge${cap}Resources"
+        val processTaskName = "process${cap}Resources"
+        val patchTaskName = "patch${cap}AndroidPrvMergedResources"
+        // AGP-internal intermediate layout (audited on this AGP version):
+        //   intermediates/incremental/<variant>/merge<Variant>Resources/merged.dir (merger XML)
+        //   intermediates/merged_res/<variant>/merge<Variant>Resources           (compiled flats)
+        val mergedDir = layout.buildDirectory.dir(
+            "intermediates/incremental/${variant.name}/$mergeTaskName/merged.dir")
+        val compiledDir = layout.buildDirectory.dir(
+            "intermediates/merged_res/${variant.name}/$mergeTaskName")
+        val aapt2Provider = sdkComponents.aapt2
+        val patchScript = "$rootDir/tools/patch_androidprv_merged_resources.py"
+
+        val patchTask = tasks.register<Exec>(patchTaskName) {
+            group = "Resource Repair"
+            description =
+                "Re-inject xmlns:androidprv into merged values flats ($cap)"
+            dependsOn(mergeTaskName)
+            // Providers are resolved at execution time; Exec reads the
+            // command line in its task action, after doFirst has run.
+            doFirst {
+                commandLine(
+                    "python3", patchScript,
+                    "--merged-dir", mergedDir.get().asFile.absolutePath,
+                    "--compiled-dir", compiledDir.get().asFile.absolutePath,
+                    "--aapt2", aapt2Provider.get().executable.get().asFile.absolutePath,
+                )
+            }
+        }
+        tasks.matching { it.name == processTaskName }
+            .configureEach { dependsOn(patchTask) }
+    }
+}
+
 // AOSP bp static_libs: ["SystemUI-core"]
 // Only direct dep on :SystemUI-core; transitive submodules (shared/animation/
 // customization/common/log/unfold/plugin/plugin-core) are pulled in by core's

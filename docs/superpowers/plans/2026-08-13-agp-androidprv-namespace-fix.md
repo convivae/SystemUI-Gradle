@@ -41,19 +41,19 @@
 - Consumes: overlaid live SysUISdk from task 011; `/tmp/task011.log`; AGP 9.3.1 `gradle-api` and plugin jars.
 - Produces: an evidence-backed verdict on public artifact-transform support and the exact fallback task ordering.
 
-- [ ] **Step 1: Reproduce the baseline**
+- [x] **Step 1: Reproduce the baseline**
 
 Run `./gradlew :app:processDebugResources --console=plain` and record `BUILD FAILED`, the failing task, and the `androidprv` count (expected 20 before the fix).
 
-- [ ] **Step 2: Audit the public API**
+- [x] **Step 2: Audit the public API**
 
 Inspect AGP 9.3.1's public `SingleArtifact`, `MultipleArtifact`, `Artifacts`, and `SdkComponents` APIs with `javap`. Record whether a transformable merged-resource artifact exists. `SdkComponents.aapt2.executable` is known public API and must be used by the fallback.
 
-- [ ] **Step 3: Test one hypothesis manually**
+- [x] **Step 3: Test one hypothesis manually**
 
 On disposable build intermediates only, inject `xmlns:androidprv="http://schemas.android.com/apk/prv/res/android"` into temporary copies of all merged values XML files containing `androidprv:`, compile them with the AGP-selected AAPT2, replace the matching temporary flat outputs, and retry link. Revert by cleaning `app` outputs. If the hypothesis fails, stop and return to root-cause investigation; do not layer another workaround.
 
-- [ ] **Step 4: Document the chosen mechanism**
+- [x] **Step 4: Document the chosen mechanism**
 
 Prefer a public artifact transform if available. Otherwise document why the fallback is required: AGP 9.3.1 has no public merged-resource transform, so a narrowly ordered post-merge/pre-link recompilation is the smallest build-only fix.
 
@@ -67,19 +67,19 @@ Prefer a public artifact transform if available. Otherwise document why the fall
 - CLI consumes `--merged-dir`, `--compiled-dir`, and `--aapt2`.
 - CLI produces a summary `scanned=<n> patched=<n> compiled=<n> unresolved=0`; exits non-zero for missing inputs, zero patch candidates, duplicate namespace declarations, compile failures, or missing expected flat outputs.
 
-- [ ] **Step 1: Write failing fixture tests**
+- [x] **Step 1: Write failing fixture tests**
 
 Cover: root namespace injection; existing declaration remains single; only files containing `androidprv:` are selected; `values[-qualifier]/name.xml` maps to AAPT2's generated flat filename; missing directories fail; zero candidates fail; second run is deterministic/idempotent.
 
-- [ ] **Step 2: Run the new test module and confirm RED**
+- [x] **Step 2: Run the new test module and confirm RED**
 
 Run `python3 -m unittest tools.tests.test_patch_androidprv_merged_resources -v`. Expected: failure because the production module/API does not yet exist.
 
-- [ ] **Step 3: Implement the minimal helper**
+- [x] **Step 3: Implement the minimal helper**
 
 Patch a temporary copy, never the source or AGP merged XML. Invoke AAPT2 once per selected values file with the flags proven by Task 1. Atomically replace only the matching files under `compiled-dir`.
 
-- [ ] **Step 4: Run GREEN and full tests**
+- [x] **Step 4: Run GREEN and full tests**
 
 Run the new module, then `python3 -m unittest discover -s tools/tests -p 'test_*.py'`. Expected: all pass, total greater than 116.
 
@@ -94,18 +94,45 @@ Run the new module, then `python3 -m unittest discover -s tools/tests -p 'test_*
 - Consumes: helper CLI and `androidComponents.sdkComponents.aapt2`.
 - Produces: per-variant ordering `merge<Variant>Resources → patch<Variant>AndroidPrvMergedResources → process<Variant>Resources`.
 
-- [ ] **Step 1: Add minimal Gradle wiring**
+- [x] **Step 1: Add minimal Gradle wiring**
 
 Register one task per app variant, pass the variant-specific merged XML and compiled-flat directories plus the public AAPT2 provider, and enforce dependency ordering. Do not claim ownership of AGP's output directory; the patch task is intentionally a narrow intermediate repair.
 
-- [ ] **Step 2: Verify from clean app outputs**
+- [x] **Step 2: Verify from clean app outputs**
 
 Run `./gradlew :app:clean :app:processDebugResources --console=plain 2>&1 | tee /tmp/task012.log`. Expected: `BUILD SUCCESSFUL`, helper summary with `unresolved=0`, and `grep -c androidprv /tmp/task012.log` equals 0.
 
-- [ ] **Step 3: Run APK diagnostics**
+- [x] **Step 3: Run APK diagnostics**
 
 Run `./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/task012-app.log`. If successful, record APK path, byte size, and SHA-256. If a new layer fails, record its task and first errors and stop; do not widen scope.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit only the File Map paths with an English message; never push.
+
+---
+
+## Completion evidence (task-012, 2026-08-19)
+
+- Step 1 (baseline): `BUILD FAILED in 18s`, `grep -c androidprv` → **20**.
+- Step 2 (audit): no `MERGED_RES` in `SingleArtifact`/`MultipleArtifact`
+  (AGP 9.3.1 `gradle-api` jar, javap); `SdkComponents.aapt2 → Provider<Aapt2>`
+  public → fallback required and used.
+- Step 3 (hypothesis): temp-copy patch + AGP-aapt2 recompile + flat replace →
+  all 20 androidprv errors gone (isolated retry; `-x :app:mergeDebugResources`
+  used once because an external flat replacement makes merge out-of-date and
+  Gradle would otherwise overwrite the patched flats before link — this is why
+  the production fix must be a mid-build task).
+- Task 2: RED confirmed (`ModuleNotFoundError`, 1 error) → implementation →
+  module 15/15 OK; full suite `Ran 131 tests … OK` (was 116).
+- Task 3 Step 2 (clean acceptance): `scanned=419 patched=8 compiled=8
+  unresolved=0`, `grep -c androidprv` → **0**. `BUILD FAILED` remains on a
+  **pre-existing masked layer**: `drawable/settingslib_switch_{track,thumb}`
+  referenced at values.xml:15398-15399 (past the highest baseline error line
+  14385) but absent from the tracked SettingsLib AAR (they live in AOSP
+  `SettingsLib/SettingsTheme/res/drawable-v31/`). Escalated REDLINE — fixing
+  requires re-packaging the SettingsLib dependency artifact, outside Allowed
+  Paths. See `docs/architecture/2026-08-13-agp-androidprv-namespace-fix.md` §5.
+- Task 3 Step 3 (APK diagnostics): `:app:assembleDebug` → `BUILD FAILED` at
+  the same settingslib layer; no APK produced.
+- Task 3 Step 4: English commit on `task-012`; not pushed.
