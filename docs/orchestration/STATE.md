@@ -7,11 +7,11 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| — | — | — | — | — | — |
+| w2:pS | w014g53 | `tasks/014-settingslib-resource-closure-research.md` | wt-014 | dispatched (GLM 5.3) | 2026-08-19 |
 
 ## Queue
 
-1. Task 014 candidate: design and implement the complete SettingsLib direct/transitive resource closure. Post-Task-013 audit found 29 direct `SettingsLib` static-lib targets with `resource_dirs`; awaiting user approval for the architecture decision (per-target res-only AARs plus transitive POM vs explicit consumer dependencies).
+1. Task 015 candidate: implement the SettingsLib resource-closure architecture after Task 014 research is reviewed and the user chooses the design.
 
 ## Done
 
@@ -24,8 +24,8 @@
 
 ## Blocked
 
-- `:app:processDebugResources`: Task 013 exposed the first 3 SettingsLib static-lib resource gaps: `ProgressBar`, `ActionButtonsPreference`, and `TwoTargetPreference` (5 AAPT errors total). Architect audit found 29 direct resource-owning sub-targets, so the next step must address/justify the full resource closure rather than silently stopping after the first linker-visible three; awaiting user approval.
+- `:app:processDebugResources`: Task 013 exposed the first 3 SettingsLib static-lib resource gaps (`ProgressBar`, `ActionButtonsPreference`, `TwoTargetPreference`). Task 014 research is investigating the reference project and AOSP/Soong primary sources before the user chooses the implementation architecture.
 
 ## Last Updated
 
-2026-08-19 — task 013 reviewed, merged, and pushed. Architect verified 137/137 tests, 174/174 byte-identical resources, identical direct/Maven AAR hashes, switch errors 0, and the next 3-resource-group AAPT layer; follow-up audit found 29 direct resource-owning SettingsLib targets. APK still not produced.
+2026-08-19 — task 014 research dispatched to w014g53 in the correct SystemUI worktree with explicit GLM-5.3; read-only docs-only scope.

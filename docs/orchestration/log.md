@@ -65,3 +65,4 @@
 2026-08-19 12:59 | w2:pR | 013 | review-pass | e2b3797e; 12 Allowed-Path files; 137/137 tests; 174/174 AOSP res byte-identical; AAR hashes equal; switch errors 0; next layer 3 SettingsLib sub-target res groups
 2026-08-19 13:01 | main | 013 | merge | task-013 merged; SettingsLibSettingsTheme artifact tracked; processDebugResources now blocked by ProgressBar/ActionButtonsPreference/TwoTargetPreference resources
 2026-08-19 13:09 | main | 014 | audit | SettingsLib direct static_libs contain 29 resource-owning targets; recommend full per-target resource closure design instead of only fixing the first 3 linker-visible groups; awaiting user approval
+2026-08-19 17:10 | w2:pS | 014 | dispatch | user requested reference-project research; w014g53 in correct SystemUI wt-014 with explicit joycode/GLM-5.3; docs-only read-only scope
