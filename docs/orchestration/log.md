@@ -68,3 +68,5 @@
 2026-08-19 17:10 | w2:pS | 014 | dispatch | user requested reference-project research; w014g53 in correct SystemUI wt-014 with explicit joycode/GLM-5.3; docs-only read-only scope
 2026-08-19 17:45 | w2:pS | 014 | review-pass | 637cad9c; 3 doc files only; reference=monolithic AAR via content rewrite+v31 deletion (rule-R violation); Soong has no merged artifact; closure 33 targets/1512 files/101 dup-path groups; latent child-R runtime defect; Option C recommended
 2026-08-19 17:46 | main | 014 | merge | task-014-research merged; architecture decision pending user
+2026-08-19 18:05 | main | 015 | user-decision | user chose POM-transitive delivery (ADR 0005) but rejected 30 new AARs as too many
+2026-08-19 18:06 | main | 016 | dispatch | consolidation research briefed; GLM-5.3 worker; read-only docs-only

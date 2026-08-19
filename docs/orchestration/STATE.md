@@ -7,11 +7,12 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| — | — | — | — | — | — |
+| pending | w016 | `tasks/016-settingslib-aar-consolidation-research.md` | wt-016 | dispatching | 2026-08-19 |
 
 ## Queue
 
-1. Task 015 candidate: implement the SettingsLib resource-closure architecture. Task 014 research recommends Option C (~30 per-target res-only AARs, explicit consumer deps); monolithic merged AAR (Option A) is rule-R non-compliant per reference-project evidence. Awaiting user decision.
+1. Task 016: research consolidating the 30-AAR closure into fewer AARs (user: 30 is too many); user chose POM-transitive delivery (ADR 0005).
+2. Task 015: implement SettingsLib resource closure at the granularity the user picks after Task 016.
 
 ## Done
 
@@ -29,4 +30,4 @@
 
 ## Last Updated
 
-2026-08-19 — task 014 research reviewed, merged, and pushed. Key findings: reference project merges all res into one AAR via content rewriting + v31 deletion (rule-R non-compliant); Soong has no reusable merged artifact; Option C (per-target res-only AARs, explicit consumer deps) recommended; latent child-R-class runtime defect discovered.
+2026-08-19 — user approved POM-transitive delivery (ADR 0005) but rejected 30 new AARs as too many; task 016 consolidation research dispatched.
