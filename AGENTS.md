@@ -86,6 +86,9 @@
 
 - 判定 ①：看 soong 模块定义是否位于 `frameworks/base/packages/SystemUI/**/Android.bp`
 - 判定 ②/③：能在 Google Maven / Maven Central 找到且未被 AOSP fork → ③ 官方坐标；否则 → ② AOSP jar/aar
+- **显式优先级（用户 2026-08-19 强调）**：**官方 Maven 坐标 > 本地 jar > 本地 Maven AAR**。
+  凡有官方坐标可用的一律用官方（经 `libs.versions.toml` catalog 管理）；存量 jar/AAR 要定期回查
+  是否已有官方等价物（首次全量审计：Task 026），不得因“当时没有”而永久留在本地形态。
 - **Maven 是仓库/交付渠道，不是第四种产物形式**：
   - `libs/maven/` = 本项目的**本地 AAR 仓库**，仓内应是 AAR + POM；
   - `google()` / `mavenCentral()` = 上游第三方库的公网获取渠道。
