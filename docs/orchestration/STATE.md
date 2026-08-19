@@ -7,16 +7,13 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:pY | w019g53 | `tasks/019-small-cleanups.md` | wt-019 | dispatched (GLM 5.3, own tab) | 2026-08-19 |
-| w2:pZ | w020g53 | `tasks/020-room-schema-export.md` | wt-020 | dispatched (GLM 5.3, own tab) | 2026-08-19 |
-| w2:p0 | w021g52 | `tasks/021-kotlin-23-unlock-check.md` | wt-021 | dispatched (GLM 5.2, own tab) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
-1. Task 019 (dispatched): docstring fix + legacy .sh removal + AGENTS.md libs/maven tree sync.
-2. Task 020 (dispatched, user approved): Room schemaLocation + 5 AOSP schema JSONs to repo-root schemas/ (asset_dirs semantics are tests-only in AOSP, skipped).
-3. Task 021 (dispatched, user approved): read-only re-poll of AGP/Kotlin/Compose maven metadata for Kotlin 2.3 unlock.
-4. Device/runtime verification of the first APK still open.
+1. Tasks 019/020/021 merged: small cleanups done (docstring, .sh removed, libs tree synced); Room schema export live (repo-root schemas/, 5 AOSP JSONs byte-exact); Kotlin 2.3 still blocked upstream (AGP 9.5.0-alpha01 still embeds 2.2.10; recheck triggers documented).
+2. Manifest duplicate-permission item closed (AOSP-inherent, merger dedupes, no fix allowed by rule C).
+3. Next grill items: 8 (disallowKotlinSourceSets experiment), 9 (SystemUI-plugin Compose plugin), 10 (heap), 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
 
@@ -36,4 +33,4 @@
 
 ## Last Updated
 
-2026-08-19 — **APK MILESTONE** (task 015). Task 017 audit + task 018 cleanup merged: SystemUISharedLib orphan AAR, maven flags jar, 3 deprecated tools deleted; 148/148 tests, compile 0 errors pre/post.
+2026-08-19 — **APK MILESTONE** (task 015). Tasks 017/018 audit+cleanup merged. 019/020/021 merged: cleanups, Room schema export, Kotlin-2.3-blocked confirmation.

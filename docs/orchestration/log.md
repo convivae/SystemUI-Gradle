@@ -85,3 +85,6 @@
 2026-08-19 22:10 | w2:pY | 019 | dispatch | small cleanups (docstring, legacy .sh, AGENTS libs tree); GLM-5.3 own tab; note: extract_prebuilts.sh reported by w018 no longer exists
 2026-08-19 22:25 | w2:pZ | 020 | dispatch | Room schema export approved by user; key fact: AOSP asset_dirs schemas = tests-base only, not prod APK
 2026-08-19 22:40 | w2:p0 | 021 | dispatch | Kotlin 2.3 unlock re-check (read-only maven metadata); GLM-5.2 own tab
+2026-08-19 23:00 | w2:pY | 019 | review-pass+merge | docstring fix; .sh deleted after .py-superset proof; AGENTS.md libs tree synced; 148/148
+2026-08-19 23:00 | w2:pZ | 020 | review-pass+merge | Room schemaLocation + internal.schemaInput (Room 2.8.4 KSP2 requirement, documented); 5 JSONs byte-exact; kspDebugKotlin SUCCESS
+2026-08-19 23:01 | w2:p0 | 021 | review-pass+merge | Kotlin 2.3 still blocked (AGP 9.5.0-alpha01 embeds 2.2.10); architect re-verified POM via curl; recheck triggers documented
