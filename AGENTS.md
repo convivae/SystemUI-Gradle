@@ -512,6 +512,7 @@ javap -p <ClassName>
 - **commit message 用英文**，及时 commit 并 push (用户 2026-08-12 明确)
 - **不用 `@Suppress("DEPRECATION")` 等绕过语法** (用户 2026-08-12 明确)
 - **遇到不会的内容去查官方文档** (用户 2026-08-12 明确)
+- **派发 herdr worker 时一个 worker 一个独立 tab**，不做同 tab split (用户 2026-08-19 明确)
 
 ---
 
