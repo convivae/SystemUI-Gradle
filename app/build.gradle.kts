@@ -46,16 +46,21 @@ android {
             // tools/install_keystore.sh.
             signingConfig = signingConfigs.getByName("release")
             // AOSP bp: optimize.proguard_flags_files: ["proguard.flags"]
+            // SystemUI-plugin-core 是 JVM library（无 AGP consumer DSL），其 AOSP
+            // plugin_core/proguard.flags（export_proguard_flags_files: true）由 app
+            // 直接接入（Task 029 R3；规则文件归 module 所有，不改模块类型）。
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard.flags"
+                "proguard.flags",
+                rootProject.file("SystemUI-plugin-core/proguard.flags")
             )
         }
         release {
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard.flags"
+                "proguard.flags",
+                rootProject.file("SystemUI-plugin-core/proguard.flags")
             )
         }
     }
