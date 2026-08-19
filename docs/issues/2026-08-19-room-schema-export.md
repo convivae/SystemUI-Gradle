@@ -82,3 +82,48 @@ Task 020 用手写 `room.internal.schemaInput` 解决导出（Room 2.8.4 + KSP2 
 `room.schemaLocation` 单独不生效的机制发现）。用户 2026-08-19 批准迁移到官方
 Room Gradle Plugin（`alias(libs.plugins.androidx.room)` +
 `room { schemaDirectory(...) }`），删除内部参数；catalog 管理版本，不动 settings。
+
+### 迁移结果（2026-08-19 实施）
+
+**改动**（commit `d152837f`）：
+
+- `gradle/libs.versions.toml` `[plugins]` 新增
+  `androidx-room = { id = "androidx.room", version.ref = "androidxRoom" }`
+  （复用 2.8.4，无版本漂移）；
+- `SystemUI-core/build.gradle.kts`：plugins 块加 `alias(libs.plugins.androidx.room)`，
+  删除 Task 020 手写 `ksp { arg("room.schemaLocation"...); arg("room.internal.schemaInput"...) }`
+  块，替换为 `room { schemaDirectory(rootProject.file("schemas").absolutePath) }`。
+
+**官方插件实际接线**（观察到的真实任务）：
+
+- `:SystemUI-core:copyRoomSchemas`（NO-SOURCE：schemas 目录无待拷贝产物）；
+- `:SystemUI-core:copyRoomSchemasToAndroidTestAssetsDebugAndroidTest`（测试 assets 接线，本项目未构建测试模块）；
+- 插件在 `SystemUI-core/build/intermediates/room/schemas/ksp{Debug,Release}Kotlin/`
+  创建了 KSP schema 输出目录——即 Task 020 机制分析中缺失的
+  INTERNAL_SCHEMA_INPUT/OUTPUT 现由插件自动设置。
+
+**验收**（均为真实输出）：
+
+| 检查 | 命令 | 结果 |
+|------|------|------|
+| 工具测试 | `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | Ran 148 tests, OK |
+| KSP debug | `./gradlew :SystemUI-core:kspDebugKotlin` | BUILD SUCCESSFUL（首次运行递到 KSP worker `Java heap space`，重试同命令 41s 成功——瞬态内存问题，与本次改动无关；成功运行可见 `copyRoomSchemas NO-SOURCE`） |
+| KSP release | `./gradlew :SystemUI-core:kspReleaseKotlin` | BUILD SUCCESSFUL |
+| APK | `./gradlew :app:assembleDebug` | BUILD SUCCESSFUL in 1m 29s（216 tasks） |
+| 内部参数清除 | `git grep -n "room.internal" -- '*.gradle.kts'` | 无匹配（exit 1） |
+| Room 任务 | `./gradlew :SystemUI-core:tasks --all \| grep -i room` | `copyRoomSchemas`、`copyRoomSchemasToAndroidTestAssetsDebugAndroidTest` |
+
+**迁移前后 schemas SHA-256 全部一致**（Room 读取现有 AOSP JSON 判定结构一致，未重写）：
+
+| 文件 | SHA-256（迁移前 = 迁移后） |
+|------|----------------------------|
+| 1.json | `12343af8edbef5b7de48b3da29a1f9361c47d0126640170b322720c7e2780161` |
+| 2.json | `e282295ac5e23f39e33704ff305a3ea42b94c2f09c26f5f81488afac6f8c74ed` |
+| 3.json | `5733222974b82a7720e973e97a8284ecfb6a16df94c0a4bbf769752b552dfb51` |
+| 4.json | `6921f00836b7daece81c0ce8cfdbe641ba2be98d2ef89e75a0c64d37d0f9a9cc` |
+| 5.json | `c82f260a287c1707fec1f944c255b719b155d269d887ac38c201043aba34d466` |
+
+### 遗留更新
+
+- §5 首条遗留（“升级 Room 或引入官方插件时应移除内部参数”）已由本迁移解决；
+  `room.internal.*` 内部参数不再存在于任何 `*.gradle.kts`。

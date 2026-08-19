@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.androidx.room)
     id("com.google.devtools.ksp")
 }
 
@@ -329,16 +330,11 @@ tasks.matching { it.name == "kspDebugKotlin" }.configureEach { dependsOn("compil
 tasks.matching { it.name == "kspReleaseKotlin" }.configureEach { dependsOn("compileReleaseAidl") }
 
 // Room schema 导出（对齐 AOSP Android.bp 的 -Aroom.schemaLocation=.../schemas）：
-// 历史版本 JSON（CommunalDatabase v1–v5）自 AOSP byte-exact 复制于仓库根 schemas/，// Room 编译期据此校验迁移链（DB v6+ AutoMigration 依赖）。
-//
-// 注意：Room 2.8.4 + KSP2 下仅传 room.schemaLocation 不会导出——RoomKspProcessor 的导出路径
-// 要求 INTERNAL_SCHEMA_INPUT_FOLDER（room.internal.schemaInput）非空（正常由 Room Gradle Plugin
-// id "androidx.room" 设置；本项目未引入该插件，见 docs/issues/2026-08-19-room-schema-export.md）。
-// 故这里同时传两个参数，均指向仓库根 schemas/：Room 读取现有 <db>/<version>.json 做 isSchemaEqual
-// 结构比对，仅当结构变化时才重写（结构一致则保持 AOSP byte-exact 不动）。
-// room.internal.schemaInput/Output 是 Room 内部参数，升级 Room 时需复核。
-ksp {
-    arg("room.schemaLocation", rootProject.file("schemas").absolutePath)
-    arg("room.internal.schemaInput", rootProject.file("schemas").absolutePath)
+// 历史版本 JSON（CommunalDatabase v1–v5）自 AOSP byte-exact 复制于仓库根 schemas/，
+// Room 编译期据此校验迁移链（DB v6+ AutoMigration 依赖）。
+// 官方 Room Gradle Plugin 负责设置 schema 输入/输出参数并接线校验任务；
+// 早期手写 KSP 内部参数的迁移记录见 docs/issues/2026-08-19-room-schema-export.md。
+room {
+    schemaDirectory(rootProject.file("schemas").absolutePath)
 }
 
