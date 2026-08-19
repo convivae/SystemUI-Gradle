@@ -131,13 +131,10 @@ errorprone-annotations = { module = "com.google.errorprone:error_prone_annotatio
 lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 
-# Local Maven AARs (SystemUI modules)
-systemui-sharedlib = { group = "com.android.systemui", name = "SystemUISharedLib", version = "1.0.0" }
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "androidxLifecycle" }
 
 # Local Maven jars for AOSP internal Flags classes
 android-server-notification-flags = { group = "com.android.server", name = "notification-flags", version = "1.0.0" }
-android-systemui-flags = { group = "com.android.systemui.flags", name = "flags", version = "1.0.0" }
 # Local Maven AARs (libs/maven/)：由 tools/package_aosp_aar.py 生成到 libs/aars/，
 # 再由 tools/install_aar_to_maven.py 安装到 libs/maven/ 并生成 POM 骨架
 systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "1.0.0" }

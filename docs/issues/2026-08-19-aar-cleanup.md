@@ -34,4 +34,40 @@ Task 017 审查（`docs/architecture/2026-08-19-aar-dependency-audit.md`）结�
 
 ## 结果
 
-待填。
+执行日期：2026-08-19（worker 018）。
+
+### 删除项
+
+- `libs/maven/com/android/systemui/SystemUISharedLib/`（AAR+POM，孤儿坐标，无任何 build 引用）
+- `libs/maven/com/android/systemui/flags/flags/1.0.0/`（jar+POM；`libs/systemui-flags.jar` 顶层 jar 保留不动）
+- `tools/gen_aar_maven.py`、`tools/rebuild_settingslib_aar.py`、`tools/clean_aar_maven.py`
+- `gradle/libs.versions.toml`：删 `systemui-sharedlib`、`android-systemui-flags` 两行 alias
+  （连带删除悬空的重复段落头 `# Local Maven AARs (SystemUI modules)`；`androidx-lifecycle-service` 本属公网坐标，原分组即误置）
+
+### 文档同步
+
+- `AGENTS.md` §3.2 maven 树：删 SystemUISharedLib 行与 `com.android.systemui.flags/` 子树，`animationlib` 改为末枝 `└──`
+- `AGENTS.md` §1.4：删 `gen_aar_maven.py` 废弃描述（对应条目同步）
+- `AGENTS.md` §7 tools 表：3 个脚本本就不在表中，无需改动
+- ~~`tools/install_aar_maven.py` docstring 删与 gen_aar_maven.py 的对比段~~：**已回退**（架构师 2026-08-19 范围纠正：该文件不在 Allowed Paths）；残留引用作为发现上报，见下
+
+### 发现（超出 brief 范围，仅上报不处理）
+
+- `tools/install_aar_to_maven.py` docstring（L13–14）仍提及已删的 `gen_aar_maven.py`（
+  “与 gen_aar_maven.py 的区别：gen_aar_maven.py 把 R.jar 错误合并进 classes.jar（已废弃的失败实验）”）。
+  导致验收 grep 在该文件残留 2 行匹配。建议下个 brief 授权后清理。
+- 根目录存在 `scripts/extract_prebuilts.sh`（.sh，违反 ADR 0002 的历史遗留）与 `scripts/scaffold_aosp_modules.py`，均在 brief 范围外，仅报告不处理。
+
+### 验证（真实输出）
+
+| 检查 | 删除前基线 | 删除后 | 结论 |
+|------|-----------|--------|------|
+| `python3 -m unittest discover -s tools/tests -p 'test_*.py'` | Ran 148 tests / OK | Ran 148 tests / OK | 无回归（无测试引用被删脚本，tools/tests/ 未改） |
+| `./gradlew :SystemUI-core:compileDebugKotlin :SystemUI-core:compileDebugJavaWithJavac` | BUILD SUCCESSFUL（0 错误） | BUILD SUCCESSFUL in 47s（0 错误） | SystemUISharedLib Maven AAR 未独占任何编译所需类 |
+| issue grep `git grep -n "sharedlib\|android-systemui-flags\|systemui.flags:flags\|gen_aar_maven\|rebuild_settingslib_aar\|clean_aar_maven" -- ':!docs/'` | — | 仅余 `tools/install_aar_to_maven.py` L13–14 docstring 提及已删脚本（范围纠正后回退未改，见“发现”） | 其余无残留 |
+| brief grep `git grep -n "SystemUISharedLib\|systemui-sharedlib\|..." -- ':!docs/' ':!libs/maven/com/android/server'` | — | 仅余 AOSP Soong 源码模块名 `SystemUISharedLib`（Android.bp / :SystemUI-shared build 文件 / check_source_alignment / scaffold 脚本），均指源码模块而非已删 Maven 产物，须保留（规则 S/B） | 无残留 |
+| `git diff --check`（含 --cached） | — | 干净 | — |
+
+### 备注
+
+- 本次未运行 `:app:assembleDebug`（不在验收范围；SettingsLib switch drawable 阻塞另行跟踪）。
