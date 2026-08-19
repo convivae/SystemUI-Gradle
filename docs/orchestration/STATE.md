@@ -16,7 +16,7 @@
 2. Manifest duplicate-permission item closed (AOSP-inherent, merger dedupes, no fix allowed by rule C).
 3. Task 022 (dispatched, user approved): Room official Gradle plugin migration (remove room.internal.* args).
 4. Task 023 (dispatched, user approved): disallowKotlinSourceSets removal experiment.
-5. Next grill items: 9 (SystemUI-plugin Compose plugin), 10 (heap), 11 (assembleRelease). Device/runtime verification of APK still open.
+5. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Next: 10 (heap), 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
 
