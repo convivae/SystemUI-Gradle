@@ -110,10 +110,18 @@ Task 014 已证子模块字节码以 `getstatic` 引用**子包** R（如
 
 ## Acceptance
 
-- `test -s docs/architecture/2026-08-19-settingslib-aar-consolidation-research.md`
-- `rg -n "Q1|Q2|Q3|Q4|Q5|Recommendation|byte-exact|namespace" docs/architecture/2026-08-19-settingslib-aar-consolidation-research.md`
+- [x] `test -s docs/architecture/2026-08-19-settingslib-aar-consolidation-research.md`
+- [x] `rg -n "Q1|Q2|Q3|Q4|Q5|Recommendation|byte-exact|namespace" docs/architecture/2026-08-19-settingslib-aar-consolidation-research.md`
   有实质性命中
-- `git diff --check` 干净；只改 Allowed Paths；英文 commit；**不 push**
+- [x] `git diff --check` 干净；只改 Allowed Paths；英文 commit；**不 push**
+
+## Required Findings checklist
+
+- [x] Q1 最小无冲突分组（定量）：k=12，精确算法 + 12-clique 最优性证明；约束版同为 12；灰区变体不降反…（保持 12，条目重叠）
+- [x] Q2 塔缩运行期实证：74 直接使用类（含文件/行号证据）、39 dormant / 0 reachable 清单、参考项目证据强度评估
+- [x] Q3 可达性最小集：代码级 6 target、链接闭包 10 target（7 新 AAR）+ 盲区清单（反射/getIdentifier/其它 AAR 类依赖）
+- [x] Q4 AGP/AAPT2 机制：单 namespace、R.txt+manifest 驱动编译期 R、R.txt-only AAR 链接期被过滤（中等置信度已标注）
+- [x] Q5 综合方案：A / B1′ / B2 / B3（含数量、合规、风险、回滚、POM 接线）+ 单一推荐 B2
 
 ## Report
 
