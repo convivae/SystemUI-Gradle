@@ -12,6 +12,10 @@ android {
 
     defaultConfig {
         minSdk = 32
+        // AOSP plugin/Android.bp SystemUIPluginLib: export_proguard_flags_files: true
+        // + proguard_flags_files: ["proguard_plugins.flags"] → Gradle consumerProguardFiles
+        // （Task 029 R3：byte-exact 复制自 AOSP plugin/proguard_plugins.flags）
+        consumerProguardFiles("proguard_plugins.flags")
     }
 
     sourceSets {

@@ -25,18 +25,10 @@ android {
 
     defaultConfig {
         minSdk = 32
-        consumerProguardFiles("consumer-rules.pro")
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
+    // AOSP SystemUI-core (android_library) 层零 ProGuard 配置（Task 028 复核确认）；
+    // 此前悬挂的 consumer/release proguard 文件引用已删除（Task 029 G1）。
 
     // AGP 9.0+ 新 DSL 源码目录配置
     // 暂时排除复杂 UI 子包（保留源代码，未来逐步启用）
