@@ -33,6 +33,10 @@ androidxRecyclerView = "1.4.0"
 androidxAsyncLayoutInflater = "1.1.0"
 androidxViewPager2 = "1.1.0"
 androidxDynamicanimation = "1.1.0"
+# zxing: 官方坐标（用户 2026-08-20 批准落地，task 027）；公网 latest stable
+zxingCore = "3.5.4"
+# protobuf-javanano: 官方坐标（task 027）；官方线已止于 3.1.0，AOSP fork 永久分叉，钉版
+protobufJavanano = "3.1.0"
 androidxConstraintlayoutCore = "1.1.0"
 androidxPalette = "1.1.0-alpha01"
 androidxActivity = "1.13.0"
@@ -72,6 +76,8 @@ androidx-concurrent-futures = { module = "androidx.concurrent:concurrent-futures
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
 androidx-constraintlayout-core = { module = "androidx.constraintlayout:constraintlayout-core", version.ref = "androidxConstraintlayoutCore" }
 androidx-dynamicanimation = { module = "androidx.dynamicanimation:dynamicanimation", version.ref = "androidxDynamicanimation" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
+protobuf-javanano = { module = "com.google.protobuf.nano:protobuf-javanano", version.ref = "protobufJavanano" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidxExifinterface" }
 androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "androidxFragment" }
 androidx-leanback = { module = "androidx.leanback:leanback", version.ref = "androidxLeanback" }

@@ -66,3 +66,12 @@ WM-Shell、WifiTrackerLib、iconloader、animationlib、monet、android.car 等�
 ## Report
 
 完成后汇报：commit、候选清单摘要、试替换通过率、新发现、HANDOFF 块。
+
+## Completion (2026-08-20, worktree wt-026)
+
+- [x] 49 产物逐一判定表（官方坐标存在性 + 证据 URL）— 报告 `docs/architecture/2026-08-20-official-maven-audit.md` §3/§4（32 jar + 17 AAR；brief 原计 48，实盘 49，无遗漏）
+- [x] 候选试替换矩阵（替换后构建结果）— §5：zxing 3.5.2 PASS、protobuf-javanano 3.1.0 PASS、dynamicanimation 1.1.0 PASS（3/3；keepanno/setupcompat 无官方坐标不适用）
+- [x] 落地建议分批清单 — §6：Batch 1（3 替换 + 3 jar 退役）、Batch 2（git rm ORPHAN SettingsLib-javac.jar）、44 产物不动
+- [x] `python3 -m unittest discover -s tools/tests -p 'test_*.py'` → `Ran 148 tests in 33.669s / OK`
+- [x] 最终 `git status` 干净（试验改动全部 revert；commit 仅报告/brief/issues）
+- [x] 英文 commit；未 push

@@ -67,3 +67,15 @@
 ## Report
 
 完成后汇报：commit、zxing 最终版本及理由、删除清单、验证输出、issue 更新、HANDOFF 块。
+
+## Completion (2026-08-20)
+
+- [x] A1 catalog 增 zxing（**最终 3.5.4**：latest stable 全量构建通过，未回退）+ protobuf-javanano 3.1.0
+- [x] A2 core 两行 files(...) → 官方 alias，注释更新
+- [x] A3 unfold compileOnly → libs.androidx.dynamicanimation，alpha04 注释删除
+- [x] A4 `git rm` 4 个 jar（3 退役 + SettingsLib-javac.jar orphan）
+- [x] A5 tools/package_aconfig_jars.py zxing 条目退役 + 测试同步（148→147 用例）
+- [x] B6 orphan 清理（并入 A4）
+- [x] C7 全仓引用清理（AGENTS.md §3.2、HANDOFF.md；历史文档按规则保留）
+- [x] C8 AGENTS.md §3.2 libs 树同步（1 行删除；其余 3 jar 原本不在树中）
+- 验证：`:SystemUI-unfold:compileDebugKotlin :app:assembleDebug` → BUILD SUCCESSFUL in 1m 10s；unittest → Ran 147 tests, OK；residue grep 仅剩 brief 自身与历史文档
