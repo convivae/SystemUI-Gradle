@@ -33,7 +33,7 @@
 - Consumes: existing `CONFIGS`, `build_artifact()`, `assemble_aar()`, and `ARTIFACTS` registries.
 - Produces: `CONFIGS["SettingsLibSettingsTheme"]` and `ARTIFACTS["SettingsLibSettingsTheme"]`.
 
-- [ ] **Step 1: Write failing config and provenance tests**
+- [x] **Step 1: Write failing config and provenance tests**
 
 Add tests asserting:
 
@@ -59,7 +59,7 @@ self.assertEqual(
 
 Update the exact `CONFIGS` set expectation to include `SettingsLibSettingsTheme`.
 
-- [ ] **Step 2: Run RED tests**
+- [x] **Step 2: Run RED tests**
 
 Run:
 
@@ -69,7 +69,7 @@ python3 -m unittest tools.tests.test_package_aosp_aar tools.tests.test_install_a
 
 Expected: failures caused only by missing `SettingsLibSettingsTheme` registry entries.
 
-- [ ] **Step 3: Add the minimal deterministic config**
+- [x] **Step 3: Add the minimal deterministic config**
 
 Add to `CONFIGS`:
 
@@ -85,7 +85,7 @@ Add to `CONFIGS`:
 
 Register the exact Maven coordinate in `ARTIFACTS`. Do not special-case copying or weaken duplicate-resource checks.
 
-- [ ] **Step 4: Run focused GREEN tests**
+- [x] **Step 4: Run focused GREEN tests**
 
 Run the same focused unittest command. Expected: exit 0 and `OK`.
 
@@ -102,7 +102,7 @@ Run the same focused unittest command. Expected: exit 0 and `OK`.
 - Consumes: Task 1's artifact registries.
 - Produces: `libs.systemui.settingslib.theme` catalog accessor and resources visible to `:SystemUI-res` consumers.
 
-- [ ] **Step 1: Generate and install only the new artifact**
+- [x] **Step 1: Generate and install only the new artifact**
 
 Run:
 
@@ -113,11 +113,11 @@ python3 tools/install_aar_to_maven.py SettingsLibSettingsTheme
 
 Expected: one direct AAR and one local Maven AAR/POM at the paths above.
 
-- [ ] **Step 2: Verify artifact provenance before Gradle wiring**
+- [x] **Step 2: Verify artifact provenance before Gradle wiring**
 
 Use Python/zipfile to assert the AAR's `res/**` set exactly matches all files below AOSP `SettingsTheme/res`, bytes included. Run `sha256sum` and require the direct and Maven AAR hashes to be identical. Verify the three switch entries exist.
 
-- [ ] **Step 3: Add the fixed catalog alias and resource-owner dependency**
+- [x] **Step 3: Add the fixed catalog alias and resource-owner dependency**
 
 Add exactly:
 
@@ -133,7 +133,7 @@ api(libs.systemui.settingslib.theme)
 
 Do not change any existing coordinate or version.
 
-- [ ] **Step 4: Run the complete Python suite**
+- [x] **Step 4: Run the complete Python suite**
 
 Run:
 
@@ -143,7 +143,7 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'
 
 Expected: more than 131 tests, exit 0, final `OK`.
 
-- [ ] **Step 5: Run clean resource-link acceptance**
+- [x] **Step 5: Run clean resource-link acceptance**
 
 Run:
 
@@ -160,7 +160,7 @@ grep -cE 'settingslib_switch_(track|thumb).*not found' /tmp/task013.log
 
 If a new failure layer appears after both switch errors reach zero, record the first failing task and first error group in the issue and halt rather than broadening scope.
 
-- [ ] **Step 6: Run APK diagnostic only after Step 5 passes**
+- [x] **Step 6: Run APK diagnostic only after Step 5 passes** (NOT RUN — condition not met: Step 5 resource link failed with a new layer; the step's own precondition authorizes skipping the diagnostic, closed as not-applicable with truthful NOT RUN status)
 
 Run:
 
@@ -170,7 +170,7 @@ Run:
 
 Record the real result. If an APK is produced, record its path, size, and SHA-256. If not, record only the first new failing task/error group.
 
-- [ ] **Step 7: Update documentation and commit**
+- [x] **Step 7: Update documentation and commit**
 
 Update `docs/issues/2026-08-19-settingslib-settings-theme-aar.md` with commands, counts, hashes, and real build results. Tick every plan and brief checkbox. Run `git diff --check`, then commit in English without pushing:
 

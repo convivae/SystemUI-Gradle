@@ -35,6 +35,9 @@ dependencies {
     api(project(":SystemUI-shared"))
     api(project(":SystemUI-customization"))
     api(libs.systemui.settingslib)
+    // SettingsLibSettingsTheme（独立 Soong target）：提供 settingslib_switch_{track,thumb} 等
+    // SettingsTheme 专属资源；其与 SettingsLib/res 有 89 个同路径文件，禁止合并为单一 res root
+    api(libs.systemui.settingslib.theme)
     api(libs.androidx.leanback)
     api(libs.androidx.slice.core)
     api(libs.androidx.slice.view)

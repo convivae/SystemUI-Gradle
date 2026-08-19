@@ -65,13 +65,89 @@ resource drawable/settingslib_switch_thumb not found
 - `:app:processDebugResources` 不再报告两个 `settingslib_switch_*` 缺失；目标为命令 exit 0 且输出含 `BUILD SUCCESSFUL`。
 - 没有修改任何 `SystemUI-*/src/**`、`SystemUI-*/res*/**`、AOSP 文件、版本号或模块边界。
 
+## 实施结果（2026-08-19 执行）
+
+### TDD 波次（tools）
+
+1. RED：先在 `tools/tests/test_package_aosp_aar.py` 新增
+   `test_settingslib_settings_theme_config_paths` + `TestSettingsLibSettingsThemeProvenance`
+   （4 个用例：完整 res 集合/字节比对、switch drawable 三项、无代码 entry、重建字节一致），
+   并把 CONFIGS 集合断言更新为 10 个；在 `tools/tests/test_install_aar_to_maven.py` 新增
+   `ArtifactRegistryTest.test_settingslib_settings_theme_coordinate`。
+   焦点运行结果：7 个失败/错误，全部为缺少 `SettingsLibSettingsTheme` 注册项，无无关失败。
+2. GREEN：`tools/package_aosp_aar.py` CONFIGS 新增 res-only 配置（code=[]），
+   `tools/install_aar_to_maven.py` ARTIFACTS 新增固定坐标
+   `com.android.systemui:SettingsLibSettingsTheme:1.0.0`。
+   `python3 -m unittest tools.tests.test_package_aosp_aar tools.tests.test_install_aar_to_maven`
+   → Ran 39 tests, OK。
+
+### 生成与安装
+
+```
+python3 tools/package_aosp_aar.py SettingsLibSettingsTheme
+  → libs/aars/SettingsLibSettingsTheme.aar (142016 bytes)
+python3 tools/install_aar_to_maven.py SettingsLibSettingsTheme
+  → libs/maven/com/android/systemui/SettingsLibSettingsTheme/1.0.0/{SettingsLibSettingsTheme-1.0.0.aar,.pom}
+```
+
+### 溯源验证（Python/zipfile 实测）
+
+- AAR `res/**` 共 174 个文件，集合与 AOSP `SettingsLib/SettingsTheme/res/**` 完全一致，逐文件字节相同；
+- `res/drawable-v31/settingslib_switch_track.xml`、`res/drawable-v31/settingslib_switch_thumb.xml`、
+  `res/drawable-v34/settingslib_switch_track.xml` 三项均在；
+- direct AAR 与 Maven AAR SHA-256 相同：
+  `0cb09355bd3757a3990fb514bbdc0838104bc4a399fa0f5ef6f890e3cf3f1a43`。
+
+### 接线
+
+- `gradle/libs.versions.toml` 仅新增一行：
+  `systemui-settingslib-theme = { group = "com.android.systemui", name = "SettingsLibSettingsTheme", version = "1.0.0" }`
+- `SystemUI-res/build.gradle.kts` 在既有 SettingsLib 依赖旁新增 `api(libs.systemui.settingslib.theme)` + 注释，
+  未改任何既有行。
+
+### Python 全量测试
+
+`python3 -m unittest discover -s tools/tests -p 'test_*.py'` → **Ran 137 tests, OK**（>131）。
+
+### 资源链接验收（真实结果）
+
+```
+./gradlew :app:clean :app:processDebugResources --console=plain 2>&1 | tee /tmp/task013.log
+→ BUILD FAILED in 15s（exit 非 0）
+```
+
+- `grep -cE 'settingslib_switch_(track|thumb).*not found' /tmp/task013.log` → **0**
+  （两个 switch drawable 缺失错误全部消失，本任务核心目标达成）。
+- 但浮出新失败层（首失败任务 `:app:processDebugResources`，共 5 条 AAPT error / 3 类资源）：
+
+  | 缺失资源 | 引用处 | AOSP 归属 |
+  |---|---|---|
+  | `interpolator/progress_indeterminate_horizontal_rect2_translatex_copy` | SystemUI-res `anim/progress_indeterminate_horizontal_rect.xml` | `SettingsLib/ProgressBar/res` |
+  | `style/SettingsLibActionButton` | SystemUI-res `layout/audio_sharing_dialog.xml`（98/114 行） | `SettingsLib/ActionButtonsPreference/res` |
+  | `layout/preference_two_target_divider` | SettingsLib AAR `layout-v33/preference_access_point.xml`、`preference_checkable_two_target.xml` | `SettingsLib/TwoTargetPreference/res` |
+
+  根因与 SettingsTheme 同构：合并版 `SettingsLib.aar` 只打包主 target 的 `SettingsLib/res`，
+  而其它 static_libs 子模块（ProgressBar / ActionButtonsPreference / TwoTargetPreference）
+  的 res 同样未打包，被引用时即报 not found。
+
+- 按计划 Step 5 约定：switch 错误归零后出现新层 → 只记录首失败任务与首批错误组，不扩大 Task 013 范围。
+- 资源链接未通过 → 按验收条件**不运行** `:app:assembleDebug`（APK 诊断仅在链接通过后允许）。
+
+### 合规检查
+
+- 改动路径全部在 brief Allowed Paths 内；未触碰任何 Forbidden Path（SystemUI-*/src、res*、AOSP 文件、既有 artifact、版本矩阵等）。
+- `git diff --check` 无输出。
+
 ## 错误数演变
 
 | 检查点 | 结果 |
 |---|---|
 | Task 012 后 | androidprv 0；SettingsLib switch drawable 缺失 2 类 |
-| Task 013 后 | 待执行 |
+| Task 013 后 | switch drawable 缺失 0（grep=0）；新层：5 条 AAPT error / 3 类缺失资源（ProgressBar / ActionButtonsPreference / TwoTargetPreference 子模块 res 未打包），`:app:processDebugResources` 失败 |
 
 ## 待解决问题
 
-- Task 013 完成后按真实 `:app:assembleDebug` 输出决定下一层；不得预判 APK 已生成。
+- 下一层（非 Task 013 范围）：按与 SettingsLibSettingsTheme 相同的独立 AAR 思路，
+  评估为 `SettingsLibProgressBar`、`SettingsLibActionButtonsPreference`、`SettingsLibTwoTargetPreference`
+  等被引用的 SettingsLib 子模块 res 补独立 res-only AAR（需用户/架构师批准后另立任务）。
+- Task 013 完成后按真实 `:app:assembleDebug` 输出决定下一层；本次资源链接未通过，APK 未生成。

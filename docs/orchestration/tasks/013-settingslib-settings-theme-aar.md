@@ -70,16 +70,16 @@ After resource acceptance passes, run `:app:assembleDebug` diagnostically and re
 
 ## Checklist
 
-- [ ] CONTRACT printed and model verified by architect
-- [ ] RED tests observed for absent config/coordinate
-- [ ] complete res-only AAR config and Maven coordinate implemented
-- [ ] focused tests GREEN
-- [ ] artifact generated, installed, and provenance verified
-- [ ] catalog alias and `:SystemUI-res` dependency added exactly
-- [ ] full Python suite passes (>131)
-- [ ] clean resource-link acceptance run and recorded truthfully
-- [ ] APK diagnostic run only if resource link passes
-- [ ] issue updated with errors/hashes/results
-- [ ] `git diff --check` clean
-- [ ] English commit created; no push
-- [ ] terminal-final `HANDOFF:` printed
+- [x] CONTRACT printed and model verified by architect
+- [x] RED tests observed for absent config/coordinate
+- [x] complete res-only AAR config and Maven coordinate implemented
+- [x] focused tests GREEN
+- [x] artifact generated, installed, and provenance verified
+- [x] catalog alias and `:SystemUI-res` dependency added exactly
+- [x] full Python suite passes (>131)
+- [x] clean resource-link acceptance run and recorded truthfully
+- [x] APK diagnostic run only if resource link passes (NOT RUN — condition not met: resource link failed with a new layer, 3 missing sub-module resource groups; per plan the diagnostic is only permitted after a passing resource link, so this item is closed as not-applicable with truthful NOT RUN status)
+- [x] issue updated with errors/hashes/results
+- [x] `git diff --check` clean
+- [x] English commit created; no push
+- [x] terminal-final `HANDOFF:` printed
