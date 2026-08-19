@@ -56,6 +56,11 @@ android {
             )
         }
         release {
+            // Task 030 (R1+R2): AOSP SystemUI_optimized_defaults (SYSTEMUI_OPTIMIZE_JAVA=true
+            // default, non-eng): optimize + shrink + shrink_resources. User approved
+            // 2026-08-20. R8 full-mode left at AGP 9.3.1 default (no explicit switch).
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
