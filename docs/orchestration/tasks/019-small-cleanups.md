@@ -3,12 +3,14 @@
 ## Goal
 
 三项已批准的小清理：
-1. `tools/install_aar_to_maven.py` docstring L13–14 仍引用已删除的 `gen_aar_maven.py` → 移除该引用；
-2. `scripts/check-aosp-src-parity.sh`（legacy bash，与 Python 孪生 `check_aosp_src_parity.py` 同 commit 引入）→
-   先验证 `.py` 是功能超集：若是，直接删 `.sh`；若有 `.sh` 独有逻辑，先并入 `.py` 再删 `.sh`；
-3. `AGENTS.md` §3.2 的 `libs/maven/` 目录树已过时 → 与实际目录同步
-   （实际 16 个 artifact 目录 + `com/android/server/notification-flags/`，含 LowLightDreamLib、
-   setupcompat、SettingsLibSettingsTheme、7 个 per-target AAR；树中 `[已删]`/`[旧]` 等过期注释一并修正）。
+
+- [x] 1. `tools/install_aar_to_maven.py` docstring L13–14 仍引用已删除的 `gen_aar_maven.py` → 移除该引用；
+- [x] 2. `scripts/check-aosp-src-parity.sh`（legacy bash，与 Python 孪生 `check_aosp_src_parity.py` 同 commit 引入） →
+  先验证 `.py` 是功能超集：若是，直接删 `.sh`；若有 `.sh` 独有逻辑，先并入 `.py` 再删 `.sh`；
+  （验证结论：`.py` 为功能超集，直接删除）
+- [x] 3. `AGENTS.md` §3.2 的 `libs/maven/` 目录树已过时 → 与实际目录同步
+  （实际 16 个 artifact 目录 + `com/android/server/notification-flags/`，含 LowLightDreamLib、
+  setupcompat、SettingsLibSettingsTheme、7 个 per-target AAR；树中 `[已删]`/`[旧]` 等过期注释一并修正）。
 
 ## Non-goals
 
@@ -40,11 +42,11 @@
 
 ## Acceptance
 
-- `python3 -m unittest discover -s tools/tests -p 'test_*.py'` OK（148 基线）
-- `git grep -n "gen_aar_maven" -- ':!docs/'` 无残留
-- `scripts/` 下无 `.sh` 文件
-- AGENTS.md §3.2 树与实际 `libs/maven/` 一致（逐目录核对）
-- issue 文档更新
+- [x] `python3 -m unittest discover -s tools/tests -p 'test_*.py'` OK（148 基线）→ `Ran 148 tests in 33.750s / OK`
+- [x] `git grep -n "gen_aar_maven" -- ':!docs/'` 无残留 → exit 1（无匹配）
+- [x] `scripts/` 下无 `.sh` 文件 → `ls scripts/*.sh` exit 2（无匹配）
+- [x] AGENTS.md §3.2 树与实际 `libs/maven/` 一致（逐目录核对）→ 脚本核对 18/18 精确匹配，aars 17/17 精确匹配
+- [x] issue 文档更新 → `docs/issues/2026-08-19-small-cleanups.md` 结果已填
 
 ## Report
 
