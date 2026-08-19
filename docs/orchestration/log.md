@@ -78,3 +78,4 @@
 2026-08-19 20:11 | main | 017 | merge | task-017-audit merged; 4 user-decision items queued
 2026-08-19 21:05 | w2:pV | 015 | review-pass | d4978da4; GLM-5.3; 148/148 tests; 7 AARs byte-exact + SHA match; POM 7 deps bp-mirrored; processDebugResources exit 0 (architect re-verified); assembleDebug SUCCESS first APK 158775460B sha256 35c7e3f6
 2026-08-19 21:06 | main | 015 | merge | task-015 merged; APK milestone reached; next: task 018 cleanup dispatch
+2026-08-19 21:20 | w2:pX | 018 | dispatch | user approved all 4 cleanup items; w018g53 in wt-018, explicit joycode/GLM-5.3, own tab (one-worker-per-tab rule)
