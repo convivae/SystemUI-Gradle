@@ -101,3 +101,5 @@
 2026-08-20 01:50 | w2:p16 | 028 | dispatch | AOSP release-config deep analysis + gap table (GLM-5.3, read-only)
 2026-08-20 02:20 | w2:p16 | 028 | review-pass+merge | AOSP release analysis: app-level R8 default true, core zero ProGuard, plugin export flags gap; user approved alignment plan
 2026-08-20 02:22 | w2:p17 | 029 | dispatch | G1+R3: core zero ProGuard, restore plugin flags paths, unobfuscated release baseline; GLM-5.3 own tab
+2026-08-20 02:30 | w2:p17 | 029 | review-pass+merge | core zero ProGuard; plugin flags byte-exact/exported; release baseline SUCCESS 126642058B V2; 147/147; first run env OOM, max-workers=4 retry successful
+2026-08-20 02:32 | w2:p18 | 030 | dispatch | release app R8 + shrinkResources together per user; GLM-5.3 own tab; AOSP-only diagnostic boundary
