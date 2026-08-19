@@ -94,3 +94,4 @@
 2026-08-19 23:55 | w2:p12 | 023 | review-pass+merge | experiment: switch REQUIRED (config error without); gradle.properties restored; docs only
 2026-08-20 00:05 | w2:p13 | 024 | dispatch | heap 16G (user approved); default-config assembleDebug verification
 2026-08-20 00:25 | w2:p13 | 024 | review-pass+merge | heap 16g; default assembleDebug SUCCESS no OOM; javac OOM point clean; 148/148 tests
+2026-08-20 00:30 | w2:p14+w2:p15 | 025+026 | dispatch | release verification (GLM-5.2) + official-Maven audit (GLM-5.3); parallel, own tabs
