@@ -99,3 +99,5 @@
 2026-08-20 01:10 | w2:p15 | 026->027 | extend | audit report merged-pending; worker extended to land 3 official deps (zxing latest-first) + retire 4 jars + tooling/comment cleanup
 2026-08-20 01:40 | w2:p15 | 026+027 | review-pass+merge | 3 official deps landed (zxing 3.5.4 latest per user), 4 jars retired, tooling cleaned; 147/147 tests; assembleDebug SUCCESS
 2026-08-20 01:50 | w2:p16 | 028 | dispatch | AOSP release-config deep analysis + gap table (GLM-5.3, read-only)
+2026-08-20 02:20 | w2:p16 | 028 | review-pass+merge | AOSP release analysis: app-level R8 default true, core zero ProGuard, plugin export flags gap; user approved alignment plan
+2026-08-20 02:22 | w2:p17 | 029 | dispatch | G1+R3: core zero ProGuard, restore plugin flags paths, unobfuscated release baseline; GLM-5.3 own tab
