@@ -54,3 +54,7 @@
 2026-08-13 20:56 | wC:p1 | 011 | contract-ok | w011 CONTRACT confirmed (session file)
 2026-08-13 21:31 | wC:p1 | 011 | review-pass | S4 applied to live SDK: symbols present, res=8202, arsc matches framework-res.apk; 116 tests; Factor 2 (merger drops xmlns:androidprv) escalated
 2026-08-13 21:31 | main | 011 | merge | task-011 merged+pushed; S4 live-applied; processDebugResources blocked by Factor 2 (AGP MergeResources namespace drop)
+2026-08-19 11:19 | wE:p1 | 012 | dispatch | w012 in wt-012; build-logic-only androidprv repair pre-approved; source/res forbidden
+2026-08-19 11:24 | wE:p1 | 012 | abort | GPT-5.6 disallowed by user model whitelist; herdr also created wrong LingerLane worktree; no files modified
+2026-08-19 11:24 | wF:p1 | 012 | redispatch | correct SystemUI worktree at 33a2e6ff; w012g53 explicitly started with joycode/GLM-5.3
+2026-08-19 11:27 | wF:p1 | 012 | contract-ok | GLM-5.3 modelId verified; correct SystemUI origin verified; CONTRACT confirmed

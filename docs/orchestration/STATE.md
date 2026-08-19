@@ -7,11 +7,11 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| — | — | — | — | none | 2026-08-13 |
+| wF:p1 | w012g53 | `tasks/012-preserve-androidprv-namespace.md` | wt-012 | dispatched (GLM 5.3) | 2026-08-19 |
 
 ## Queue
 
-1. `tasks/012-preserve-androidprv-namespace.md` — approved; ready to dispatch.
+1. (empty)
 
 ## Done
 
@@ -26,4 +26,4 @@
 
 ## Last Updated
 
-2026-08-13 — task 012 plan/brief prepared after explicit user approval; dispatch pending.
+2026-08-19 — initial w012 dispatch aborted before edits (disallowed GPT-5.6 and herdr created a LingerLane worktree); incorrect worktree removed, correct SystemUI worktree recreated manually at `33a2e6ff`, and task redispatched as w012g53 using GLM 5.3.

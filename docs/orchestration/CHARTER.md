@@ -157,5 +157,6 @@ HANDOFF:
   public equivalent exists.
 - Never use `@Suppress` to bypass; consult official docs when unsure.
 - Reference implementation: `CarSystemUIGradle`.
+- Herdr worker model whitelist: **Kimi-K3, GLM-5.3, GLM-5.2 only**. The architect must pass an explicit model when starting pi (for example `-- --model joycode/GLM-5.3`) and verify the worker session's `modelId` before accepting `CONTRACT:`; never rely on pi's default model.
 - Leave a complete handoff for the next AI — this CHARTER + STATE.md exist for
   exactly that purpose.
