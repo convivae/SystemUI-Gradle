@@ -90,3 +90,5 @@
 2026-08-19 23:01 | w2:p0 | 021 | review-pass+merge | Kotlin 2.3 still blocked (AGP 9.5.0-alpha01 embeds 2.2.10); architect re-verified POM via curl; recheck triggers documented
 2026-08-19 23:30 | w2:p11 | 022 | dispatch | Room official plugin migration (user approved over internal args); catalog plugin alias, no settings change
 2026-08-19 23:40 | w2:p12 | 023 | dispatch | disallowKotlinSourceSets removal experiment (user approved); GLM-5.2 own tab
+2026-08-19 23:55 | w2:p11 | 022 | review-pass+merge | Room official plugin migration; room.internal gone; schemas byte-exact; APK SUCCESS (architect re-verified)
+2026-08-19 23:55 | w2:p12 | 023 | review-pass+merge | experiment: switch REQUIRED (config error without); gradle.properties restored; docs only

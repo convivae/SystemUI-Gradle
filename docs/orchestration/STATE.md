@@ -7,16 +7,16 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:p11 | w022g53 | `tasks/022-room-official-plugin.md` | wt-022 | dispatched (GLM 5.3, own tab) | 2026-08-19 |
-| w2:p12 | w023g52 | `tasks/023-disallow-kotlin-sourcesets.md` | wt-023 | dispatched (GLM 5.2, own tab) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
 1. Tasks 019/020/021 merged: small cleanups done (docstring, .sh removed, libs tree synced); Room schema export live (repo-root schemas/, 5 AOSP JSONs byte-exact); Kotlin 2.3 still blocked upstream (AGP 9.5.0-alpha01 still embeds 2.2.10; recheck triggers documented).
 2. Manifest duplicate-permission item closed (AOSP-inherent, merger dedupes, no fix allowed by rule C).
-3. Task 022 (dispatched, user approved): Room official Gradle plugin migration (remove room.internal.* args).
-4. Task 023 (dispatched, user approved): disallowKotlinSourceSets removal experiment.
-5. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Next: 10 (heap), 11 (assembleRelease). Device/runtime verification of APK still open.
+3. Task 022 (merged): Room official Gradle plugin migration done; room.internal.* removed; 5 schemas byte-exact; APK builds.
+4. Task 023 (merged): experiment concluded — disallowKotlinSourceSets=false is REQUIRED (KSP config error without it); flag stays, documented.
+5. Task 024 (briefed, pending dispatch): heap 16G; dispatch next (was held to avoid OOM confounders).
+6. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Item 10 approved (16G heap, task 024). Next: 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
 
