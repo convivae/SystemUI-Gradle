@@ -7,11 +7,11 @@
 
 | Pane | Agent | Task brief | Worktree | Stage | Since |
 |------|-------|------------|----------|-------|-------|
-| w2:pX | w018g53 | `tasks/018-aar-cleanup.md` | wt-018 | dispatched (GLM 5.3, own tab) | 2026-08-19 |
+| — | — | — | — | — | — |
 
 ## Queue
 
-1. Task 018 (dispatched): execute approved AAR cleanup (delete SystemUISharedLib orphan AAR, maven flags jar, 3 deprecated tools).
+1. Cleanup done (task 018 merged). Deferred: install_aar_to_maven.py docstring references deleted gen_aar_maven.py (needs brief); scripts/extract_prebuilts.sh is legacy .sh (ADR 0002); device/runtime verification of the first APK.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes SHA-256 35c7e3f6881328a4e26c1ea3ddf6ae8f844ef5e1599f082ae1b70a87c0336e86; 148/148 tests; 7 B2 AARs provenance-verified.
 3. Task 017 (merged): audit done; user approved all 4 decision items (2026-08-19).
 
@@ -31,4 +31,4 @@
 
 ## Last Updated
 
-2026-08-19 — **APK MILESTONE**: task 015 merged; first app-debug.apk built (151.5 MB). Task 017 audit merged; user approved cleanup (task 018 next).
+2026-08-19 — **APK MILESTONE** (task 015). Task 017 audit + task 018 cleanup merged: SystemUISharedLib orphan AAR, maven flags jar, 3 deprecated tools deleted; 148/148 tests, compile 0 errors pre/post.
