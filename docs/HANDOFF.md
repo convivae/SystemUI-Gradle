@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：debug APK 构建成功、Python 测试 233/233、release R8 仅剩 `AssumeTrueForR8` 1 个真实 missing ref）。
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：debug APK 构建成功、release R8 仍有 `AssumeTrueForR8` 1 个 missing ref；原 Task 042 精确复刻方案已暂停，当前等待用户复核 Gradle-native 架构 spec）。
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：Task 042，以真实 build-time annotation classpath closure 清零 `AssumeTrueForR8` 1 ref（详见 CURRENT_STATE "Next ordered work"）。
+5. **当前唯一工程优先级**：用户复核 `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`；批准后才制定只读现状审查，不得直接派发原 Task 042 或回退代码。
 
 ## 2. 环境确认
 
@@ -34,7 +34,7 @@ ls /home/conv/Android/Sdk/platforms/            # 必须有 android-SysUISdk
 
 - **禁止 stub**：不手写 `*.java`/`*.kt` stub，不伪造 res 文件（规则 P/R）。
 - **禁止擅改 res/src**：AOSP 镜像源码与资源改动需 ADR 0004 CONV 标记 + 用户授权（规则 R/F）。
-- **禁止宽泛 `-dontwarn`/keep 掩盖真实 R8 missing refs**；禁止 `@Suppress("DEPRECATION")` 绕过。
+- **禁止宽泛 `-dontwarn`/keep 掩盖真实问题**；精确 warning 处置必须先按新架构分类、记录证据并经用户逐项批准；禁止 `@Suppress("DEPRECATION")` 绕过。
 - **全系统同一时刻只允许一个 Gradle build**；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 - `tools/` 脚本一律 Python（ADR 0002）。
 - 版本矩阵与模块边界是红线区域：升级依赖、增删模块、移动入口类须先与用户沟通。

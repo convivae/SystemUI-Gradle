@@ -1,5 +1,10 @@
 # Task 042 implementation plan — R8 aconfig assumption closure
 
+> **Status: REJECTED BEFORE IMPLEMENTATION. DO NOT EXECUTE.** The user approved the
+> superseding AGP-native functional-parity direction in
+> `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`. This file is
+> retained only as the historical proposal that exposed the over-constraint.
+
 > **For worker:** follow `worker-contract`, `AGENTS.md`, `docs/orchestration/CHARTER.md`,
 > and `docs/orchestration/tasks/042-r8-aconfig-assumption-closure.md` before this plan.
 > Use TDD and stop on every REDLINE condition.

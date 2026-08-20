@@ -2,10 +2,14 @@
 
 | Field | Value |
 |---|---|
-| Status | Planned; exact brief awaiting user approval |
+| Status | **Rejected before implementation**; retained as a historical proposal and must not be dispatched |
 | Baseline | main `1f462795`; fresh R8 exit 1 with exactly one missing ref |
-| Target | Exact 1→0; R8 task succeeds; AOSP aconfig assumption rules remain effective |
-| Architecture | ADR 0006, independent SysUISdk `S3c` + byte-exact exported AOSP rules |
+| Target | Historical proposal only; replacement mechanism intentionally undecided |
+| Superseded by | `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md` |
+
+> This proposal over-constrained Gradle by requiring a byte-exact complete Soong consumer-rule
+> import and a dedicated S3c stage. The user approved a new AGP-native functional-parity
+> direction on 2026-08-21. No Task 042 implementation or live-SDK mutation occurred.
 
 ## Background
 
@@ -144,10 +148,10 @@ missing effective assumption rule is a REDLINE.
 - Existing target class with bytes different from the approved source is a hard stop.
 - Debug regression, bridged class in APK, or release R8 not reaching zero is a hard stop.
 
-## Pending
+## Historical outcome
 
-1. User approval of the exact design/brief, including the full byte-exact exported AOSP rule
-   file rather than only the two `AssumeTrueForR8` lines.
-2. Worker implementation, dual-axis static review, architect main fresh verification, merge,
-   push, and cleanup.
-3. After 1→0, run the separate release packaging/resource-shrink/signing milestone.
+1. The user rejected the byte/configuration-parity premise before implementation.
+2. No Worker was dispatched and no build, repository implementation, or live SysUISdk mutation
+   occurred from this proposal.
+3. The one remaining reference will be reconsidered only after the Gradle-native architecture
+   spec and read-only current-state audit are approved.

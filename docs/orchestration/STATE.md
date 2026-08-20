@@ -13,8 +13,9 @@
 
 ## Queue
 
-1. Task 042: exact issue/plan/redline-gated brief drafted; awaiting user approval of the
-   independent S3c one-class bridge plus complete byte-exact AOSP exported rule file.
+1. User review of `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`.
+2. Only after written-spec approval: plan a read-only present-state architecture audit; no
+   Git-history-first investigation, implementation, or rollback.
 
 ## Recent Orchestration Transitions
 
@@ -71,13 +72,16 @@
 - 2026-08-21 — Task 041 closure docs pushed as `37a86f01`; clean-status and
   patch-equivalence checks passed. Worker and both reviewer herdr workspaces closed;
   all three worktrees and local task/review branches removed.
-- 2026-08-21 — Task 042 primary-source investigation confirmed two required Soong
-  channels: the real 413-byte `AssumeTrueForR8.class` library definition and the complete
-  exported 778-byte `aconfig_proguard.flags`. Exact S3c + byte-exact rule-import issue,
-  TDD plan, and redline-gated brief drafted; dispatch awaits explicit user approval.
+- 2026-08-21 — Task 042 primary-source investigation confirmed two Soong channels, but the
+  user rejected configuration/byte parity as the product goal. The unimplemented S3c + complete
+  byte-exact rule-import proposal is frozen as rejected; no worker was dispatched and no live
+  SDK mutation occurred.
+- 2026-08-21 — User approved the architectural direction of AGP-native functional parity,
+  coarse viable artifact-family seams, outcome/runtime validation, and item-specific discussion
+  before any rollback. Written spec drafted for user review; no implementation worker yet.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — No active SystemUI workers. Task 042 exact brief awaits user approval;
-no implementation or live-SDK mutation has started.
+2026-08-21 — No active SystemUI workers. Written Gradle-native architecture spec awaits
+user review; no audit dispatch, implementation, history-first investigation, or rollback.

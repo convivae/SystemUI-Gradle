@@ -8,19 +8,26 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
-### 1. `AssumeTrueForR8` build-time annotation 1 ref（当前唯一优先级）
+### 1. Gradle-native functional-parity 架构书面复核（当前唯一优先级）
 
-- **完成条件**: 该 ref 以真实 build-time annotation classpath closure 消除，并保留 R8 flag-assumption 语义；不得使用 runtime `implementation` 或 `-dontwarn`。
+- **设计**: `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`
+- **完成条件**: 用户明确批准书面 spec；本阶段不派 Worker、不修改构建代码、不回退。
 
-### 2. Release R8 达到 0 missing refs
+### 2. 当前 artifact / SysUISdk / Release 设计只读审查
 
-- **完成条件**: fresh `:app:minifyReleaseWithR8 --rerun-tasks` BUILD SUCCESSFUL。
+- **范围**: 只看当前仓库、AOSP owner、AGP 行为与参考项目；不先查 Git 历史，不实施修改。
+- **完成条件**: 输出 keep / simplify / consolidate / candidate rollback / needs experiment ledger。
 
-### 3. `shrinkResources` + 签名/打包验证
+### 3. 逐项讨论并实施经用户批准的简化
 
-- **完成条件**: release 构建含资源收缩成功产出，V2 签名校验通过。
+- **完成条件**: 每个候选先说明存在原因、解决的问题、维护成本、替代方案和验证；仅批准项进入独立实施任务。
 
-### 4. 兼容模拟器/设备安装与运行验证
+### 4. Gradle-native Release APK 验收
+
+- **范围**: 在批准的新架构下处理当前 `AssumeTrueForR8` optimizer/build-time 问题；不要求复刻 Soong R8 配置或输出。
+- **完成条件**: `:app:minifyReleaseWithR8` 与 `:app:assembleRelease` 成功，资源收缩及 V2 签名校验通过。
+
+### 5. 兼容模拟器/设备安装与运行验证
 
 - **范围**: AVD 签名/root/framework 兼容性预审后替换预装 SystemUI 并运行验证。
 - **计划**: `docs/issues/2026-08-20-device-emulator-validation-plan.md`。
@@ -31,7 +38,9 @@
 ## 纪律约束（全程有效）
 
 - 每批必须保持 `:app:assembleDebug` 成功（硬门禁）；全系统同一时刻只允许一个 Gradle build。
-- 错误数/R8 refs 数只作诊断，不作为提交门槛（规则 I）；但 R8 差分必须精确可解释。
+- 错误数/R8 refs 数只作诊断，不作为 artifact seam、提交门槛或 Soong/Gradle 等价要求（规则 I）。
+- 不以 Soong target、单个 missing ref 或字节一致性自动决定 AAR/SysUISdk/R8 设计。
+- 任何回退或合并都必须先逐项向用户解释并获得批准。
 - 每批按规则 D 先写 `docs/issues/` 记录，merge 后更新 CURRENT_STATE。
 
 ## 已完成工作

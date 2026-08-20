@@ -1,5 +1,10 @@
 # Task 042 — R8 aconfig assumption closure
 
+> **Status: REJECTED BEFORE DISPATCH. DO NOT START A WORKER FROM THIS BRIEF.** The user
+> approved a superseding AGP-native functional-parity architecture; see
+> `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`. No Task 042
+> implementation or live-SDK mutation occurred.
+
 ## Authority
 
 `redline-gated`, `self-commit`, never push. Dispatch requires explicit user approval of this
