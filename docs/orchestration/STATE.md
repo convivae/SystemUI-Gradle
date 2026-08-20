@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- None. Task 038 is merged and main-verified; Task 039 documentation governance is next for dispatch.
+- Task 039 (documentation information architecture): worker `w1C:p1`, branch `task-039-documentation-governance`, worktree `SystemUI-Gradle-wt-039`; model `joycode/GLM-5.3` verified and CONTRACT accepted. Static-only task: no Gradle; implementing single live-state owner, lifecycle taxonomy, conservative deduplication, and frozen-history policy.
 
 ## Queue
 
@@ -37,4 +37,4 @@
 
 ## Last Updated
 
-2026-08-20 — Task 038 merged and main-verified: commits `dee92a90` + `8b3bb275`; Standards PASS and Spec PASS (no BLOCKER/HIGH/MEDIUM; two LOW documentation details resolved before closure). Main fresh evidence: 179/179 tests; `:app:assembleDebug` exit 0 (`BUILD SUCCESSFUL in 2m35s`); TraceurCommon/Traceur-res hashes match the deterministic worker artifacts; all 640 AAR source classes are defined in the APK (MISSING=0), and the merged manifest contains `CONTROL_UI_TRACING`; fresh `:app:minifyReleaseWithR8 --rerun-tasks` reaches the expected remaining-closure failure with 81 unique refs, exact 88→81 delta (seven Traceur removals, zero additions, `AssumeTrueForR8` retained). Remaining 81 = SettingsLib 74 + B-class 6 + AssumeTrueForR8 1.
+2026-08-20 — Task 039 dispatched after user approval and plan redesign (`7b24b7c6`). Worker `w1C:p1` is active on the isolated Task 039 worktree with GLM-5.3 and a verified CONTRACT. This is a static-only documentation governance task: no Gradle, no historical document deletion/move, and changes to AGENTS/CHARTER/STATE are narrowly limited to removing duplicate dynamic-state snapshots while preserving rules.
