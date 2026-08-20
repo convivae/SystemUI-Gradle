@@ -28,6 +28,9 @@ SOONG_DIR = AOSP_ROOT / "out/soong/.intermediates"
 ANIMATIONLIB_DIR = AOSP_ROOT / "frameworks/libs/systemui/animationlib"
 ANIMATIONLIB_SOONG = SOONG_DIR / "frameworks/libs/systemui/animationlib/animationlib/android_common"
 
+TRACEUR_DIR = AOSP_ROOT / "packages/apps/Traceur"
+TRACEUR_SOONG = SOONG_DIR / "packages/apps/Traceur"
+
 DEFAULT_OUTPUT = Path("libs/aars/animationlib.aar")
 
 def _discover_settingslib_code_jars() -> list:
@@ -212,6 +215,34 @@ CONFIGS = {
         "manifest": AOSP_ROOT / "external/setupcompat/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "external/setupcompat/setupcompat/android_common/R.txt",
         "output": "libs/aars/setupcompat.aar",
+    },
+    # ↓↓↓ Task 038（R8 Batch 4C）：Traceur 双 AAR（直接 AAR，ADR 0001）。
+    # 依据 packages/apps/Traceur/Android.bp：SystemUI-core static_libs 含
+    # TraceurCommon + Traceur-res； retiring libs/TraceurCommon.jar / libs/traceur-res-R.jar。
+    "TraceurCommon": {
+        # android_library "TraceurCommon"（srcs src_common）+ static_libs
+        # perfetto_config_java_protos（并入 proto static_libs，先例：WM-Shell Task 037）：
+        # 15 类（com/android/traceur/）∪ 625 类（perfetto/protos/）= 640 类不相交并集。
+        # 无 res；manifest AndroidManifest-common.xml 合并 CONTROL_UI_TRACING 等 5 权限
+        # （AOSP 靠它把权限并进 SystemUI APK，故必须 AAR 交付而非纯 jar）；R.txt 为 Soong 空表。
+        "code": [
+            TRACEUR_SOONG / "TraceurCommon/android_common/javac/TraceurCommon.jar",
+            SOONG_DIR / "external/perfetto/perfetto_config_java_protos/android_common/javac/perfetto_config_java_protos.jar",
+        ],
+        "res": [],
+        "manifest": TRACEUR_DIR / "AndroidManifest-common.xml",
+        "rtxt": TRACEUR_SOONG / "TraceurCommon/android_common/R.txt",
+        "output": "libs/aars/TraceurCommon.aar",
+    },
+    "Traceur-res": {
+        # android_library "Traceur-res"（res-only，use_resource_processor）：
+        # 105 个 res 文件，namespace com.android.traceur.res；
+        # 类由 AGP 从 R.txt 重新生成（R$array/R$string 等，旧 traceur-res-R.jar 退役）。
+        "code": [],
+        "res": [TRACEUR_DIR / "res"],
+        "manifest": TRACEUR_DIR / "AndroidManifest-res.xml",
+        "rtxt": TRACEUR_SOONG / "Traceur-res/android_common/R.txt",
+        "output": "libs/aars/Traceur-res.aar",
     },
 }
 

@@ -642,6 +642,158 @@ class TestWMShellProtoProvenance(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
 
 
+class TestTraceurProvenance(unittest.TestCase):
+    """Task 038（Batch 4C）：Traceur 双 AAR——TraceurCommon（15+625=640 类，无 res）
+    + Traceur-res（res-only 105 文件，namespace com.android.traceur.res）。
+
+    依据 packages/apps/Traceur/Android.bp：TraceurCommon.static_libs 含
+    perfetto_config_java_protos（与 WM-Shell 并入 proto static_libs 同构，先例 Task 037）。
+    """
+
+    TRACEUR = paar.AOSP_ROOT / "packages/apps/Traceur"
+    TRACEUR_SOONG = paar.SOONG_DIR / "packages/apps/Traceur"
+    PERFETTO_PROTO_JAR = (paar.SOONG_DIR /
+                          "external/perfetto/perfetto_config_java_protos/android_common/javac/perfetto_config_java_protos.jar")  # noqa: E501
+
+    # 审计 A7：5 个 class 级 R8 目标（另 2 个 traceur.res.R$* 由 AGP 从 R.txt 重新生成）
+    R8_CLASS_TARGETS = (
+        "com/android/traceur/FileSender.class",
+        "com/android/traceur/PresetTraceConfigs.class",
+        "com/android/traceur/PresetTraceConfigs$TraceOptions.class",
+        "com/android/traceur/TraceConfig.class",
+        "com/android/traceur/TraceConfig$Builder.class",
+    )
+
+    def _classes_of(self, jar):
+        with zipfile.ZipFile(jar) as z:
+            return {n: z.read(n) for n in z.namelist() if n.endswith(".class")}
+
+    def test_traceur_common_config(self):
+        """code = TraceurCommon javac ∪ perfetto proto javac；无 res；manifest/rtxt 溯源。"""
+        cfg = paar.CONFIGS["TraceurCommon"]
+        self.assertEqual(cfg["code"], [
+            self.TRACEUR_SOONG / "TraceurCommon/android_common/javac/TraceurCommon.jar",
+            self.PERFETTO_PROTO_JAR,
+        ])
+        self.assertEqual(cfg["res"], [])
+        self.assertEqual(cfg["manifest"], self.TRACEUR / "AndroidManifest-common.xml")
+        self.assertEqual(cfg["rtxt"],
+                         self.TRACEUR_SOONG / "TraceurCommon/android_common/R.txt")
+        self.assertEqual(cfg["output"], "libs/aars/TraceurCommon.aar")
+
+    def test_traceur_res_config(self):
+        """res-only：code=[]；res = Traceur/res；manifest/rtxt 溯源。"""
+        cfg = paar.CONFIGS["Traceur-res"]
+        self.assertEqual(cfg["code"], [])
+        self.assertEqual(cfg["res"], [self.TRACEUR / "res"])
+        self.assertEqual(cfg["manifest"], self.TRACEUR / "AndroidManifest-res.xml")
+        self.assertEqual(cfg["rtxt"],
+                         self.TRACEUR_SOONG / "Traceur-res/android_common/R.txt")
+        self.assertEqual(cfg["output"], "libs/aars/Traceur-res.aar")
+
+    def test_traceur_common_classes_exact_disjoint_union(self):
+        """640 类 = 15（com/android/traceur/）∪ 625（perfetto/protos/）不相交并集，字节一致。"""
+        traceur = self._classes_of(paar.CONFIGS["TraceurCommon"]["code"][0])
+        protos = self._classes_of(self.PERFETTO_PROTO_JAR)
+        self.assertEqual(len(traceur), 15)
+        self.assertEqual(len(protos), 625)
+        self.assertEqual(set(traceur) & set(protos), set())
+        for n in traceur:
+            self.assertTrue(n.startswith("com/android/traceur/"), f"越界类名: {n}")
+        for n in protos:
+            self.assertTrue(n.startswith("perfetto/protos/"), f"越界类名: {n}")
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "TraceurCommon.aar"
+            paar.build_artifact("TraceurCommon", out)
+            with zipfile.ZipFile(out) as aar:
+                names = set(aar.namelist())
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    actual = {n: cj.read(n) for n in cj.namelist()
+                              if n.endswith(".class")}
+        expected = {**traceur, **protos}
+        self.assertEqual(len(actual), 640)
+        self.assertEqual(set(actual), set(expected),
+                         "输出 class 集不是两输入的精确并集")
+        for name, data in expected.items():
+            self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
+        # 无 res 条目；manifest/R.txt 原样
+        self.assertFalse({n for n in names if n.startswith("res/")})
+        self.assertEqual(names, {"classes.jar", "AndroidManifest.xml", "R.txt"})
+
+    def test_traceur_common_manifest_and_rtxt(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "TraceurCommon.aar"
+            paar.build_artifact("TraceurCommon", out)
+            with zipfile.ZipFile(out) as z:
+                manifest_bytes = z.read("AndroidManifest.xml")
+                rtxt_bytes = z.read("R.txt")
+        cfg = paar.CONFIGS["TraceurCommon"]
+        self.assertEqual(manifest_bytes, cfg["manifest"].read_bytes())
+        self.assertEqual(rtxt_bytes, cfg["rtxt"].read_bytes())
+        self.assertIn(b'package="com.android.traceur.common"', manifest_bytes)
+        self.assertIn(b"android.permission.CONTROL_UI_TRACING", manifest_bytes)
+
+    def test_traceur_common_r8_targets_present(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "TraceurCommon.aar"
+            paar.build_artifact("TraceurCommon", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    names = set(cj.namelist())
+        for t in self.R8_CLASS_TARGETS:
+            self.assertIn(t, names, f"R8 目标类缺失: {t}")
+
+    def test_traceur_res_no_code_and_res_matches_aosp(self):
+        """0 类；res 恰好 105 文件与 AOSP 树字节一致；R.txt 与 Soong 一致。"""
+        res_root = self.TRACEUR / "res"
+        source_res = {
+            f"res/{p.relative_to(res_root)}": p.read_bytes()
+            for p in sorted(res_root.rglob("*")) if p.is_file()
+        }
+        self.assertEqual(len(source_res), 105)
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "Traceur-res.aar"
+            paar.build_artifact("Traceur-res", out)
+            with zipfile.ZipFile(out) as z:
+                names = set(z.namelist())
+                aar_res = {n: z.read(n) for n in names if n.startswith("res/")}
+                with zipfile.ZipFile(BytesIO(z.read("classes.jar"))) as cj:
+                    classes = [n for n in cj.namelist() if n.endswith(".class")]
+                manifest_bytes = z.read("AndroidManifest.xml")
+                rtxt_bytes = z.read("R.txt")
+        self.assertEqual(classes, [])
+        self.assertEqual(set(aar_res), set(source_res),
+                         "AAR res entry 集与 AOSP Traceur res 树不一致")
+        for name, data in source_res.items():
+            self.assertEqual(aar_res[name], data, f"{name} 字节与 AOSP 源不一致")
+        self.assertIn(b'package="com.android.traceur.res"', manifest_bytes)
+        self.assertEqual(rtxt_bytes,
+                         (self.TRACEUR_SOONG / "Traceur-res/android_common/R.txt").read_bytes(),
+                         "R.txt 字节与 Soong 输出不一致")
+        self.assertEqual(names, {"classes.jar", "AndroidManifest.xml", "R.txt"}
+                         | set(aar_res))
+
+    def test_traceur_res_rtxt_has_r8_symbol_types(self):
+        """R$array / R$string（R8 目标 6-7）由 AGP 从 R.txt 重新生成：符号类型必须在表内。"""
+        rtxt = (self.TRACEUR_SOONG / "Traceur-res/android_common/R.txt").read_text()
+        types = {line.split()[1] for line in rtxt.splitlines() if line.strip()}
+        self.assertIn("array", types)
+        self.assertIn("string", types)
+
+    def test_rebuild_is_byte_identical(self):
+        import time
+        for name in ["TraceurCommon", "Traceur-res"]:
+            with tempfile.TemporaryDirectory() as d:
+                d = Path(d)
+                first = d / "first.aar"
+                second = d / "second.aar"
+                paar.build_artifact(name, first)
+                time.sleep(2)
+                paar.build_artifact(name, second)
+                self.assertEqual(first.read_bytes(), second.read_bytes(),
+                                 f"{name} 重复打包字节不一致")
+
+
 class TestAbsentInputFails(unittest.TestCase):
     """Step 1: 缺输入报 FileNotFoundError。"""
 
@@ -743,8 +895,8 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 17 个 artifact（Task 015 新增 7 个 SettingsLib per-target
-        # res-only target：B2 可达性最小集）
+        # 确认 CONFIGS 含 19 个 artifact（Task 015 新增 7 个 SettingsLib per-target
+        # res-only target；Task 038 新增 Traceur 双 AAR）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
@@ -757,7 +909,8 @@ class TestAllFlag(unittest.TestCase):
              "SettingsLibProgressBar",
              "SettingsLibTwoTargetPreference",
              "SettingsLibLayoutPreference",
-             "SettingsLibAdaptiveIcon"})
+             "SettingsLibAdaptiveIcon",
+             "TraceurCommon", "Traceur-res"})
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

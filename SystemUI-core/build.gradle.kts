@@ -192,9 +192,12 @@ dependencies {
     // PlatformMotionTestingComposeValues (platform.test.motion.compose.values.*，
     // 来自 platform_testing/libraries/motion/compose/values，tier② jar；BouncerContent 等用 motionTestValues)
     implementation(files("${rootProject.projectDir}/libs/PlatformMotionTestingComposeValues.jar"))
-    // Traceur (record issue 用 PresetTraceConfigs/TraceConfig + com.android.traceur.res.R)
-    compileOnly(files("${rootProject.projectDir}/libs/TraceurCommon.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/traceur-res-R.jar"))
+    // Traceur 双 AAR（recordissue 用 PresetTraceConfigs/TraceConfig + com.android.traceur.res.R；
+    // manifest 合并 CONTROL_UI_TRACING 等 5 权限，故 AAR 而非 jar；ADR 0001 直接 AAR）
+    // TraceurCommon = 15 类 ∪ perfetto_config_java_protos 625 类 = 640 类（bp static_libs 并入，先例 WM-Shell）
+    implementation(files("${rootProject.projectDir}/libs/aars/TraceurCommon.aar"))
+    // Traceur-res = res-only（105 文件，namespace com.android.traceur.res；R 类由 AGP 从 R.txt 重新生成）
+    implementation(files("${rootProject.projectDir}/libs/aars/Traceur-res.aar"))
 
     // server-notification Flags (AOSP @aconfig Flags) - 显式声明，避免 Kotlin 编译器遗漏
     // 配合 root build.gradle.kts 中的 allprojects 注入以保证顺序
