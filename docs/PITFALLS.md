@@ -2,6 +2,7 @@
 
 > **目的**: 记录所有"看似简单但实际不行"的方案，帮助下个 AI 避免重复失败。
 > **格式**: 现象 → 尝试 → 失败原因 → 替代方案
+> **职责边界（2026-08-20 起）**: 本文件只保存**可复用根因/防错经验**，不维护当前错误数、当前 blocker 等动态状态；完整实时状态唯一见 `docs/CURRENT_STATE.md`。
 
 ---
 
@@ -28,14 +29,7 @@ Kotlin 版本由 AGP 内置（2.2.10），不再单独声明。
 
 **根因**: KAPT 1.9+ 引入了 IR backend，但与 Gradle 9.5 的 class 文件结构冲突
 
-**当前**:
-```kotlin
-// SystemUI-core/build.gradle.kts
-// id("kotlin-kapt")  // 临时禁用
-// kapt(libs.dagger.compiler)  // 临时禁用
-```
-
-**后果**: Dagger 不会生成代码，所有 `@Inject` 注入失败
+**结论**: KAPT 全面禁用（历史案例，见上）；所有注解处理改用 **KSP**（Dagger 自 2026-08-11 起经 KSP 生成代码，问题已解决）。
 
 **替代方案**:
 - KSP (推荐)
@@ -246,7 +240,7 @@ find . -path "*/<包路径>/<类名>.*" -not -path "*/build/*"
 - 复制源码但反编译 androidx.compose（违反规则 P）
 - 暂时排除这些源码
 
-**当前**: 源码**未在 git 中**（`SystemUI-core/src/com/android/compose/animation/scene/*` 显示 `??`），但被 `srcDir("src")` 包含，会被编译。
+**历史案例（2026-07）**: 当时源码未入 git 而被 `srcDir("src")` 隐式包含。现 Scene 源码已作为 `:SystemUI-compose` 模块入库；本条保留作"隐式 srcDir 吞噬未跟踪文件"的防错案例。
 
 ### 3.2 Compose / 多命名空间 R import 歧义 (2026-07-28 **已解决**)
 
@@ -306,7 +300,7 @@ files(frameworkJar) + files(options.bootstrapClasspath?.files ?: emptySet<File>(
 
 **笔记**: AOSP 编译产物是 41MB / 20155 class，比参考项目 CarSystemUIGradle 用的 8.7MB 大很多。
 
-**当前**: 直接 cp 完整版，不裁剪。
+**历史案例**: 早期曾直接 cp 完整版不裁剪；后改为确定性本地 Maven AAR（`libs.systemui.wmshell`，现 1.0.1 含 proto 闭包）。
 
 ### 4.4 AOSP 命名 vs 参考项目命名
 
@@ -534,6 +528,34 @@ echo 'implementation(project(":SystemUI-new"))' >> SystemUI-core/build.gradle.kt
 # 7. 文档
 echo "docs/issues/YYYY-MM-DD-add-new-module.md"
 ```
+
+---
+
+## 13. 构建与产物纪律（2026-08-20 收录，长期有效）
+
+### 13.1 SysUISdk 只能经 `tools/build_sysuisdk.py --apply` 修改
+
+SysUISdk 是可从 tracked inputs 从零重建的自定义 SDK；任何修补（framework 类、framework-res、framework.aidl）都必须走受控脚本入口 `python3 tools/build_sysuisdk.py --apply`，禁止手工改 `android-SysUISdk/` 下的产物（不可重现、无法审计）。
+
+### 13.2 Soong `static_libs` 必须进入 program/packaging closure
+
+Soong 的 `static_libs` 传递依赖**不会**自动出现在 Gradle compile classpath，更不会自动进 R8 program closure。每个 AAR/JAR 落地时必须核对其 `Android.bp` `static_libs` 闭包（Task 7 八组 javac 根因、R8 Batch 1–4C 全部源于此）。CHARTER Part 3 决策树是判定入口。
+
+### 13.3 本地 AAR 内容变化必须升坐标
+
+`libs/maven/` 下的本地 Maven AAR 一旦内容（类集/资源）变化，必须升 version（如 iconloader/WM-Shell 1.0.0→1.0.1 并退役旧版），否则 Gradle 缓存与消费方无法感知变化，产生难排查的陈旧产物问题。
+
+### 13.4 真实 R8 missing refs 不得用宽泛 keep/`-dontwarn` 掩盖
+
+Release R8 的 missing refs 是真实 closure 缺口的信号；用宽泛 `-keep`/`-dontwarn` 压掉只会把运行时 NoClassDefFoundError 推迟到设备上。正解是逐批补齐真实产物（Batches 1–4C 的做法），platform/build classpath 桥接类只允许窄域处理。
+
+### 13.5 Debug 每批硬门禁
+
+每个改动批次必须保持 `:app:assembleDebug` BUILD SUCCESSFUL（用户 2026-08-20 强制）；不允许以"先修 release"为由让 debug 基线失败。
+
+### 13.6 全系统只允许一个 Gradle build
+
+构建机无法支撑两个并发 SystemUI Gradle 构建：worker 在自己 worktree 内拥有构建；reviewer 只做静态验证（禁止 Gradle）；architect 的 main fresh 验证在 worker/reviewer 之后串行执行（CHARTER Part 4）。
 
 ---
 

@@ -2,6 +2,27 @@
 
 > 参考 [CarSystemUIGradle/docs/GRADLE_MIGRATION.md](../CarSystemUIGradle/docs/GRADLE_MIGRATION.md)
 > 的格式与编号体系。本项目从问题一开始。
+> 本日志 append-only：新条目追加在顶部，旧条目不改写、不重排。
+
+---
+
+## 2026-08-19/20 — 追加里程碑摘要（APK、Release 基线与 R8 收口）
+
+> 本节为追加摘要；详细证据见所引 issue/audit，旧条目一律保持原样。
+
+- **首个 debug APK**（2026-08-19，Task 015）：`:app:assembleDebug` BUILD SUCCESSFUL，
+  158,775,460 B；SettingsLib per-target res closure 经 ADR 0005 落地。
+  见 `docs/issues/2026-08-19-settingslib-per-target-aars.md`。
+- **Release 基线**（2026-08-19/20，Tasks 028–030）：AOSP release 配置对齐；core 零 ProGuard；
+  无混淆 release 基线 SUCCESS（126,642,058 B，V2 签名）；随后开启 R8+shrinkResources，
+  暴露 140 个真实 missing refs（预期失败，无掩盖）。见 `docs/issues/2026-08-20-release-r8-alignment-decisions.md`。
+- **R8 收口 140→81**（2026-08-20，Batches 1–4C）：clean monet / 五个 aconfig JAR /
+  view-capture+motion-tool / iconloader 1.0.1 / WM-Shell proto 1.0.1 / Traceur 双 AAR 逐批落地，
+  每批精确差分、零新增未解释引用。见 `docs/architecture/2026-08-20-r8-runtime-closure-audit.md`
+  及 `docs/issues/2026-08-20-r8-runtime-batch*.md`。
+- **Python 工具测试 179/179**；debug APK 每批硬门禁保持成功。
+- **剩余工作**：SettingsLib 74 + B1–B4 6 + `AssumeTrueForR8` 1 → release R8 归零 →
+  shrinkResources/签名 → 设备运行验证。实时状态与排序见 `docs/CURRENT_STATE.md` 与 `docs/PLAN.md`。
 
 ---
 
