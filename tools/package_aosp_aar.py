@@ -80,8 +80,17 @@ CONFIGS = {
         "output": "libs/aars/iconloader.aar",
     },
     "SettingsLib": {
-        # 主 target + 全部 static_libs 子模块 javac JAR（780 classes，0 重复）
-        "code": _discover_settingslib_code_jars(),
+        # 主 target + 全部 static_libs 子模块 javac JAR（780 classes）
+        # Task 040：追加两个 owning Kotlin 产物——主 SettingsLib Kotlin（372 类，
+        # 含 RestrictedPreferenceHelperProvider 等）+ DeviceStateRotationLock Kotlin
+        # （1 类 PosturesHelper，主 SettingsLib 的 direct static_libs）→ 1153 类。
+        # Theme 的 Kotlin 代码归 SettingsLibSettingsTheme AAR，不得并入。
+        "code": _discover_settingslib_code_jars() + [
+            SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar",
+            SOONG_DIR / "frameworks/base/packages/SettingsLib/DeviceStateRotationLock/"
+                       "SettingsLibDeviceStateRotationLock/android_common/kotlin/"
+                       "SettingsLibDeviceStateRotationLock.jar",
+        ],
         "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/res"],
         "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/R.txt",
@@ -144,11 +153,16 @@ CONFIGS = {
         "output": "libs/aars/SettingsLibColor.aar",
     },
     "SettingsLibSettingsTheme": {
-        # SettingsLib/SettingsTheme：独立 Soong android_library target（res + src），
-        # 但其代码类已由 SettingsLib.aar 的 static_libs javac 合并交付；
-        # 此处 res-only 补齐 SettingsTheme/res 资源（89 个同路径文件不得与 SettingsLib/res 合并，
+        # SettingsLib/SettingsTheme：独立 Soong android_library target（res + src）。
+        # Task 040：加入 owning Kotlin 产物（15 类，含 GroupSectionDividerMixin/
+        # SettingsThemeHelper），代码归本 AAR 交付，不得并入主 SettingsLib AAR；
+        # res 补齐 SettingsTheme/res 资源（89 个同路径文件不得与 SettingsLib/res 合并，
         # 保持 Soong target 边界，Task 013）
-        "code": [],
+        "code": [
+            SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsTheme/"
+                       "SettingsLibSettingsTheme/android_common/kotlin/"
+                       "SettingsLibSettingsTheme.jar",
+        ],
         "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/SettingsTheme/res"],
         "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/SettingsTheme/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsTheme/SettingsLibSettingsTheme/android_common/R.txt",

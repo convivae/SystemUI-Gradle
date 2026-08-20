@@ -256,13 +256,43 @@ class TestArtifactConfigs(unittest.TestCase):
         # setupcompat 是 com.google.android.setupcompat，无 com/android/systemui 类，无需 reject_sysui
         self.assertFalse(cfg.get("reject_sysui", False))
 
-    def test_settingslib_settings_theme_config_paths(self):
-        """SettingsLibSettingsTheme 是独立 Soong target，res-only AAR（Task 013）。
+    def test_settingslib_program_code_inputs(self):
+        """Task 040：main code = javac discovery + 主 Kotlin + DeviceStateRotationLock Kotlin；
+        Theme code = 其 owning Kotlin JAR（不得并入 main）。"""
+        cfg = paar.CONFIGS["SettingsLib"]
+        discovered = paar._discover_settingslib_code_jars()
+        main_kotlin = (
+            paar.SOONG_DIR
+            / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar"
+        )
+        device_kotlin = (
+            paar.SOONG_DIR
+            / "frameworks/base/packages/SettingsLib/DeviceStateRotationLock/"
+              "SettingsLibDeviceStateRotationLock/android_common/kotlin/"
+              "SettingsLibDeviceStateRotationLock.jar"
+        )
+        self.assertEqual(cfg["code"], discovered + [main_kotlin, device_kotlin])
 
-        其代码类已由 SettingsLib.aar 的 static_libs javac 合并交付，这里只补 res。
+        theme_kotlin = (
+            paar.SOONG_DIR
+            / "frameworks/base/packages/SettingsLib/SettingsTheme/"
+              "SettingsLibSettingsTheme/android_common/kotlin/SettingsLibSettingsTheme.jar"
+        )
+        self.assertEqual(paar.CONFIGS["SettingsLibSettingsTheme"]["code"], [theme_kotlin])
+
+    def test_settingslib_settings_theme_config_paths(self):
+        """SettingsLibSettingsTheme 是独立 Soong target：res + owning Kotlin 代码（Task 040）。
+
+        Task 040 起其代码类由自身 Kotlin JAR 交付（15 类），不再依赖 SettingsLib.aar
+        的 static_libs javac 合并；main AAR 不得包含 Theme 目标类。
         """
         cfg = paar.CONFIGS["SettingsLibSettingsTheme"]
-        self.assertEqual(cfg["code"], [])
+        self.assertEqual(
+            cfg["code"],
+            [paar.SOONG_DIR
+             / "frameworks/base/packages/SettingsLib/SettingsTheme/"
+               "SettingsLibSettingsTheme/android_common/kotlin/SettingsLibSettingsTheme.jar"],
+        )
         self.assertIn("SettingsLib/SettingsTheme/res", str(cfg["res"]))
         self.assertTrue(str(cfg["manifest"]).endswith("SettingsTheme/AndroidManifest.xml"))
         self.assertIn("SettingsLibSettingsTheme/android_common/R.txt", str(cfg["rtxt"]))
@@ -291,8 +321,133 @@ class TestArtifactConfigs(unittest.TestCase):
             self.assertFalse(cfg.get("reject_sysui", False))
 
 
+class TestSettingsLibProgramClosure(unittest.TestCase):
+    """Task 040：SettingsLib 程序类闭包——780 javac + 372 主 Kotlin + 1 RotationLock
+    Kotlin = 1153 类精确不相交并集；Theme 15 类独立交付，零重叠。"""
+
+    MAIN_KOTLIN = (
+        paar.SOONG_DIR
+        / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar"
+    )
+    DEVICE_KOTLIN = (
+        paar.SOONG_DIR
+        / "frameworks/base/packages/SettingsLib/DeviceStateRotationLock/"
+          "SettingsLibDeviceStateRotationLock/android_common/kotlin/"
+          "SettingsLibDeviceStateRotationLock.jar"
+    )
+    THEME_KOTLIN = (
+        paar.SOONG_DIR
+        / "frameworks/base/packages/SettingsLib/SettingsTheme/"
+          "SettingsLibSettingsTheme/android_common/kotlin/SettingsLibSettingsTheme.jar"
+    )
+
+    def _classes_of(self, jar):
+        with zipfile.ZipFile(jar) as z:
+            return {n: z.read(n) for n in z.namelist() if n.endswith(".class")}
+
+    def _input_union(self):
+        """按 packager 语义（R 类排除）机械读取全部配置 code JAR 的 class bytes。"""
+        contributions = []
+        for jar in paar.CONFIGS["SettingsLib"]["code"]:
+            classes = {n: b for n, b in self._classes_of(jar).items()
+                       if not paar._is_r_class(n)}
+            contributions.append(classes)
+        return contributions
+
+    def test_input_class_sets_pairwise_disjoint_union_1153(self):
+        contributions = self._input_union()
+        self.assertEqual(len(contributions), 34)  # 32 javac + 2 Kotlin
+        union = {}
+        for c in contributions:
+            self.assertEqual(set(c) & set(union), set(),
+                             "输入 class 集存在重叠")
+            union.update(c)
+        self.assertEqual(len(union), 1153, len(union))
+
+    def test_main_classes_jar_exact_union(self):
+        contributions = self._input_union()
+        expected = {}
+        for c in contributions:
+            expected.update(c)
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "SettingsLib.aar"
+            paar.build_artifact("SettingsLib", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    actual = {n: cj.read(n) for n in cj.namelist() if n.endswith(".class")}
+        self.assertEqual(set(actual), set(expected),
+                         "输出 class 集不是配置输入的精确并集")
+        for name, data in expected.items():
+            self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
+        self.assertEqual(len(actual), 1153)
+
+    def test_main_owner_classes_present(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "SettingsLib.aar"
+            paar.build_artifact("SettingsLib", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    names = set(cj.namelist())
+        self.assertIn("com/android/settingslib/RestrictedPreferenceHelperProvider.class", names)
+        self.assertIn("com/android/settingslib/devicestate/PosturesHelper.class", names)
+
+    def test_main_excludes_theme_target_classes(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "SettingsLib.aar"
+            paar.build_artifact("SettingsLib", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    names = set(cj.namelist())
+        self.assertNotIn("com/android/settingslib/widget/GroupSectionDividerMixin.class", names)
+        self.assertNotIn("com/android/settingslib/widget/SettingsThemeHelper.class", names)
+
+    def test_theme_classes_jar_exact_fifteen(self):
+        expected = self._classes_of(self.THEME_KOTLIN)
+        self.assertEqual(len(expected), 15)
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "SettingsLibSettingsTheme.aar"
+            paar.build_artifact("SettingsLibSettingsTheme", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    actual = {n: cj.read(n) for n in cj.namelist() if n.endswith(".class")}
+        self.assertEqual(set(actual), set(expected),
+                         "Theme 输出 class 集与其 Kotlin 源 JAR 不一致")
+        for name, data in expected.items():
+            self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
+        self.assertIn("com/android/settingslib/widget/GroupSectionDividerMixin.class", actual)
+        self.assertIn("com/android/settingslib/widget/SettingsThemeHelper.class", actual)
+
+    def test_main_and_theme_class_sets_disjoint(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            main_out = d / "SettingsLib.aar"
+            theme_out = d / "SettingsLibSettingsTheme.aar"
+            paar.build_artifact("SettingsLib", main_out)
+            paar.build_artifact("SettingsLibSettingsTheme", theme_out)
+            sets = []
+            for path in (main_out, theme_out):
+                with zipfile.ZipFile(path) as aar:
+                    with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                        sets.append({n for n in cj.namelist() if n.endswith(".class")})
+        self.assertEqual(sets[0] & sets[1], set(), "main 与 Theme class 集不得重叠")
+
+    def test_rebuild_byte_identical(self):
+        import time
+        for name in ["SettingsLib", "SettingsLibSettingsTheme"]:
+            with tempfile.TemporaryDirectory() as d:
+                d = Path(d)
+                first = d / "first.aar"
+                second = d / "second.aar"
+                paar.build_artifact(name, first)
+                time.sleep(2)
+                paar.build_artifact(name, second)
+                self.assertEqual(first.read_bytes(), second.read_bytes(),
+                                 f"{name} 重复打包字节不一致")
+
+
 class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
-    """Task 013：完整 res 树逐字节溯源——不漏、不多、不改。"""
+    """Task 013：完整 res 树逐字节溯源——不漏、不多、不改；
+    Task 040：加入 owning Kotlin 代码（15 类）。"""
 
     AOSP_THEME_RES = Path("/home/conv/myspace/aosp/frameworks/base/packages/SettingsLib/SettingsTheme/res")
 
@@ -324,8 +479,8 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
         self.assertIn("res/drawable-v31/settingslib_switch_thumb.xml", names)
         self.assertIn("res/drawable-v34/settingslib_switch_track.xml", names)
 
-    def test_no_code_entries(self):
-        """res-only：classes.jar 应为空 JAR（无 code 输入）。"""
+    def test_classes_jar_contains_only_theme_kotlin_classes(self):
+        """Task 040：classes.jar 恰为其 owning Kotlin JAR 的 15 个类。"""
         from io import BytesIO
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "SettingsLibSettingsTheme.aar"
@@ -333,8 +488,12 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
             with zipfile.ZipFile(out) as z:
                 self.assertIn("classes.jar", z.namelist())
                 with zipfile.ZipFile(BytesIO(z.read("classes.jar"))) as cj:
-                    self.assertEqual([n for n in cj.namelist()
-                                      if not n.endswith("/") and n != "META-INF/MANIFEST.MF"], [])
+                    classes = [n for n in cj.namelist()
+                               if n.endswith(".class")]
+        self.assertEqual(len(classes), 15, classes)
+        for n in classes:
+            self.assertTrue(n.startswith("com/android/settingslib/widget/"),
+                            f"越界类名: {n}")
 
     def test_rebuild_is_byte_identical(self):
         import time
