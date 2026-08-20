@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- None. Task 034 implementation and both independent reviewers are complete; panes are pending close after final push.
+- None. Task 034 implementation and both independent reviewers are complete; all three panes were closed after final push.
 
 ## Queue
 
