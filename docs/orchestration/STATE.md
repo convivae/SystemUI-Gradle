@@ -9,9 +9,9 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 041 implementation | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | revision: pin moving scope evidence to immutable ranges |
-| 041 Standards review | `w1R:p1` (`review041-standards`) | `review-041-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-041-standards` | `joycode/GLM-5.2` | PASS at `5fae790b`; 0 blocker/high/medium |
-| 041 Spec review | `w1S:p1` (`review041-spec`) | `review-041-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-041-spec` | `joycode/GLM-5.2` | FAIL at `5fae790b`; 1 MEDIUM evidence range accuracy |
+| 041 implementation | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | revised clean at `db361ea4`; implementation unchanged |
+| 041 Standards review | `w1R:p1` (`review041-standards`) | `review-041-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-041-standards` | `joycode/GLM-5.2` | re-review `a4876fe5...db361ea4` |
+| 041 Spec review | `w1S:p1` (`review041-spec`) | `review-041-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-041-spec` | `joycode/GLM-5.2` | re-review `a4876fe5...db361ea4` |
 
 ## Queue
 
@@ -61,9 +61,12 @@
   Data Clump and two TRIVIAL notes); Spec FAIL with one MEDIUM because a moving
   `HEAD~2..HEAD` scope command no longer reproduced the recorded file list. Implementation
   and actual scope passed. Original worker is pinning the evidence to immutable ranges.
+- 2026-08-21 — Worker revision `db361ea4` replaced the moving scope command with exact
+  immutable checkpoint and reviewed ranges; implementation was untouched. Both isolated
+  GLM-5.2 reviewers are re-reviewing fixed base/head `a4876fe5...db361ea4`.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 041 implementation passed Standards; Spec requested one evidence-only
-revision to replace a moving Git range with immutable checkpoint/final ranges.
+2026-08-21 — Task 041 evidence-only revision `db361ea4` is under dual-axis static
+re-review against fixed base `a4876fe5`.

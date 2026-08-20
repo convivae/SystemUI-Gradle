@@ -177,3 +177,5 @@
 2026-08-21 02:20 | w1R:p1+w1S:p1 | 041 | review-dispatch | isolated Standards+Spec reviewers started with explicit joycode/GLM-5.2 plus reviewer.md; fixed base a4876fe5 head 5fae790b; static-only, no Gradle
 2026-08-21 02:34 | w1R:p1+w1S:p1 | 041 | review-fail | Standards PASS (0 BLOCKER/HIGH/MEDIUM; 1 LOW Data Clump, 2 TRIVIAL); Spec FAIL with 1 MEDIUM evidence issue: moving HEAD~2..HEAD no longer reproduced recorded four-tools scope list; implementation and actual forbidden-path gate passed
 2026-08-21 02:35 | w1Q:p1 | 041 | revision | original worker asked to replace moving scope evidence with immutable checkpoint/final commit ranges only; no implementation change authorized
+2026-08-21 02:39 | w1Q:p1 | 041 | revision-done | db361ea4 pins scope evidence to immutable a4876fe5..6be0f5bc and a4876fe5..5fae790b ranges; both outputs and no-forbidden-path scans reverified; implementation untouched; clean, no push
+2026-08-21 02:41 | w1R:p1+w1S:p1 | 041 | re-review | reviewer worktrees reset cleanly to revised head db361ea4; fixed base a4876fe5; dual-axis static re-review requested, no Gradle
