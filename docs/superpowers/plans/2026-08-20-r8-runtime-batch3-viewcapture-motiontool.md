@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:test-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace polluted/incomplete view-capture and motion-tool JARs with deterministic owning-Soong implementation closures, add latest-stable official protobuf-javalite, and remove exactly 11 R8 missing refs.
+**Goal:** Replace polluted/incomplete view-capture and motion-tool JARs with deterministic owning-Soong implementation closures, add latest-stable official protobuf-javalite, pin official coroutines to the highest compatible stable release without changing AOSP source, and remove exactly 11 R8 missing refs.
 
-**Architecture:** A focused Python packager merges only approved class namespaces from five fixed Soong implementation JARs into two deterministic tier② JARs. Gradle models the AOSP `static_libs` runtime closure using direct JAR `implementation` edges plus official Maven protobuf-javalite 4.35.1; view-capture/protobuf land before motion-tool.
+**Architecture:** A focused Python packager merges only approved class namespaces from five fixed Soong implementation JARs into two deterministic tier② JARs. Gradle models the AOSP `static_libs` runtime closure using direct JAR `implementation` edges plus official Maven protobuf-javalite 4.35.1; view-capture/protobuf land before motion-tool. Removing the old FAT view-capture JAR also removes its accidental AOSP-coroutines 1.9.0 compile-classpath shadow. The user approved official coroutines 1.10.2—the immediately preceding and diagnostically proven highest compatible stable release—so AOSP mirrored source remains unchanged.
 
 **Tech Stack:** Python 3 `zipfile`/`unittest`, Gradle Kotlin DSL/version catalog, AOSP Soong outputs, AGP 9.3.1/D8/R8.
 
@@ -17,7 +17,8 @@
 - `tools/` additions are Python only.
 - JARs are direct files under `libs/`; never install JARs into local Maven.
 - Use owning Soong `javac`/`kotlin` implementation outputs only; reject turbine/header/FAT inputs by exact namespace validation.
-- `protobuf-javalite` first tries latest public stable 4.35.1 under the user's existing latest-stable policy. Any fallback requires REDLINE approval with failure evidence.
+- `protobuf-javalite` uses latest public stable 4.35.1 under the user's existing latest-stable policy.
+- **Approved REDLINE resolution:** change only `kotlinxCoroutines = "1.11.0"` to `"1.10.2"`. The worker proved 1.11.0's new `SharedFlow.collectLatest` overload breaks the unchanged AOSP expression-body function, while a reverted 1.10.2 probe compiles. 1.10.2 is the immediately preceding stable release and therefore the highest compatible official version currently proven. Do not add a coroutines shadow JAR, modify AOSP source, or silently lower below 1.10.2; a 1.10.2 acceptance failure requires a new REDLINE.
 - Heavy Gradle commands use `-Dorg.gradle.workers.max=4`; piped commands use `set -o pipefail` and persist full logs plus true Gradle exit status.
 - Every wait/poll timeout is at most 90 seconds.
 
@@ -29,7 +30,7 @@
 - Create `tools/tests/test_package_viewcapture_motiontool_jars.py`: synthetic input tests for clean merge, determinism, namespace rejection, duplicate rejection, and invalid inputs.
 - Replace `libs/view_capture.jar`: 56-class clean output.
 - Replace `libs/motion_tool_lib.jar`: 65-class clean output.
-- Modify `gradle/libs.versions.toml`: add only protobuf-javalite 4.35.1 version and alias.
+- Modify `gradle/libs.versions.toml`: add protobuf-javalite 4.35.1 version and alias; change only existing `kotlinxCoroutines` 1.11.0→1.10.2 under explicit user approval.
 - Modify `SystemUI-core/build.gradle.kts`: program/runtime edges for protobuf, view-capture, and motion-tool.
 - Modify `SystemUI-shared/build.gradle.kts`: self-contained runtime edges for protobuf and view-capture.
 - Update `docs/issues/2026-08-20-r8-runtime-batch3-viewcapture-motiontool.md`: actual hashes, tests, debug, APK and R8 evidence.
@@ -176,14 +177,15 @@ PY
 
 Fetch Maven Central metadata and record latest/release, last ten versions, and the latest non-`RC`/alpha/beta stable selection in the issue. Expected selection: `4.35.1`. If it differs, stop with `REDLINE` before editing the version matrix.
 
-- [ ] **Step 2: Add the exact catalog entries**
+- [ ] **Step 2: Apply the exact approved catalog entries**
 
 ```toml
+kotlinxCoroutines = "1.10.2"
 protobufJavalite = "4.35.1"
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobufJavalite" }
 ```
 
-Do not change any other version or alias.
+Do not change any other version or alias. Record in the issue that 1.11.0 failed both debug and release compilation only after clean-JAR removal exposed the real classpath; the old FAT JAR had accidentally shadowed it with AOSP 1.9.0. Record the temporary, reverted 1.10.2 diagnostic success and the user's explicit approval.
 
 - [ ] **Step 3: Wire view/protobuf before motion-tool**
 
@@ -230,7 +232,7 @@ set -o pipefail
 printf 'GRADLE_EXIT=%s\n' "${PIPESTATUS[0]}" | tee /tmp/task035-debug.status
 ```
 
-Expected: `GRADLE_EXIT=0`, `BUILD SUCCESSFUL`, no duplicate-class failure.
+Expected: `GRADLE_EXIT=0`, `BUILD SUCCESSFUL`, no duplicate-class failure, and no mirrored source change. If 1.10.2 fails for a new version-related reason, preserve the log and halt with a new REDLINE; do not lower the version or edit source.
 
 - [ ] **Step 2: Prove representative main/proto/runtime classes are defined**
 

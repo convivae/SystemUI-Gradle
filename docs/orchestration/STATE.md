@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- Task 035 implementation: `wV:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-035`, branch `task-035`, model `joycode/GLM-5.3`. ModelId and CONTRACT verified; fresh pre-change 119-ref R8 baseline is running.
+- Task 035 implementation: `wV:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-035`, branch `task-035`, model `joycode/GLM-5.3`. ModelId and CONTRACT verified. User approved the REDLINE resolution: preserve AOSP source and pin official coroutines to the highest compatible stable release, 1.10.2; worker is authorized to resume and finish full acceptance.
 
 ## Queue
 
@@ -33,8 +33,8 @@
 
 ## Blocked
 
-优化 Release 主分支仍被 119 个 R8 missing class 阻塞（Task 034 从 126 精确移除 7，`AssumeTrueForR8` 仍保留并延期到 B3）；下一批为 protobuf-javalite + clean view_capture + motion_tool runtime closure。APK 装机/运行验证未做。
+优化 Release 主分支仍被 119 个 R8 missing class 阻塞（Task 034 从 126 精确移除 7，`AssumeTrueForR8` 仍保留并延期到 B3）。Task 035 正在实施 protobuf-javalite + clean view_capture + motion_tool runtime closure；clean JAR 暴露的 coroutines 1.11.0/AOSP source 编译不兼容已获用户批准按最高兼容官方 1.10.2 解决。APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-20 — Task 035 planned and dispatched to `wV:p1` with explicit GLM-5.3. Worker must capture fresh 119-ref baseline, use TDD for deterministic 56/65-class clean JARs, try latest-stable protobuf-javalite 4.35.1 under the user's approved policy, and target exact R8 delta 119→108 with zero additions. All waits remain capped at 90 seconds.
+2026-08-20 — Task 035 REDLINE approved. Removing the polluted FAT view-capture JAR exposed coroutines 1.11.0's new `SharedFlow.collectLatest` overload, which makes unchanged AOSP `OriginalUnseenKeyguardCoordinator.kt` fail in both debug and release compilation. A coroutines-only AOSP 1.9.0 probe and a temporary official 1.10.2 probe proved the boundary; 1.10.2 succeeds and is the immediately preceding stable release. The user chose to preserve AOSP source and authorized only `kotlinxCoroutines` 1.11.0→1.10.2. Task 035 resumes with full debug/APK/R8 acceptance; all waits remain capped at 90 seconds.

@@ -130,3 +130,5 @@
 2026-08-20 11:36 | main | 035 | user-approved+plan | user said continue and authorized worker dispatch; Batch 3 issue+TDD plan+brief committed as 90945f7d; latest-stable protobuf policy selects 4.35.1; target R8 119->108
 2026-08-20 11:40 | wV:p1 | 035 | dispatch | task-035 worktree from 90945f7d; explicit joycode/GLM-5.3 modelId verified; worker-contract startup reads in progress; all waits capped at 90s
 2026-08-20 11:41 | wV:p1 | 035 | contract-ok | CONTRACT confirmed from session transcript; exact allowed/forbidden paths, 4.35.1 redline boundary, 119->108 acceptance, no-push authority acknowledged; fresh baseline R8 running
+2026-08-20 12:15 | wV:p1 | 035 | REDLINE | clean view_capture JAR removed accidental AOSP coroutines 1.9.0 shadow; official 1.11.0 new SharedFlow.collectLatest overload breaks unchanged AOSP source in debug+release; temporary official 1.10.2 probe succeeds
+2026-08-20 12:16 | main | 035 | user-approved | user chose recommended resolution: preserve AOSP source and use highest compatible official coroutines; exact 1.11.0->1.10.2 version change authorized, no lower fallback without new REDLINE
