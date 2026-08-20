@@ -173,3 +173,43 @@ Task 1 基线验证命令与结果：
 - `grep -q '179/179' docs/orchestration/STATE.md` → exit 0
 - `grep -q '81' docs/orchestration/STATE.md` → exit 0
 - 陈旧状态扫描（plan Task 1 Step 2 rg 命令）→ 命中见上表 `stale_current_entries`
+
+---
+
+## 完成证据（worker，2026-08-20，Task 039 执行完毕）
+
+### Commits（worker 分支 `task-039-documentation-governance`，基点 `7b24b7c6`；未 push）
+
+| Commit | 内容 |
+|--------|------|
+| `7499bdbe` | docs: audit documentation ownership and stale state（Task 1 执行审计表） |
+| `f1c1bc72` | docs: establish single live state and focused roadmap（CURRENT_STATE/HANDOFF/PLAN 重写） |
+| `34ed78ff` | docs: separate live state from rules and archives（docs/README 索引 + AGENTS §四 改实时状态归属 + CHARTER Part 6 owner 声明 + STATE 收窄） |
+| `7f755e45` | docs: preserve reusable lessons and append migration milestones（PITFALLS §13 六条纪律 + 校准；迁移日志顶部追加 2026-08-19/20 摘要） |
+| （本 commit） | docs: record documentation governance verification（完成证据） |
+
+### 静态验收结果（真实命令输出）
+
+- **Markdown local-link check**（plan Task 5 Step 1 Python 脚本，覆盖 README/README.en/AGENTS/CURRENT_STATE/HANDOFF/PLAN/docs-README/PITFALLS/CHARTER/STATE）→ `markdown links: OK`
+- **Stale-current scan**（plan Task 5 Step 2 rg 命令，八文件）→ 0 命中（`stale scan: CLEAN`）
+- **无删除检查** → `git diff --diff-filter=D --name-only 2545bdc9...HEAD` 为空（`no deletions: OK`）
+- **diff-check** → `git diff --check 2545bdc9...HEAD` exit 0（`diff --check: OK`；对 worker 基点 7b24b7c6 同样 exit 0）
+- **Scope check** → worker 改动路径（`git diff --name-only 7b24b7c6...HEAD`）恰为 10 个 allowed paths；`2545bdc9...HEAD` 中额外的 `docs/orchestration/tasks/039-*.md` 与 `docs/superpowers/plans/2026-08-20-*.md` 来自架构师派发前设计提交 `7b24b7c6`，非 worker 改动
+- **规则保留检查**（plan Task 3 Step 5）→ 规则 P/S/C/F/R/B/H/D/I token 全部命中；`^## 四、当前进度状态` 已移除；CHARTER 无 `131/131|APK not produced|106 missing|88 missing`；AGENTS/CHARTER/STATE 均含 CURRENT_STATE.md 链接
+- **数字检查**（plan Task 2 Step 4）→ CURRENT_STATE 含 179/81/SettingsLib 74；PLAN 含 SettingsLib 74；三文档无陈旧句
+- **PITFALLS 经验检查**（plan Task 4 Step 3）→ `build_sysuisdk.py --apply`/`static_libs`/`dontwarn`/`一个 Gradle`/`硬门禁`/升坐标 全部命中；`当前.*(106|88)|131/131|APK 尚未生成` 0 命中
+- **迁移日志追加检查** → 顶部新章节含 `140→81` 与 `179`；旧条目未改写（仅文件头补 append-only 声明一行）
+- **README 只读验收** → 双语 README 均为 179/81 正确事实（`rg '179|81'` 命中），未修改
+- **架构师编号指示落实** → §四 原地替换为静态 `## 四、实时状态归属`；§五–九 未重编号；版本历史旧行未改写（仅追加 2026-08-20 行）
+
+### 边界遵守
+
+- frozen 历史目录（docs/issues 除本文件、docs/architecture、docs/superpowers、docs/orchestration/tasks）：无移动、无修改、无删除
+- 删除候选：none；移动候选：none
+- 未触碰 forbidden paths（README/README.en 只读验收、log.md 只读、ADR/其他 issues/architecture/specs/plans/tasks/源码/资源/Gradle/工具均未改）
+- **Gradle: NOT RUN (task boundary)**；未生成任何 AAR/JAR/APK
+
+### 遗留说明
+
+- AGENTS.md §3.2（libs/ 内容清单）与 §4.3 引用等历史性描述按"规则文档冻结语义"保留，其中版本矩阵现由 CURRENT_STATE "Toolchain and module topology" 为实时 owner；未来 libs 结构变化时按 docs/README 维护触发条件同步。
+- 双语 README 的短摘要由架构师维护，worker 只读验收通过。
