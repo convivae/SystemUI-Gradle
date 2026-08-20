@@ -314,7 +314,7 @@ libs/
     │   ├── SettingsLibSettingsTheme/1.0.0/             # libs.systemui.settingslib.theme
     │   ├── LowLightDreamLib/1.0.0/                     # libs.systemui.lowlight.dream.lib
     │   ├── WifiTrackerLib/1.0.0/                       # libs.systemui.wifitrackerlib
-    │   ├── WindowManager-Shell/1.0.0/                  # libs.systemui.wmshell
+    │   ├── WindowManager-Shell/1.0.1/                  # libs.systemui.wmshell（Task 037：proto 闭包并入 1888 类，1.0.0 已退役）
     │   ├── WindowManager-Shell-shared/1.0.0/           # libs.systemui.wmshell.shared
     │   ├── animationlib/1.0.0/                         # libs.systemui.animationlib
     │   ├── iconloader/1.0.1/                           # libs.systemui.iconloader（Task 036：javac+kotlin 合并 75 类，1.0.0 已退役）
