@@ -211,3 +211,23 @@ C d 80  81  5587  com.google.protobuf.GeneratedMessageLite
 
 - ~~REDLINE 待决（新）~~ **已裁决（2026-08-20）**：119→109 结果被用户接受；`org.apache.harmony.dalvik.ddmc.ChunkHandler` 归类 B2（device-provided @hide core-libart，与 `IoUtils`/`NativeAllocationRegistry` 同类），并入已规划 B2 桥接批次；worker 未加 dontwarn、未加 jar、未动 SysUISdk。
 - 本批结束后（以 109 计）继续按已审计顺序处理 Batch 4 的 Traceur、SettingsLib、SettingsTheme、WM-Shell、iconloader 闭包；B1–B4 classpath 问题仍不得越界处理。
+
+## 双轴审查与主分支 fresh 复验（2026-08-20）
+
+固定范围 `c747debc..26d63629` 的独立双轴审查均通过：
+
+- Standards（`wX:p1`，GLM-5.2）：PASS；BLOCKER/HIGH/MEDIUM/LOW 均为 0，仅 3 个不影响行为的 TRIVIAL 可选整洁度建议。
+- Spec（`wY:p1`，GLM-5.2）：PASS；无缺项、无 scope creep、无错误实现。
+- worker commit `26d63629` 已由架构师 cherry-pick 为主分支 commit `bf6ff75f`。
+
+架构师在主分支重新执行验收，结果如下：
+
+- focused tests：6/6，`OK`；全套工具测试：160/160，`OK`。
+- 打包器连续运行两次 SHA-256 完全一致：
+  - `view_capture.jar`：`7ed2eb141ec1d491a5c9b0f205eb2649862b6a6e5595150b92e6d7e25ed5d315`，56 个排序后的纯 `com/android/app/viewcapture/**` class。
+  - `motion_tool_lib.jar`：`e2f5d0a96f43e535e8ead5096ea31f93c9f991504a19cf077d303142c50bbf72`，65 个排序后的纯 `com/android/app/motiontool/**` class。
+- `:app:checkDebugDuplicateClasses :app:assembleDebug -Dorg.gradle.workers.max=4`：真实 exit 0，`BUILD SUCCESSFUL in 2m 8s`，216 tasks。
+- 首次主分支增量 APK 为 199,943,097 B；ZIP 结构诊断确认其包含 39,399,416 B 未被 central directory 引用的旧增量区段。删除旧 APK 输出及 `packageDebug` 增量状态后，`:app:packageDebug` 在 6s 内成功重打包为 160,547,785 B，只有正常 4 KiB signing alignment；V2 签名有效。这是本机构建缓存现象，不是代码或依赖差异。
+- 重打包 APK 中五个代表类均有 `C d` defined row：`ViewCapture`、`ExportedData`、`MotionToolManager`、`MotionToolsRequest`、`GeneratedMessageLite`。
+- 首次带 `--rerun-tasks` 的 release R8 验证因全量重编时系统 OOM 被内核杀死 Gradle daemon（PID 3307107，约 12.6 GiB RSS；同时孤立 Kotlin daemon 占约 10.8 GiB），没有生成可接受的 R8 结论。停止无活跃客户端的孤立 Kotlin daemon 后，重新执行标准验收命令，真实 exit 1 且准确失败于剩余 missing classes：before=119、after=109、removed=精确计划 11 项、added=仅 `org.apache.harmony.dalvik.ddmc.ChunkHandler`、`AssumeTrueForR8` 保留。
+- `git diff --check` 干净；没有 source/res、suppress、keep/dontwarn、SysUISdk/B2 或 local-Maven JAR 越界改动。
