@@ -66,8 +66,15 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // tracinglib（frameworks/libs/systemui，tier② prebuilt jar）
     compileOnly(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
-    // view_capture（frameworks/libs/systemui/viewcapturelib，tier② prebuilt jar）
-    compileOnly(files("${rootProject.projectDir}/libs/view_capture.jar"))
+    // view_capture（frameworks/libs/systemui/viewcapturelib，tier② 干净 jar：
+    // tools/package_viewcapture_motiontool_jars.py 合并 3 个 owning Soong
+    // implementation 输出 javac 9 + kotlin 23 + view_capture_proto 24 = 56 类，
+    // 仅 com/android/app/viewcapture/**，无 androidx/kotlin/kotlinx/protobuf-lite 污染。
+    // AOSP SystemUISharedLib static_libs runtime/program 输入，dex 进 APK，故 implementation
+    implementation(files("${rootProject.projectDir}/libs/view_capture.jar"))
+    // protobuf-javalite（lite proto runtime，tier③ 官方 Maven 坐标，task 035 R8 Batch 3）；
+    // view_capture_proto 生成类依赖它，补齐本库自身 runtime closure
+    implementation(libs.protobuf.javalite)
 
     // Dagger 组件（SystemUnfoldSharedModule 的 factory）由 KSP 在本项目内生成。
     // 对齐 AOSP shared/Android.bp SystemUISharedLib plugins: ["dagger2-compiler"]；Dagger 2.59.2 + useBindingGraphFix 默认启用（2.58+）。

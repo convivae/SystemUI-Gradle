@@ -133,7 +133,16 @@ dependencies {
     // msdl（frameworks/libs/systemui/msdllib，tier② prebuilt jar；AOSP static_libs runtime/program
     // 输入——SystemUISharedLib static_libs ":msdl"，dex 进 APK，故 implementation）
     implementation(files("${rootProject.projectDir}/libs/msdl.jar"))
-    compileOnly(files("${rootProject.projectDir}/libs/view_capture.jar"))
+    // view_capture（frameworks/libs/systemui/viewcapturelib，tier② 干净 jar：
+    // tools/package_viewcapture_motiontool_jars.py 合并 3 个 owning Soong
+    // implementation 输出 javac 9 + kotlin 23 + view_capture_proto 24 = 56 类，
+    // 仅 com/android/app/viewcapture/**，去除旧 FAT jar 的 androidx/kotlin/kotlinx/
+    // protobuf-lite 污染。AOSP static_libs runtime/program 输入，dex 进 APK，故 implementation；
+    // 顺序约束：必须先于 motion_tool_lib 就位（其闭包依赖 viewcapture + protobuf）
+    implementation(files("${rootProject.projectDir}/libs/view_capture.jar"))
+    // protobuf-javalite（com.google.protobuf.GeneratedMessageLite 等 lite runtime，
+    // tier③ 官方 Maven 坐标；AOSP libprotobuf-java-lite 的公网等价物，task 035 R8 Batch 3）
+    implementation(libs.protobuf.javalite)
 
     // tracinglib-platform（提供 launchTraced 等 Trace 协程扩展）
     implementation(files("${rootProject.projectDir}/libs/prebuilts/tracinglib-platform.jar"))
@@ -172,7 +181,11 @@ dependencies {
     // com.android.settingslib.media.flags.Flags (aconfig, removeUnnecessaryRouteScanning 等)
     implementation(files("${rootProject.projectDir}/libs/settingslib-media-flags.jar"))
     // motion_tool_lib (com.android.app.motiontool.*，来自 AOSP frameworks/libs/systemui/motiontoollib)
-    compileOnly(files("${rootProject.projectDir}/libs/motion_tool_lib.jar"))
+    // 干净 jar：tools/package_viewcapture_motiontool_jars.py 合并 2 个 owning Soong
+    // implementation 输出 kotlin 8 + motion_tool_proto 57 = 65 类，仅 com/android/app/motiontool/**。
+    // AOSP static_libs runtime/program 输入，dex 进 APK，故 implementation；
+    // 顺序约束：必须在 view_capture + protobuf-javalite 之后（其 static 闭包依赖二者）
+    implementation(files("${rootProject.projectDir}/libs/motion_tool_lib.jar"))
     // contextualeducationlib (com.android.systemui.contextualeducation.GestureType 等，
     // 来自 frameworks/libs/systemui/contextualeducationlib，tier② jar)
     implementation(files("${rootProject.projectDir}/libs/contextualeducationlib.jar"))

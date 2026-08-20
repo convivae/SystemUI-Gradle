@@ -105,6 +105,109 @@ Maven Central metadata 于 2026-08-20 实测：`latest/release=4.36.0-RC2`，过
 | Task 034 后 | 119 | fresh main baseline |
 | 本批目标 | 108 | 精确移除 A5+A8 共 11 项，0 additions |
 
-## 待解决问题
+## 实施记录（2026-08-20，worker task 035）
 
-本批结束后仍有 108 个 missing refs，继续按已审计顺序处理 Batch 4 的 Traceur、SettingsLib、SettingsTheme、WM-Shell、iconloader 闭包；B1–B4 classpath 问题仍不得越界处理。
+### 已完成步骤及真实证据
+
+1. **Fresh 前置 R8 基线**（改动前）：
+   - 命令：`./gradlew :app:minifyReleaseWithR8 -Dorg.gradle.workers.max=4`（全日志 `/tmp/task035-r8-before.log`）
+   - 真实 exit code：`GRADLE_EXIT=1`（保存在 `/tmp/task035-r8-before.status`），失败模式为 R8 missing classes（非 D8 重复类）
+   - 机器断言：`BASELINE=119 PASS`（119 个唯一 `-dontwarn` refs；11 个目标 refs 与 `AssumeTrueForR8` 均在）
+
+2. **TDD 打包器**（先写失败测试再实现，superpowers TDD 流程）：
+   - 新增 `tools/package_viewcapture_motiontool_jars.py` + `tools/tests/test_package_viewcapture_motiontool_jars.py`
+   - 聚焦测试：`python3 -m unittest tools.tests.test_package_viewcapture_motiontool_jars` → `Ran 6 tests ... OK`
+
+3. **干净产物**（两次运行 byte-identical）：
+   - `view_capture: (9 + 23 + 24) = 56 classes`；SHA-256 `7ed2eb141ec1d491a5c9b0f205eb2649862b6a6e5595150b92e6d7e25ed5d315`
+   - `motion_tool_lib: (8 + 57) = 65 classes`；SHA-256 `e2f5d0a96f43e535e8ead5096ea31f93c9f991504a19cf077d303142c50bbf72`
+   - 双次运行 `sha256sum` 完全一致（`/tmp/task035-hash-{first,second}.txt` diff 为空）；命名空间/排序/计数断言全部通过
+
+4. **全量 Python 测试**：`python3 -m unittest discover -s tools/tests -p 'test_*.py'` → `Ran 160 tests in 35.937s ... OK`（154 基线 + 6 新增）
+
+5. **protobuf-javalite Maven 元数据实测**（2026-08-20）：
+   - `latest = 4.36.0-RC2`、`release = 4.36.0-RC2`（RC 预发布）；过滤 RC 后最新稳定 = **4.35.1**（最近 10 版：`4.34.0-RC2, 4.34.0, 4.34.1, 4.34.2, 4.35.0-RC1, 4.35.0-RC2, 4.35.0, 4.35.1, 4.36.0-RC1, 4.36.0-RC2`）
+   - 与预授权版本一致，已加入 `gradle/libs.versions.toml`（`protobufJavalite = "4.35.1"` + alias，未动其他任何版本）
+
+### 阻断：kotlinx-coroutines 1.11.0 编译不兼容（REDLINE 停止）
+
+按序接入 view/protobuf 后，`:SystemUI-core:compileDebugKotlin` **可复现失败**（debug 与 release 均 fail，同一错误，全日志 `/tmp/task035-debug.log`、`/tmp/task035-release-compile.log`）：
+
+```text
+e: .../statusbar/notification/collection/coordinator/OriginalUnseenKeyguardCoordinator.kt:142:25
+   Return type 'Nothing' needs to be specified explicitly.
+```
+
+**系统化定位（逐项 bisect，全部可复现）**：
+
+| 实验 | 变量 | 结果 |
+|---|---|---|
+| A | 全部改动 stash（旧 FAT jar + compileOnly） | compileDebugKotlin `BUILD SUCCESSFUL` |
+| B | 仅移除 core 的 `implementation(libs.protobuf.javalite)` | 仍失败（排除 protobuf） |
+| C | core 的 jar scope 回退 compileOnly（新 jar 仍在） | 仍失败（排除 scope 翻转） |
+| D | 恢复旧 FAT jar、保留其余全部 Gradle 改动 | `BUILD SUCCESSFUL`（锁定 jar 内容） |
+| E | 新 jar + 仅补 FAT 内 `kotlinx/coroutines/**`（1.9.0）的 compileOnly 探针 jar | `BUILD SUCCESSFUL`（锁定 coroutines 遮蔽） |
+| F | 仅把 `kotlinxCoroutines` 临时改为 `1.10.2`（诊断后已回退） | `BUILD SUCCESSFUL`（锁定 1.11.0 版本本身） |
+
+**根因**：旧 FAT `view_capture.jar` 内嵌 AOSP `kotlinx-coroutines`（pin 1.9.0，见 `external/kotlinx.coroutines/METADATA`）全量类，compileOnly 位于 classpath 靠前位置，编译期遮蔽了 Maven `kotlinxCoroutines = "1.11.0"`。换干净 jar 后首次真正对 1.11.0 编译。`javap` 对比（`/tmp/task035-probe/`）：1.11.0 的 `FlowKt.collectLatest` 新增了第二个 `SharedFlow`-receiver 重载（Continuation 为通配符 `Continuation<?>`），而 `KeyguardRepository.isDozing: StateFlow<Boolean>`（`SharedFlow` 子类型）恰好命中新重载，K2 推断 `OriginalUnseenKeyguardCoordinator.kt:142` 表达式体的返回类型为 `Nothing`，报错要求显式标注。该文件为 AOSP 镜像源码（红线 1）。
+
+**阻断的验收项**：#5（assembleDebug）与 #7（post-change R8）—— release 编译同样失败（`GRADLE_EXIT=1`，同一错误）。
+
+**需要用户决策的选项**（均触碰红线，worker 不擅自处置）：
+
+1. 把 `kotlinxCoroutines` 从 `1.11.0` 回退到 `1.10.2`（实测可编译；AOSP pin 为 1.9.0）——版本矩阵红线（CHARTER Part 5 #4）；
+2. 修改 AOSP 镜像源码 `OriginalUnseenKeyguardCoordinator.kt` 加显式返回类型——源码红线（Part 5 #1）；
+3. 其他用户认可的方案。
+
+当前工作区为 REDLINE 状态的未提交 diff（8 个文件，全部在 Allowed Paths 内，`git diff --check` 干净）：打包器 + 测试 + 两个干净 jar + 三处 Gradle 接线（core 侧目前处于诊断中间态后已恢复：view/protobuf/motion 均 implementation、无探针 jar、无临时版本）。待决策后重跑验收 #5–#7。
+
+### REDLINE 批准后的续作（2026-08-20，用户批准 coroutines 1.10.2）
+
+用户批准架构师建议：保持 AOSP 镜像源码不动，使用最高兼容官方版本。主仓 commit `c747debc` 已更新 brief/plan；worker 已 fast-forward `task-035` 并保留全部未提交 diff。
+
+**应用授权改动**：`gradle/libs.versions.toml` 仅 `kotlinxCoroutines = "1.11.0"` → `"1.10.2"`（带根因注释）；protobuf-javalite 保持 4.35.1；未改任何源码；未加 shadow jar。
+
+**验收 #5（debug 组装）**：
+- 命令：`./gradlew :app:checkDebugDuplicateClasses :app:assembleDebug -Dorg.gradle.workers.max=4`（全日志 `/tmp/task035-debug.log`）
+- 真实 exit：`GRADLE_EXIT=0`；`BUILD SUCCESSFUL in 46s`；无 duplicate-class 失败；AOSP 镜像源码零改动
+
+**验收 #6（APK dex 定义）**：`apkanalyzer dex packages --defined-only`（输出存 `/tmp/task035-dex-defined.txt`，788738 行）五个目标类全部为 `C d`（DEFINED，非仅引用）：
+
+```text
+C d 74  83  3963  com.android.app.viewcapture.data.ExportedData
+C d 35  35  2542  com.android.app.viewcapture.ViewCapture
+C d 55  61  3294  com.android.app.motiontool.MotionToolsRequest
+C d 12  12  1595  com.android.app.motiontool.MotionToolManager
+C d 80  81  5587  com.google.protobuf.GeneratedMessageLite
+```
+
+**验收 #7（fresh post-change R8）——11 项精确移除达成，但差分多出 1 个新增 ref（已上报 REDLINE）**：
+- 命令：`./gradlew :app:minifyReleaseWithR8 -Dorg.gradle.workers.max=4`（全日志 `/tmp/task035-r8-after.log`）
+- 真实 exit：`GRADLE_EXIT=1`（失败模式仍为 missing classes，非 D8 重复类）
+- 机器比对（before=`/tmp/task035-missing-before.txt` vs after=新 `missing_rules.txt`）：
+  - before = 119 ✅；removed = **恰好审计列表的 11 项，无多无少** ✅；AssumeTrueForR8 保留 ✅
+  - **after = 109（原预期 108，差分 +1）；added = 1 项：`org.apache.harmony.dalvik.ddmc.ChunkHandler`**（后续经用户裁决接受为 B2 发现，见下方“用户裁决”）
+- 新增 ref 根因（非本批错误，是闭包变深的必然暴露）：
+  - 引用点：`com.android.app.motiontool.DdmHandleMotionTool.<clinit>()`（`ChunkHandler.type("MOTO")`，AOSP 源码 `motiontoollib/src/.../DdmHandleMotionTool.kt:22,42`）+ 1 个其他 context
+  - 此前 `DdmHandleMotionTool` 本身是 missing class，R8 在此截断；干净 jar 使 motiontool 可解析后 R8 首次触达其 ddmc 引用
+  - `ChunkHandler` 为 libcore `@hide` bootclasspath 类（`libcore/dalvik/src/main/java/org/apache/harmony/dalvik/ddmc/ChunkHandler.java:32 @hide`），**与 B2 类（`libcore.io.IoUtils`/`libcore.util.NativeAllocationRegistry`，仍留在 missing set，设备提供，AOSP 不 dex）同类别**；存在于 `libs/android_module_lib_stubs_current.jar`（compileOnly，不在 R8 library classpath），不在 SysUISdk android.jar/framework.jar
+  - 修复途径全部越界：B1–B4 classpath 桥接（本 brief Forbidden Paths）、dontwarn（禁止）、排除 motiontool（禁止）→ 按 brief 要求上报 REDLINE 待决策
+
+**用户裁决（2026-08-20，接受本批真实结果）**：
+
+- 接受 truthful 差分 **119 → 109**：恰好移除计划的 11 项 A/program refs，恰好新增 1 项 `org.apache.harmony.dalvik.ddmc.ChunkHandler`
+- `ChunkHandler` 归类为 **device-provided @hide core-libart B2 library-classpath ref**，并入已规划的 B2 桥接批次处理；**非 Batch 3 失败**，不回滚已验证正确的工件
+- 明确禁止：不加 dontwarn、不把 ChunkHandler 打进 APK、不动 SysUISdk/B2 桥、不扩大 scope
+- `com.android.aconfig.annotations.AssumeTrueForR8` 继续保留在 missing set（实测确认）
+
+## 错误数演变（更新）
+
+| 阶段 | R8 unique missing refs | 说明 |
+|---|---:|---|
+| Task 034 后 | 119 | fresh main baseline |
+| 本批最终（用户接受） | **109** | 恰好移除 A5+A8 的 11 项；+1 项 B2 类 `ddmc.ChunkHandler`（闭包变深暴露，用户裁决归入 B2 桥接批次） |
+
+## 待解决问题（更新）
+
+- ~~REDLINE 待决（新）~~ **已裁决（2026-08-20）**：119→109 结果被用户接受；`org.apache.harmony.dalvik.ddmc.ChunkHandler` 归类 B2（device-provided @hide core-libart，与 `IoUtils`/`NativeAllocationRegistry` 同类），并入已规划 B2 桥接批次；worker 未加 dontwarn、未加 jar、未动 SysUISdk。
+- 本批结束后（以 109 计）继续按已审计顺序处理 Batch 4 的 Traceur、SettingsLib、SettingsTheme、WM-Shell、iconloader 闭包；B1–B4 classpath 问题仍不得越界处理。

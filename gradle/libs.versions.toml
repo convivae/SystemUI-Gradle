@@ -12,7 +12,10 @@ androidxAnnotation = "1.11.0-alpha01"
 jsr305 = "3.0.2"
 material = "1.14.0"
 material3 = "1.5.0-alpha18"
-kotlinxCoroutines = "1.11.0"
+# kotlinx-coroutines：官方坐标。1.11.0 新增 SharedFlow.collectLatest 重载，使 AOSP
+# OriginalUnseenKeyguardCoordinator.kt:142 推断 Nothing 编译失败（旧 FAT view_capture.jar
+# 内嵌 AOSP 1.9.0 曾遮蔽它）；用户 2026-08-20 批准钉在最高兼容稳定版 1.10.2（task 035）
+kotlinxCoroutines = "1.10.2"
 dagger = "2.59.2"
 guava = "33.4.8-android"
 lottie = "6.6.6"
@@ -37,6 +40,9 @@ androidxDynamicanimation = "1.1.0"
 zxingCore = "3.5.4"
 # protobuf-javanano: 官方坐标（task 027）；官方线已止于 3.1.0，AOSP fork 永久分叉，钉版
 protobufJavanano = "3.1.0"
+# protobuf-javalite: 官方坐标（task 035，R8 Batch 3）；Maven Central latest stable
+# （latest=4.36.0-RC2 为 RC，非稳定版，过滤后最新稳定 = 4.35.1）
+protobufJavalite = "4.35.1"
 androidxConstraintlayoutCore = "1.1.0"
 androidxPalette = "1.1.0-alpha01"
 androidxActivity = "1.13.0"
@@ -78,6 +84,7 @@ androidx-constraintlayout-core = { module = "androidx.constraintlayout:constrain
 androidx-dynamicanimation = { module = "androidx.dynamicanimation:dynamicanimation", version.ref = "androidxDynamicanimation" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
 protobuf-javanano = { module = "com.google.protobuf.nano:protobuf-javanano", version.ref = "protobufJavanano" }
+protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobufJavalite" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidxExifinterface" }
 androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "androidxFragment" }
 androidx-leanback = { module = "androidx.leanback:leanback", version.ref = "androidxLeanback" }
