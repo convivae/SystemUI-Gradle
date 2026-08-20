@@ -155,11 +155,72 @@ class ArtifactRegistryTest(unittest.TestCase):
             {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "1.0.0"},
         )
 
+    def test_settingslib_main_coordinate(self):
+        """Task 040：SettingsLib 升级为用户批准的 1.0.1（完整 Kotlin program closure）。"""
+        self.assertEqual(iam.ARTIFACTS["SettingsLib"]["version"], "1.0.1")
+        self.assertEqual(iam.ARTIFACTS["SettingsLib"]["group"], "com.android.systemui")
+        self.assertEqual(iam.ARTIFACTS["SettingsLib"]["name"], "SettingsLib")
+
     def test_settingslib_settings_theme_coordinate(self):
-        """Task 013：SettingsLibSettingsTheme 固定本地坐标。"""
+        """Task 040：SettingsLibSettingsTheme 升级为用户批准的 1.0.1（owning Kotlin 15 类）。"""
         self.assertEqual(
             iam.ARTIFACTS["SettingsLibSettingsTheme"],
-            {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.0"},
+            {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.1"},
+        )
+
+    def test_settingslib_ten_new_resource_targets_coordinates(self):
+        """Task 040（Batch 4D）：10 个新增 res-only AAR 固定坐标 com.android.systemui:<Target>:1.0.0。"""
+        expected = {
+            "SettingsLibMainSwitchPreference",
+            "SettingsLibAppPreference",
+            "SettingsLibBannerMessagePreference",
+            "SettingsLibBarChartPreference",
+            "SettingsLibButtonPreference",
+            "SettingsLibFooterPreference",
+            "SettingsLibIllustrationPreference",
+            "SettingsLibSliderPreference",
+            "SettingsLibUsageProgressBarPreference",
+            "SettingsLibSettingsSpinner",
+        }
+        for name in expected:
+            self.assertEqual(
+                iam.ARTIFACTS[name],
+                {"group": "com.android.systemui", "name": name, "version": "1.0.0"},
+            )
+
+    def test_artifacts_registry_has_exactly_27_entries(self):
+        """Task 040：17（既有）+ 10（新 resource target）= 27。"""
+        self.assertEqual(len(iam.ARTIFACTS), 27)
+
+    def test_settingslib_pom_carries_seventeen_closure_deps(self):
+        """Task 040（ADR 0005）：SettingsLib POM 依赖边扩展为 17 条，
+        按 AOSP 主 bp static_libs 过滤后顺序排列。"""
+        deps = iam.ARTIFACTS["SettingsLib"].get("deps")
+        expected_names = [
+            "SettingsLibActionButtonsPreference",
+            "SettingsLibAdaptiveIcon",
+            "SettingsLibAppPreference",
+            "SettingsLibBannerMessagePreference",
+            "SettingsLibBarChartPreference",
+            "SettingsLibButtonPreference",
+            "SettingsLibFooterPreference",
+            "SettingsLibIllustrationPreference",
+            "SettingsLibLayoutPreference",
+            "SettingsLibMainSwitchPreference",
+            "SettingsLibProgressBar",
+            "SettingsLibRestrictedLockUtils",
+            "SettingsLibSelectorWithWidgetPreference",
+            "SettingsLibSettingsSpinner",
+            "SettingsLibSliderPreference",
+            "SettingsLibTwoTargetPreference",
+            "SettingsLibUsageProgressBarPreference",
+        ]
+        self.assertEqual(
+            deps,
+            [
+                {"group": "com.android.systemui", "name": n, "version": "1.0.0"}
+                for n in expected_names
+            ],
         )
 
     def test_settingslib_closure_seven_targets_coordinates(self):
@@ -179,29 +240,35 @@ class ArtifactRegistryTest(unittest.TestCase):
                 {"group": "com.android.systemui", "name": name, "version": "1.0.0"},
             )
 
-    def test_settingslib_pom_carries_seven_closure_deps(self):
-        """Task 015（ADR 0005）：SettingsLib POM 依赖边机械镜像主 bp 的 7 个新增直接 static_libs。"""
-        deps = iam.ARTIFACTS["SettingsLib"].get("deps")
-        self.assertEqual(
-            deps,
-            [
-                {"group": "com.android.systemui", "name": "SettingsLibSelectorWithWidgetPreference", "version": "1.0.0"},
-                {"group": "com.android.systemui", "name": "SettingsLibRestrictedLockUtils", "version": "1.0.0"},
-                {"group": "com.android.systemui", "name": "SettingsLibActionButtonsPreference", "version": "1.0.0"},
-                {"group": "com.android.systemui", "name": "SettingsLibProgressBar", "version": "1.0.0"},
-                {"group": "com.android.systemui", "name": "SettingsLibTwoTargetPreference", "version": "1.0.0"},
-                {"group": "com.android.systemui", "name": "SettingsLibLayoutPreference", "version": "1.0.0"},
-                {"group": "com.android.systemui", "name": "SettingsLibAdaptiveIcon", "version": "1.0.0"},
-            ],
-        )
+    def test_settingslib_closure_seven_targets_coordinates(self):
+        """Task 015（B2）：7 个 per-target res-only AAR 固定坐标 com.android.systemui:<Target>:1.0.0。"""
+        expected = {
+            "SettingsLibSelectorWithWidgetPreference",
+            "SettingsLibRestrictedLockUtils",
+            "SettingsLibActionButtonsPreference",
+            "SettingsLibProgressBar",
+            "SettingsLibTwoTargetPreference",
+            "SettingsLibLayoutPreference",
+            "SettingsLibAdaptiveIcon",
+        }
+        for name in expected:
+            self.assertEqual(
+                iam.ARTIFACTS[name],
+                {"group": "com.android.systemui", "name": name, "version": "1.0.0"},
+            )
 
     def test_closure_targets_have_no_deps(self):
-        """7 个新 target 自身 POM 保持骨架（无 deps 边）。"""
+        """17 个子 target 与 Theme 自身 POM 保持骨架（无 deps 边）。"""
         for name in [
             "SettingsLibSelectorWithWidgetPreference", "SettingsLibRestrictedLockUtils",
             "SettingsLibActionButtonsPreference", "SettingsLibProgressBar",
             "SettingsLibTwoTargetPreference", "SettingsLibLayoutPreference",
             "SettingsLibAdaptiveIcon", "SettingsLibSettingsTheme", "SettingsLibColor",
+            "SettingsLibMainSwitchPreference", "SettingsLibAppPreference",
+            "SettingsLibBannerMessagePreference", "SettingsLibBarChartPreference",
+            "SettingsLibButtonPreference", "SettingsLibFooterPreference",
+            "SettingsLibIllustrationPreference", "SettingsLibSliderPreference",
+            "SettingsLibUsageProgressBarPreference", "SettingsLibSettingsSpinner",
         ]:
             self.assertNotIn("deps", iam.ARTIFACTS[name], f"{name} 不应携带 deps")
 

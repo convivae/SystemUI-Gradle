@@ -8,7 +8,7 @@
 
 POM 默认为骨架（只声明 groupId/artifactId/version/packaging=aar，无传递依赖，
 由消费方显式声明）；例外（ADR 0005）：SettingsLib 闭包的 POM 携带机械镜像
-Android.bp static_libs 的 <dependencies>（当前仅 SettingsLib 主 POM 的 7 条边）。
+Android.bp static_libs 的 <dependencies>（仅 SettingsLib 主 POM，当前 17 条边）。
 
 本工具只做文件复制 + POM 生成，不修改 AAR 字节内容。
 """
@@ -26,18 +26,32 @@ DEFAULT_REPO_DIR = PROJECT_ROOT / "libs/maven"
 # 可选 "deps" 字段（ADR 0005，仅 SettingsLib 闭包）：POM 渲染 <dependencies>，
 # 依赖边机械镜像 AOSP Android.bp static_libs；无 deps 的 artifact 保持骨架 POM。
 _SETTINGS_LIB_CLOSURE_DEPS = [
-    "SettingsLibSelectorWithWidgetPreference",
-    "SettingsLibRestrictedLockUtils",
     "SettingsLibActionButtonsPreference",
-    "SettingsLibProgressBar",
-    "SettingsLibTwoTargetPreference",
-    "SettingsLibLayoutPreference",
     "SettingsLibAdaptiveIcon",
+    "SettingsLibAppPreference",
+    "SettingsLibBannerMessagePreference",
+    "SettingsLibBarChartPreference",
+    "SettingsLibButtonPreference",
+    "SettingsLibFooterPreference",
+    "SettingsLibIllustrationPreference",
+    "SettingsLibLayoutPreference",
+    "SettingsLibMainSwitchPreference",
+    "SettingsLibProgressBar",
+    "SettingsLibRestrictedLockUtils",
+    "SettingsLibSelectorWithWidgetPreference",
+    "SettingsLibSettingsSpinner",
+    "SettingsLibSliderPreference",
+    "SettingsLibTwoTargetPreference",
+    "SettingsLibUsageProgressBarPreference",
 ]
 
 
 def _settingslib_closure_dep_entries():
-    """SettingsLib POM 的 7 条传递依赖边（Task 015 / ADR 0005，机械镜像主 bp static_libs）。"""
+    """SettingsLib POM 的 17 条传递依赖边（Task 040 / ADR 0005）。
+
+    机械镜像 AOSP 主 SettingsLib Android.bp static_libs 中全部 res-owning
+    子 target，按 bp 声明顺序过滤后排列（7 条既有 + 10 条 Task 040 新增）。
+    """
     return [
         {"group": "com.android.systemui", "name": n, "version": "1.0.0"}
         for n in _SETTINGS_LIB_CLOSURE_DEPS
@@ -46,7 +60,8 @@ def _settingslib_closure_dep_entries():
 
 ARTIFACTS = {
     "SettingsLib": {
-        "group": "com.android.systemui", "name": "SettingsLib", "version": "1.0.0",
+        # Task 040: 完整 program closure（1153 类），升 1.0.1，旧 1.0.0 退役
+        "group": "com.android.systemui", "name": "SettingsLib", "version": "1.0.1",
         "deps": _settingslib_closure_dep_entries(),
     },
     "WifiTrackerLib": {"group": "com.android.systemui", "name": "WifiTrackerLib", "version": "1.0.0"},
@@ -56,7 +71,7 @@ ARTIFACTS = {
     "iconloader": {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.1"},
     "LowLightDreamLib": {"group": "com.android.systemui", "name": "LowLightDreamLib", "version": "1.0.0"},
     "SettingsLibColor": {"group": "com.android.settingslib", "name": "color", "version": "1.0.0"},
-    "SettingsLibSettingsTheme": {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.0"},
+    "SettingsLibSettingsTheme": {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.1"},  # Task 040: owning Kotlin 15 类，升 1.0.1
     # Task 015（B2）：7 个 SettingsLib per-target res-only AAR（坐标与 Soong target 名一致）
     "SettingsLibSelectorWithWidgetPreference": {"group": "com.android.systemui", "name": "SettingsLibSelectorWithWidgetPreference", "version": "1.0.0"},
     "SettingsLibRestrictedLockUtils": {"group": "com.android.systemui", "name": "SettingsLibRestrictedLockUtils", "version": "1.0.0"},
@@ -65,6 +80,17 @@ ARTIFACTS = {
     "SettingsLibTwoTargetPreference": {"group": "com.android.systemui", "name": "SettingsLibTwoTargetPreference", "version": "1.0.0"},
     "SettingsLibLayoutPreference": {"group": "com.android.systemui", "name": "SettingsLibLayoutPreference", "version": "1.0.0"},
     "SettingsLibAdaptiveIcon": {"group": "com.android.systemui", "name": "SettingsLibAdaptiveIcon", "version": "1.0.0"},
+    # Task 040（Batch 4D）：10 个新增 SettingsLib per-target res-only AAR（坐标与 Soong target 名一致）
+    "SettingsLibMainSwitchPreference": {"group": "com.android.systemui", "name": "SettingsLibMainSwitchPreference", "version": "1.0.0"},
+    "SettingsLibAppPreference": {"group": "com.android.systemui", "name": "SettingsLibAppPreference", "version": "1.0.0"},
+    "SettingsLibBannerMessagePreference": {"group": "com.android.systemui", "name": "SettingsLibBannerMessagePreference", "version": "1.0.0"},
+    "SettingsLibBarChartPreference": {"group": "com.android.systemui", "name": "SettingsLibBarChartPreference", "version": "1.0.0"},
+    "SettingsLibButtonPreference": {"group": "com.android.systemui", "name": "SettingsLibButtonPreference", "version": "1.0.0"},
+    "SettingsLibFooterPreference": {"group": "com.android.systemui", "name": "SettingsLibFooterPreference", "version": "1.0.0"},
+    "SettingsLibIllustrationPreference": {"group": "com.android.systemui", "name": "SettingsLibIllustrationPreference", "version": "1.0.0"},
+    "SettingsLibSliderPreference": {"group": "com.android.systemui", "name": "SettingsLibSliderPreference", "version": "1.0.0"},
+    "SettingsLibUsageProgressBarPreference": {"group": "com.android.systemui", "name": "SettingsLibUsageProgressBarPreference", "version": "1.0.0"},
+    "SettingsLibSettingsSpinner": {"group": "com.android.systemui", "name": "SettingsLibSettingsSpinner", "version": "1.0.0"},
     "setupcompat": {"group": "com.android.systemui", "name": "setupcompat", "version": "1.0.0"},
 }
 
