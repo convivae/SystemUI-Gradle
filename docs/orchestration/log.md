@@ -121,3 +121,4 @@
 2026-08-20 10:56 | main | 033 | merge | worker b84b0688 cherry-picked as dcd7d332 after architect re-ran 151/151, debug duplicate/build SUCCESS, diff-check clean; exact five-path scope
 2026-08-20 10:56 | main | process | user-constraint | architect and all subagents must use waits/timeouts no longer than 90 seconds; future monitoring uses short polling plus agent/process/pane checks
 2026-08-20 11:10 | main | 034 | user-approved+plan | Batch 2 aconfig runtime closure approved; issue+TDD plan+worker brief prepared; expected fresh R8 delta 126->119, B3 AssumeTrueForR8 explicitly deferred
+2026-08-20 11:16 | wR:p1 | 034 | dispatch+contract-ok | task-034 worktree from 3d0dda18; explicit joycode/GLM-5.3 modelId verified; CONTRACT confirmed; fresh pre-change R8 baseline started; all waits capped at 90s

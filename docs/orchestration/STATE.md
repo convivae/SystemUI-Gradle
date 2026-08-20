@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- Task 034 approved; implementation plan and worker brief prepared for dispatch. No worker active yet.
+- Task 034 implementation: `wR:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-034`, branch `task-034`, model `joycode/GLM-5.3`. CONTRACT confirmed; fresh pre-change R8 baseline in progress.
 
 ## Queue
 
@@ -37,4 +37,4 @@
 
 ## Last Updated
 
-2026-08-20 — Task 034 design approved; documentation-first issue, TDD implementation plan, and bounded worker brief prepared. Baseline is 126 and expected exact A-class delta is seven removals to 119; `AssumeTrueForR8` remains deferred B3. All waits remain capped at 90 seconds.
+2026-08-20 — Task 034 dispatched to `wR:p1` with explicit GLM-5.3; modelId and CONTRACT verified. Worker is measuring the fresh pre-change 126-ref R8 baseline before TDD edits. Expected exact A-class delta remains seven removals to 119; `AssumeTrueForR8` remains deferred B3. All waits remain capped at 90 seconds.
