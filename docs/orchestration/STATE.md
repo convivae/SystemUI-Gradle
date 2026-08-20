@@ -9,14 +9,12 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 041 implementation | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | merged + main fresh verified; cleanup pending |
-| 041 Standards review | `w1R:p1` (`review041-standards`) | `review-041-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-041-standards` | `joycode/GLM-5.2` | PASS; cleanup pending |
-| 041 Spec review | `w1S:p1` (`review041-spec`) | `review-041-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-041-spec` | `joycode/GLM-5.2` | PASS; cleanup pending |
+| — | — | — | — | No active SystemUI task workers |
 
 ## Queue
 
-1. Task 042: `AssumeTrueForR8` one-ref annotation classpath closure, after Task 041 is
-   reviewed, independently verified, merged, and cleaned up.
+1. Task 042: `AssumeTrueForR8` one-ref annotation classpath closure; Task 041 is
+   reviewed, independently verified, merged, pushed, and cleaned up. Planning/approval next.
 
 ## Recent Orchestration Transitions
 
@@ -70,9 +68,12 @@
   inventories equivalent with 35 source-identical classes per SDK target, S5 `ALL PASS`,
   debug hard gate exit 0, APK `BRIDGED=35 PACKAGED=0`, and fresh R8 exact 7→1 with only
   `AssumeTrueForR8` remaining. Workspace cleanup is pending the closure push.
+- 2026-08-21 — Task 041 closure docs pushed as `37a86f01`; clean-status and
+  patch-equivalence checks passed. Worker and both reviewer herdr workspaces closed;
+  all three worktrees and local task/review branches removed.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 041 merged and independently verified on main; closure documentation
-is ready to push, then the clean worker/reviewer workspaces will be removed.
+2026-08-21 — Task 041 fully closed and cleaned up; no active SystemUI workers.
+Task 042 planning/approval is the next orchestration action.
