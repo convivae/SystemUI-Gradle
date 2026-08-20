@@ -130,9 +130,9 @@ dependencies {
     debugImplementation(files("${rootProject.projectDir}/libs/compilelib-debug.jar"))
     releaseImplementation(files("${rootProject.projectDir}/libs/compilelib-release.jar"))
 
-    // msdl / view_capture（frameworks/libs/systemui，tier② prebuilt jar）
-    // 原先由 SystemUISharedLib.jar（fat turbine-combined）透传，shared 源码化后需 core 直接依赖
-    compileOnly(files("${rootProject.projectDir}/libs/msdl.jar"))
+    // msdl（frameworks/libs/systemui/msdllib，tier② prebuilt jar；AOSP static_libs runtime/program
+    // 输入——SystemUISharedLib static_libs ":msdl"，dex 进 APK，故 implementation）
+    implementation(files("${rootProject.projectDir}/libs/msdl.jar"))
     compileOnly(files("${rootProject.projectDir}/libs/view_capture.jar"))
 
     // tracinglib-platform（提供 launchTraced 等 Trace 协程扩展）
@@ -157,8 +157,10 @@ dependencies {
     implementation(libs.lottie.compose)
     implementation(files("${rootProject.projectDir}/libs/SystemUI-tags.jar"))
     implementation(files("${rootProject.projectDir}/libs/SystemUI-statsd.jar"))
-    // Monet (从 AOSP out/.../monet.jar 提取，含 ColorScheme/Shades/Style 等)
-    compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
+    // Monet（56 类确定性产物，tools/package_monet_jar.py 合并两个 Soong javac 输出：
+    // monet 9 + libmonet 47；errorprone 由官方 Maven error_prone_annotations 供给。
+    // monet+libmonet 为 AOSP static_libs runtime/program 输入，dex 进 APK，故 implementation）
+    implementation(files("${rootProject.projectDir}/libs/monet.jar"))
     implementation(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
     // com.android.tools.r8.keepanno.annotations.KeepTarget/UsesReflection
     // (SystemUIAppComponentFactoryBase; Maven 上无此 artifact，AOSP 用 prebuilts/r8/keepanno-annotations.jar)
@@ -207,12 +209,12 @@ dependencies {
     // zxing-core: SettingsLib 的 Soong static_libs（com.google.zxing.WriterException 等），
     // AOSP 把它的 classes dex 进 APK，故用 implementation（tier③ 官方坐标，task 027；本地 jar 已退役）
     implementation(libs.zxing.core)
-    // Wi-Fi aconfig flags（com.android.wifi.flags.Flags；WifiTrackerLib static_libs），
-    // 平台镜像在设备上提供，仅编译期需要（与 settingslib-flags.jar 同例）
-    compileOnly(files("${rootProject.projectDir}/libs/wifi-flags.jar"))
-    // WM-Shell aconfig flags（com.android.wm.shell.Flags；WindowManager-Shell static_libs），
-    // 平台镜像在设备上提供，仅编译期需要（与 settingslib-flags.jar 同例）
-    compileOnly(files("${rootProject.projectDir}/libs/wm-shell-flags.jar"))
+    // Wi-Fi aconfig flags（com.android.wifi.flags.Flags；WifiTrackerLib static_libs
+    // 经 core 进入 APK 打包闭包——AOSP static_libs runtime/program 输入，故 implementation）
+    implementation(files("${rootProject.projectDir}/libs/wifi-flags.jar"))
+    // WM-Shell aconfig flags（com.android.wm.shell.Flags；WindowManager-Shell static_libs
+    // 进入 APK 打包闭包——AOSP static_libs runtime/program 输入，故 implementation）
+    implementation(files("${rootProject.projectDir}/libs/wm-shell-flags.jar"))
     // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖；tier③ 官方坐标，task 027。
     // AOSP 私有 com.google.protobuf.nano.android.* 3 类全仓零引用，由 framework.jar/platform 兑底）
     implementation(libs.protobuf.javanano)
