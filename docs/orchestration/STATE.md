@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-无。Tasks 031/032 已完成双轴审查并合并；实现批次待派发。
+- Task 033 — `wJ:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033`, branch `task-033`, GLM-5.3. Implementing A-class Batch 1 scope corrections for msdl/monet/wifi-flags/wm-shell-flags; two-path scope, no push.
 
 ## Queue
 
@@ -33,8 +33,8 @@
 
 ## Blocked
 
-Debug 无构建阻塞：`:app:assembleDebug` 已成功。优化 Release 仍被 R8 的 140 个 missing class 阻塞；Tasks 031/032 已将其精确归为 A=135/B=5 并给出依赖序实施方案，尚未落地。APK 装机/运行验证未做。
+Debug 无构建阻塞：`:app:assembleDebug` 已成功。优化 Release 仍被 R8 的 140 个 missing class 阻塞；Tasks 031/032 已将其精确归为 A=135/B=5 并给出依赖序实施方案。Task 033 正在实施首批 4 个纯 scope 修正，预期本批后剩余 125，最终以 fresh R8 实测为准。APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-20 — Tasks 031/032 runtime-closure 与 platform-classpath 审计完成、双轴审查通过并合并；下一步实施 A 类依赖闭包与 B 类 bridge。
+2026-08-20 — Task 033 已派发到独立 worktree，实施首批 4 个 AOSP `static_libs` runtime scope 修正。
