@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- None. Task 033 implementation and both read-only reviews are complete; panes are being closed after merge.
+- Task 034 approved; implementation plan and worker brief prepared for dispatch. No worker active yet.
 
 ## Queue
 
@@ -15,7 +15,7 @@
 4. Task 023 (merged): experiment concluded — disallowKotlinSourceSets=false is REQUIRED (KSP config error without it); flag stays, documented.
 5. Task 024 (merged): heap now 16G; default-config assembleDebug SUCCESS (2m54s), no OOM; historical javac OOM point re-verified clean.
 6. Tasks 026+027 (merged): official-Maven audit (49 artifacts) landed — zxing 3.5.4 (latest, full build passed), protobuf-javanano 3.1.0, dynamicanimation 1.1.0; 4 jars retired (3 replaced + SettingsLib-javac orphan); tooling entry retired; test baseline now 147 (zxing packaging test retired with it).
-7. Task 028 (merged): AOSP release config deep analysis complete; user approved G1/R1/R2/R3 and diagnostic boundaries. Task 029 merged: core zero-ProGuard + plugin export flags + unobfuscated release baseline SUCCESS (126,642,058 B, V2 signed, 147/147). Task 030 partial merged after user approval: release R8+shrinkResources remain enabled; 140-class closure blocker fully documented. Tasks 031/032 merged after Standards+Spec review: A=135 runtime/program-closure classes, B=5 R8-library/build classes. Task 033 merged after dual-axis PASS: deterministic 56-class clean monet JAR plus msdl/monet/wifi-flags/wm-shell-flags runtime scopes; debug APK succeeds, tests 151/151, fresh R8 missing set is 126 (15 removed, `AssumeTrueForR8` newly surfaced). Next: Batch 2 aconfig runtime closure.
+7. Task 028 (merged): AOSP release config deep analysis complete; user approved G1/R1/R2/R3 and diagnostic boundaries. Task 029 merged: core zero-ProGuard + plugin export flags + unobfuscated release baseline SUCCESS (126,642,058 B, V2 signed, 147/147). Task 030 partial merged after user approval: release R8+shrinkResources remain enabled; 140-class closure blocker fully documented. Tasks 031/032 merged after Standards+Spec review: A=135 runtime/program-closure classes, B=5 R8-library/build classes. Task 033 merged after dual-axis PASS: deterministic 56-class clean monet JAR plus msdl/monet/wifi-flags/wm-shell-flags runtime scopes; debug APK succeeds, tests 151/151, fresh R8 missing set is 126 (15 removed, `AssumeTrueForR8` newly surfaced). Task 034 approved: package five complete aconfig `javac` runtime JARs, migrate notification flags out of local Maven, and target exact R8 delta 126→119 while deferring B3.
 8. After debug+release compile milestones: emulator/device validation plan recorded at docs/issues/2026-08-20-device-emulator-validation-plan.md; first audit AVD signature/root/framework compatibility before replacing preinstalled SystemUI.
 6. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Item 10 approved (16G heap, task 024). Next: 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
@@ -37,4 +37,4 @@
 
 ## Last Updated
 
-2026-08-20 — Task 033 merged as `dcd7d332` after Standards+Spec PASS and architect verification: clean monet 56 classes、四个 runtime scope、debug APK 成功、151 tests、R8 140→126。后续所有 architect/worker 单次等待不超过 90 秒（用户明确要求）。
+2026-08-20 — Task 034 design approved; documentation-first issue, TDD implementation plan, and bounded worker brief prepared. Baseline is 126 and expected exact A-class delta is seven removals to 119; `AssumeTrueForR8` remains deferred B3. All waits remain capped at 90 seconds.
