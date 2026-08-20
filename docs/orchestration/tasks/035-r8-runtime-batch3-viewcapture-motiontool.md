@@ -2,7 +2,7 @@
 
 ## Goal
 
-Implement the already-approved ordered Batch 3 closure: latest-stable official protobuf-javalite, deterministic clean view-capture/motion-tool JARs from owning Soong implementation outputs, the user-approved highest-compatible official coroutines pin, and exact R8 reduction 119→108 with zero additions.
+Implement the already-approved ordered Batch 3 closure: latest-stable official protobuf-javalite, deterministic clean view-capture/motion-tool JARs from owning Soong implementation outputs, and the user-approved highest-compatible official coroutines pin. The original R8 target was 119→108 with zero additions; fresh verification removed exactly the planned 11 program refs but exposed one new device-provided B2 library ref, so the user subsequently accepted the truthful 119→109 result and deferred `org.apache.harmony.dalvik.ddmc.ChunkHandler` to the existing B2 bridge work.
 
 ## Read First
 
@@ -22,6 +22,8 @@ Then print the required `CONTRACT:` block before any edit.
 The user authorized continuing this Batch 3 in the current chat and has an existing hard preference to try the latest public stable dependency first. Therefore the exact `gradle/libs.versions.toml` addition `protobuf-javalite:4.35.1` is pre-approved **only if fresh Maven metadata still selects 4.35.1 as latest non-prerelease stable**.
 
 **2026-08-20 REDLINE approval:** clean `view_capture.jar` exposed that the old FAT JAR had silently shadowed official coroutines 1.11.0 with AOSP coroutines 1.9.0. The worker proved the exact cause: 1.11.0 adds the `SharedFlow.collectLatest` overload; AOSP `isDozing: StateFlow<Boolean>` then makes `OriginalUnseenKeyguardCoordinator.kt:142` infer `Nothing`. Both debug and release compilation fail with 1.11.0, while a temporary, reverted official Maven 1.10.2 probe succeeds. The user chose the architect's recommendation: preserve AOSP source exactly and use the highest compatible official version. Maven metadata shows 1.10.2 is the immediately preceding stable release, so changing only `kotlinxCoroutines = "1.11.0"` to `"1.10.2"` is now explicitly authorized. Do not test or adopt a lower version unless 1.10.2 fails a fresh required acceptance command; in that case halt with a new `REDLINE`.
+
+**2026-08-20 R8-delta adjudication:** fresh post-change R8 removed exactly all 11 planned A/program refs, but the newly resolvable `DdmHandleMotionTool` closure exposed one additional `org.apache.harmony.dalvik.ddmc.ChunkHandler` ref. The class is device-provided `@hide` `core-libart` library API, not APK program input. The user said to continue and accepted the truthful 119→109 result: classify this single new ref as B2 and defer it to the already-planned R8 library-classpath bridge. This approval does **not** authorize `-dontwarn`, packaging `ChunkHandler` into the APK, or implementing B2/SysUISdk work in Task 035.
 
 Worker commits but never pushes. No source/res/SDK red-line area is authorized.
 
@@ -72,7 +74,7 @@ All commands and expected results are mandatory:
 4. **Artifacts:** twice running `python3 tools/package_viewcapture_motiontool_jars.py --all` gives identical SHA-256; exact class counts/namespaces 56 and 65.
 5. **Debug:** after the exact coroutines 1.10.2 pin, `:app:checkDebugDuplicateClasses :app:assembleDebug -Dorg.gradle.workers.max=4` → true exit 0, `BUILD SUCCESSFUL`; the AOSP mirrored source remains untouched.
 6. **APK definitions:** one `apkanalyzer dex packages --defined-only` output contains `C d` rows for ViewCapture, ExportedData, MotionToolManager, MotionToolsRequest, GeneratedMessageLite.
-7. **Fresh post-change R8:** true exit remains 1 at missing classes; exact set delta 119→108, exactly the issue's 11 refs removed, 0 added, `AssumeTrueForR8` retained.
+7. **Fresh post-change R8:** true exit remains 1 at missing classes; exactly the issue's 11 planned program refs are removed and `AssumeTrueForR8` is retained. The final set is 109 because exactly one newly surfaced ref, `org.apache.harmony.dalvik.ddmc.ChunkHandler`, was added; the user accepted and classified it as deferred B2 library-classpath work. No other additions or removals are permitted.
 8. **Hygiene:** `git diff --check` clean; changed files are a subset of Allowed Paths; issue contains actual evidence.
 9. **Delivery:** one focused English commit, no push, terminal-final `HANDOFF:` block.
 

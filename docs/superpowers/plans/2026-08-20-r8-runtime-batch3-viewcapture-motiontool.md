@@ -268,7 +268,7 @@ Expected: true Gradle exit remains `1` because later closure batches remain; fai
 
 - [ ] **Step 2: Compare sets mechanically**
 
-Parse unique `-dontwarn` lines from `/tmp/task035-missing-before.txt` and the fresh `missing_rules.txt`. Assert:
+Parse unique `-dontwarn` lines from `/tmp/task035-missing-before.txt` and the fresh `missing_rules.txt`. The original assertion was:
 
 - before = 119;
 - after = 108;
@@ -276,7 +276,9 @@ Parse unique `-dontwarn` lines from `/tmp/task035-missing-before.txt` and the fr
 - added = empty;
 - `com.android.aconfig.annotations.AssumeTrueForR8` remains after.
 
-If any assertion differs, do not add suppressions or broaden scope; diagnose and report `REDLINE` with both sets.
+Fresh verification instead produced after = 109: exactly the planned 11 refs were removed, while the newly resolvable motion-tool closure added exactly one `org.apache.harmony.dalvik.ddmc.ChunkHandler` ref. The user accepted this truthful result and classified `ChunkHandler` as device-provided `@hide` `core-libart` B2 library-classpath work. Task 035 must record that exact set, retain `AssumeTrueForR8`, and must not add a suppression, package the class into the APK, or implement the B2 bridge.
+
+If any assertion beyond this adjudicated single addition differs, do not add suppressions or broaden scope; diagnose and report `REDLINE` with both sets.
 
 - [ ] **Step 3: Update issue evidence**
 
