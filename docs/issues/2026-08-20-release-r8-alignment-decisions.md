@@ -137,9 +137,18 @@ Task 030 曾记 781），不含主 src 这批类；我方 compileOnly `libs/Sett
 
 | # | 缺失内容 | 来源 |
 |---|---|---|
-| B1 | `android.compat.annotation.UnsupportedAppUsage`（219 引用点） | ~~framework.jar（bootclasspath，设备 framework 提供）~~ **Task 031 依 Task 032 证据修正**：实为构建期 CLASS-retention 注解库（tools/platform-compat），Soong `libs:` 不打包，framework.jar/android.jar 中不存在；AOSP 经 Ch4 传递 header jar 暴露给 R8，无运行时提供者 |
+| B1 | `android.compat.annotation.UnsupportedAppUsage`（219 引用点） | ~~framework.jar（bootclasspath，设备 framework 提供）~~ **Task 031/032 修正**：实为构建期 CLASS-retention 注解库（tools/platform-compat），Soong `libs:` 不打包，framework.jar/android.jar 中不存在；AOSP 经 Ch4 传递 header jar 暴露给 R8，无运行时提供者 |
 | B2 | `libcore.io.IoUtils`、`libcore.util.NativeAllocationRegistry` | libcore（bootclasspath） |
 | B3 | `com.android.aconfig.annotations.AconfigFlagAccessor` | aconfig 注解（构建期消费） |
+
+> **[Task 032 修正，2026-08-20]** 上表为 Task 030 当时的初步分类，已被 Task 032
+> 主源追踪修正：B1 非“设备 framework 提供”——`unsupportedappusage` 经 aconfig
+> codegen `AddSharedLibrary`（`java_aconfig_library.go:74`）→ flags-lib `libs:` →
+> SystemUI-core static_libs 传递 header jars 走 **Ch4**（非 Ch2 bootclasspath）；
+> `@Retention(CLASS)` 非反射，无需运行期 provider，AOSP 经 Ch4 向 R8 提供定义。
+> B2 确为真 platform bootclasspath（`art/build/boot/Android.bp:41,48-50` 证
+> core-libart 在 ART bootclasspath_fragment `contents:`）。B3 同 B1 走 Ch4、构建期注解。完整证据见下方 Task 032 节与
+> `docs/architecture/2026-08-20-r8-platform-classpath-bridge.md`。
 
 ### 为何 AOSP 不需要 dontwarn（核对结果）
 
@@ -163,6 +172,10 @@ Task 030 曾记 781），不含主 src 这批类；我方 compileOnly `libs/Sett
    B1/B2 dontwarn，优先结构性 classpath/SysUISdk 方案，仅 B3 可能在无受支持桥梁时以恰好
    1 条逐字 `-dontwarn` 兑底；四个 platform 类全部移交 Task 032 逐类处置）：同样需
    用户批准才能写入。
+   > **[Task 032 修正，2026-08-20]** 本 REDLINE 项已被 Task 032 调研取代：B1+B2
+   > 改走结构性 SysUISdk/library bridge（`build_sysuisdk.py --apply`），仅 B3 用
+   > 精确单类 `-dontwarn com.android.aconfig.annotations.AconfigFlagAccessor`。
+   > “约 3 条 dontwarn” 不再是 B 类的落地方式（除 B3 外）。详见下方 Task 032 节。
 
 worker 未做任何上述变更；`app/build.gradle.kts` 的 R1+R2 改动保留为未提交 diff，
 等待架构师决策。
@@ -183,7 +196,50 @@ view_capture 去污染重打包 + motion_tool 后置翻转（11 类）；Batch 4
 （新 Traceur AAR；主 SettingsLib AAR 补主 src+DeviceStateRotationLock+31 R；
 SettingsLibSettingsTheme AAR 自身补回 SettingsTheme 代码、不并入主 AAR；WM-Shell；iconloader；
 直接 AAR 优先；102 类）；Batch 5 为 B1–B3 四个 platform 类移交
-Task 032 逐类处置（B1/B2 禁 dontwarn、优先结构方案，仅 B3 可逐字兑底 1 条；本审计不预设
+Task 032 逐类处置（B1/B2 禁 dontwarn、优先结构方案，仅 B3 可逐字兜底 1 条；本审计不预设
 结论）；Batch 6 keepanno release-R8 classpath 方案调查（不进 runtime）；Batch 7 清理。
 A 批次全部完成后预期 missing_rules 140 → 5（B1/B2×2/B3/B4）；**140 → 0 需待 Task 032
 处置与 B4 方案落地，非本审计批次内可宣称**。
+
+## 后续（Task 032）：B 类 platform-classpath bridge 调研（2026-08-20，report-only，amended）
+
+Task 032 专责调研 B 类（B1 UnsupportedAppUsage / B2 IoUtils+NativeAllocationRegistry /
+B3 AconfigFlagAccessor）如何桥接到 AGP 9.3.1 R8 的 library classpath。结论（经架构师
+FAIL 审查后修正）：
+
+- **Soong R8 有四个 `-libraryjars` 通道（已证）**：Ch1 proguardRaiseDeps
+  （`dex.go:446`）、Ch2 `flags.bootClasspath`（`:450`，平台 bootclasspath）、
+  Ch3 `flags.dexClasspath`（`:452`，`libs:` 即 libTag）、Ch4 `transitiveClasspath`
+  （`:468`，传递 header jars）。AGP 9.3.1 仅有 Ch2 等价物（compileSdk 平台目录），
+  无 Ch3/Ch4 等价物。
+- **逐类追踪（已证，不靠 sdk_version 推断）**：
+  - **B2 IoUtils/NativeAllocationRegistry**：`core-libart` `sdk_version: "none"`
+    （`libcore/JavaLibrary.bp:360` 模块名、`:384` sdk_version none），但经
+    `art/build/boot/Android.bp:41,48-50`（bootclasspath_fragment `contents:`）证在
+    ART 平台 bootclasspath → **Ch2**。真平台类。
+  - **B1 UnsupportedAppUsage**：aconfig codegen `AddSharedLibrary`（
+    `java_aconfig_library.go:74`）→ flags-lib `libs:` → SystemUI-core static_libs
+    传递 header jars → **Ch4**，非 bootclasspath。`@Retention(CLASS)` 构建期注解，
+    非反射，无需运行期 provider；AOSP 经 Ch4 向 R8 提供定义，不经打包。
+  - **B3 AconfigFlagAccessor**：同 B1 路径（`java_aconfig_library.go:72`）→ **Ch4**，
+    非 bootclasspath。`@Retention(CLASS)` 构建期注解。
+- **建议（按用户批准顺序，重评后）**：
+  - **B2**：声明式 SysUISdk 注入（faithful mirror，真平台 bootclasspath 类）。
+  - **B1**：SysUISdk 注入是用户授权的结构性 bridge（workaround，AOSP 走 Ch4 非 Ch2），
+    不宜称“faithfully mirrors AOSP”；它向 AGP R8 暴露 library 定义而不打包进 APK
+    （Ch4→Ch2 workaround），因 `@Retention(CLASS)` 非反射故无需运行期 provider。
+  - **B3**：按用户顺序，先找受支持 library 通道→**无**（`useLibrary` 仅覆盖 6 个
+    `optional/` jar，aconfig 不在其中）→精确单类 `-dontwarn
+    com.android.aconfig.annotations.AconfigFlagAccessor`（最后手段，不拓宽）。
+    B3 **不**走 SysUISdk 注入（用户顺序未授权，且为构建期注解非平台类）。
+- **live SDK 变更**：只能经 `tools/build_sysuisdk.py --apply`（`apply_to_live` line 579，
+  `_live_guard` line 99），禁止直接 patch；新阶段需精确单元测试与 S5 staging/live 校验。
+- **授权状态**：2026-08-20 用户（task brief Authority + STATE.md）已定向授权 B1+B2 结构性 SysUISdk/library
+  bridge 与 B3 精确 `-dontwarn` fallback；2026-08-13 授权（仅
+  `dalvik.annotation.optimization`）对本范围已 superseded。实施 task brief 仍受限于声明式
+  `build_sysuisdk.py --apply` + 单元测试、禁止直接 live patch；除非出现精确未批准产品
+  选择，无需再 Rule H 升级。
+
+完整证据、proven/assumption 分离、主源引用见
+`docs/architecture/2026-08-20-r8-platform-classpath-bridge.md`。worker 未改动任何代码或
+SDK jar（report-only）。
