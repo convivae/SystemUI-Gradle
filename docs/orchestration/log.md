@@ -117,3 +117,6 @@
 2026-08-20 10:42 | w2:p19+p1A+p1K+p1M+p1N+p1P | 031+032 | close | final audit+review conclusions already accepted, merged, and pushed; six stale idle SystemUI worker/reviewer panes closed after tail review
 2026-08-20 10:37 | wJ:p1 | 033 | worker-done | b84b0688; 5 allowed paths; clean monet 56 classes; debug duplicate+assemble success; 151/151; R8 fresh 140->126 (15 removed, AssumeTrueForR8 newly surfaced)
 2026-08-20 10:38 | wK:p1+wM:p1 | 033 | review-dispatch | independent Standards+Spec reviewers started in separate worktrees with explicit joycode/GLM-5.2 and reviewer.md; fixed point ef83d877, head b84b0688
+2026-08-20 10:55 | wK:p1+wM:p1 | 033 | review-pass | Standards PASS (no hard violations; only low/trivial optional nits) and Spec PASS; reviewers independently verified 56-class deterministic monet, 151/151 tests, five APK classes, and R8 126 including AssumeTrueForR8
+2026-08-20 10:56 | main | 033 | merge | worker b84b0688 cherry-picked as dcd7d332 after architect re-ran 151/151, debug duplicate/build SUCCESS, diff-check clean; exact five-path scope
+2026-08-20 10:56 | main | process | user-constraint | architect and all subagents must use waits/timeouts no longer than 90 seconds; future monitoring uses short polling plus agent/process/pane checks
