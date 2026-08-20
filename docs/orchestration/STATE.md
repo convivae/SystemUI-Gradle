@@ -26,10 +26,13 @@
 - 2026-08-20 — Task 039 cherry-picked to main; the `STATE.md` dispatch conflict was
   resolved by preserving the narrowed orchestration-only role and the newer transition.
   Main fresh static verification passed; no Gradle task was run by design.
+- 2026-08-20 — Task 040 bounded SettingsLib design and exact `1.0.1` version bumps
+  approved; issue, TDD plan, and redline-gated worker brief prepared. Dispatch awaits
+  explicit brief approval.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-20 — Task 039 documentation governance is merged and main-verified.
-No active workers. Next queue item is the bounded SettingsLib 74-ref closure task;
-live technical details remain owned by `docs/CURRENT_STATE.md`.
+2026-08-20 — Task 040 SettingsLib design/version bumps approved and execution documents
+prepared; no active worker until the user approves the exact brief. Live technical details
+remain owned by `docs/CURRENT_STATE.md`.
