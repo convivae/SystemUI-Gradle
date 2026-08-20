@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- Task 034 implementation: `wR:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-034`, branch `task-034`, model `joycode/GLM-5.3`. CONTRACT confirmed; fresh pre-change R8 baseline in progress.
+- None. Task 034 implementation and both independent reviewers are complete; panes are pending close after final push.
 
 ## Queue
 
@@ -15,7 +15,7 @@
 4. Task 023 (merged): experiment concluded — disallowKotlinSourceSets=false is REQUIRED (KSP config error without it); flag stays, documented.
 5. Task 024 (merged): heap now 16G; default-config assembleDebug SUCCESS (2m54s), no OOM; historical javac OOM point re-verified clean.
 6. Tasks 026+027 (merged): official-Maven audit (49 artifacts) landed — zxing 3.5.4 (latest, full build passed), protobuf-javanano 3.1.0, dynamicanimation 1.1.0; 4 jars retired (3 replaced + SettingsLib-javac orphan); tooling entry retired; test baseline now 147 (zxing packaging test retired with it).
-7. Task 028 (merged): AOSP release config deep analysis complete; user approved G1/R1/R2/R3 and diagnostic boundaries. Task 029 merged: core zero-ProGuard + plugin export flags + unobfuscated release baseline SUCCESS (126,642,058 B, V2 signed, 147/147). Task 030 partial merged after user approval: release R8+shrinkResources remain enabled; 140-class closure blocker fully documented. Tasks 031/032 merged after Standards+Spec review: A=135 runtime/program-closure classes, B=5 R8-library/build classes. Task 033 merged after dual-axis PASS: deterministic 56-class clean monet JAR plus msdl/monet/wifi-flags/wm-shell-flags runtime scopes; debug APK succeeds, tests 151/151, fresh R8 missing set is 126 (15 removed, `AssumeTrueForR8` newly surfaced). Task 034 approved: package five complete aconfig `javac` runtime JARs, migrate notification flags out of local Maven, and target exact R8 delta 126→119 while deferring B3.
+7. Task 028 (merged): AOSP release config deep analysis complete; user approved G1/R1/R2/R3 and diagnostic boundaries. Task 029 merged: core zero-ProGuard + plugin export flags + unobfuscated release baseline SUCCESS (126,642,058 B, V2 signed, 147/147). Task 030 partial merged after user approval: release R8+shrinkResources remain enabled; 140-class closure blocker fully documented. Tasks 031/032 merged after Standards+Spec review: A=135 runtime/program-closure classes, B=5 R8-library/build classes. Task 033 merged after dual-axis PASS: deterministic 56-class clean monet JAR plus msdl/monet/wifi-flags/wm-shell-flags runtime scopes; debug APK succeeds, tests 151/151, fresh R8 missing set is 126 (15 removed, `AssumeTrueForR8` newly surfaced). Task 034 merged after dual-axis PASS: five byte-identical complete aconfig runtime JARs, notification flags migrated out of local Maven, tests 154/154, debug APK succeeds, fresh R8 missing set is 119 (exact seven removals, zero additions, `AssumeTrueForR8` retained). Next A-class batch: protobuf-javalite + clean view_capture + motion_tool runtime closure.
 8. After debug+release compile milestones: emulator/device validation plan recorded at docs/issues/2026-08-20-device-emulator-validation-plan.md; first audit AVD signature/root/framework compatibility before replacing preinstalled SystemUI.
 6. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Item 10 approved (16G heap, task 024). Next: 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
@@ -33,8 +33,8 @@
 
 ## Blocked
 
-优化 Release 主分支仍被 126 个 R8 missing class 阻塞（Task 033 已从 140 移除 15，并新浮出 `AssumeTrueForR8` 1）；下一批为 aconfig runtime closure。APK 装机/运行验证未做。
+优化 Release 主分支仍被 119 个 R8 missing class 阻塞（Task 034 从 126 精确移除 7，`AssumeTrueForR8` 仍保留并延期到 B3）；下一批为 protobuf-javalite + clean view_capture + motion_tool runtime closure。APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-20 — Task 034 dispatched to `wR:p1` with explicit GLM-5.3; modelId and CONTRACT verified. Worker is measuring the fresh pre-change 126-ref R8 baseline before TDD edits. Expected exact A-class delta remains seven removals to 119; `AssumeTrueForR8` remains deferred B3. All waits remain capped at 90 seconds.
+2026-08-20 — Task 034 merged as `bdbb5a55` after independent GLM-5.2 Standards/Spec PASS. Architect fresh verification: 154/154 tests, five JARs byte-identical with exact five-class sets, debug duplicate/build SUCCESS in 1m06s, five APK classes DEFINED, and release R8 truthfully fails with exactly 119 refs (`126 - 7`, zero additions, `AssumeTrueForR8` retained). All waits remained capped at 90 seconds.

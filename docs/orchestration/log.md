@@ -122,3 +122,7 @@
 2026-08-20 10:56 | main | process | user-constraint | architect and all subagents must use waits/timeouts no longer than 90 seconds; future monitoring uses short polling plus agent/process/pane checks
 2026-08-20 11:10 | main | 034 | user-approved+plan | Batch 2 aconfig runtime closure approved; issue+TDD plan+worker brief prepared; expected fresh R8 delta 126->119, B3 AssumeTrueForR8 explicitly deferred
 2026-08-20 11:16 | wR:p1 | 034 | dispatch+contract-ok | task-034 worktree from 3d0dda18; explicit joycode/GLM-5.3 modelId verified; CONTRACT confirmed; fresh pre-change R8 baseline started; all waits capped at 90s
+2026-08-20 11:25 | wR:p1 | 034 | worker-done | 5a26df9a; five complete byte-identical aconfig javac JARs; notification local-Maven JAR/POM retired; 154/154 tests; debug SUCCESS; fresh R8 126->119 exact seven removals, zero additions
+2026-08-20 11:26 | wT:p1+wS:p1 | 034 | review-dispatch | independent Standards+Spec reviewers started in separate worktrees with explicit joycode/GLM-5.2 and reviewer.md; fixed point 3d0dda18, head 5a26df9a
+2026-08-20 11:27 | wT:p1+wS:p1 | 034 | review-pass | Standards PASS (no hard violations; one LOW and one TRIVIAL optional smell) and Spec PASS; exact artifact provenance/class sets, 154 tests, and R8 126->119 independently checked
+2026-08-20 11:27 | main | 034 | merge | worker 5a26df9a cherry-picked as bdbb5a55; architect fresh verification: 154/154, byte-identical five-class JARs, debug duplicate/build SUCCESS in 1m06s, five dex classes DEFINED, R8 119 exact with AssumeTrueForR8 retained
