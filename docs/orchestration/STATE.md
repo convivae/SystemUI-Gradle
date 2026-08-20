@@ -9,9 +9,9 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 041 implementation | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | done at `5fae790b`; clean; exact 7→1 reported |
-| 041 Standards review | `w1R:p1` (`review041-standards`) | `review-041-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-041-standards` | `joycode/GLM-5.2` | static review of `a4876fe5...5fae790b` |
-| 041 Spec review | `w1S:p1` (`review041-spec`) | `review-041-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-041-spec` | `joycode/GLM-5.2` | static review of `a4876fe5...5fae790b` |
+| 041 implementation | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | revision: pin moving scope evidence to immutable ranges |
+| 041 Standards review | `w1R:p1` (`review041-standards`) | `review-041-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-041-standards` | `joycode/GLM-5.2` | PASS at `5fae790b`; 0 blocker/high/medium |
+| 041 Spec review | `w1S:p1` (`review041-spec`) | `review-041-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-041-spec` | `joycode/GLM-5.2` | FAIL at `5fae790b`; 1 MEDIUM evidence range accuracy |
 
 ## Queue
 
@@ -57,9 +57,13 @@
 - 2026-08-21 — Task 041 worker completed three focused commits through `5fae790b`; reported
   233 tests, strict S5 PASS, debug success, APK 35/35 absent, and exact fresh R8 7→1.
   Fixed-base/head isolated Standards and Spec reviewers dispatched with GLM-5.2, static-only.
+- 2026-08-21 — Initial Task 041 review: Standards PASS (0 blocker/high/medium; one LOW
+  Data Clump and two TRIVIAL notes); Spec FAIL with one MEDIUM because a moving
+  `HEAD~2..HEAD` scope command no longer reproduced the recorded file list. Implementation
+  and actual scope passed. Original worker is pinning the evidence to immutable ranges.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 041 worker done and clean at `5fae790b`; parallel static Standards/Spec
-review is active against fixed base `a4876fe5`.
+2026-08-21 — Task 041 implementation passed Standards; Spec requested one evidence-only
+revision to replace a moving Git range with immutable checkpoint/final ranges.
