@@ -239,12 +239,24 @@ core-libart `org/apache/harmony/dalvik/ddmc/` non-directory entries are exactly 
   (UnsupportedAppUsage, AconfigFlagAccessor, UsesReflection, IoUtils,
   NativeAllocationRegistry, ChunkHandler); added = ∅; remaining =
   `AssumeTrueForR8` only (Task 042).
-- **Static scope checks**: `git diff --name-only HEAD~2..HEAD` shows only
-  `tools/build_sysuisdk.py`, `tools/patch_sdk_r8_library_classes.py`,
-  `tools/tests/test_build_sysuisdk.py`,
-  `tools/tests/test_patch_sdk_r8_library_classes.py`; no
-  src/res/app/SystemUI-*/libs/gradle/AGENTS.md/adr/CHARTER path; no
-  dontwarn/keep/implementation/compileOnly change; `git diff --check` exit 0.
+- **Static scope checks** (exact immutable ranges; fixed 2026-08-21
+  revision — the earlier text referenced `HEAD~2..HEAD`, a moving reference):
+  - Code checkpoint range `a4876fe5..6be0f5bc` (patcher + pipeline commits):
+    `git diff --name-only a4876fe5..6be0f5bc` → exactly the four tools files
+    `tools/build_sysuisdk.py`, `tools/patch_sdk_r8_library_classes.py`,
+    `tools/tests/test_build_sysuisdk.py`,
+    `tools/tests/test_patch_sdk_r8_library_classes.py`.
+  - Final reviewed range `a4876fe5..5fae790b` (through the evidence docs
+    commit): `git diff --name-only a4876fe5..5fae790b` → all six allowed
+    paths: the four tools files above plus
+    `docs/issues/2026-08-21-r8-platform-build-classpath-closure.md` and
+    `docs/orchestration/tasks/041-r8-platform-build-classpath-closure.md`.
+  - Forbidden-path scan (pattern covering `src/`, `res*/`, `app/`,
+    `SystemUI-*`, `libs/`, `gradle/`, `AGENTS.md`, `docs/adr/`,
+    `docs/orchestration/CHARTER.md`) against both ranges: **no forbidden
+    paths matched**.
+  - No dontwarn/keep/implementation/compileOnly change;
+    `git diff --check` exit 0.
 
 ## Conclusion
 
