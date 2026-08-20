@@ -78,6 +78,15 @@ carries 7 per-target dependency edges mechanically mirroring `Android.bp`
   annotation processing uses KSP.
 - Internal flags jars must precede framework.jar on the classpath or their
   same-named classes get shadowed (PITFALLS §2.x).
+- **Build serialization (user mandate 2026-08-20)**: the build machine cannot
+  sustain two concurrent SystemUI Gradle builds. At most ONE Gradle build
+  (assembleDebug / minifyReleaseWithR8 / any heavy verification) may run at a
+  time across the architect and ALL workers/reviewers. Workers own builds in
+  their worktree; reviewers must verify statically (diffs, hashes, zip/unittest
+  checks — Python tests are cheap and allowed) and must NOT invoke Gradle build
+  tasks; the architect runs main-branch fresh verification only after worker
+  and reviewer builds have finished. Every batch must keep
+  `:app:assembleDebug` successful (hard gate).
 
 ## Part 5 · Red-Line Areas
 
