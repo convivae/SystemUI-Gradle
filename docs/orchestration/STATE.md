@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- None for SystemUI-Gradle. Task 035 implementation and both independent reviews are complete; their HANDOFF/REVIEW_HANDOFF evidence was captured. The three completed herdr workspaces may be closed after the final documentation commit is pushed.
+- None for SystemUI-Gradle. Task 035 implementation and both independent reviews are complete; their HANDOFF/REVIEW_HANDOFF evidence was captured, implementation/docs were pushed through `82e581db`, and the three completed herdr workspaces were closed.
 
 ## Queue
 
