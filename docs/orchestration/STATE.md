@@ -13,8 +13,8 @@
 
 ## Queue
 
-1. Task 042: `AssumeTrueForR8` one-ref annotation classpath closure; Task 041 is
-   reviewed, independently verified, merged, pushed, and cleaned up. Planning/approval next.
+1. Task 042: exact issue/plan/redline-gated brief drafted; awaiting user approval of the
+   independent S3c one-class bridge plus complete byte-exact AOSP exported rule file.
 
 ## Recent Orchestration Transitions
 
@@ -71,9 +71,13 @@
 - 2026-08-21 — Task 041 closure docs pushed as `37a86f01`; clean-status and
   patch-equivalence checks passed. Worker and both reviewer herdr workspaces closed;
   all three worktrees and local task/review branches removed.
+- 2026-08-21 — Task 042 primary-source investigation confirmed two required Soong
+  channels: the real 413-byte `AssumeTrueForR8.class` library definition and the complete
+  exported 778-byte `aconfig_proguard.flags`. Exact S3c + byte-exact rule-import issue,
+  TDD plan, and redline-gated brief drafted; dispatch awaits explicit user approval.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 041 fully closed and cleaned up; no active SystemUI workers.
-Task 042 planning/approval is the next orchestration action.
+2026-08-21 — No active SystemUI workers. Task 042 exact brief awaits user approval;
+no implementation or live-SDK mutation has started.
