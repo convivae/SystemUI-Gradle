@@ -129,3 +129,4 @@
 2026-08-20 11:28 | main | 034 | push+close | main pushed through b5aa078f; implementation and both review workspaces closed after final HANDOFF/review tails were captured
 2026-08-20 11:36 | main | 035 | user-approved+plan | user said continue and authorized worker dispatch; Batch 3 issue+TDD plan+brief committed as 90945f7d; latest-stable protobuf policy selects 4.35.1; target R8 119->108
 2026-08-20 11:40 | wV:p1 | 035 | dispatch | task-035 worktree from 90945f7d; explicit joycode/GLM-5.3 modelId verified; worker-contract startup reads in progress; all waits capped at 90s
+2026-08-20 11:41 | wV:p1 | 035 | contract-ok | CONTRACT confirmed from session transcript; exact allowed/forbidden paths, 4.35.1 redline boundary, 119->108 acceptance, no-push authority acknowledged; fresh baseline R8 running

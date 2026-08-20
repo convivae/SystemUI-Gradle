@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- Task 035 implementation: `wV:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-035`, branch `task-035`, model `joycode/GLM-5.3`. ModelId verified; startup reads in progress and CONTRACT pending confirmation.
+- Task 035 implementation: `wV:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-035`, branch `task-035`, model `joycode/GLM-5.3`. ModelId and CONTRACT verified; fresh pre-change 119-ref R8 baseline is running.
 
 ## Queue
 
