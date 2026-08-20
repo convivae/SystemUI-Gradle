@@ -11,9 +11,10 @@ No active workers. Task 040 worker and both reviewer workspaces were closed afte
 
 ## Queue
 
-1. After Task 040: B1–B4 platform/build classpath 6-ref closure, then
-   `AssumeTrueForR8` 1-ref annotation classpath closure. Technical ordering remains owned
-   by `docs/CURRENT_STATE.md`.
+1. Task 041 exact plan/brief prepared after user design approval; dispatch awaits explicit
+   brief approval. Scope: B1–B4 six-ref structural SysUISdk library-class bridge, exact
+   fresh R8 7→1, with `AssumeTrueForR8` reserved for Task 042.
+2. Task 042: `AssumeTrueForR8` one-ref annotation classpath closure.
 
 ## Recent Orchestration Transitions
 
@@ -44,9 +45,13 @@ No active workers. Task 040 worker and both reviewer workspaces were closed afte
   and exact fresh R8 81→7 (74 removed, 0 added).
 - 2026-08-21 — Task 040 worker/reviewer workspaces closed; three clean worktrees and
   patch-equivalent task/review branches removed.
+- 2026-08-21 — Task 041 two-stage architecture approved by user: Task 041 injects exactly
+  35 real library classes through declarative SysUISdk S3b and targets fresh R8 7→1;
+  `AssumeTrueForR8` remains isolated for Task 042. Issue, TDD plan, and redline-gated brief
+  prepared; dispatch awaits exact brief approval.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 040 is merged, independently verified, documented, and fully cleaned up.
-No active workers remain; next queue item is the B1–B4 six-ref platform/build classpath closure.
+2026-08-21 — Task 041 architecture is approved and the exact issue/plan/brief are prepared.
+No active worker exists; dispatch awaits explicit brief approval.
