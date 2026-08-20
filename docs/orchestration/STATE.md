@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- Task 035 implementation completed by `wV:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-035`, branch `task-035`, model `joycode/GLM-5.3`, commit `26d63629` (never pushed). Worker HANDOFF captured; awaiting independent Standards+Spec review and architect fresh verification. User accepted the truthful R8 result 119→109: exactly 11 planned refs removed plus one newly surfaced B2 `org.apache.harmony.dalvik.ddmc.ChunkHandler` ref deferred to the platform library bridge.
+- Task 035 implementation completed by `wV:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-035`, branch `task-035`, model `joycode/GLM-5.3`, commit `26d63629` (never pushed). Worker HANDOFF captured. Independent reviews active: Standards `wX:p1` and Spec `wY:p1`, both isolated worktrees with `joycode/GLM-5.2` + reviewer prompt, fixed base/head `c747debc..26d63629`. User accepted truthful R8 119→109: exactly 11 planned refs removed plus one newly surfaced B2 `org.apache.harmony.dalvik.ddmc.ChunkHandler` ref deferred to the platform library bridge.
 
 ## Queue
 
