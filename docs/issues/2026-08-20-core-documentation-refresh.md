@@ -254,3 +254,19 @@ Task 1 基线验证命令与结果：
   `docs/architecture/2026-08-20-r8-runtime-closure-audit.md`；audit 文件 diff 仅为顶部 3 行元数据新增
 - **AGENTS 结构完整性**：代码围栏 8 个（成对）；章节编号未变
 - **Gradle: NOT RUN (task boundary)**；未生成任何构建产物
+
+---
+
+## Main closure（架构师，2026-08-20）
+
+- 固定复审范围：`7b24b7c6...04a13473`。修订后 Standards PASS、Spec PASS；两轴均为
+  `0 BLOCKER / 0 HIGH / 0 MEDIUM / 0 LOW`。初审 MEDIUM 与 LOW 均已关闭。
+- 六个 worker commits 已 cherry-pick 到 main。`docs/orchestration/STATE.md` 与 main dispatch
+  commit 的唯一冲突已人工解决：保留新的 orchestration-only 职责边界，并记录 worker/reviewer 完成与 main closure transition。
+- Main fresh Markdown local-link check：11 个治理文档共 **78** 个本地目标，全部存在。
+- Main fresh expanded stale scan：`CLEAN`；规则 P/S/C/F/R/B/H/D/I 全部保留。
+- Active audit lifecycle marker 与真实 `libs/notification-flags.jar` 位置校验通过；CURRENT_STATE 的
+  179/179、81、SettingsLib 74 固定事实均存在。
+- `git diff --diff-filter=D --name-only 2545bdc9...HEAD`：空；`git diff --check 7b24b7c6...HEAD`：exit 0。
+- Task 039 main diff 为 11 个治理路径加 append-only `docs/orchestration/log.md` dispatch/closure 记录；无文档删除。
+- **Gradle: NOT RUN (static documentation task boundary)**；未生成 AAR/JAR/APK。

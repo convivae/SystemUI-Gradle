@@ -7,13 +7,11 @@
 
 ## Active Workers
 
-- None. Task 039 worker and both isolated reviewers have completed; main merge and
-  static verification are in progress.
+- None.
 
 ## Queue
 
-1. Complete Task 039 main static verification, closure record, push, and workspace cleanup.
-2. Next bounded build task: SettingsLib 74 program/resource closure
+1. Next bounded build task: SettingsLib 74 program/resource closure
    (technical detail and ordering: `docs/CURRENT_STATE.md` → "Next ordered work").
 
 ## Recent Orchestration Transitions
@@ -25,10 +23,13 @@
 - 2026-08-20 — Task 039 worker completed at `04a13473`; initial Standards review
   found one MEDIUM lifecycle mismatch, revision fixed it, and final Standards + Spec
   re-review both passed with no BLOCKER/HIGH/MEDIUM/LOW findings.
+- 2026-08-20 — Task 039 cherry-picked to main; the `STATE.md` dispatch conflict was
+  resolved by preserving the narrowed orchestration-only role and the newer transition.
+  Main fresh static verification passed; no Gradle task was run by design.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-20 — Task 039 worker and dual-axis review are complete; main merge and
-static-only verification are in progress. Live technical state remains owned by
-`docs/CURRENT_STATE.md`.
+2026-08-20 — Task 039 documentation governance is merged and main-verified.
+No active workers. Next queue item is the bounded SettingsLib 74-ref closure task;
+live technical details remain owned by `docs/CURRENT_STATE.md`.
