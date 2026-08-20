@@ -320,6 +320,37 @@ class TestArtifactConfigs(unittest.TestCase):
             self.assertEqual(cfg["output"], f"libs/aars/{target}.aar")
             self.assertFalse(cfg.get("reject_sysui", False))
 
+    def test_settingslib_ten_new_resource_configs(self):
+        """Task 040（Batch 4D）：10 个新增 per-target res-only 配置
+        （code=[]，res/manifest/R.txt 源自各自 AOSP 目录，独立 namespace）。"""
+        expected = {
+            "SettingsLibMainSwitchPreference": "MainSwitchPreference",
+            "SettingsLibAppPreference": "AppPreference",
+            "SettingsLibBannerMessagePreference": "BannerMessagePreference",
+            "SettingsLibBarChartPreference": "BarChartPreference",
+            "SettingsLibButtonPreference": "ButtonPreference",
+            "SettingsLibFooterPreference": "FooterPreference",
+            "SettingsLibIllustrationPreference": "IllustrationPreference",
+            "SettingsLibSliderPreference": "SliderPreference",
+            "SettingsLibUsageProgressBarPreference": "UsageProgressBarPreference",
+            "SettingsLibSettingsSpinner": "SettingsSpinner",
+        }
+        for target, subdir in expected.items():
+            cfg = paar.CONFIGS[target]
+            self.assertEqual(cfg["code"], [], f"{target} 应为 res-only")
+            self.assertEqual(
+                cfg["res"],
+                [paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"],
+            )
+            self.assertTrue(str(cfg["manifest"]).endswith(f"{subdir}/AndroidManifest.xml"))
+            self.assertEqual(
+                cfg["rtxt"],
+                paar.SOONG_DIR / "frameworks/base/packages/SettingsLib" / subdir / target
+                / "android_common/R.txt",
+            )
+            self.assertEqual(cfg["output"], f"libs/aars/{target}.aar")
+            self.assertFalse(cfg.get("reject_sysui", False))
+
 
 class TestSettingsLibProgramClosure(unittest.TestCase):
     """Task 040：SettingsLib 程序类闭包——780 javac + 372 主 Kotlin + 1 RotationLock
@@ -579,6 +610,100 @@ class TestSettingsLibPerTargetProvenance(unittest.TestCase):
     def test_rebuild_is_byte_identical(self):
         import time
         for target in self.TARGETS:
+            with tempfile.TemporaryDirectory() as d:
+                d = Path(d)
+                first = self._build(target, d / "first.aar")
+                time.sleep(2)
+                second = self._build(target, d / "second.aar")
+                self.assertEqual(first.read_bytes(), second.read_bytes(),
+                                 f"{target} 重复打包字节不一致")
+
+
+class TestSettingsLibNewResourceProvenance(unittest.TestCase):
+    """Task 040（Batch 4D）：10 个新 res-only AAR——res 树逐字节溯源不漏不多不改、
+    空 classes.jar、manifest/R.txt 原样、确定性。"""
+
+    NEW_RESOURCE_TARGETS = {
+        "SettingsLibMainSwitchPreference": "MainSwitchPreference",
+        "SettingsLibAppPreference": "AppPreference",
+        "SettingsLibBannerMessagePreference": "BannerMessagePreference",
+        "SettingsLibBarChartPreference": "BarChartPreference",
+        "SettingsLibButtonPreference": "ButtonPreference",
+        "SettingsLibFooterPreference": "FooterPreference",
+        "SettingsLibIllustrationPreference": "IllustrationPreference",
+        "SettingsLibSliderPreference": "SliderPreference",
+        "SettingsLibUsageProgressBarPreference": "UsageProgressBarPreference",
+        "SettingsLibSettingsSpinner": "SettingsSpinner",
+    }
+
+    EXPECTED_COUNTS = {
+        "SettingsLibMainSwitchPreference": 22,
+        "SettingsLibAppPreference": 91,
+        "SettingsLibBannerMessagePreference": 96,
+        "SettingsLibBarChartPreference": 6,
+        "SettingsLibButtonPreference": 23,
+        "SettingsLibFooterPreference": 91,
+        "SettingsLibIllustrationPreference": 6,
+        "SettingsLibSliderPreference": 5,
+        "SettingsLibUsageProgressBarPreference": 1,
+        "SettingsLibSettingsSpinner": 5,
+    }
+
+    def _build(self, target: str, tmpdir: Path) -> Path:
+        out = tmpdir / f"{target}.aar"
+        paar.build_artifact(target, out)
+        return out
+
+    def test_source_tree_counts_total_346(self):
+        total = 0
+        for target, subdir in self.NEW_RESOURCE_TARGETS.items():
+            src_root = paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"
+            count = sum(1 for p in src_root.rglob("*") if p.is_file())
+            self.assertEqual(count, self.EXPECTED_COUNTS[target],
+                             f"{target} AOSP 源树文件数变化")
+            total += count
+        self.assertEqual(total, 346)
+
+    def test_res_entries_match_aosp_tree_exactly(self):
+        for target, subdir in self.NEW_RESOURCE_TARGETS.items():
+            src_root = paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"
+            source = {
+                f"res/{p.relative_to(src_root)}": p.read_bytes()
+                for p in sorted(src_root.rglob("*")) if p.is_file()
+            }
+            with tempfile.TemporaryDirectory() as d:
+                out = self._build(target, Path(d))
+                with zipfile.ZipFile(out) as z:
+                    aar_res = {n: z.read(n) for n in z.namelist() if n.startswith("res/")}
+                    manifest_bytes = z.read("AndroidManifest.xml")
+                    rtxt_bytes = z.read("R.txt")
+            self.assertEqual(set(aar_res), set(source),
+                             f"{target} res entry 集与 AOSP 源树不一致")
+            for name, data in source.items():
+                self.assertEqual(aar_res[name], data,
+                                 f"{target}/{name} 字节与 AOSP 源不一致")
+            cfg = paar.CONFIGS[target]
+            self.assertEqual(manifest_bytes, cfg["manifest"].read_bytes(),
+                             f"{target} AndroidManifest.xml 字节与 AOSP 源不一致")
+            self.assertEqual(rtxt_bytes, cfg["rtxt"].read_bytes(),
+                             f"{target} R.txt 字节与 Soong 输出不一致")
+
+    def test_no_code_entries(self):
+        from io import BytesIO
+        for target in self.NEW_RESOURCE_TARGETS:
+            with tempfile.TemporaryDirectory() as d:
+                out = self._build(target, Path(d))
+                with zipfile.ZipFile(out) as z:
+                    self.assertIn("classes.jar", z.namelist())
+                    with zipfile.ZipFile(BytesIO(z.read("classes.jar"))) as cj:
+                        self.assertEqual(
+                            [n for n in cj.namelist()
+                             if not n.endswith("/") and n != "META-INF/MANIFEST.MF"],
+                            [], f"{target} 应为 res-only")
+
+    def test_rebuild_is_byte_identical(self):
+        import time
+        for target in self.NEW_RESOURCE_TARGETS:
             with tempfile.TemporaryDirectory() as d:
                 d = Path(d)
                 first = self._build(target, d / "first.aar")
@@ -1054,8 +1179,9 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 19 个 artifact（Task 015 新增 7 个 SettingsLib per-target
-        # res-only target；Task 038 新增 Traceur 双 AAR）
+        # 确认 CONFIGS 含 29 个 artifact（Task 015 新增 7 个 SettingsLib per-target
+        # res-only target；Task 038 新增 Traceur 双 AAR；Task 040 新增 10 个
+        # SettingsLib per-target res-only target）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
@@ -1069,7 +1195,18 @@ class TestAllFlag(unittest.TestCase):
              "SettingsLibTwoTargetPreference",
              "SettingsLibLayoutPreference",
              "SettingsLibAdaptiveIcon",
+             "SettingsLibMainSwitchPreference",
+             "SettingsLibAppPreference",
+             "SettingsLibBannerMessagePreference",
+             "SettingsLibBarChartPreference",
+             "SettingsLibButtonPreference",
+             "SettingsLibFooterPreference",
+             "SettingsLibIllustrationPreference",
+             "SettingsLibSliderPreference",
+             "SettingsLibUsageProgressBarPreference",
+             "SettingsLibSettingsSpinner",
              "TraceurCommon", "Traceur-res"})
+        self.assertEqual(len(paar.CONFIGS), 29)
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

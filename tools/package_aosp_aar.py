@@ -220,6 +220,90 @@ CONFIGS = {
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/AdaptiveIcon/SettingsLibAdaptiveIcon/android_common/R.txt",
         "output": "libs/aars/SettingsLibAdaptiveIcon.aar",
     },
+    # ↓↓↓ Task 040（R8 Batch 4D）：10 个新增 SettingsLib per-target res-only AAR。
+    # 各自拥有真实 AOSP 资源（共 346 文件）与独立 R namespace；代码类已由
+    # SettingsLib.aar 合并交付，这里只补各自 res；AAR 经 SettingsLib POM 传递
+    # 依赖接线（ADR 0005），consumer 不新增依赖行。
+    "SettingsLibMainSwitchPreference": {
+        # namespace com.android.settingslib.widget.mainswitch；22 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/MainSwitchPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/MainSwitchPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/MainSwitchPreference/SettingsLibMainSwitchPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibMainSwitchPreference.aar",
+    },
+    "SettingsLibAppPreference": {
+        # namespace com.android.settingslib.widget.preference.app；91 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/AppPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/AppPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/AppPreference/SettingsLibAppPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibAppPreference.aar",
+    },
+    "SettingsLibBannerMessagePreference": {
+        # namespace com.android.settingslib.widget.preference.banner；96 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/BannerMessagePreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/BannerMessagePreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/BannerMessagePreference/SettingsLibBannerMessagePreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibBannerMessagePreference.aar",
+    },
+    "SettingsLibBarChartPreference": {
+        # namespace com.android.settingslib.widget.preference.barchart；6 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/BarChartPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/BarChartPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/BarChartPreference/SettingsLibBarChartPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibBarChartPreference.aar",
+    },
+    "SettingsLibButtonPreference": {
+        # namespace com.android.settingslib.widget.preference.button；23 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/ButtonPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/ButtonPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/ButtonPreference/SettingsLibButtonPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibButtonPreference.aar",
+    },
+    "SettingsLibFooterPreference": {
+        # namespace com.android.settingslib.widget.preference.footer；91 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/FooterPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/FooterPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/FooterPreference/SettingsLibFooterPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibFooterPreference.aar",
+    },
+    "SettingsLibIllustrationPreference": {
+        # namespace com.android.settingslib.widget.preference.illustration；6 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/IllustrationPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/IllustrationPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/IllustrationPreference/SettingsLibIllustrationPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibIllustrationPreference.aar",
+    },
+    "SettingsLibSliderPreference": {
+        # namespace com.android.settingslib.widget.preference.slider；5 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/SliderPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/SliderPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SliderPreference/SettingsLibSliderPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibSliderPreference.aar",
+    },
+    "SettingsLibUsageProgressBarPreference": {
+        # namespace com.android.settingslib.widget.preference.usage；1 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/UsageProgressBarPreference/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/UsageProgressBarPreference/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/UsageProgressBarPreference/SettingsLibUsageProgressBarPreference/android_common/R.txt",
+        "output": "libs/aars/SettingsLibUsageProgressBarPreference.aar",
+    },
+    "SettingsLibSettingsSpinner": {
+        # namespace com.android.settingslib.widget.spinner；5 个 res 文件
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/SettingsSpinner/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/SettingsSpinner/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsSpinner/SettingsLibSettingsSpinner/android_common/R.txt",
+        "output": "libs/aars/SettingsLibSettingsSpinner.aar",
+    },
     "setupcompat": {
         # external/setupcompat android_library（含 res；AOSP SettingsLib 经 setupdesign→setupcompat
         # 传递获得 compile classpath）。package com.google.android.setupcompat；
