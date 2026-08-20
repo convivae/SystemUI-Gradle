@@ -97,10 +97,54 @@ IssueRecordingService*、CustomTraceSettingsDialogDelegate 等）。
 
 ## 7. 验收
 
-- [ ] `python3 -m unittest discover -s tools/tests` 全绿（含新增 CONFIGS 测试）
-- [ ] 两 AAR 确定性（双跑同 SHA-256）；类集合 = 640 / 0（res-only）；命名空间零重叠验证
-- [ ] `libs/TraceurCommon.jar`、`libs/traceur-res-R.jar` 已删且无引用残留
-- [ ] `./gradlew :app:assembleDebug` exit 0（完整日志 + pipefail）
-- [ ] APK：`com/android/traceur/` 与 `perfetto/protos/` 类 defined；merged manifest 含 `CONTROL_UI_TRACING`
-- [ ] fresh `minifyReleaseWithR8`：88→81 精确差分（added=0、AssumeTrueForR8 保留）
-- [ ] 审计文档 §4.2 A7 行更新
+以下为 Task 038 worker 于 2026-08-20 在 worktree `SystemUI-Gradle-wt-038`（branch `task-038-r8-runtime-batch4c-traceur`，base `57da6777`）填写的真实证据（全部命令真实运行，退出码未伪造）。
+
+### 1. TDD 红/绿
+
+- RED：新增 `TestTraceurProvenance`（8 用例）+ `TestAllFlag` CONFIGS 集合更新后，焦点运行 `Ran 10 tests / FAILED (failures=1, errors=7)`——仅直接读 Soong R.txt 的回归守卫用例绿，其余均因 CONFIGS 缺 Traceur 两项而失败，符合预期。
+- GREEN：CONFIGS 实现后焦点 `Ran 10 tests / OK`；全量 `python3 -m unittest discover -s tools/tests` → **`Ran 179 tests in 46.149s / OK`**（171 基线 + 8 新增）。
+
+### 2. 产物审计
+
+- `libs/aars/TraceurCommon.aar`：1053643 bytes；`classes.jar` = **640 类**（`com/android/traceur/` 15 ∪ `perfetto/protos/` 625，两两不相交，字节与 Soong 输入一致）；无 res 条目；manifest=`AndroidManifest-common.xml`（package `com.android.traceur.common`，含 `CONTROL_UI_TRACING` 等 5 权限）；R.txt = Soong 空表；双跑 SHA-256 稳定：`e358570e907ee8c33f12e4c9a36fa741d923454d0ab872e125c0436bd02be2dd`。
+- `libs/aars/Traceur-res.aar`：409115 bytes；`classes.jar` **0 类**；res 恰好 **105 文件**与 AOSP `packages/apps/Traceur/res` 字节一致；manifest=`AndroidManifest-res.xml`（package `com.android.traceur.res`）；R.txt 与 Soong 逐字节一致（139 符号，含 array 8/string 114）；双跑 SHA-256：`868237f6757f73719a6718b7551c966ae4e2e7b2caa53133b24e0e01554e40dd`。
+- 重叠审计：两 AAR 互斥；与 `libs/*.jar`、`libs/aars/*.aar`、`libs/maven/**` 全量比对，唯一交集 = 待退役的 `libs/TraceurCommon.jar` 自身（15 类子集）；`libs/TraceurCommon.jar`、`libs/traceur-res-R.jar` 已 `git rm`，`git grep` 仅余历史文档记载与 AOSP 源路径引用，无功能性引用。
+
+### 3. Debug 硬门禁
+
+- `set -o pipefail; ./gradlew :app:assembleDebug 2>&1 | tee /tmp/task038-debug.log` → **exit=0，`BUILD SUCCESSFUL in 2m 53s`**（216 tasks）；`/tmp/task038-debug.status` = `exit=0`；无 leanback/v14 缺资源错误。
+- APK（162931039 bytes）类定义（apkanalyzer `dex packages --defined-only`，架构师修正口径：source-set ⊆ defined-set）：**AAR 输入 640 类全部 defined，MISSING=0**（traceur 15/15；perfetto 625/625）。另 perfetto namespace 实测 defined 总数 679 = 625 源类 + 54 个 D8 interface-desugaring 合成类 `*-IA`（dexdump 证实 `D8$$SyntheticClass`，验收不计入）。
+- traceur R 类由 AGP 从 R.txt 重新生成：`com.android.traceur.res.R{,$array,$color,$drawable,$id,$layout,$mipmap,$string,$style,$xml}` 全部 defined。
+- merged manifest（`app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml`）：`CONTROL_UI_TRACING`、`START_FOREGROUND_SERVICES_FROM_BACKGROUND`、`QUERY_ALL_PACKAGES`、`FOREGROUND_SERVICE`、`WRITE_SECURE_SETTINGS` 5 权限全部在场。
+- traceur res 链接验证：aapt2 dump resources 显示 `layout/custom_trace_settings_dialog`、`string/custom_trace_settings_dialog_title` 等进入 resources.arsc。
+
+### 4. Fresh R8 差分
+
+- Baseline（detached HEAD `57da6777`）：`./gradlew :app:minifyReleaseWithR8 -Dorg.gradle.workers.max=4` → exit=1（剩余 missing refs 阻塞，符合预期）；`missing_rules.txt` unique `-dontwarn` refs = **88**，7 个 traceur 目标与 `AssumeTrueForR8` 均在场。
+- Changed（branch HEAD `0a0ba884`）：同命令 → exit=1（81 剩余）；unique refs = **81**。
+- 机械差分：**removed = 恰好 7 个 traceur 目标**（FileSender、PresetTraceConfigs、PresetTraceConfigs$TraceOptions、TraceConfig、TraceConfig$Builder、traceur.res.R$array、traceur.res.R$string）；**added = 0**；`AssumeTrueForR8` 保留。PASS。
+
+### 5. 卫生检查
+
+- 改动文件仅 Allowed Paths（见下方 commit）；`git diff --check` 干净；英文 commit，未 push。
+
+| 阶段 | R8 unique missing refs | 说明 |
+|---|---:|---|
+| Task 037 后 | 88 | fresh 基线（本批 detached-HEAD 实测复现） |
+| 本批完成后 | 81 | 精确移除 traceur 7 项，新增 0（实测） |
+
+### 原始验收清单（全部满足）
+
+- [x] `python3 -m unittest discover -s tools/tests` 全绿（179）
+- [x] 两 AAR 确定性（双跑同 SHA-256）；类集合 = 640 / 0（res-only）；命名空间零重叠验证
+- [x] `libs/TraceurCommon.jar`、`libs/traceur-res-R.jar` 已删且无引用残留
+- [x] `./gradlew :app:assembleDebug` exit 0（完整日志 + pipefail + status 文件）
+- [x] APK：`com/android/traceur/` 与 `perfetto/protos/` 源集类全部 defined；merged manifest 含 `CONTROL_UI_TRACING`
+- [x] fresh `minifyReleaseWithR8`：88→81 精确差分（added=0、`AssumeTrueForR8` 保留）
+- [x] 审计文档 A7 行更新（实际落在 §3.2 映射表 A7 行，brief 所指“§4.2”即该行）
+
+## 8. 待解决问题
+
+- AGENTS.md §3.2 libs 树将滞后（`TraceurCommon.jar`/`traceur-res-R.jar` 行、`libs/aars/` 双 AAR 未列）——红线文件，由架构师合并时作事实性修正（与 036/037 同处理）。
+- perfetto namespace 内 54 个 D8 `-IA` 合成类（interface desugaring，`D8$$SyntheticClass`）为 debug dex 正常现象，非来源问题，无需处理（架构师 2026-08-20 裁定）。
+- 剩余 81 missing refs：SettingsLib 74（下一批 4D）+ B 类 6 + AssumeTrueForR8 1，不属本批。

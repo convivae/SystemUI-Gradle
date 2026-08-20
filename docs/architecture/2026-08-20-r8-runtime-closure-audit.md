@@ -98,7 +98,7 @@ R8 missing_rules 只列出当前 shrink 触及的类；翻转 scope 后 R8 会�
 | A4 | Batch 4（AAR 并入 lite-proto + proto javac） | launcher3 flags 双入（WM-Shell bp L185 同源）→ flags 只由独立 jar 供给，禁止并入 AAR | 无 |
 | A5 | Batch 3（官方 `protobuf-javalite:3.21.12`） | 与 view_capture.jar 内嵌 lite runtime 重复 → 同批换干净重打包 jar | 旧 FAT view_capture.jar 替换 |
 | A6 | Batch 1（scope 翻转） | errorprone 27 类为 libmonet static 闭包（AOSP 同样作为 APK 打包闭包供给，R8 可按需 shrink），无其他产物重复（实测）→ **保留，不剥离** | 无 |
-| A7 | Batch 4（Traceur AAR：res+namespace 保留，直接 AAR 优先，确认冲突才入本地 Maven） | res 与 SystemUI-res 合并冲突需验证；perfetto proto 闭包补齐 | `traceur-res-R.jar` 退役 |
+| A7 | Batch 4C（Task 038，已完成：Traceur 双 AAR 直接引入——TraceurCommon 640 类含 perfetto_config_java_protos 625 ∪ traceur 15；Traceur-res 105 res + namespace；fresh R8 实测 88→81，removed 恰为 7 个 traceur 目标、added=0；原计划归 Batch 4，实际拆为 4C 提前落地） | res 与 SystemUI-res 合并冲突：实测无冲突（processDebugResources 通过）；perfetto proto 闭包已补齐（Batch 3 javalite 4.35.1 底座） | `traceur-res-R.jar` + `TraceurCommon.jar` 均已退役 |
 | A8 | Batch 3（有序：javalite+view_capture → motion_tool） | FAT jar 内 androidx/kotlinx 与官方坐标重复 → 必须先重打包再翻转 | 旧 FAT jar 替换；core+shared 两处同改 |
 | A10 | Batch 1（scope 翻转） | 无（jar 纯净，46 类全 msdl） | 无 |
 | A11 | Batch 2（flags jar）+ Batch 4（AAR javac+kotlin 合并） | 与 WM-Shell 侧同源 flags → 同 A4 约束 | 无 |
