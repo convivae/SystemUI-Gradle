@@ -7,14 +7,14 @@
 
 ## Active Workers
 
-No active workers. Task 040 worker and both reviewer workspaces were closed after main fresh verification; their worktrees and branches were removed.
+| Task | Workspace / pane | Branch / worktree | Model | Stage |
+|---|---|---|---|---|
+| 041 SysUISdk classpath closure | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | dispatched; CONTRACT verification pending |
 
 ## Queue
 
-1. Task 041 exact plan/brief prepared after user design approval; dispatch awaits explicit
-   brief approval. Scope: B1–B4 six-ref structural SysUISdk library-class bridge, exact
-   fresh R8 7→1, with `AssumeTrueForR8` reserved for Task 042.
-2. Task 042: `AssumeTrueForR8` one-ref annotation classpath closure.
+1. Task 042: `AssumeTrueForR8` one-ref annotation classpath closure, after Task 041 is
+   reviewed, independently verified, merged, and cleaned up.
 
 ## Recent Orchestration Transitions
 
@@ -49,9 +49,12 @@ No active workers. Task 040 worker and both reviewer workspaces were closed afte
   35 real library classes through declarative SysUISdk S3b and targets fresh R8 7→1;
   `AssumeTrueForR8` remains isolated for Task 042. Issue, TDD plan, and redline-gated brief
   prepared; dispatch awaits exact brief approval.
+- 2026-08-21 — User approved the exact Task 041 brief and explicitly authorized ADR 0006
+  plus its factual `AGENTS.md` index entry. Isolated GLM-5.3 worker dispatched in `w1Q:p1`;
+  CONTRACT verification pending.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 041 architecture is approved and the exact issue/plan/brief are prepared.
-No active worker exists; dispatch awaits explicit brief approval.
+2026-08-21 — Task 041 worker dispatched in isolated worktree; CONTRACT verification is the
+next gate before dispatch is accepted.
