@@ -109,7 +109,8 @@ SystemUI-core library 层零 ProGuard，plugin/plugin_core 通过 export flags �
 - `app/build/outputs/mapping/release/missing_rules.txt`：**140 条 `-dontwarn` 建议**。
   APK/mapping/usage/seeds 均**未产出**（R8 在 shrink 前失败）。
 
-### 根因分类（140 个 missing class，逐项核对 AOSP `Android.bp`）
+### 根因分类（140 个 missing class，逐项核对 AOSP `Android.bp`；**Task 030 初步版，其中
+A9 归属与个别类数已被 Task 031 修正，见文末与审计报告**）
 
 **A 类：AOSP 把这些类编进 SystemUI APK（SystemUI-core static_libs），我们的依赖闭包缺失
 （编译期能过是因为 compileOnly jar 提供符号；运行期/unminified 基线 APK 里本来就缺类，
@@ -117,17 +118,18 @@ R8 只是把它变成硬错误）**：
 
 | # | 缺失内容 | AOSP 依据 | 我方现状 |
 |---|---|---|---|
-| A1 | `com.android.systemui.FeatureFlags` / `FeatureFlagsImpl`（2 类，被 185+ 处引用） | `com_android_systemui_flags_lib`（SystemUI-core static_libs，bp L459）生成 | `libs/systemui-flags.jar` 陈旧（2026-07-23，仅 `Flags.class`）；AOSP javac jar 还含 `CustomFeatureFlags`、`FakeFeatureFlagsImpl`。同批 `systemui-shared-flags.jar` 已于 08-12 换全量 javac JAR，此 jar 漏换 |
-| A2 | `com.android.server.notification.FeatureFlags(Impl)` | `notification_flags_lib`（bp L505） | `libs/maven/.../notification-flags` jar 实测仅含 `Flags.class`（2026-07-23 旧打包批次，与 A1 同批） |
-| A3 | SettingsLib ~70 类（`wifi.WifiUtils`、`qrcode.QrCodeGenerator`、`graph.ThemedBatteryDrawable`、`devicestate.PosturesHelper`、volume/bluetooth/fuelgauge/notification.data/media.data 各 repository、mainswitch/spinner/各 per-target `R$*` 等） | `SettingsLib`（bp L457）主 src 含这些文件（实测 `SettingsLib/src/com/android/settingslib/wifi/WifiUtils.kt` 等） | `libs/aars/SettingsLib.aar` 仅 781 类，不含主 src 这批类；我方 compileOnly `libs/SettingsLib-full.jar` 里反而全有（实测含 `WifiUtils.class` 等）——AAR 打包时选错了产物/未合并主 src |
+| A1 | `com.android.systemui.FeatureFlags` / `FeatureFlagsImpl`（2 类，被 185+ 处引用） | `com_android_systemui_flags_lib`（SystemUI-core static_libs，bp L458）生成 | `libs/systemui-flags.jar` 陈旧（2026-07-23，仅 `Flags.class`）；AOSP javac jar 还含 `CustomFeatureFlags`、`FakeFeatureFlagsImpl`。同批 `systemui-shared-flags.jar` 已于 08-12 换全量 javac JAR，此 jar 漏换 |
+| A2 | `com.android.server.notification.FeatureFlags(Impl)` | `notification_flags_lib`（bp L506） | `libs/maven/.../notification-flags` jar 实测仅含 `Flags.class`（2026-07-23 旧打包批次，与 A1 同批） |
+| A3 | SettingsLib ~70 类（`wifi.WifiUtils`、`qrcode.QrCodeGenerator`、`graph.ThemedBatteryDrawable`、`devicestate.PosturesHelper`、volume/bluetooth/fuelgauge/notification.data/media.data 各 repository、mainswitch/spinner/各 per-target `R$*` 等） | ~~`SettingsLib`（bp L457）主 src 含这些文件~~ **Task 031 修正**：43 个非 R 代码类 = 主 src 40 + DeviceStateRotationLock/src 1（`PosturesHelper`，非主 src）+ SettingsTheme/src 2（`GroupSectionDividerMixin`/`SettingsThemeHelper`，归宿是其自身 SettingsLibSettingsTheme AAR，不并入主 AAR） | `libs/aars/SettingsLib.aar` 仅 780 类（Task 031 修正口径：`unzip -l classes.jar | grep -c '\.class$'`，
+Task 030 曾记 781），不含主 src 这批类；我方 compileOnly `libs/SettingsLib-full.jar` 里反而全有（实测含 `WifiUtils.class` 等）——AAR 打包时选错了产物/未合并主 src |
 | A4 | `com.android.wm.shell.desktopmode.persistence.{Desktop,DesktopTask,DesktopRepositoryState,DesktopPersistentRepositories…}` + `desktopmode.education.data.WindowingEducationProto*` + `com.android.wm.shell.nano.*` | `WindowManager-Shell-lite-proto`（lite proto，WM-Shell bp L189 static_libs）与 `WindowManager-Shell-proto`（nano proto，SystemUI-proto 的 libs） | `libs/aars/WindowManager-Shell.aar`（1848 类）不含任何 proto 生成类；`SystemUI-proto.jar` 的 nano 闭包也未随包 |
 | A5 | `com.google.protobuf.GeneratedMessageLite($Builder)` | A4 lite proto 的 soong protobuf-lite 运行时 | 无对应运行时依赖 |
 | A6 | `com.android.systemui.monet.*` + `com.google.ux.material.libmonet.*` | `monet`、`libmonet`（bp L494-495 static_libs） | `monet.jar` 为 **compileOnly**（SystemUI-core L161）；libmonet 无运行时依赖 |
 | A7 | `com.android.traceur.*`（TraceConfig/PresetTraceConfigs/FileSender/res.R） | `TraceurCommon` + `Traceur-res`（bp L502-503 **static_libs**） | 两者均为 compileOnly jar（L181-182） |
 | A8 | `com.android.app.motiontool.*`、`com.android.app.viewcapture.*` | `motion_tool_lib`（bp L504 static_libs）；viewcapturelib 在 WM-Shell 闭包内 | `motion_tool_lib.jar` compileOnly（L173）；viewcapture 类不在任何运行时闭包 |
-| A9 | `com.android.tools.r8.keepanno.annotations.UsesReflection` | `keepanno-annotations`（bp L512 **static_libs**，注解保留在 class 内供 R8 消费） | `keepanno-annotations.jar` compileOnly（L165） |
+| ~~A9~~ B4 | `com.android.tools.r8.keepanno.annotations.UsesReflection` | **Task 031 修正**：`keepanno-annotations` 在 SystemUI bp **`libs:`（L516-518）非 static_libs**，AOSP 不 dex 进 APK，属 R8 library classpath 而非 runtime 闭包（Task 030 曾误记 static_libs） | `keepanno-annotations.jar` compileOnly（L165，scope 本身正确；AGP R8 可见性另案） |
 | A10 | `com.google.android.msdl.*`（6 类） | msdllib（frameworks/libs/systemui/msdllib，经某 static 链进入 APK） | `msdl.jar` compileOnly（L135） |
-| A11 | `com.android.launcher3.Flags` + `launcher3.icons.{IconThemeController,ThemedBitmap,mono.ThemedIconDrawable}` | iconloaderlib srcs（`IconThemeController` 声明在 `ThemedBitmap.kt`；其 static_libs 含 `com_android_launcher3_flags_lib`） | `libs/aars/iconloader.aar` 60 类全部为 Java 源产物，**Kotlin 类一个未含**（与 A1/A2 同模式：打包选了不全的 soong 产物）；launcher3 flags 无运行时 |
+| A11 | `com.android.launcher3.Flags` + `launcher3.icons.{IconThemeController,ThemedBitmap,mono.ThemedIconDrawable}` | iconloaderlib srcs（`IconThemeController` 声明在 `ThemedBitmap.kt`；其 static_libs 含 `com_android_launcher3_flags_lib`） | `libs/aars/iconloader.aar` 59 类（Task 031 修正口径；Task 030 曾记 60）全部为 Java 源产物，**Kotlin 类一个未含**（与 A1/A2 同模式：打包选了不全的 soong 产物）；launcher3 flags 无运行时 |
 | A12 | `com.android.wifi.flags.Flags`、`com.android.wm.shell.Flags` | WifiTrackerLib / WM-Shell aconfig 闭包 | `wifi-flags.jar`/`wm-shell-flags.jar` compileOnly（L212/215） |
 
 **B 类：真 bootclasspath/framework 提供（compileOnly 语义正确；AOSP 不报是因为 soong
@@ -135,7 +137,7 @@ R8 只是把它变成硬错误）**：
 
 | # | 缺失内容 | 来源 |
 |---|---|---|
-| B1 | `android.compat.annotation.UnsupportedAppUsage`（219 引用点） | framework.jar（bootclasspath，设备 framework 提供） |
+| B1 | `android.compat.annotation.UnsupportedAppUsage`（219 引用点） | ~~framework.jar（bootclasspath，设备 framework 提供）~~ **Task 031 依 Task 032 证据修正**：实为构建期 CLASS-retention 注解库（tools/platform-compat），Soong `libs:` 不打包，framework.jar/android.jar 中不存在；AOSP 经 Ch4 传递 header jar 暴露给 R8，无运行时提供者 |
 | B2 | `libcore.io.IoUtils`、`libcore.util.NativeAllocationRegistry` | libcore（bootclasspath） |
 | B3 | `com.android.aconfig.annotations.AconfigFlagAccessor` | aconfig 注解（构建期消费） |
 
@@ -157,8 +159,31 @@ R8 只是把它变成硬错误）**：
    NoClassDefFoundError**（如 `FeatureFlags` 185+ 引用点），建议架构师优先处理。
 2. **接 AGP 生成的 `missing_rules.txt`（140 条 `-dontwarn`）**：AGP 标准补救，但属
    “自创 dontwarn”，brief 明文禁止；且会把 A 类真实缺口掩埋成运行期风险。
-3. **B 类少量 `-dontwarn`**（约 3 条，bootclasspath 注解/工具类）：语义正确但同样需
+3. **B 类少量 `-dontwarn`**（Task 030 曾估约 3 条；**Task 031 修正**：用户政策不允许对
+   B1/B2 dontwarn，优先结构性 classpath/SysUISdk 方案，仅 B3 可能在无受支持桥梁时以恰好
+   1 条逐字 `-dontwarn` 兑底；四个 platform 类全部移交 Task 032 逐类处置）：同样需
    用户批准才能写入。
 
 worker 未做任何上述变更；`app/build.gradle.kts` 的 R1+R2 改动保留为未提交 diff，
 等待架构师决策。
+
+## 后续（Task 031，2026-08-20）
+
+140 个 missing class 已完成逐类闭包审计（**A 类=135 / B 类=5**，含 keepanno `UsesReflection`
+改判 B4——SystemUI bp 将其置于 `libs:` 而非 static_libs，AOSP 不 dex，属 R8 library classpath
+而非 runtime 闭包；无未分类）：完整归属表、每个 A 类组的 Android.bp 证据、三个不完整 AAR
+（SettingsLib 780/WM-Shell 1848/iconloader 59 类，统一 `unzip -l | grep -c '\.class$'` 口径）的
+class-set 取证、传递 static 闭包链（Traceur→perfetto proto/AndroidX；motiontool→view_capture
+→view_capture_proto→protobuf-lite；Traceur-res 资源型 AndroidX）、官方 Maven 判定
+（protobuf-javalite 3.21.12 可用；keepanno/msdl/libmonet 无公网坐标）及 7 个依赖序实施批次见
+`docs/architecture/2026-08-20-r8-runtime-closure-audit.md`。
+要点：Batch 1 纯 scope 翻转（4 行，15 类）；Batch 2 aconfig jar 重产 + notification-flags 由
+本地 Maven jar 迁移为直引 `libs/notification-flags.jar`（7 类）；Batch 3 官方 javalite +
+view_capture 去污染重打包 + motion_tool 后置翻转（11 类）；Batch 4 五个产物的 AAR 闭包重打包
+（新 Traceur AAR；主 SettingsLib AAR 补主 src+DeviceStateRotationLock+31 R；
+SettingsLibSettingsTheme AAR 自身补回 SettingsTheme 代码、不并入主 AAR；WM-Shell；iconloader；
+直接 AAR 优先；102 类）；Batch 5 为 B1–B3 四个 platform 类移交
+Task 032 逐类处置（B1/B2 禁 dontwarn、优先结构方案，仅 B3 可逐字兑底 1 条；本审计不预设
+结论）；Batch 6 keepanno release-R8 classpath 方案调查（不进 runtime）；Batch 7 清理。
+A 批次全部完成后预期 missing_rules 140 → 5（B1/B2×2/B3/B4）；**140 → 0 需待 Task 032
+处置与 B4 方案落地，非本审计批次内可宣称**。
