@@ -1,6 +1,6 @@
 # SystemUI-Gradle
 
-中文 | **[English]**
+**[中文](README.md)** | English
 
 A standalone, self-contained Gradle build of AOSP `frameworks/base/packages/SystemUI` —
 the real SystemUI source tree, fully extracted from Soong/Blueprint, compilable without
@@ -51,8 +51,8 @@ Sibling project using the same approach: [CarSystemUIGradle](../CarSystemUIGradl
   markup (ADR 0004)
 - **Reproducible SysUISdk pipeline**: hidden APIs, framework-private resources, and @hide
   AIDL declarations are patched declaratively by script — no hand-edited SDK
-- **Full dependency governance**: AOSP libraries are deterministically packaged into AARs
-  (17) by `tools/package_aosp_aar.py`, served through a local Maven repo + version
+- **Full dependency governance**: AOSP libraries are deterministically packaged into 17+
+  AARs by `tools/package_aosp_aar.py`, served through a local Maven repo + version
   catalog; third-party libraries use official Maven coordinates at the latest compatible
   versions; all of `libs/` is committed to git
 - **Release aligned with AOSP**: Soong behavior is the baseline — zero ProGuard in core,
@@ -90,7 +90,7 @@ SystemUI-Gradle/
 ├── libs/                       # All prebuilt artifacts, committed to git
 │   ├── framework.jar           # AOSP framework (with @hide APIs)
 │   ├── *-flags.jar             # aconfig-generated flags classes
-│   ├── aars/                   # 17 AOSP-produced AARs (SettingsLib, WM-Shell, iconloader…)
+│   ├── aars/                   # 17+ AOSP-produced AARs (SettingsLib, WM-Shell, iconloader…)
 │   └── maven/                  # Local Maven repo (AAR + POM, consumed via catalog)
 ├── tools/                      # Python tooling (AAR packaging, SDK build, alignment checks…)
 └── docs/                       # State, plans, pitfalls, issue records, ADRs

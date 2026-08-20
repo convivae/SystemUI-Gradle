@@ -72,7 +72,7 @@ SystemUI-Gradle/
 ├── libs/                       # 全部预置产物，提交入 git
 │   ├── framework.jar           # AOSP framework（含 @hide API）
 │   ├── *-flags.jar             # aconfig 生成的 flags 类
-│   ├── aars/                   # 17 个 AOSP 产物 AAR（SettingsLib、WM-Shell、iconloader…）
+│   ├── aars/                   # 17+ 个 AOSP 产物 AAR（SettingsLib、WM-Shell、iconloader…）
 │   └── maven/                  # 本地 Maven 仓（AAR + POM，经 catalog 引用）
 ├── tools/                      # Python 工具链（AAR 打包、SDK 生成、对齐校验…）
 └── docs/                       # 状态、计划、踩坑、issue 记录、ADR
