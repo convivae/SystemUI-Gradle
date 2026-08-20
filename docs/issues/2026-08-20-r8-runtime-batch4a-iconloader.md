@@ -68,12 +68,54 @@ Task 035 后，正式优化 Release 仍在 `:app:minifyReleaseWithR8` 阶段因 
 
 | 阶段 | R8 unique missing refs | 说明 |
 |---|---:|---|
-| Task 035 后 | 109 | fresh main baseline |
-| 本批目标 | 106 | 精确移除 iconloader Kotlin 3 项，新增 0 |
+| Task 035 后 | 109 | fresh main baseline（本批实测复现） |
+| 本批完成后 | 106 | 精确移除 iconloader Kotlin 3 项，新增 0（实测） |
 
 ## 实施记录
 
-待 worker 填写真实输入/输出类数、SHA-256、测试数量、Gradle true exit、APK defined rows 和 R8 before/after 差分。正式优化 Release 在剩余 missing refs 清零前仍不得声明成功。
+以下为 Task 036 worker 于 2026-08-20 填写的真实证据（全部命令真实运行，未伪造）。
+
+### 1. Fresh 109 基线（改动前）
+
+- 命令：`./gradlew :app:minifyReleaseWithR8 -Dorg.gradle.workers.max=4`（`set -o pipefail` + `tee`，真实退出码经 `${PIPESTATUS[0]}` 保存于 `/tmp/task036-r8-before.status`）
+- 结果：`GRADLE_EXIT=1`，`BUILD FAILED`；`missing_rules.txt` 去重后 unique `-dontwarn` refs = **109**；三个目标类与 `AssumeTrueForR8` 均在集合内（脚本断言 `BASELINE=109 TARGETS=3 PASS`）。
+
+### 2. TDD 红/绿
+
+- RED：新增/扩展 5 个测试后，焦点运行 `FAILED (failures=2, errors=1)`——config 测试因 code 列表缺 kotlin JAR 失败，并集测试因单元素列表解包失败，坐标测试因 `1.0.0 != 1.0.1` 失败，均符合预期失败原因。
+- GREEN：实施最小修复后，焦点 5 测试 `Ran 5 tests in 2.053s / OK`。
+
+### 3. 确定性重建与产物溯源
+
+- `python3 tools/package_aosp_aar.py iconloader` 运行两次，SHA-256 均为
+  `d6e4f27e4b752620b9207fd804db1f5f3dad3225998375ed36d13346d3da6d8b`（137664 bytes）。
+- `classes.jar` class 数 = **75**（javac 59 + kotlin 16，两输入集不相交，并集精确相等，逐字节一致）；全部类名位于 `com/android/launcher3/**`。
+- `res/**`、`AndroidManifest.xml`、`R.txt` 与配置的 AOSP/Soong 源逐字节一致（单测断言）。
+
+### 4. 本地 Maven 替换
+
+- `rm -rf libs/maven/com/android/systemui/iconloader/1.0.0` 后 `python3 tools/install_aar_to_maven.py iconloader`。
+- 仅剩 `1.0.1/iconloader-1.0.1.aar` + `.pom`；AAR 与 `libs/aars/iconloader.aar` `cmp` 字节相同；POM 版本 `1.0.1`、`packaging aar`、无 `<dependencies>`。
+- `gradle/libs.versions.toml` 仅 `systemui-iconloader` 一行 `1.0.0`→`1.0.1`。
+
+### 5. 测试 / Debug / APK
+
+- 全量：`python3 -m unittest discover -s tools/tests -p 'test_*.py'` → `Ran 164 tests in 37.855s / OK`（160 基线 + 4 新增）。
+- Debug：`./gradlew :app:checkDebugDuplicateClasses :app:assembleDebug -Dorg.gradle.workers.max=4` → `GRADLE_EXIT=0`，`BUILD SUCCESSFUL in 2m 21s`，APK `app/build/outputs/apk/debug/app-debug.apk` 生成（log 中 9 处 duplicate 均为已知 manifest 重复权限 warning，非 duplicate-class 失败）。
+- APK 定义：`apkanalyzer dex packages --defined-only` 中三个目标类均有 `C d` 行：
+  - `C d 3 3 102 com.android.launcher3.icons.IconThemeController`
+  - `C d 2 2 90 com.android.launcher3.icons.ThemedBitmap`
+  - `C d 10 10 1028 com.android.launcher3.icons.mono.ThemedIconDrawable`
+
+### 6. Fresh R8 差分（改动后）
+
+- 命令同基线，真实退出码 `/tmp/task036-r8-after.status`：`GRADLE_EXIT=1`（剩余 missing classes 阻塞，符合预期）。
+- 机械差分：before = 109，after = **106**；removed = 恰好三个 iconloader 目标；added = 空；`AssumeTrueForR8` 保留。
+
+### 7. 卫生检查
+
+- `git diff --check` 干净；改动文件仅为 Allowed Paths：`tools/package_aosp_aar.py`、`tools/tests/test_package_aosp_aar.py`、`tools/install_aar_to_maven.py`、`tools/tests/test_install_aar_to_maven.py`、`libs/aars/iconloader.aar`、`libs/maven/.../iconloader/1.0.0/*`（删）、`libs/maven/.../iconloader/1.0.1/*`（新）、`gradle/libs.versions.toml`（仅 iconloader 行）、本 issue 文档。
+- 正式优化 Release 在剩余 106 个 missing refs 清零前仍不声明成功。
 
 ## 待解决问题
 

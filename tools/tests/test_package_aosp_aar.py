@@ -201,7 +201,14 @@ class TestArtifactConfigs(unittest.TestCase):
 
     def test_iconloader_config_paths(self):
         cfg = paar.CONFIGS["iconloader"]
-        self.assertIn("iconloader/android_common/javac/iconloader.jar", str(cfg["code"]))
+        # Task 036：code 必须是 owning Soong 的 javac + kotlin implementation 输出（有序两项）
+        self.assertEqual(
+            cfg["code"],
+            [
+                paar.SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/javac/iconloader.jar",
+                paar.SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/kotlin/iconloader.jar",
+            ],
+        )
         self.assertIn("iconloaderlib/res", str(cfg["res"]))
         self.assertTrue(str(cfg["manifest"]).endswith("iconloaderlib/AndroidManifest.xml"))
         self.assertIn("iconloader/android_common/R.txt", str(cfg["rtxt"]))
@@ -420,6 +427,79 @@ class TestSettingsLibPerTargetProvenance(unittest.TestCase):
                 second = self._build(target, d / "second.aar")
                 self.assertEqual(first.read_bytes(), second.read_bytes(),
                                  f"{target} 重复打包字节不一致")
+
+
+class TestIconloaderProvenance(unittest.TestCase):
+    """Task 036：iconloader AAR 完整 Kotlin closure——59+16=75 类精确并集 + 资源溯源 + 确定性。"""
+
+    def _input_classes(self) -> "tuple[dict, dict]":
+        """返回 (javac 贡献, kotlin 贡献) 的 {class_name: bytes}。"""
+        javac_jar, kotlin_jar = paar.CONFIGS["iconloader"]["code"]
+        contributions = []
+        for jar in (javac_jar, kotlin_jar):
+            with zipfile.ZipFile(jar) as z:
+                contributions.append({
+                    n: z.read(n) for n in z.namelist()
+                    if n.endswith(".class")
+                })
+        return contributions[0], contributions[1]
+
+    def test_classes_exact_disjoint_union(self):
+        from io import BytesIO
+        javac, kotlin = self._input_classes()
+        # 输入贡献必须是精确的 59 + 16，且不相交
+        self.assertEqual(len(javac), 59)
+        self.assertEqual(len(kotlin), 16)
+        self.assertEqual(set(javac) & set(kotlin), set())
+        expected = {**javac, **kotlin}
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "iconloader.aar"
+            paar.build_artifact("iconloader", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    actual = {n: cj.read(n) for n in cj.namelist() if n.endswith(".class")}
+        self.assertEqual(set(actual), set(expected),
+                         "输出 class 集不是两输入的精确并集")
+        for name, data in expected.items():
+            self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
+        self.assertEqual(len(actual), 75)
+        for name in actual:
+            self.assertTrue(name.startswith("com/android/launcher3/"),
+                            f"越界类名: {name}")
+
+    def test_resource_manifest_rtxt_provenance(self):
+        cfg = paar.CONFIGS["iconloader"]
+        res_root = cfg["res"][0]
+        source_res = {
+            f"res/{p.relative_to(res_root)}": p.read_bytes()
+            for p in sorted(res_root.rglob("*")) if p.is_file()
+        }
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "iconloader.aar"
+            paar.build_artifact("iconloader", out)
+            with zipfile.ZipFile(out) as z:
+                aar_res = {n: z.read(n) for n in z.namelist() if n.startswith("res/")}
+                manifest_bytes = z.read("AndroidManifest.xml")
+                rtxt_bytes = z.read("R.txt")
+        self.assertEqual(set(aar_res), set(source_res),
+                         "AAR res entry 集与 AOSP iconloaderlib res 树不一致")
+        for name, data in source_res.items():
+            self.assertEqual(aar_res[name], data, f"{name} 字节与 AOSP 源不一致")
+        self.assertEqual(manifest_bytes, cfg["manifest"].read_bytes(),
+                         "AndroidManifest.xml 字节与 AOSP 源不一致")
+        self.assertEqual(rtxt_bytes, cfg["rtxt"].read_bytes(),
+                         "R.txt 字节与 Soong 输出不一致")
+
+    def test_rebuild_is_byte_identical(self):
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            first = d / "first.aar"
+            second = d / "second.aar"
+            paar.build_artifact("iconloader", first)
+            time.sleep(2)
+            paar.build_artifact("iconloader", second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
 
 
 class TestAbsentInputFails(unittest.TestCase):

@@ -53,7 +53,7 @@ ARTIFACTS = {
     "WindowManager-Shell": {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "1.0.0"},
     "WindowManager-Shell-shared": {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "1.0.0"},
     "animationlib": {"group": "com.android.systemui", "name": "animationlib", "version": "1.0.0"},
-    "iconloader": {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.0"},
+    "iconloader": {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.1"},
     "LowLightDreamLib": {"group": "com.android.systemui", "name": "LowLightDreamLib", "version": "1.0.0"},
     "SettingsLibColor": {"group": "com.android.settingslib", "name": "color", "version": "1.0.0"},
     "SettingsLibSettingsTheme": {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.0"},

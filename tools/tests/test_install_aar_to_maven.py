@@ -134,6 +134,13 @@ class InstallAarTest(unittest.TestCase):
 
 
 class ArtifactRegistryTest(unittest.TestCase):
+    def test_iconloader_coordinate(self):
+        """Task 036：iconloader 升级为用户批准的 1.0.1（完整 Kotlin closure）。"""
+        self.assertEqual(
+            iam.ARTIFACTS["iconloader"],
+            {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.1"},
+        )
+
     def test_settingslib_settings_theme_coordinate(self):
         """Task 013：SettingsLibSettingsTheme 固定本地坐标。"""
         self.assertEqual(

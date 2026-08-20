@@ -65,7 +65,12 @@ CONFIGS = {
         "output": "libs/aars/WifiTrackerLib.aar",
     },
     "iconloader": {
-        "code": [SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/javac/iconloader.jar"],
+        # javac JAR (59 Java classes) + kotlin JAR (16 Kotlin classes, 如 ThemedBitmap/
+        # IconThemeController/mono.ThemedIconDrawable) 合并（先例：WM-Shell javac+kotlin）
+        "code": [
+            SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/javac/iconloader.jar",
+            SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/kotlin/iconloader.jar",
+        ],
         "res": [AOSP_ROOT / "frameworks/libs/systemui/iconloaderlib/res"],
         "manifest": AOSP_ROOT / "frameworks/libs/systemui/iconloaderlib/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/R.txt",
