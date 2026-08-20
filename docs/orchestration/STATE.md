@@ -5,7 +5,9 @@
 
 ## Active Workers
 
-- Task 033 — `wJ:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033`, branch `task-033`, GLM-5.3. User approved REDLINE resolution A: deterministic clean `monet.jar` from the two Soong javac outputs, retaining official Maven errorprone; revised brief ready for worker resume.
+- Task 033 implementation — `wJ:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033`, branch `task-033`, GLM-5.3. Commit `b84b0688`; worker HANDOFF complete; architect/dual-axis review pending.
+- Task 033 Standards review — `wK:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033-standards`, GLM-5.2, read-only review in progress.
+- Task 033 Spec review — `wM:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033-spec`, GLM-5.2, read-only review in progress.
 
 ## Queue
 
@@ -33,8 +35,8 @@
 
 ## Blocked
 
-Debug 主分支无构建阻塞。Task 033 的 monet 重复类根因已有用户批准方案，正在恢复实施；优化 Release 主分支仍为 140 个 R8 missing class，首批修正尚未合并。APK 装机/运行验证未做。
+Debug 主分支无构建阻塞。Task 033 实施已完成，正在双轴审查；优化 Release 主分支仍为 140 个 R8 missing class，Task 033 候选实测为 126（移除 15、新浮出 `AssumeTrueForR8` 1）。APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-20 — 用户批准 Task 033 方案 A：用两个 Soong javac 输出确定性生成 56-class clean monet JAR，官方 Maven 提供 errorprone，再完成四个 runtime scope。
+2026-08-20 — Task 033 候选 commit `b84b0688` 完成：clean monet 56 classes、四个 runtime scope、debug APK 成功、151 tests；Standards/Spec 双轴审查中。
