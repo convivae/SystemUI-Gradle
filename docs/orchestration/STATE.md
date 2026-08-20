@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 041 SysUISdk classpath closure | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | dispatched; CONTRACT verification pending |
+| 041 SysUISdk classpath closure | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | working; model and full CONTRACT verified; fresh baseline R8 running |
 
 ## Queue
 
@@ -56,5 +56,5 @@
 
 ## Last Updated
 
-2026-08-21 — Task 041 worker dispatched in isolated worktree; CONTRACT verification is the
-next gate before dispatch is accepted.
+2026-08-21 — Task 041 dispatch accepted: explicit GLM-5.3 model and full CONTRACT verified;
+worker is running the serialized fresh R8 baseline.
