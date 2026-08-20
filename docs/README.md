@@ -1,177 +1,107 @@
-# SystemUI-Gradle 文档索引
+# SystemUI-Gradle 文档索引与生命周期 (docs/README.md)
 
-> **目的**: 让任何 AI Agent 都能快速找到所需文档。
-> **最后更新**: 2026-08-12
-
----
-
-## 必读文档 (新 AI 入口)
-
-| 顺序 | 文档 | 说明 |
-|------|------|------|
-| 1 | [`docs/HANDOFF.md`](./HANDOFF.md) | 5 分钟上手纲要 + 项目概述 |
-| 2 | [`../AGENTS.md`](../AGENTS.md) | 项目规则（必读） |
-| 3 | [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) | 当前状态快照（构建状态、版本矩阵、待解决） |
-
-**当前里程碑（2026-08-12 实施检查点，Task 1–7）**：依赖升级 + AGP `builtInKotlin` 迁移完成；
-debug/release KSP 0 错误；core Kotlin 0 错误。审查发现的 `jsr305`、WM-Shell AAR 交集、
-header flag JAR 与 release KSP/AIDL 依赖问题均已修复；Task 7 的 `:app:assembleDebug`
-在 core Java 编译阶段失败（42 个 javac 错误，APK 未生成）。
-详见 [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md)，
-后续按 [`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md) 执行。
+> **Owner**: 本文件定义文档分类、生命周期、owner、维护触发与导航。
+> **实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**；本文件不复制构建数字。
+> **最后更新**: 2026-08-20（Task 039 文档治理）
 
 ---
 
-## 规则与原则
+## Start here（新 AI 阅读顺序）
 
-- [`../AGENTS.md`](../AGENTS.md) - 全局规则、依赖引入、问题排查流程
+1. [`docs/HANDOFF.md`](./HANDOFF.md) — 5 分钟接手流程与红线速查
+2. [`../AGENTS.md`](../AGENTS.md) — 全部强制项目规则（必读）
+3. [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) — 唯一完整实时技术状态
+4. [`docs/PLAN.md`](./PLAN.md) — 未完成路线与完成条件
+5. （编排参与者加读）[`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md) → [`docs/orchestration/STATE.md`](./orchestration/STATE.md) → [`docs/orchestration/log.md`](./orchestration/log.md) 尾部
 
-### 架构决策记录 (ADR)
+## Live owners（持续维护文档）
 
-| ADR | 文档 | 决策 |
-|-----|------|------|
-| 0001 | [`adr/0001-aosp-res-via-local-maven.md`](./adr/0001-aosp-res-via-local-maven.md) | res 缺失处理：AAR 先直接引入，确认冲突后才用 local Maven |
-| 0002 | [`adr/0002-tools-scripts-only-python.md`](./adr/0002-tools-scripts-only-python.md) | `tools/` 脚本一律 Python，禁止 .sh |
-| 0003 | [`adr/0003-app-module-aligns-aosp-bp.md`](./adr/0003-app-module-aligns-aosp-bp.md) | 模块划分/依赖/入口类位置按 AOSP `Android.bp` 语义对齐 |
-| 0004 | [`adr/0004-conv-markup-and-alignment-discipline.md`](./adr/0004-conv-markup-and-alignment-discipline.md) | AOSP 源码改动用 CONV 标记追溯；对齐 strict 不卡 MODIFIED |
+| 文档 | 职责 | 更新触发 |
+|------|------|---------|
+| [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) | **唯一完整实时技术状态**（构建矩阵、版本、依赖产物、blocker、下一步、验证证据） | merge 改变 build/test/blocker/toolchain/当前下一步 |
+| [`docs/HANDOFF.md`](./HANDOFF.md) | 5 分钟接手流程、规则入口、当前唯一优先级 | 接手步骤、规则入口或唯一优先级变化 |
+| [`docs/PLAN.md`](./PLAN.md) | 仅未完成路线、顺序与完成条件 | 路线、顺序或完成条件变化 |
+| [`README.md`](../README.md) / [`README.en.md`](../README.en.md) | 对外介绍 + 简短状态摘要（双语） | 对外里程碑显著变化 |
+| `docs/README.md`（本文件） | 文档生命周期、owner、导航 | 分类、owner、ADR 或关键入口变化 |
 
----
+## Rules and decisions（规则与有效决策）
 
-## 现状与计划
+- [`../AGENTS.md`](../AGENTS.md) — 强制规则 P/S/C/F/R/B/H/D/I、依赖三层策略、SysUISdk 规则、诊断流程、用户偏好。**不保存动态进度**；实时状态见 CURRENT_STATE。
+- [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md) — herdr 编排协议（十规则、依赖决策树、串行构建、红线、worker contract）。不保存动态项目快照。
+- [`docs/adr/`](./adr/) — ADR 0001–0005：res 处理优先级 / Python-only 工具 / bp 语义对齐 / CONV 标记 / SettingsLib POM 传递依赖。仅在决策变化时更新或新增。
 
-- [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) - 当前构建状态、版本矩阵、待解决清单
-- [`docs/PLAN.md`](./PLAN.md) - 阶段计划（含历史阶段记录）
-- [`docs/GRADLE_MIGRATION_LOG.md`](./GRADLE_MIGRATION_LOG.md) - 历史问题与错误数演变
-- [`docs/audit-2026-07-30-aosp-src-parity.md`](./audit-2026-07-30-aosp-src-parity.md) - AOSP 源码对齐审计
-- [`docs/mapping-2026-07-30-aosp-bp-to-gradle.md`](./mapping-2026-07-30-aosp-bp-to-gradle.md) - Android.bp → Gradle 模块映射
+## Append-only records（追加型记录）
 
----
+- [`docs/orchestration/log.md`](./orchestration/log.md) — 编排事件流水（只由架构师按事件追加）。
+- [`docs/GRADLE_MIGRATION_LOG.md`](./GRADLE_MIGRATION_LOG.md) — 迁移里程碑与错误数历史（只追加，不改写旧条目）。
 
-## 踩坑与调研
+## Active operational records（活跃运营记录）
 
-- [`docs/PITFALLS.md`](./PITFALLS.md) - 看似简单但实际不行的方案（含 builtInKotlin/KSP/AIDL 兼容性 §1.5）
-- [`docs/architecture/`](./architecture/) - 深度调研文档
-  - [`STAGE2-3-RESEARCH-LOG.md`](./architecture/STAGE2-3-RESEARCH-LOG.md) - Stage 2-3 根因分析（历史）
-  - [`2026-07-29-dependency-audit.md`](./architecture/2026-07-29-dependency-audit.md) - 依赖审计（三层策略）
-  - [`2026-07-29-systemui-module-source-vs-jar.md`](./architecture/2026-07-29-systemui-module-source-vs-jar.md) - 源码 vs jar 判定调研
-  - [`2026-08-06-module-structure-audit.md`](./architecture/2026-08-06-module-structure-audit.md) - 13-module 结构审计
-  - [`2026-08-06-reference-project-rationale.md`](./architecture/2026-08-06-reference-project-rationale.md) - 参考项目机制的"为什么"
-  - [`2026-08-06-soong-android-app-vs-gradle-app.md`](./architecture/2026-08-06-soong-android-app-vs-gradle-app.md) - Soong android_app vs Gradle app 分析
+- [`docs/orchestration/STATE.md`](./orchestration/STATE.md) — 仅活跃 worker / queue / 编排 transition；技术状态链接 CURRENT_STATE。
+- **Active operational audit 定义**：文档头明确标记 `Lifecycle: Active operational audit` 且 bounded audit 尚未关闭的审计文档，可继续更新其**审计域内 ledger**，但不得成为全项目状态源。当前唯一实例：[`docs/architecture/2026-08-20-r8-runtime-closure-audit.md`](./architecture/2026-08-20-r8-runtime-closure-audit.md)（R8 closure 归零前维护 class mapping）。audit 关闭后改 frozen；新问题建新 issue/audit，不改写旧结论。
 
----
+## Historical archives（冻结历史归档）
 
-## 问题记录 (按时间)
+完成后原地保留，**不因当前状态变化而重写**；旧数字是合法历史快照。只允许纠正明确 typo/provenance 且注明原因。
 
-### 2026-08（近期，先读这些）
+| 目录 | 内容 | 精选里程碑 |
+|------|------|-----------|
+| [`docs/issues/`](./issues/) | 每日问题/任务记录 | 2026-08-19 SettingsLib per-target AARs、2026-08-20 R8 Batch 1–4C 系列、2026-08-20 官方 Maven 审计 |
+| [`docs/architecture/`](./architecture/) | 深度调研与 audit | 2026-08-06 module-structure-audit、2026-08-13 sysuisdk-reproducible-build |
+| [`docs/superpowers/`](./superpowers/) | specs 与 plans | 按任务配套 |
+| [`docs/orchestration/tasks/`](./orchestration/tasks/) | 已派发任务 brief | Task 031 R8 closure audit、Task 038 Traceur |
+| [`docs/audit-2026-07-30-aosp-src-parity.md`](./audit-2026-07-30-aosp-src-parity.md) / [`docs/mapping-2026-07-30-aosp-bp-to-gradle.md`](./mapping-2026-07-30-aosp-bp-to-gradle.md) | 早期对齐审计与 bp 映射 | — |
+| [`docs/PITFALLS.md`](./PITFALLS.md) | 可复用踩坑经验（**不维护当前错误数**，实时状态见 CURRENT_STATE） | — |
 
-| 日期 | 文档 | 主题 |
-|------|------|------|
-| 2026-08-12 | [`issues/2026-08-12-current-progress-standards-review.md`](./issues/2026-08-12-current-progress-standards-review.md) | 当前进度规范审查、APK 新阻塞与后续实施计划 |
-| 2026-08-12 | [`issues/2026-08-12-deps-upgrade-builtin-kotlin.md`](./issues/2026-08-12-deps-upgrade-builtin-kotlin.md) | 全依赖升级 + builtInKotlin 迁移（KSP 里程碑） |
-| 2026-08-11 | [`issues/2026-08-11-phase-c-final-4-decisions.md`](./issues/2026-08-11-phase-c-final-4-decisions.md) | Phase C 4 项版本决策（版本已被 08-12 升级超越） |
-| 2026-08-11 | [`issues/2026-08-11-aar-maven-catalog-unification.md`](./issues/2026-08-11-aar-maven-catalog-unification.md) | AAR 统一到 Maven catalog（gitignore 策略已变更） |
-| 2026-08-07 | [`issues/2026-08-07-conv-markup-spec.md`](./issues/2026-08-07-conv-markup-spec.md) | CONV 标记规范（ADR 0004） |
-| 2026-08-07 | [`issues/2026-08-07-post-topology-review.md`](./issues/2026-08-07-post-topology-review.md) | 13-module 拓扑后置审查 |
-| 2026-08-07 | [`issues/2026-08-07-aosp-artifact-recovery.md`](./issues/2026-08-07-aosp-artifact-recovery.md) | AOSP 产物恢复 |
-| 2026-08-07 | [`issues/2026-08-07-product-variant-conv-del.md`](./issues/2026-08-07-product-variant-conv-del.md) | res-product `product=` 变体 CONV_DEL |
-| 2026-08-07 | [`issues/2026-08-07-uncaught-exception-prehandler-reflection.md`](./issues/2026-08-07-uncaught-exception-prehandler-reflection.md) | 反射方案记录 |
-| 2026-08-06 | [`issues/2026-08-06-gradle-module-boundary-research.md`](./issues/2026-08-06-gradle-module-boundary-research.md) | Gradle 模块边界调研 |
-| 2026-08-06 | [`issues/2026-08-06-module-consolidation-plan.md`](./issues/2026-08-06-module-consolidation-plan.md) | 模块合并计划 |
-| 2026-08-06 | [`issues/2026-08-06-soong-gradle-apk-and-progress-policy.md`](./issues/2026-08-06-soong-gradle-apk-and-progress-policy.md) | APK 政策与前进原则（规则 I） |
-| 2026-08-06 | [`issues/2026-08-06-source-alignment-audit.md`](./issues/2026-08-06-source-alignment-audit.md) | 源码对齐审计 |
+## 删除准则（五项须同时满足，本次未删除任何文档）
 
-### 2026-07（历史）
+1. 内容完全重复或为无内容的生成副本；
+2. 没有独立决策、证据、时间线或 handoff 价值；
+3. 全仓无有效 inbound link，或链接已先迁移；
+4. 删除理由与证据记录在对应 issue；
+5. reviewer 可独立复核。
 
-| 日期 | 文档 | 主题 |
-|------|------|------|
-| 2026-07-31 | [`issues/2026-07-31-gen_aar_maven-rewrite.md`](./issues/2026-07-31-gen_aar_maven-rewrite.md) | gen_aar_maven.py 重写（已废弃） |
-| 2026-07-30 | [`issues/2026-07-30-phase-d-modules-compile.md`](./issues/2026-07-30-phase-d-modules-compile.md) | Phase D 模块编译 |
-| 2026-07-29 | [`issues/2026-07-29-aidl-animationlib-app.md`](./issues/2026-07-29-aidl-animationlib-app.md) | AIDL 编译知识（aidl 工具不读 jar） |
-| 2026-07-29 | [`issues/2026-07-29-completeness-audit.md`](./issues/2026-07-29-completeness-audit.md) | 规则 C 完整性审计 |
-| 2026-07-29 | [`issues/2026-07-29-shared-source-migration.md`](./issues/2026-07-29-shared-source-migration.md) | shared 源码迁移 |
-| 2026-07-28 | [`issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`](./issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md) | stub 遮蔽 jar 根因（经典案例） |
-| 2026-07-28 | [`issues/2026-07-28-server-flags-debug-session.md`](./issues/2026-07-28-server-flags-debug-session.md) | server-flags 调试 session |
-| 2026-07-28 | [`issues/2026-07-28-r-import-ambiguity.md`](./issues/2026-07-28-r-import-ambiguity.md) | 全项目 R import 歧义清零 |
-| 2026-07-28 | [`issues/2026-07-28-systemui-aidl-jar.md`](./issues/2026-07-28-systemui-aidl-jar.md) | AIDL jar（后被 AIDL 源码编译取代） |
-| 2026-07-28 | [`issues/2026-07-28-settingslib-full-jar.md`](./issues/2026-07-28-settingslib-full-jar.md) | SettingsLib kotlin+javac 双 jar |
-| 2026-07-28 | [`issues/2026-07-28-compose-core-source.md`](./issues/2026-07-28-compose-core-source.md) | PlatformComposeCore 源码补齐 |
-| 2026-07-28 | [`issues/2026-07-28-compose-features-source.md`](./issues/2026-07-28-compose-features-source.md) | compose/features 源码补齐 |
-| 2026-07-28 | [`issues/2026-07-28-transitive-r-customization-res.md`](./issues/2026-07-28-transitive-r-customization-res.md) | transitive R + customization res |
-| 2026-07-28 | [`issues/2026-07-28-customization-api-exposure.md`](./issues/2026-07-28-customization-api-exposure.md) | implementation→api 暴露 |
-| 2026-07-28 | [`issues/2026-07-28-proto-nano-gen-jar.md`](./issues/2026-07-28-proto-nano-gen-jar.md) | nano proto 生成类 jar |
-| 2026-07-28 | [`issues/2026-07-28-systemui-log-jar.md`](./issues/2026-07-28-systemui-log-jar.md) | LogLib jar 冲突（classpath 顺序取胜） |
-| 2026-07-28 | [`issues/2026-07-28-unfold-jar-androidx-window.md`](./issues/2026-07-28-unfold-jar-androidx-window.md) | unfold jar + androidx.window |
-| 2026-07-28 | [`issues/2026-07-28-lottie-jar.md`](./issues/2026-07-28-lottie-jar.md) | lottie/lottie_compose jar |
-| 2026-07-28 | [`issues/2026-07-28-biometric-shared-model.md`](./issues/2026-07-28-biometric-shared-model.md) | biometric shared model |
-| 2026-07-28 | [`issues/2026-07-28-wifitrackerlib-update.md`](./issues/2026-07-28-wifitrackerlib-update.md) | WifiTrackerLib 更新 |
-| 2026-07-23 | [`issues/2026-07-23-server-notification-flags-unresolvable.md`](./issues/2026-07-23-server-notification-flags-unresolvable.md) | server-notification-flags（已于 07-28 解决） |
-| 2026-07-22 | [`issues/2026-07-22-framework-jar-replace-and-stubs.md`](./issues/2026-07-22-framework-jar-replace-and-stubs.md) | framework.jar 替换 |
-| 2026-07-22 | [`issues/2026-07-22-sdk-android-jar-merge.md`](./issues/2026-07-22-sdk-android-jar-merge.md) | SDK android.jar 合并 |
-| 2026-07-22 | [`issues/2026-07-22-stub-cleanup-and-deps.md`](./issues/2026-07-22-stub-cleanup-and-deps.md) | v1 stub 清理 |
-| 2026-07-18 | [`issues/2026-07-18-real-framework-jar-migration.md`](./issues/2026-07-18-real-framework-jar-migration.md) | 真实 framework.jar 迁移 |
+**有疑问即保留。** 移动/重排历史文件同样不在常规维护范围内。
 
----
+## 维护触发条件表
 
-## 工具脚本（全部 Python，ADR 0002）
+| 事件 | 更新对象 |
+|------|---------|
+| merge 改变 build/test/blocker/toolchain/当前下一步 | CURRENT_STATE |
+| 接手步骤、规则入口、当前唯一优先级变化 | HANDOFF |
+| 未完成路线、顺序、完成条件变化 | PLAN |
+| 对外里程碑显著变化 | 双语 README 短摘要 |
+| 分类、owner、ADR、关键入口变化 | docs/README |
+| 强制规则变化 | AGENTS |
+| 编排协议变化 | CHARTER |
+| 可复用根因/防错经验 | PITFALLS |
+| 编排事件 / 迁移里程碑 | orchestration log / migration log（追加） |
+| frozen 文档 | 不更新（仅 typo/provenance 更正并注明） |
 
-| 脚本 | 用途 |
+## Tooling reference（当前有效 Python 工具，ADR 0002）
+
+| 工具 | 用途 |
 |------|------|
-| [`../tools/package_aosp_aar.py`](../tools/package_aosp_aar.py) | 从 AOSP Soong 产物打包 AAR 到 `libs/aars/`（多 JAR 合并、reject_sysui、确定性） |
-| [`../tools/install_aar_to_maven.py`](../tools/install_aar_to_maven.py) | 安装 `libs/aars/*.aar` 到 `libs/maven/`（AAR + POM 骨架） |
+| [`../tools/build_sysuisdk.py`](../tools/build_sysuisdk.py) | 从 tracked inputs 从零重建 SysUISdk（`--apply` 落盘） |
+| [`../tools/package_aosp_aar.py`](../tools/package_aosp_aar.py) | 从 AOSP Soong 产物打包确定性 AAR 到 `libs/aars/` |
+| [`../tools/install_aar_to_maven.py`](../tools/install_aar_to_maven.py) | 安装 AAR 到 `libs/maven/` 本地 Maven 仓（AAR + POM 骨架） |
+| [`../tools/package_aconfig_jars.py`](../tools/package_aconfig_jars.py) | 从 AOSP javac 产物打包完整 aconfig runtime JAR |
 | [`../tools/package_compilelib_jars.py`](../tools/package_compilelib_jars.py) | 打包 compilelib debug/release JAR |
-| [`../tools/package_aconfig_jars.py`](../tools/package_aconfig_jars.py) | 从 AOSP `javac` 产物打包完整 aconfig runtime JAR |
-| [`../tools/install_sdk.py`](../tools/install_sdk.py) | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口） |
-| [`../tools/check_source_alignment.py`](../tools/check_source_alignment.py) | AOSP SystemUI src/AIDL/res 对齐校验（规则 C） |
+| [`../tools/package_monet_jar.py`](../tools/package_monet_jar.py) / [`../tools/package_viewcapture_motiontool_jars.py`](../tools/package_viewcapture_motiontool_jars.py) | 确定性 clean JAR（monet / view-capture / motion-tool） |
+| [`../tools/check_source_alignment.py`](../tools/check_source_alignment.py) | AOSP src/AIDL/res 对齐校验（规则 C） |
+| [`../tools/install_sdk.py`](../tools/install_sdk.py) | 校验 + 补 SysUISdk framework.aidl |
+| [`../tools/patch_androidprv_merged_resources.py`](../tools/patch_androidprv_merged_resources.py) | AGP `androidprv` namespace 丢失修复 |
 | [`../tools/markup_product_variants.py`](../tools/markup_product_variants.py) | res-product `product=` 变体 CONV 标记 |
-| [`../tools/clean_prebuilts.py`](../tools/clean_prebuilts.py) | 清理 prebuilt jar 中的冲突类 |
-| [`../tools/clean_aar_maven.py`](../tools/clean_aar_maven.py) | 清理本地 Maven 仓 |
-| [`../tools/fix_r_imports_to_res.py`](../tools/fix_r_imports_to_res.py) | R import 修正 |
-| [`../tools/rebuild_settingslib_aar.py`](../tools/rebuild_settingslib_aar.py) | 重建 SettingsLib AAR |
-| `../tools/gen_aar_maven.py` | 已废弃（R.jar 合并失败实验），勿用 |
 
-单元测试：`python3 -m unittest discover -s tools/tests -p 'test_*.py'`（60 个）。
-
----
-
-## 项目根目录
-
-- [`../`](../) - SystemUI-Gradle/
-  - [`../build.gradle.kts`](../build.gradle.kts) - 根项目（allprojects 注入 framework.jar）
-  - [`../settings.gradle.kts`](../settings.gradle.kts) - 模块配置 + 插件版本声明
-  - [`../gradle/libs.versions.toml`](../gradle/libs.versions.toml) - 版本目录（单一事实源）
-  - [`../gradle.properties`](../gradle.properties) - builtInKotlin/KSP/sourceSets 关键开关
-  - [`../libs/`](../libs/) - 自包含依赖（jar + aars + maven，**2026-08-12 起提交入 git**）
-
----
+单元测试：`python3 -m unittest discover -s tools/tests -p 'test_*.py'`（当前通过数见 CURRENT_STATE）。
 
 ## 快速搜索
 
-### "项目规则是什么？"
-→ [`AGENTS.md`](../AGENTS.md) §1, §2
-
-### "现在构建状态如何？"
-→ [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §0–§2（KSP 0 错误 / Kotlin 0 错误 / APK 最终基线待复验）
-
-### "当前各依赖什么版本？"
-→ [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §3 或 [`AGENTS.md`](../AGENTS.md) §4.3
-
-### "为什么不能用 Kotlin 2.3.x / Compose 1.12？"
-→ [`issues/2026-08-12-deps-upgrade-builtin-kotlin.md`](./issues/2026-08-12-deps-upgrade-builtin-kotlin.md) §二
-
-### "builtInKotlin 下 KSP/AIDL 怎么配？"
-→ [`docs/PITFALLS.md`](./PITFALLS.md) §1.5
-
-### "我能加 stub 类吗？"
-→ 不能。`AGENTS.md` §1.2（规则 P）
-
-### "server-notification-flags 怎么修的？"
-→ 已解决：源码 stub 遮蔽 jar。[`issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`](./issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md)
-
-### "错误数变化历史？"
-→ [`docs/GRADLE_MIGRATION_LOG.md`](./GRADLE_MIGRATION_LOG.md)（注意：错误数仅作诊断，规则 I）
-
-### "哪些方案试过失败？"
-→ [`docs/PITFALLS.md`](./PITFALLS.md) 全文
-
-### "下次该做什么？"
-→ [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) §5 待解决
+- "项目规则是什么？" → [`AGENTS.md`](../AGENTS.md) §1–§2
+- "现在构建状态如何？" → [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)
+- "下次该做什么？" → [`docs/PLAN.md`](./PLAN.md)
+- "为什么不能用 Kotlin 2.3.x / Compose 1.12？" → [`docs/PITFALLS.md`](./PITFALLS.md) §1.1/§1.6
+- "builtInKotlin 下 KSP/AIDL 怎么配？" → [`docs/PITFALLS.md`](./PITFALLS.md) §1.5
+- "我能加 stub 吗？" → 不能，`AGENTS.md` §1.2（规则 P）
+- "错误数变化历史？" → [`docs/GRADLE_MIGRATION_LOG.md`](./GRADLE_MIGRATION_LOG.md)
+- "哪些方案试过失败？" → [`docs/PITFALLS.md`](./PITFALLS.md) 全文

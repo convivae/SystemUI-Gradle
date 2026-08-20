@@ -3,6 +3,7 @@
 > 这是本项目的全局指令。所有 AI Agent 在本项目中工作时必须遵守此文件。
 > 用户指令优先级最高，本文件次之，最后是默认系统提示。
 > **新 AI Agent 请先读 `docs/HANDOFF.md` 取得 5 分钟概要，再读本文件了解完整规则。**
+> **实时状态唯一见 `docs/CURRENT_STATE.md`**；本文件不保存动态进度/构建快照。
 
 ---
 
@@ -348,77 +349,13 @@ SystemUI-res/res-product/      <--  AOSP SystemUI/res-product/
 
 ---
 
-## 四、当前进度状态（历史记录至 2026-07-29；现状更新于 2026-08-12）
+## 四、实时状态归属
 
-### 4.1 已完成
+> 本文件只保存**强制规则**，不保存动态进度/构建快照。
+> **唯一完整实时技术状态见 `docs/CURRENT_STATE.md`**（构建矩阵、版本、依赖产物、blocker、下一步、验证证据）；
+> 未完成路线见 `docs/PLAN.md`；历史错误数/迁移里程碑见 `docs/GRADLE_MIGRATION_LOG.md`（append-only）；
+> 历史进度快照已随 2026-08-20 文档治理（Task 039）移入上述 owner 文档与冻结归档。
 
-| 时间 | 错误数 | 操作 |
-|------|--------|------|
-| 2026-07-22 初 | 5296 | 仅有 sdk android.jar |
-| 2026-07-22 | 4675 | 替换 framework.jar (AOSP 完整版) |
-| 2026-07-22 | 3008 | 合并 SDK android.jar + framework.jar |
-| 2026-07-22 | 2412 | 删除所有 v1 stub 文件 |
-| 2026-07-22 | 2000 | 加 Monet jar + SystemUI Flags jar |
-| 2026-07-23 | 2000 | (本日到此) |
-| 2026-07-29 | 142 | biometrics/keyguard/kairos 等大批源码补全 |
-| 2026-07-29 | 116 | clocks 塞 :SystemUI-plugin |
-| 2026-07-29 | 102 | Phase A–C：tier① 全源码化 + KSP 跑 Dagger（无回归） |
-| 2026-07-29 | 73 | Phase D：AIDL 源码编译删 systemui-aidl.jar（communal/widgets 29→0） |
-| 2026-07-29 | 70 | 规则 C 审查：删 5 个伪造 stub + 18 处伪造 import（回归 AOSP 原貌） |
-| 2026-08-11 | KSP: 0 | KSP + Dagger 2.55 useBindingGraphFix 首次通过（commit `05ea2064`） |
-| **2026-08-12** | **KSP: 0 / Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移（commit `e3548016`）** |
-| **2026-08-12 实施** | **KSP: 0 / Kotlin: 0** | **Task 1–6：jsr305、aconfig JAR、WM-Shell AAR、variant KSP/AIDL、AGP 9.3.1、文档/格式清理** |
-| **2026-08-12 验证** | **KSP: 0 / Kotlin: 0 / javac: 42** | **Task 7：完整验证链；`:app:assembleDebug` 在 core Java 编译阶段失败，APK 未生成，8 组根因已归属** |
-| **2026-08-13 修复波次** | **javac: 20（仅 NeverCompile 组）** | **编排工作流修复 7/8 组根因（`2662423b`/`e454feda`/`f870be99`/`ddd334fb`）；新浮出 `processDebugResources` featureFlag 阻塞** |
-| **2026-08-13 里程碑** | **javac: 0** | **brief 008 补 SysUISdk dalvik annotations（`a35906f4`）；`:SystemUI-core:compileDebugJavaWithJavac` 0 错误，8 组根因全部清零；仅剩 featureFlag 资源链接阻塞** |
-| **2026-08-19 资源链接波次** | **androidprv: 0** | **brief 009–012 修复 featureFlag、可复现 SysUISdk/S4 framework-res 及 AGP namespace 丢失；131 个工具测试通过；新浮出 SettingsLib AAR 缺两个 switch drawable** |
-
-### 4.2 当前构建状态（2026-08-12 实施检查点，Task 1–7）
-
-- **KSP 编译**: debug/release 均 BUILD SUCCESSFUL，0 错误，2933 个文件生成；fresh checkout 已复验
-- **Kotlin 编译**: `:SystemUI-core:compileDebugKotlin` BUILD SUCCESSFUL，0 错误
-- **APK 编译**: core javac 已 0 错误；featureFlag、SysUISdk framework-res 与 AGP `androidprv` namespace 丢失均已修（brief 009–012）。架构师亲验 `patchDebugAndroidPrvMergedResources` 为 `scanned=419 patched=8 compiled=8 unresolved=0`、`androidprv` 20→0；`:app:processDebugResources` 当前仅被 **SettingsLib AAR 缺 `drawable/settingslib_switch_{track,thumb}`** 阻塞。两个资源均来自 AOSP `packages/SettingsLib/SettingsTheme/res/drawable-v31/`（track 另有 v34），但当前 AAR 未打包；待用户批准重新打包 SettingsLib AAR
-- **WM-Shell AAR**: 主/shared class-set 交集为 0，`:app:checkDebugDuplicateClasses` 通过
-- **flag JAR**: `systemui-shared-flags.jar` 已换 Soong `javac` 完整 JAR；`settingslib-flags.jar` 为 `compileOnly`；D8 `Absent Code attribute` 消失
-- **单元测试**: Python 工具测试 131 个全部通过（task 012 架构师亲验）
-- 错误数只作诊断，不构成提交、回滚或审批条件
-- 审查与实施记录：`docs/issues/2026-08-12-current-progress-standards-review.md`
-- 执行计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`
-
-### 4.3 版本矩阵（2026-08-12）
-
-| 组件 | 版本 | 备注 |
-|------|------|------|
-| Gradle | 9.5.0 | wrapper |
-| AGP | 9.3.1 | settings.gradle.kts 硬编码 |
-| Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置，**无显式 kotlin-android 插件** |
-| KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin |
-| Dagger | 2.59.2 | useBindingGraphFix 自 2.58 默认启用 |
-| Compose | 1.11.4 | **最高保留 `ExperimentalAnimatableApi`**（1.12.0 已移除，AOSP 源码在用） |
-| material3 | 1.5.0-alpha18 | 对齐 compose 1.11.x |
-| androidx 系列 | 公网最新 | AOSP prebuilts 版本多在公网不存在，须逐个查 maven-metadata.xml |
-
-**builtInKotlin 关键配置**（详见 PITFALLS §1.5）：
-- `android.builtInKotlin=true`（gradle.properties）
-- `android.disallowKotlinSourceSets=false`（允许 KSP 操作 kotlin sourceSets）
-- 所有 Android 模块必须 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)`（builtInKotlin 下 java.srcDirs 不含 .kt）
-- SystemUI-core: AIDL 输出目录加入 kotlin sourceSet + `kspDebugKotlin→compileDebugAidl`、`kspReleaseKotlin→compileReleaseAidl`
-
-### 4.4 待解决
-
-1. 用户批准后重新打包 SettingsLib AAR，将 AOSP `SettingsLib/SettingsTheme/res/drawable-v31/`（以及对应 v34 变体）纳入既有 SettingsLib 产物；重新安装本地 Maven AAR并跑 `:app:processDebugResources` / `:app:assembleDebug`
-2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、manifest 重复权限、评估移除 `android.disallowKotlinSourceSets=false`
-
-### 4.5 已解决
-
-- **server-notification-flags.jar** (Stage 2): 已解决。根因是源码 stub 遮蔽 jar，`git rm` 后 2000 → 1979
-  - 详见 `docs/issues/2026-07-28-server-flags-ROOT-CAUSE-FOUND.md`
-- **全项目 R import 歧义**: 已清零（7 文件删多余 `systemui.R`，1979→1879）
-- **KSP + Dagger 绑定解析**: 已解决（Dagger 2.59.2 默认启用 useBindingGraphFix，KSP 0 错误）
-- **Compose inline 问题**: 已解决（Compose 1.11.4 + builtInKotlin 后消失）
-- **Kotlin 版本兼容**: 已解决（AGP builtInKotlin 锁定 2.2.10；2.3.x 插件与 newDsl 不兼容）
-
----
 
 ## 五、问题排查流程
 
@@ -501,9 +438,9 @@ javap -p <ClassName>
 | 路径 | 说明 |
 |------|------|
 | `docs/HANDOFF.md` | 下个 AI 必读入口 |
-| `AGENTS.md` | 本文件（规则 + 现状） |
-| `docs/CURRENT_STATE.md` | 状态快照 |
-| `docs/PLAN.md` | 阶段计划 |
+| `AGENTS.md` | 本文件（强制规则；实时状态唯一见 `docs/CURRENT_STATE.md`） |
+| `docs/CURRENT_STATE.md` | 唯一完整实时技术状态 owner |
+| `docs/PLAN.md` | 未完成路线与完成条件 |
 | `docs/PITFALLS.md` | 踩坑记录 |
 | `docs/GRADLE_MIGRATION_LOG.md` | 历史错误数演变 |
 | `docs/issues/YYYY-MM-DD-<topic>.md` | 每日详细问题记录 |
@@ -548,6 +485,7 @@ javap -p <ClassName>
 | 2026-08-06 更正 | Maven 不再列为第四种产物；AAR 先直接引入、确认冲突后才用本地 Maven；补充自定义 SDK/framework.jar/framework-res 原理；删除错误数下降/阈值和逐次编译要求，改为“项目整体向前推进”原则 |
 | 2026-08-07 增订 | 新增 ADR 0004（CONV 标记规范 + 对齐纪律）；规则 R 升级为“禁止无标记擅改”；`check_source_alignment.py --strict` 不再卡 MODIFIED |
 | 2026-08-12 增订 | §4 更新：全依赖升级 + builtInKotlin 迁移（commit `e3548016`）；§4.2 重写为当前构建状态；新增 §4.3 版本矩阵；§2.4 记录 Compose inline 问题已解决 |
+| 2026-08-20 增订 | Task 039 文档治理：§四 由动态进度快照改为实时状态归属（指向 CURRENT_STATE）；规则 P/S/C/F/R/B/H/D/I、依赖策略、SysUISdk 规则、诊断流程与用户偏好全部保留不变 |
 
 ---
 

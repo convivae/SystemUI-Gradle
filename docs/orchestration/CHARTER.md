@@ -111,17 +111,11 @@ relays it to the user; work resumes only after explicit user approval.
 When unsure whether something is a red-line area, **treat it as red-line** —
 false positives are cheap, violations are not.
 
-## Part 6 · Current Project State Snapshot
+## Part 6 · Live State Ownership
 
-One line only; details live in `docs/CURRENT_STATE.md` (always the authority):
-
-> KSP 0 errors (2933 files), core Kotlin 0 errors; `:app:assembleDebug` is
-> blocked by 42 javac errors in `:SystemUI-core:compileDebugJavaWithJavac`
-> (eight attributed root-cause groups; APK not produced). See
-> `docs/issues/2026-08-12-current-progress-standards-review.md` §Task 7.
-
-Known accepted deviations: 1 src MODIFIED + 86 res byte-diffs (CONV discipline;
-`--strict` does not gate on MODIFIED).
+The sole complete live technical state is `docs/CURRENT_STATE.md`.
+`docs/orchestration/STATE.md` owns only active workers, queue, and orchestration transitions.
+Workers must read both when the task brief requires orchestration context.
 
 ## Part 7 · Worker Contract
 
