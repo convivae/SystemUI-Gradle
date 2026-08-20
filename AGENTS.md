@@ -300,6 +300,8 @@ libs/
 │   ├── SettingsLib.aar                 # frameworks/base/packages/SettingsLib（含 32 个子模块合并）
 │   ├── WindowManager-Shell.aar         # frameworks/base/libs/WindowManager/Shell
 │   ├── WindowManager-Shell-shared.aar  # WM-Shell static_libs 子模块（javac+kotlin 合并，含 PhysicsAnimator）
+│   ├── TraceurCommon.aar               # Traceur common + perfetto_config_java_protos（640 类；manifest 合并 5 个权限）
+│   ├── Traceur-res.aar                 # Traceur 资源 namespace（105 个 AOSP res；0 类）
 │   ├── LowLightDreamLib.aar            # frameworks/base/libs/dream/lowlight:LowLightDreamLib
 │   ├── setupcompat.aar                 # external/setupcompat:setupcompat
 │   ├── SettingsLibColor.aar            # SettingsLib/Color（Maven 坐标 com.android.settingslib:color）

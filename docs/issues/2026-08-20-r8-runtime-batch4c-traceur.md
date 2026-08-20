@@ -113,7 +113,7 @@ IssueRecordingService*、CustomTraceSettingsDialogDelegate 等）。
 ### 3. Debug 硬门禁
 
 - `set -o pipefail; ./gradlew :app:assembleDebug 2>&1 | tee /tmp/task038-debug.log` → **exit=0，`BUILD SUCCESSFUL in 2m 53s`**（216 tasks）；`/tmp/task038-debug.status` = `exit=0`；无 leanback/v14 缺资源错误。
-- APK（162931039 bytes）类定义（apkanalyzer `dex packages --defined-only`，架构师修正口径：source-set ⊆ defined-set）：**AAR 输入 640 类全部 defined，MISSING=0**（traceur 15/15；perfetto 625/625）。另 perfetto namespace 实测 defined 总数 679 = 625 源类 + 54 个 D8 interface-desugaring 合成类 `*-IA`（dexdump 证实 `D8$$SyntheticClass`，验收不计入）。
+- APK（162931039 bytes）类定义（apkanalyzer `dex packages --defined-only`，架构师修正口径：source-set ⊆ defined-set）：**AAR 输入 640 类全部 defined，MISSING=0**（traceur 15/15；perfetto 625/625）。另 perfetto namespace 实测 defined 总数 679 = 625 源类 + 54 个 D8 interface-desugaring 合成类 `*-IA`；Traceur common namespace 实测 19 = 15 源类 + 3 个 D8 `$$ExternalSyntheticLambda` + AGP 生成的 `com.android.traceur.common.R`（dexdump 证实合成类来自 `D8$$SyntheticClass`，额外定义均不计入 640 源类验收）。
 - traceur R 类由 AGP 从 R.txt 重新生成：`com.android.traceur.res.R{,$array,$color,$drawable,$id,$layout,$mipmap,$string,$style,$xml}` 全部 defined。
 - merged manifest（`app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml`）：`CONTROL_UI_TRACING`、`START_FOREGROUND_SERVICES_FROM_BACKGROUND`、`QUERY_ALL_PACKAGES`、`FOREGROUND_SERVICE`、`WRITE_SECURE_SETTINGS` 5 权限全部在场。
 - traceur res 链接验证：aapt2 dump resources 显示 `layout/custom_trace_settings_dialog`、`string/custom_trace_settings_dialog_title` 等进入 resources.arsc。

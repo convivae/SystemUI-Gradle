@@ -36,9 +36,9 @@ Sibling project using the same approach: [CarSystemUIGradle](../CarSystemUIGradl
 | Toolchain | Gradle 9.5.0 · AGP 9.3.1 · Kotlin 2.2.10 (AGP `builtInKotlin`) · KSP 2.2.10-2.0.2 · Dagger 2.59.2 · Compose 1.11.4 |
 | Custom SDK | SysUISdk fully reproducible (`tools/build_sysuisdk.py --apply`: hidden APIs, framework-private `androidprv` resources, @hide AIDL declarations) |
 | Compilation | KSP 0 errors · core Kotlin 0 errors · core javac 0 errors |
-| Unit tests | **171/171 passing** |
+| Unit tests | **179/179 passing** |
 | **Debug APK** | ✅ `:app:assembleDebug` succeeds (hard gate for every batch of changes) |
-| Release APK | 🚧 R8 config aligned with AOSP (zero obfuscation in core / unified R8+shrinkResources in app); missing runtime-closure refs converged 140 → **88**, being cleared batch by batch |
+| Release APK | 🚧 R8 config aligned with AOSP (zero obfuscation in core / unified R8+shrinkResources in app); missing runtime-closure refs converged 140 → **81**, being cleared batch by batch |
 | Device validation | ⏳ After release is green (emulator/device plan on file) |
 
 ## What's been done
@@ -59,13 +59,12 @@ Sibling project using the same approach: [CarSystemUIGradle](../CarSystemUIGradl
   unified R8 + shrinkResources in the app
 - **R8 runtime-closure audit and burn-down**: 140 missing refs classified into
   A (program/runtime) and B (classpath) groups, cleared in batches:
-  140 → 126 → 119 → 109 → 106 → **88**
+  140 → 126 → 119 → 109 → 106 → 88 → **81**
 
 ## What's in progress
 
-- **Burning the R8 closure to zero (88 → 0)**: the current batch is the Traceur dual-AAR
-  (Batch 4C); next is SettingsLib (74 refs — the largest chunk), then the platform
-  classpath bridge (group B)
+- **Burning the R8 closure to zero (81 → 0)**: next is SettingsLib (74 refs — the
+  largest chunk), followed by the platform classpath bridge (group B)
 - After the closure reaches zero: full `:app:assembleRelease` (R8 + resource shrinking +
   signing)
 - Emulator/device validation (plan: `docs/issues/2026-08-20-device-emulator-validation-plan.md`)
@@ -130,7 +129,7 @@ Every AAR/JAR is **deterministically** packaged from AOSP Soong outputs by scrip
 ```bash
 ./gradlew :app:assembleDebug            # Build the debug APK (current hard gate)
 ./gradlew :SystemUI-core:compileDebugKotlin
-python3 -m unittest discover -s tools/tests   # Toolchain tests (171)
+python3 -m unittest discover -s tools/tests   # Toolchain tests (179)
 ```
 
 All of `libs/` is committed to git — **a fresh clone builds out of the box**.
