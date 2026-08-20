@@ -1,220 +1,126 @@
 # SystemUI-Gradle
 
-A standalone, self-contained Gradle build of the Android SystemUI source tree — designed to compile independently of the AOSP build system while remaining compatible with it.
+**[English](README.en.md)** | 中文
 
-> **Status:** active development — see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) for the live snapshot.
-> As of 2026-08-19, debug/release KSP, core Kotlin, and core javac pass with
-> **0 errors**. Feature-flag linking, reproducible SysUISdk/framework resources,
-> and AGP's dropped `androidprv` namespace are fixed. `:app:assembleDebug` is now
-> blocked at `:app:processDebugResources` because the tracked SettingsLib AAR lacks
-> two AOSP SettingsTheme switch drawables, so no APK is produced yet. See the
-> [androidprv issue record](docs/issues/2026-08-13-agp-androidprv-namespace-fix.md).
+把 AOSP `frameworks/base/packages/SystemUI` 从 Soong/Blueprint 构建体系中完整剥离出来，
+移植为一个**独立、自包含的 Gradle 工程**——不依赖 AOSP 源码树即可编译真实 SystemUI 源码，
+同时保持与 AOSP 的源码、资源 1:1 对齐，随时可以回流。
 
----
-
-## Why
-
-AOSP's SystemUI is normally built inside the AOSP source tree using Blueprint (`Android.bp`) and Soong. While this works well for AOSP itself, it makes the module hard to:
-
-- modify and iterate on with Android Studio / a fast Gradle build loop;
-- use as a library or standalone project outside the full AOSP checkout;
-- version, branch, or code-review independently of the platform.
-
-This project extracts SystemUI from AOSP, ports it to a pure Gradle build (Gradle 9.5 + AGP 9.3.1 +
-Kotlin 2.2.10 via AGP `builtInKotlin`), and packages every dependency it needs so that the project
-compiles without ever reaching back into the AOSP tree.
-
-A reference implementation that informed many of the choices here is [`CarSystemUIGradle`](../CarSystemUIGradle) (commit `c0ae96b`) — a sibling project that did the same thing for the Car SystemUI.
+> **状态**：活跃开发中。debug APK 已可构建；release（R8 全程序优化）正在逐批收口。
+> 实时状态见 [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)。
 
 ---
 
-## Goals
+## 为什么做这个项目
 
-1. **Build independently.** No symlinks to the AOSP tree. Every needed `.class`, `.jar`, `.aar`, and resource lives inside this repo.
-2. **Stay BP-compatible.** The source tree is kept close enough to AOSP that the same files still compile under Blueprint, so the project can be dropped back into AOSP without rewriting imports or layout.
-3. **No stubs.** Hidden AOSP APIs are provided by real prebuilt JARs/AARs copied out of AOSP outputs, never by hand-written `*.java` stub classes.
-4. **No private resource files.** Every resource under `res/` came from AOSP source, a checked-in AAR, or a checked-in JAR — never a one-off XML/PNG created locally to make the build pass.
-5. **Use modern Gradle.** Kotlin DSL (`build.gradle.kts`), version catalog (`gradle/libs.versions.toml`), Gradle 9.5, AGP 9.3.1 with `builtInKotlin=true`.
+AOSP 的 SystemUI 正常只能在 AOSP 源码树内用 Soong 编译。这带来几个痛点：
 
----
+- 无法用 Android Studio / Gradle 快速迭代；
+- 无法脱离整个 AOSP checkout 独立版本化、评审、分支管理；
+- 想基于 SystemUI 做二次开发的团队，被迫维护一整套 AOSP 构建环境。
 
-## High-level architecture
+本项目把 SystemUI 完整搬进纯 Gradle 构建（Gradle 9.5 + AGP 9.3.1 + Kotlin 2.2.10），
+所需的一切依赖（隐藏 API、aconfig flags、AOSP 库、资源）都以真实产物的形式收进仓库，
+`git clone` 之后直接构建，**不再回头碰 AOSP 树**。
+
+同方法论的姊妹项目：[CarSystemUIGradle](../CarSystemUIGradle)（Car SystemUI 的同款移植）。
+
+## 当前状态速览（2026-08-20）
+
+| 维度 | 状态 |
+|---|---|
+| 构建链 | Gradle 9.5.0 · AGP 9.3.1 · Kotlin 2.2.10（AGP `builtInKotlin`）· KSP 2.2.10-2.0.2 · Dagger 2.59.2 · Compose 1.11.4 |
+| 自定义 SDK | SysUISdk 完全可复现（`tools/build_sysuisdk.py --apply` 声明式生成，含隐藏 API / 私有资源 / AIDL 声明） |
+| 编译 | KSP 0 错误 · core Kotlin 0 错误 · core javac 0 错误 |
+| 单元测试 | **171 个全部通过** |
+| **Debug APK** | ✅ `:app:assembleDebug` 成功产出（每批改动的硬门禁） |
+| Release APK | 🚧 R8 配置已对齐 AOSP（core 零混淆 / app 统一 R8+shrinkResources）；运行时闭包缺失从 140 收敛至 **88**，逐批清零中 |
+| 装机验证 | ⏳ 待 release 打通后进行（模拟器/真机方案已记录在案） |
+
+## 已经做了什么
+
+- **13 个 Gradle 模块**，边界语义严格对齐 AOSP `Android.bp`（ADR 0003）；SystemUI 自有代码全部源码化（规则 S：不用 jar 顶替），非 SystemUI 的 AOSP 产物一律 jar/AAR 引入（规则 F：不偷拷 framework 源码）
+- **源码/资源与 AOSP 逐一对齐**（规则 C：不漏不多），有自动化对齐校验工具；任何必要的源码改动以 CONV 标记追溯（ADR 0004）
+- **SysUISdk 可复现流水线**：隐藏 API、framework 私有资源（`androidprv`）、@hide AIDL 全部由脚本声明式补齐，禁止手工 patch
+- **全套依赖治理**：AOSP 库由 `tools/package_aosp_aar.py` 确定性打包为 AAR（17 个），经本地 Maven 仓 + version catalog 统一管理；第三方库一律官方 Maven 坐标并升级到最新兼容版；`libs/` 全部提交入 git
+- **Release 对齐 AOSP**：以 Soong 实际行为为基准，core 零 ProGuard、app 统一 R8 + shrinkResources
+- **R8 运行时闭包审计与收口**：140 项缺失分类为 A（program/runtime）/B（classpath）两类，按批清零：140 → 126 → 119 → 109 → 106 → **88**
+
+## 正在做什么
+
+- **R8 闭包清零（88 → 0）**：当前批次为 Traceur 双 AAR（Batch 4C）；之后是最大的一块 SettingsLib（74 项），再之后是 platform classpath 桥接（B 类）
+- 闭包归零后：完整 `:app:assembleRelease`（R8 + 资源收缩 + 签名）
+- 模拟器/真机装机验证（方案见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
+
+## 模块结构
 
 ```
 SystemUI-Gradle/
-├── app/                         # APK entry point (no sources; depends on :SystemUI-core)
-├── SystemUI-core/               # Main module: src + compose + pods + entry classes
-├── SystemUI-res/                # Standalone resource namespace (res/res-keyguard/res-product)
-├── SystemUI-common/             # Common + Log + utils (JVM)
-├── SystemUI-animation/          # PlatformAnimation + Shader
-├── SystemUI-plugin-core/        # Plugin runtime API (JVM)
-├── SystemUI-plugin-processor/   # Plugin annotation processor (build-time)
-├── SystemUI-plugin/             # PluginLib runtime (incl. bcsmartspace)
-├── SystemUI-unfold/             # Unfold (KSP Dagger)
-├── SystemUI-customization/      # Customization (with res)
-├── SystemUI-shared/             # Shared + keyguard
-├── SystemUI-shared-biometrics/  # Biometrics (own R namespace)
-├── SystemUI-compose/            # Compose Core + Scene
-├── libs/                        # All prebuilt jars/aars + local Maven repo (committed to git)
-│   ├── framework.jar            # AOSP framework (provides hidden APIs)
-│   ├── monet.jar                # Monet color engine
-│   ├── systemui-flags.jar       # aconfig-generated SystemUI flags (+ other flag jars)
-│   ├── aars/                    # 8 AOSP-produced AARs (animationlib, SettingsLib, WM-Shell, ...)
-│   ├── maven/                   # Local Maven repo (AAR + POM) consumed via version catalog
-│   └── prebuilts/               # Legacy prebuilt jars (being cleaned up)
-├── tools/                       # Python helper scripts (AAR packaging, SDK install, ...)
-├── docs/                        # CURRENT_STATE.md, PLAN.md, PITFALLS.md, issues/, adr/
-├── gradle/libs.versions.toml    # Single source of truth for versions/deps
-├── settings.gradle.kts
-└── build.gradle.kts             # Root build + framework.jar injection
+├── app/                        # APK 入口（无独立源码；manifest、签名、打包）
+├── SystemUI-core/              # 主模块：SystemUIApplication、src + compose + pods
+├── SystemUI-res/               # 独立资源 namespace（res / res-keyguard / res-product）
+├── SystemUI-common/            # Common + Log + shared-utils
+├── SystemUI-animation/         # PlatformAnimation + Shader(surfaceeffects)
+├── SystemUI-plugin-core/       # Plugin 运行时 API（JVM）
+├── SystemUI-plugin-processor/  # Plugin 注解处理器（构建期）
+├── SystemUI-plugin/            # PluginLib 运行时（含 bcsmartspace）
+├── SystemUI-unfold/            # Unfold（KSP 跑 Dagger）
+├── SystemUI-customization/     # Customization（含 res）
+├── SystemUI-shared/            # Shared + keyguard（含 aidl + res）
+├── SystemUI-shared-biometrics/ # Biometrics（独立 R namespace）
+├── SystemUI-compose/           # Compose Core + Scene
+├── libs/                       # 全部预置产物，提交入 git
+│   ├── framework.jar           # AOSP framework（含 @hide API）
+│   ├── *-flags.jar             # aconfig 生成的 flags 类
+│   ├── aars/                   # 17 个 AOSP 产物 AAR（SettingsLib、WM-Shell、iconloader…）
+│   └── maven/                  # 本地 Maven 仓（AAR + POM，经 catalog 引用）
+├── tools/                      # Python 工具链（AAR 打包、SDK 生成、对齐校验…）
+└── docs/                       # 状态、计划、踩坑、issue 记录、ADR
 ```
 
-The AOSP sources under `SystemUI-core/src/` mirror the original layout of
-`frameworks/base/packages/SystemUI/src/` (see `AGENTS.md` for the full mapping).
-Resources owned by `:SystemUI-res` under `SystemUI-res/res/`,
-`SystemUI-res/res-keyguard/`, and `SystemUI-res/res-product/` are tracked copies of the
-corresponding AOSP resource directories.
+`SystemUI-core/src/` 与 AOSP `frameworks/base/packages/SystemUI/src/` 逐路径对应；
+`SystemUI-res/res*` 与 AOSP 对应资源目录 1:1（详见 `AGENTS.md` §3.3）。
 
----
+## 依赖是怎么解决的（无 stub 原则）
 
-## How the build finds AOSP-internal code
+AGP 官方 SDK 会剥离 `@hide` API 和 aconfig 生成的类，SystemUI 大量使用这两者。
+本项目**不用任何手写 stub**，而是用三类真实产物补齐：
 
-AGP compiles against a public SDK, which strips out `@hide` APIs and aconfig-generated
-flags. SystemUI uses a lot of both, so we layer extra jars on top of the SDK via three
-mechanisms:
+1. **官方 Maven 坐标**（优先）：androidx / Compose / Dagger / protobuf 等第三方库直接用公网最新兼容版
+2. **本地 JAR**：无资源的 AOSP 纯代码产物（framework.jar、aconfig flags jar 等）
+3. **AAR**：含资源的 AOSP 库（先直接引入，确认冲突后才入本地 Maven 仓）
 
-1. **`framework.jar`** — AOSP's full prebuilt framework (with `@hide` APIs intact).
-   Injected into every project's compile classpath by the `allprojects {}` block in the
-   root `build.gradle.kts`. For some classes (e.g. `UserHandle.getIdentifier()`) we
-   additionally need to take precedence over `android.jar`; for those we merged the
-   conflicting classes into the SDK's `android.jar` itself (`libs/android-merged.jar` →
-   `SysUISdk/android.jar`).
-2. **aconfig-flag jars** — `com.android.systemui.Flags` and friends are generated by aconfig at
-   AOSP build time. We extract the `.class` files from the AOSP intermediates and package them as
-   small standalone jars (see `libs/systemui-flags.jar` and the other `*-flags.jar` files).
-3. **Local Maven AARs** — SystemUI-adjacent prebuilt artifacts (`SettingsLib`, `iconloader`,
-   `WindowManager-Shell`, `WifiTrackerLib`, `animationlib`, …) are produced by AOSP and consumed
-   here as AARs from `libs/maven/`, referenced through the version catalog. They are generated by
-   `tools/package_aosp_aar.py` and installed by `tools/install_aar_to_maven.py`.
+所有 AAR/JAR 均由 `tools/` 下脚本从 AOSP Soong 产物**确定性**打包，可复现、可审计。
 
-Every mechanism in this list is a real prebuilt, not a stub.
+## 构建
 
----
+### 环境要求
 
-## Building
+- Linux x86_64 · JDK 21
+- Android SDK + 安装好的 **SysUISdk** 平台（`platforms/android-SysUISdk`，由 `tools/install_sdk.py` / `build_sysuisdk.py` 生成）
+- 仅当需要重新生成 AOSP 产物时，才需要本地 AOSP 树
 
-### Prerequisites
-
-- Linux x86_64 (the project is developed on Linux; macOS may work but is untested)
-- JDK 21 (Gradle daemon JVM in `gradle/gradle-daemon-jvm.properties`)
-- Android SDK at `$ANDROID_SDK_ROOT` (defaults to `~/Android/Sdk`)
-- A `SysUISdk` platform installed under `$ANDROID_SDK_ROOT/platforms/android-SysUISdk`
-  with both `android.jar` and `core-for-system-modules.jar` — see
-  `tools/install_sdk.py`
-- AOSP source tree at `/home/conv/myspace/aosp` (only needed if you regenerate the
-  prebuilt jars/AARs)
-
-### Configure
+### 常用命令
 
 ```bash
-# 1. Create local.properties pointing at your SDK
-echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-
-# 2. (Optional) Regenerate AARs from your local AOSP build outputs.
-#    libs/ (jars, aars/, maven/) is committed to git, so a fresh clone builds
-#    without this step; run it only when AOSP artifacts need regenerating.
-python3 tools/package_aosp_aar.py --all    # generate libs/aars/*.aar
-python3 tools/install_aar_to_maven.py       # install to libs/maven/ + POM
-```
-
-### Build SystemUI-core
-
-```bash
+./gradlew :app:assembleDebug            # 构建 debug APK（当前硬门禁）
 ./gradlew :SystemUI-core:compileDebugKotlin
+python3 -m unittest discover -s tools/tests   # 工具链测试（171 个）
 ```
 
-### Assemble a debug APK
+`libs/` 已全部提交入 git，**fresh clone 开箱即建**。
 
-```bash
-./gradlew :app:assembleDebug
-```
+## 文档导航
 
-### Other useful tasks
-
-```bash
-./gradlew :SystemUI-core:clean
-./gradlew :SystemUI-core:compileDebugKotlin --rerun-tasks
-./gradlew :SystemUI-core:dependencies --configuration debugCompileClasspath
-./gradlew :SystemUI-core:tasks --all
-```
-
----
-
-## Project conventions
-
-- **No stubs.** Hidden APIs come from real prebuilt jars/AARs, never from hand-written
-  `*.java` stub classes.
-- **No private resources.** Every resource was copied from AOSP source, lives inside an
-  AAR, or lives inside a Maven artifact.
-- **Source mirrors AOSP layout.** `SystemUI-core/src/<path>` corresponds to
-  `aosp/frameworks/base/packages/SystemUI/src/<path>`. Don't reshuffle directories.
-- **One commit per logical change.** Push promptly. Update `docs/` in the same commit.
-- **Error counts are diagnostic only.** They never gate commits or rollbacks; what matters is
-  forward progress toward a correct, maintainable, buildable project (see `AGENTS.md` rule I).
-
-The full list of constraints and conventions lives in [`AGENTS.md`](AGENTS.md).
-
----
-
-## Where to look
-
-| You want to… | Look at |
+| 想了解 | 看这里 |
 |---|---|
-| Understand the current roadmap and milestones | [`docs/PLAN.md`](docs/PLAN.md) |
-| See how the error count has evolved over time | [`docs/GRADLE_MIGRATION_LOG.md`](docs/GRADLE_MIGRATION_LOG.md) |
-| Read about a specific build problem and its fix | [`docs/issues/`](docs/issues/) (one file per day/topic) |
-| Understand project rules and constraints | [`AGENTS.md`](AGENTS.md) |
-| Regenerate AARs from AOSP outputs | [`tools/package_aosp_aar.py`](tools/package_aosp_aar.py) + [`tools/install_aar_to_maven.py`](tools/install_aar_to_maven.py) |
-| Find where a hidden API lives | check `libs/framework.jar` first, then `docs/issues/` |
-
----
-
-## Known issues
-
-As of 2026-08-12 the verified blockers are tracked in
-[`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) and the
-[standards review](docs/issues/2026-08-12-current-progress-standards-review.md):
-
-- **Final APK assembly is blocked at core Java compilation.** The previous blockers have been
-  fixed: `jsr305` is now declared; WM-Shell AAR class overlap is zero; shared SettingsLib/SystemUI
-  flags use the correct compile/runtime forms; release KSP is wired to release AIDL; AGP 9.3.1 is
-  verified. Task 7 then exposed eight real dependency/artifact gaps: `NeverCompile`, setupcompat,
-  Wi-Fi/WM-Shell aconfig flags, zxing, missing Dagger factories from `:SystemUI-shared`, a stale
-  `SystemUI-tags.jar`, and an `androidx.media` version constraint.
-- **No APK is produced yet.** The next work is a standards-compliant follow-up plan that supplies
-  the real AOSP JARs/AARs or Maven constraints and reruns `:app:assembleDebug`.
-- **Non-blocking warnings remain.** Room schema export is unconfigured, Kotlin 2.3 warns about
-  future data-class copy visibility, and manifest merging reports duplicate permissions. These are
-  deferred follow-ups, not current build blockers.
-
-Historical blockers that are **solved**: KSP + Dagger binding resolution (Dagger 2.59.2 enables
-`useBindingGraphFix` by default), the Compose inline-metadata failure (gone since Compose 1.11.4 +
-AGP `builtInKotlin`), and the server-notification-flags resolution issue (a source stub was
-shadowing the jar — see `docs/PITFALLS.md` §2.4).
-
----
-
-## Reference projects
-
-- [`CarSystemUIGradle`](../CarSystemUIGradle) — sibling project, same approach applied to
-  Car SystemUI. Particularly informative for AAR-generation patterns; key commit is
-  `c0ae96b`.
-- [AOSP SystemUI](https://cs.android.com/android/platform/superproject/+/master:frameworks/base/packages/SystemUI/)
-  — the upstream source.
-
----
+| 实时状态快照 | [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) |
+| 项目规则（无 stub / 对齐纪律 / 求助规则） | [AGENTS.md](AGENTS.md) |
+| 阶段计划 | [docs/PLAN.md](docs/PLAN.md) |
+| 踩坑记录 | [docs/PITFALLS.md](docs/PITFALLS.md) |
+| 架构决策记录 | [docs/adr/](docs/adr/) |
+| 每日问题/调研记录 | [docs/issues/](docs/issues/) · [docs/architecture/](docs/architecture/) |
 
 ## License
 
-The code in this repository is licensed under the Apache License, Version 2.0, the same
-as AOSP itself. See individual file headers for details.
+Apache License 2.0，与 AOSP 一致。
