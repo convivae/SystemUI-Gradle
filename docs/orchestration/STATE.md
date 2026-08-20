@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- Task 033 — `wJ:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033`, branch `task-033`, GLM-5.3. **REDLINE halted, no commit**: four scope flips expose 27 duplicate classes between FAT `libs/monet.jar` and official Maven `error_prone_annotations:2.50.0`; uncommitted two-path diff preserved pending user decision.
+- Task 033 — `wJ:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033`, branch `task-033`, GLM-5.3. User approved REDLINE resolution A: deterministic clean `monet.jar` from the two Soong javac outputs, retaining official Maven errorprone; revised brief ready for worker resume.
 
 ## Queue
 
@@ -33,8 +33,8 @@
 
 ## Blocked
 
-Debug 主分支无构建阻塞；Task 033 的候选 scope 改动在 `checkDebugDuplicateClasses` 暴露 27 个 `monet.jar` × 官方 Maven `error_prone_annotations:2.50.0` 重复类，已按 REDLINE 停止。优化 Release 主分支仍为 140 个 R8 missing class；首批 scope 修正尚未合并。APK 装机/运行验证未做。
+Debug 主分支无构建阻塞。Task 033 的 monet 重复类根因已有用户批准方案，正在恢复实施；优化 Release 主分支仍为 140 个 R8 missing class，首批修正尚未合并。APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-20 — Task 033 REDLINE：AOSP turbine-combined `monet.jar` 内嵌 27 个 errorprone 类，与 Gradle 官方 runtime 图重复；等待用户选择 clean javac-jar 重打包（推荐）或其他方向。
+2026-08-20 — 用户批准 Task 033 方案 A：用两个 Soong javac 输出确定性生成 56-class clean monet JAR，官方 Maven 提供 errorprone，再完成四个 runtime scope。
