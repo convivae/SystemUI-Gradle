@@ -7,12 +7,15 @@
 
 ## Active Workers
 
-- None.
+| Task | Workspace / pane | Worktree / branch | Model | Stage |
+|---|---|---|---|---|
+| 040 SettingsLib closure | `w1H:p1` / `task040-settingslib` | `/home/conv/myspace/SystemUI-Gradle-wt-040` / `task-040-settingslib` | `joycode/GLM-5.3` | working — fresh pre-change R8 baseline |
 
 ## Queue
 
-1. Next bounded build task: SettingsLib 74 program/resource closure
-   (technical detail and ordering: `docs/CURRENT_STATE.md` → "Next ordered work").
+1. After Task 040: B1–B4 platform/build classpath 6-ref closure, then
+   `AssumeTrueForR8` 1-ref annotation classpath closure. Technical ordering remains owned
+   by `docs/CURRENT_STATE.md`.
 
 ## Recent Orchestration Transitions
 
@@ -27,12 +30,13 @@
   resolved by preserving the narrowed orchestration-only role and the newer transition.
   Main fresh static verification passed; no Gradle task was run by design.
 - 2026-08-20 — Task 040 bounded SettingsLib design and exact `1.0.1` version bumps
-  approved; issue, TDD plan, and redline-gated worker brief prepared. Dispatch awaits
-  explicit brief approval.
+  approved; issue, TDD plan, and redline-gated worker brief prepared.
+- 2026-08-20 — Task 040 dispatched in isolated worktree `/home/conv/myspace/SystemUI-Gradle-wt-040`
+  to `w1H:p1` with explicit `joycode/GLM-5.3`; session `modelId` and full CONTRACT verified.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-20 — Task 040 SettingsLib design/version bumps approved and execution documents
-prepared; no active worker until the user approves the exact brief. Live technical details
-remain owned by `docs/CURRENT_STATE.md`.
+2026-08-20 — Task 040 active in isolated worker `w1H:p1`; model and CONTRACT verified.
+Worker currently owns the only heavy Gradle build for the fresh 81/74/7 R8 baseline.
+Live technical details remain owned by `docs/CURRENT_STATE.md`.
