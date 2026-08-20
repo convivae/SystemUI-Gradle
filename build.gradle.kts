@@ -15,7 +15,7 @@ allprojects {
             file("${rootProject.projectDir}/libs/systemui-flags.jar"),
             file("${rootProject.projectDir}/libs/monet.jar")
         ).filter { it.exists() }
-        val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar")
+        val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/notification-flags.jar")
         tasks.withType<JavaCompile>().configureEach {
             if (frameworkJar.exists()) {
                 options.bootstrapClasspath = files(frameworkJar) + files(

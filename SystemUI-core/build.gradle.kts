@@ -185,7 +185,17 @@ dependencies {
 
     // server-notification Flags (AOSP @aconfig Flags) - 显式声明，避免 Kotlin 编译器遗漏
     // 配合 root build.gradle.kts 中的 allprojects 注入以保证顺序
-    implementation(libs.android.server.notification.flags)
+    // （AOSP notification_flags_lib javac 全量产物，5 类 runtime 集；tier② jar，2026-08-20 Batch 2）
+    implementation(files("${rootProject.projectDir}/libs/notification-flags.jar"))
+    // launcher3 aconfig flags（com.android.launcher3.Flags；iconloader_base static_libs
+    // 进入 APK 打包闭包——AOSP static_libs runtime/program 输入，故 implementation）
+    implementation(files("${rootProject.projectDir}/libs/launcher3-flags.jar"))
+    // SettingsLib IllustrationPreference aconfig flags（com.android.settingslib.widget.flags.Flags；
+    // SettingsLib 子模块 static_libs runtime/program 输入，故 implementation）
+    implementation(files("${rootProject.projectDir}/libs/settingslib-widget-flags.jar"))
+    // SettingsLib SelectorWithWidgetPreference aconfig flags
+    // （com.android.settingslib.widget.selectorwithwidgetpreference.flags.Flags；同上）
+    implementation(files("${rootProject.projectDir}/libs/settingslib-selector-flags.jar"))
 
     // 直接 AAR（Soong javac + 原始 res + R.txt，无 R.class）
     implementation(libs.systemui.settingslib)

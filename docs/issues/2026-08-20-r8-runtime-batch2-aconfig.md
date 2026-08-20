@@ -67,10 +67,84 @@ program/runtime closure。
 - 不处理 `AssumeTrueForR8` / `AconfigFlagAccessor`；它们留给 A 类闭包完成后的 B3 方案。
 - 不修改 `AGENTS.md` 或历史问题文档；当前依赖清单的机械同步需架构师另行取得 red-line 授权。
 
-## 验证记录
+## 验证记录（worker 实测，2026-08-20）
 
-待 worker 填写。所有带管道的 Gradle 命令必须 `set -o pipefail`，并记录真实 Gradle exit code；
-所有等待/轮询不超过 90 秒。
+所有带管道的 Gradle 命令均 `set -o pipefail`，exit code 由独立 status 文件记录（前台 90s 超时后改用 nohup 后台 launcher + 短轮询，无一次等待超过 90 秒）。
+
+### Task 1 — pre-change R8 基线
+
+- `./gradlew :app:minifyReleaseWithR8 -Dorg.gradle.workers.max=4` → `GRADLE_EXIT=1`，
+  `BUILD FAILED in 1m 53s`（R8 missing classes，与预期同型）；完整日志 `/tmp/task034-r8-before.log`，
+  基线集合存档 `/tmp/task034-missing-before.txt`。
+- **126 条 `-dontwarn` 规则 / 126 个唯一 class 引用**，与 Task 033 终态一致。
+- 7 个目标 ref（systemui FeatureFlags{,Impl}、server.notification FeatureFlags{,Impl}、
+  launcher3 Flags、settingslib widget/selector flags）全部在位；`AssumeTrueForR8` 在位。
+
+### Task 2 — TDD（规格纠正后）
+
+- **RED**：先改 `tools/tests/test_package_aconfig_jars.py` 再跑，
+  `Ran 9 tests / FAILED (failures=5, errors=8)`——全部因缺失 Batch-2 config/包元数据/校验行为
+  （初始版本含越界的第 4 个测试 `test_rejects_wrong_namespace`，经架构师纠正后删除；
+  wrong-namespace 拒绝由 exact-set 的 incomplete+extra 组合覆盖，production 校验保留在
+  `validate_runtime_jar` 的 `actual != expected` 比较中）。
+- **GREEN ×2**：最小实现后连跑两次，`Ran 8 tests / OK`。
+- 新增 3 个 focused behaviors：Batch-2 config matrix（5 组 source/destination/package 精确断言）、
+  incomplete runtime-set 拒绝、extra class 拒绝；存量 copy 测试改为完整五类合成集 + package 元数据。
+
+### Task 3 — 五个真实 JAR
+
+`python3 tools/package_aconfig_jars.py <name>` 逐一重产，机械校验全部通过：
+
+| JAR | cmp 源 JAR | 类数 | FeatureFlagsImpl/FakeFeatureFlagsImpl | SHA-256 |
+|---|---|---|---|---|
+| `libs/systemui-flags.jar` | IDENTICAL | 5 | ✓ | `c0b7d482…f9f6` |
+| `libs/notification-flags.jar` | IDENTICAL | 5 | ✓ | `0f3bfc66…a423` |
+| `libs/launcher3-flags.jar` | IDENTICAL | 5 | ✓ | `5b0f57ee…6eb` |
+| `libs/settingslib-widget-flags.jar` | IDENTICAL | 5 | ✓ | `e08f2587…57e` |
+| `libs/settingslib-selector-flags.jar` | IDENTICAL | 5 | ✓ | `7c54c1fb…145` |
+
+五个 SHA-256 与实施前对 AOSP owning javac 源的独立实测完全一致（byte-identical 拷贝，
+无任何合并/合成）。
+
+### Task 4 — 迁移与机械断言
+
+- 根 `build.gradle.kts`：`serverNotificationFlagsJar` 指向 `libs/notification-flags.jar`，
+  保持在 framework.jar 之前注入的顺序逻辑未动；无其他 classpath 改动。
+- `SystemUI-core/build.gradle.kts`：`implementation(libs.android.server.notification.flags)` →
+  直引 `libs/notification-flags.jar`；新增 launcher3/widget/selector 三个直引 `implementation`；
+  `systemui-flags.jar` 维持既有 implementation。
+- `gradle/libs.versions.toml`：仅删除 `android-server-notification-flags` alias 及其分组注释行，
+  无版本变更。
+- `git rm` 旧 `libs/maven/com/android/server/notification-flags/1.0.0/` JAR+POM；
+  `libs/maven` 已无 notification/server 条目；空目录自然消失。
+- 机械断言全部 PASS：五 JAR 均为 core `implementation`；tracked build/catalog 文件
+  `git grep` 旧 alias/旧路径 0 命中；`settings.gradle.kts` 未改动；Batch 3/4/B-class 缓办项
+  （view_capture/motion_tool_lib/TraceurCommon/traceur-res-R/keepanno-annotations，含 shared 模块）
+  scope 全部维持 `compileOnly`。
+
+### Task 5 — 闭包与精确推进验证
+
+- `git diff --check`：干净（DIFF_CHECK_OK）。
+- `python3 -m unittest discover -s tools/tests -p 'test_*.py'`：**Ran 154 tests / OK**
+  （151 存量 + 3 新增，符合验收 #3）。
+- `./gradlew :app:checkDebugDuplicateClasses :app:assembleDebug -Dorg.gradle.workers.max=4` →
+  `GRADLE_EXIT=0`，**BUILD SUCCESSFUL in 2m 41s**，无重复类。
+- `apkanalyzer dex packages --defined-only` 五个代表类全部 DEFINED：
+  `com.android.systemui.FeatureFlagsImpl`、`com.android.server.notification.FeatureFlagsImpl`、
+  `com.android.launcher3.Flags`、`com.android.settingslib.widget.flags.Flags`、
+  `com.android.settingslib.widget.selectorwithwidgetpreference.flags.Flags`。
+- Fresh `:app:minifyReleaseWithR8` → `GRADLE_EXIT=1`（后续 missing classes，预期中间态），
+  `BUILD FAILED in 1m 3s`，日志 `/tmp/task034-r8-after.log`，集合存档 `/tmp/task034-missing-after.txt`。
+- **精确差分（LC_ALL=C）**：BEFORE=126 → AFTER=119；REMOVED = 恰好 7 个批准目标
+  （A1×2 + A2×2 + launcher3 Flags + widget flags + selector flags）；ADDED = 0；
+  `AssumeTrueForR8` 保留。与预测 119 完全一致，无 REDLINE。
+
+### 边界检查
+
+`git status --short` 与 Allowed Paths 逐一比对：改动仅为 `tools/package_aconfig_jars.py`、
+`tools/tests/test_package_aconfig_jars.py`、`libs/systemui-flags.jar`（M）、4 个新 JAR、
+旧本地 Maven JAR/POM（D）、`gradle/libs.versions.toml`、`build.gradle.kts`、
+`SystemUI-core/build.gradle.kts`、本 issue 文档。无越界文件。
 
 ## 待解决问题
 
