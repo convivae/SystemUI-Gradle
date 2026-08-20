@@ -2,7 +2,8 @@
 
 ## Status
 
-Design approved in principle by the user; written architecture specification awaiting review.
+Written architecture specification explicitly approved by the user on 2026-08-21.
+Task 043 read-only audit plan and exact Worker brief are drafted for separate dispatch approval.
 No worker has been dispatched, no build code has changed, and no rollback has started.
 
 ## Background
@@ -82,6 +83,9 @@ missing reference. Error/ref counts are diagnostic only and no longer define art
 
 ## Pending
 
-- User review of `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`.
-- No Worker dispatch until that written spec is explicitly approved.
-- No rollback until a later item-specific discussion and approval.
+- User review of the exact Task 043 brief:
+  `docs/orchestration/tasks/043-gradle-native-current-state-audit.md`.
+- After explicit brief approval, dispatch one isolated read-only GLM-5.3 Worker; no Gradle,
+  history-first investigation, implementation, or rollback.
+- No rollback until the audit is reviewed and each later item is separately discussed and
+  approved.

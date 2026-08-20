@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：debug APK 构建成功、release R8 仍有 `AssumeTrueForR8` 1 个 missing ref；原 Task 042 精确复刻方案已暂停，当前等待用户复核 Gradle-native 架构 spec）。
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Gradle-native 架构 spec 已获用户批准；Task 043 只读现状审查 plan/brief 已起草，等待 exact brief 单独批准后派发；release R8 事实仍为 1 个 missing ref）。
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：用户复核 `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`；批准后才制定只读现状审查，不得直接派发原 Task 042 或回退代码。
+5. **当前唯一工程优先级**：用户复核 `docs/orchestration/tasks/043-gradle-native-current-state-audit.md`；批准后才派隔离只读 Worker，禁止直接实施、回退或重启原 Task 042。
 
 ## 2. 环境确认
 

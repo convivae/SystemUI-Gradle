@@ -15,7 +15,7 @@
 | Release R8 | **仍失败**：1 个 missing ref（`AssumeTrueForR8`；事实不变，但原 Task 042 精确复刻方案已暂停） |
 | `shrinkResources` | 未完成有效验收 |
 | 设备/模拟器运行验证 | 未开始 |
-| 当前唯一工程优先级 | **用户复核 Gradle-native functional-parity 架构 spec；随后只读审查当前 artifact/SDK/R8 设计** |
+| 当前唯一工程优先级 | **用户复核 Task 043 只读审查 exact brief；批准后派一个隔离 Worker** |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → **1**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
@@ -100,9 +100,9 @@ Task 041 已通过声明式 SysUISdk S3b bridge 清零 B1–B4 的 6 个 platfor
 
 ## Next ordered work
 
-1. **用户复核书面架构 spec**：`docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`
-2. spec 批准后，制定并派发**只读当前状态审查**：不先查 Git 历史、不修改、不回退；按新设计输出 keep/simplify/consolidate/candidate rollback ledger
-3. 对每个非 keep 项逐项向用户解释原因、前因后果、代价与验证，再决定是否实施
+1. **用户复核 Task 043 exact brief**：`docs/orchestration/tasks/043-gradle-native-current-state-audit.md`
+2. 批准后派发一个隔离的 GLM-5.3 Worker 做**只读当前状态审查**：禁止 Git 历史、Gradle、修改和回退；输出完整 inventory、family/seam 分析和 decision ledger
+3. 通过双轴静态 review 与架构师验收后，对每个非 keep 项逐项向用户解释原因、前因后果、代价与验证，再决定是否实施
 4. 在批准的 Gradle-native 架构下恢复 release R8、`assembleRelease`、资源收缩与签名验收
 5. 兼容模拟器/设备安装与运行验证（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
 

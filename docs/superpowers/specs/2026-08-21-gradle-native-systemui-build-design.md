@@ -1,6 +1,6 @@
 # Gradle-native SystemUI build architecture
 
-> **Status:** Draft for user review
+> **Status:** Approved by the user on 2026-08-21
 > **Date:** 2026-08-21
 > **Decision scope:** Release optimization, external AOSP artifact seams, SysUISdk scope,
 > maintainability, and the review/migration process

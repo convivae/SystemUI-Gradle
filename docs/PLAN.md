@@ -8,26 +8,24 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
-### 1. Gradle-native functional-parity 架构书面复核（当前唯一优先级）
+### 1. Task 043 当前状态只读架构审查（当前唯一优先级）
 
-- **设计**: `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`
-- **完成条件**: 用户明确批准书面 spec；本阶段不派 Worker、不修改构建代码、不回退。
+- **已批准设计**: `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`
+- **计划**: `docs/superpowers/plans/2026-08-21-gradle-native-current-state-audit.md`
+- **Worker brief**: `docs/orchestration/tasks/043-gradle-native-current-state-audit.md`（等待用户单独批准后派发）
+- **范围**: 只看当前仓库、AOSP owner、AGP 行为与参考项目；禁止 Git 历史、Gradle、实施和回退。
+- **完成条件**: 双轴审查通过的 keep / simplify / consolidate / candidate rollback / needs experiment / needs history-context ledger。
 
-### 2. 当前 artifact / SysUISdk / Release 设计只读审查
-
-- **范围**: 只看当前仓库、AOSP owner、AGP 行为与参考项目；不先查 Git 历史，不实施修改。
-- **完成条件**: 输出 keep / simplify / consolidate / candidate rollback / needs experiment ledger。
-
-### 3. 逐项讨论并实施经用户批准的简化
+### 2. 逐项讨论并实施经用户批准的简化
 
 - **完成条件**: 每个候选先说明存在原因、解决的问题、维护成本、替代方案和验证；仅批准项进入独立实施任务。
 
-### 4. Gradle-native Release APK 验收
+### 3. Gradle-native Release APK 验收
 
 - **范围**: 在批准的新架构下处理当前 `AssumeTrueForR8` optimizer/build-time 问题；不要求复刻 Soong R8 配置或输出。
 - **完成条件**: `:app:minifyReleaseWithR8` 与 `:app:assembleRelease` 成功，资源收缩及 V2 签名校验通过。
 
-### 5. 兼容模拟器/设备安装与运行验证
+### 4. 兼容模拟器/设备安装与运行验证
 
 - **范围**: AVD 签名/root/framework 兼容性预审后替换预装 SystemUI 并运行验证。
 - **计划**: `docs/issues/2026-08-20-device-emulator-validation-plan.md`。

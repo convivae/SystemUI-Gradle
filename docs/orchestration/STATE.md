@@ -13,9 +13,10 @@
 
 ## Queue
 
-1. User review of `docs/superpowers/specs/2026-08-21-gradle-native-systemui-build-design.md`.
-2. Only after written-spec approval: plan a read-only present-state architecture audit; no
-   Git-history-first investigation, implementation, or rollback.
+1. User review of Task 043 exact brief:
+   `docs/orchestration/tasks/043-gradle-native-current-state-audit.md`.
+2. Only after explicit brief approval: dispatch one isolated GLM-5.3 Worker for the read-only
+   present-state audit; no Git history, Gradle, implementation, or rollback.
 
 ## Recent Orchestration Transitions
 
@@ -79,9 +80,12 @@
 - 2026-08-21 — User approved the architectural direction of AGP-native functional parity,
   coarse viable artifact-family seams, outcome/runtime validation, and item-specific discussion
   before any rollback. Written spec drafted for user review; no implementation worker yet.
+- 2026-08-21 — User explicitly approved the written Gradle-native architecture spec. Task 043
+  documentation-only plan and exact read-only Worker brief were drafted with complete current
+  AAR/JAR/module/rule/SysUISdk inventory gates; dispatch awaits separate exact-brief approval.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — No active SystemUI workers. Written Gradle-native architecture spec awaits
-user review; no audit dispatch, implementation, history-first investigation, or rollback.
+2026-08-21 — No active SystemUI workers. Written architecture spec is approved; Task 043
+exact read-only audit brief awaits separate user approval before dispatch.
