@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-20（Task 038 合并后 main fresh 验证，commit `dee92a90` + `8b3bb275`）
+> **Last verified**: 2026-08-21（Task 040 合并后 main fresh 验证，commits `d2e1569a` + `01c7e58d` + `1aea7ace` + `f1952172`）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -10,14 +10,14 @@
 
 | 维度 | 状态 |
 |------|------|
-| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 038 main fresh 2m35s） |
-| Python 工具测试 | **179/179 通过** |
-| Release R8 | **仍失败**：81 个真实 missing refs（closure 缺失，非成功状态） |
+| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 040 main fresh 1m10s） |
+| Python 工具测试 | **195/195 通过** |
+| Release R8 | **仍失败**：7 个真实 missing refs（closure 缺失，非成功状态） |
 | `shrinkResources` | 未完成有效验收 |
 | 设备/模拟器运行验证 | 未开始 |
-| 当前唯一工程优先级 | **SettingsLib 74 refs 的 program/resource closure** |
+| 当前唯一工程优先级 | **B1–B4 platform/build classpath 6 refs** |
 
-R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → **81**（每批精确差分，零新增未解释引用）。
+R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → **7**（每批精确差分，零新增未解释引用）。
 
 ## Verified milestones（已完成里程碑，最新在后）
 
@@ -31,18 +31,19 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → **81**�
 | 2026-08-20 | 官方 Maven 依赖审计落地（zxing 3.5.4 等，4 个本地 jar 退役） | `docs/issues/2026-08-20-official-maven-audit.md` |
 | 2026-08-20 | R8 Batch 1–4C：clean monet/aconfig/view-capture/iconloader/WM-Shell proto/Traceur 产物；140→81 | `docs/architecture/2026-08-20-r8-runtime-closure-audit.md` |
 | 2026-08-20 | Traceur 双 AAR（Task 038）：640 类 + 105 res；R8 88→81 精确；179/179 | `docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md` |
+| 2026-08-21 | SettingsLib program/resource 闭包（Task 040）：主 AAR 1153 类、Theme 15 类、17 个 per-target 资源 AAR；R8 81→7 精确；195/195 | `docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md` |
 
 ## Current build and verification matrix
 
 | 验证项 | 状态 | 最新证据 |
 |--------|------|---------|
-| KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 038 main fresh |
-| core Kotlin | ✅ 0 错误 | Task 038 main fresh |
-| core javac | ✅ 0 错误 | Task 038 main fresh |
-| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 038 main fresh，exit 0 in 2m35s |
-| Python 工具测试 | ✅ 179/179 | Task 038 main fresh |
-| APK 类定义检查 | ✅ Traceur 640/640 source classes defined；manifest 含 `CONTROL_UI_TRACING` | Task 038 main fresh |
-| `:app:minifyReleaseWithR8` | ❌ 预期失败：81 个 missing refs（真实 closure 缺失） | Task 038 main fresh，exit 1，精确 88→81 |
+| KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 040 main fresh |
+| core Kotlin | ✅ 0 错误 | Task 040 main fresh |
+| core javac | ✅ 0 错误 | Task 040 main fresh |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 040 main fresh，exit 0 in 1m10s |
+| Python 工具测试 | ✅ 195/195 | Task 040 main fresh |
+| APK 类定义检查 | ✅ SettingsLib pre-change targets 74/74 defined | Task 040 main fresh |
+| `:app:minifyReleaseWithR8` | ❌ 预期失败：7 个 missing refs（真实 closure 缺失） | Task 040 main fresh，exit 1，精确 81→7 |
 | `shrinkResources` 有效验收 | ❌ 未完成 | — |
 | 设备/模拟器 install + runtime | ❌ 未开始 | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
 
@@ -79,45 +80,43 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 ## Dependency and artifact state
 
 - `libs/`（jar + aars + maven）全部提交入 git；新 clone 可直接构建。仅在重新生成 AOSP 产物时运行 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py`。
-- 本地 Maven AAR（`libs/maven/`）均为确定性产物：SettingsLib（POM 携 7 条 per-target 依赖边，ADR 0005）、SettingsLibSettingsTheme、7 个 SettingsLib per-target res-only AAR、WindowManager-Shell 1.0.1（含 proto 闭包 1888 类）、iconloader 1.0.1（75 类）、animationlib、WifiTrackerLib、LowLightDreamLib、setupcompat、SettingsLibColor。
+- 本地 Maven AAR（`libs/maven/`）均为确定性产物：SettingsLib 1.0.1（1153 类；POM 携 17 条 per-target 依赖边，ADR 0005）、SettingsLibSettingsTheme 1.0.1（15 类）、17 个 SettingsLib per-target res-only AAR、WindowManager-Shell 1.0.1（含 proto 闭包 1888 类）、iconloader 1.0.1（75 类）、animationlib、WifiTrackerLib、LowLightDreamLib、setupcompat、SettingsLibColor。
 - Traceur：双直接 AAR（TraceurCommon 640 类 + Traceur-res 105 res，Task 038）；占位 jar 已退役。
 - 官方 Maven 坐标优先（Task 026 审计后）：zxing、protobuf-javalite、coroutines 1.10.2、errorprone 等走公网；AOSP prebuilts 版本多数不在公网，逐个查 `maven-metadata.xml`。
 - aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034，位于 `libs/` 根目录）；notification flags 已从本地 Maven 迁出，现为 `libs/notification-flags.jar`。
 - `libs/prebuilts/` 仅剩 `tracinglib-platform.jar`（历史遗留，逐步清理）。
 
-## Release closure blocker（81 构成）
+## Release closure blocker（7 构成）
 
-Release R8 在 `:app:minifyReleaseWithR8` 阶段因 **81 个真实 missing refs** 失败（exit 1，这是**预期失败**，不是成功状态）：
+Release R8 在 `:app:minifyReleaseWithR8` 阶段因 **7 个真实 missing refs** 失败（exit 1，这是**预期失败**，不是成功状态）：
 
 | 组 | 数量 | 内容 | 处置路径 |
 |----|------|------|---------|
-| SettingsLib | 74 | SettingsLib 程序/资源 closure 缺口 | 下一 bounded task（当前唯一优先级） |
-| B1–B4 | 6 | platform/build classpath 桥接类 | 需 SysUISdk/AGP 桥或窄域处理，禁止宽泛 `-dontwarn` |
+| B1–B4 | 6 | `UnsupportedAppUsage`、`AconfigFlagAccessor`、`UsesReflection`、`IoUtils`、`NativeAllocationRegistry`、`ChunkHandler` | SysUISdk/AGP 或窄域 classpath 桥接，禁止宽泛 `-dontwarn` |
 | `AssumeTrueForR8` | 1 | build-time annotation 类 | 单独批次处理 |
 
 ## Next ordered work
 
-1. **SettingsLib 74 program/resource closure**（当前唯一工程优先级）
-2. B1–B4 platform/build classpath 6 refs
-3. `AssumeTrueForR8` 1 ref
-4. release R8 达到 0 missing refs
-5. `shrinkResources` + 签名/打包验证
-6. 兼容模拟器/设备安装与运行验证（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
+1. **B1–B4 platform/build classpath 6 refs**（当前唯一工程优先级）
+2. `AssumeTrueForR8` 1 ref
+3. release R8 达到 0 missing refs
+4. `shrinkResources` + 签名/打包验证
+5. 兼容模拟器/设备安装与运行验证（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
 
 ## Verification commands and evidence
 
 ```bash
 # 单元测试（Python 工具测试）
-python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 179/179
+python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 195/195
 
 # Debug APK（每批硬门禁）
 ./gradlew :app:assembleDebug --console=plain
 
-# Release R8（当前预期 exit 1，81 missing refs）
+# Release R8（当前预期 exit 1，7 missing refs）
 ./gradlew :app:minifyReleaseWithR8 --rerun-tasks --console=plain
 ```
 
-最新证据：Task 038 main fresh（2026-08-20）— 179/179 tests；`:app:assembleDebug` exit 0（2m35s）；Traceur AAR 哈希与确定性 worker 产物一致；640/640 类 defined；R8 88→81 精确差分（7 removed、0 added、`AssumeTrueForR8` retained）。详细证据：`docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
+最新证据：Task 040 main fresh（2026-08-21）— 195/195 tests；12 个变化/新增 SettingsLib AAR 两次打包 byte-identical，Maven 副本 12/12 一致；`:app:assembleDebug` exit 0（1m10s）；APK 目标类 74/74 defined；fresh R8 exit 1（2m17s），精确 81→7（74 removed、0 added、无 SettingsLib refs、`AssumeTrueForR8` retained）。详细证据：`docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 

@@ -7,11 +7,7 @@
 
 ## Active Workers
 
-| Task | Workspace / pane | Worktree / branch | Model | Stage |
-|---|---|---|---|---|
-| 040 SettingsLib closure | `w1H:p1` / `task040-settingslib` | `/home/conv/myspace/SystemUI-Gradle-wt-040` / `task-040-settingslib` | `joycode/GLM-5.3` | worker done at `56811443`; dual-axis PASS; authorized rule-doc sync applied; ready to merge |
-| 040 Standards review | `w1J:p1` / `review040-standards` | `/home/conv/myspace/SystemUI-Gradle-wt-040-standards` / `review-040-standards` | `joycode/GLM-5.2` | PASS — 0 B/H/M, 1 LOW stale 7→17 rule-doc count, 1 TRIVIAL |
-| 040 Spec review | `w1K:p1` / `review040-spec` | `/home/conv/myspace/SystemUI-Gradle-wt-040-spec` / `review-040-spec` | `joycode/GLM-5.2` | PASS — zero findings |
+No active workers. Task 040 worker and both reviewer workspaces were closed after main fresh verification; their worktrees and branches were removed.
 
 ## Queue
 
@@ -42,10 +38,15 @@
   count drift, 1 TRIVIAL explicit config repetition) and Spec PASS (zero findings).
 - 2026-08-21 — User explicitly authorized the H.6 rule-file factual sync; `AGENTS.md`
   and `CHARTER.md` now say 17 SettingsLib POM edges without changing policy semantics.
+- 2026-08-21 — Task 040 worker commits merged to main as `d2e1569a`, `01c7e58d`,
+  `1aea7ace`, and `f1952172`; architect main fresh verification passed: 195/195 tests,
+  12 deterministic AAR rebuilds and Maven identities, debug hard gate exit 0, APK 74/74,
+  and exact fresh R8 81→7 (74 removed, 0 added).
+- 2026-08-21 — Task 040 worker/reviewer workspaces closed; three clean worktrees and
+  patch-equivalent task/review branches removed.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — User authorized and architect applied the factual `7`→`17` POM-edge
-count sync in `AGENTS.md` and `docs/orchestration/CHARTER.md`. Task 040 is ready for
-worker-commit integration and serialized main fresh verification.
+2026-08-21 — Task 040 is merged, independently verified, documented, and fully cleaned up.
+No active workers remain; next queue item is the B1–B4 six-ref platform/build classpath closure.

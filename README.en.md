@@ -29,16 +29,16 @@ need. **The build never reaches back into the AOSP tree.**
 Sibling project using the same approach: [CarSystemUIGradle](../CarSystemUIGradle)
 (Car SystemUI).
 
-## Status at a glance (2026-08-20)
+## Status at a glance (2026-08-21)
 
 | Dimension | Status |
 |---|---|
 | Toolchain | Gradle 9.5.0 · AGP 9.3.1 · Kotlin 2.2.10 (AGP `builtInKotlin`) · KSP 2.2.10-2.0.2 · Dagger 2.59.2 · Compose 1.11.4 |
 | Custom SDK | SysUISdk fully reproducible (`tools/build_sysuisdk.py --apply`: hidden APIs, framework-private `androidprv` resources, @hide AIDL declarations) |
 | Compilation | KSP 0 errors · core Kotlin 0 errors · core javac 0 errors |
-| Unit tests | **179/179 passing** |
+| Unit tests | **195/195 passing** |
 | **Debug APK** | ✅ `:app:assembleDebug` succeeds (hard gate for every batch of changes) |
-| Release APK | 🚧 R8 config aligned with AOSP (zero obfuscation in core / unified R8+shrinkResources in app); missing runtime-closure refs converged 140 → **81**, being cleared batch by batch |
+| Release APK | 🚧 R8 config aligned with AOSP (zero obfuscation in core / unified R8+shrinkResources in app); missing runtime-closure refs converged 140 → **7**, being cleared batch by batch |
 | Device validation | ⏳ After release is green (emulator/device plan on file) |
 
 ## What's been done
@@ -51,7 +51,7 @@ Sibling project using the same approach: [CarSystemUIGradle](../CarSystemUIGradl
   markup (ADR 0004)
 - **Reproducible SysUISdk pipeline**: hidden APIs, framework-private resources, and @hide
   AIDL declarations are patched declaratively by script — no hand-edited SDK
-- **Full dependency governance**: AOSP libraries are deterministically packaged into 17+
+- **Full dependency governance**: AOSP libraries are deterministically packaged into 29
   AARs by `tools/package_aosp_aar.py`, served through a local Maven repo + version
   catalog; third-party libraries use official Maven coordinates at the latest compatible
   versions; all of `libs/` is committed to git
@@ -59,12 +59,12 @@ Sibling project using the same approach: [CarSystemUIGradle](../CarSystemUIGradl
   unified R8 + shrinkResources in the app
 - **R8 runtime-closure audit and burn-down**: 140 missing refs classified into
   A (program/runtime) and B (classpath) groups, cleared in batches:
-  140 → 126 → 119 → 109 → 106 → 88 → **81**
+  140 → 126 → 119 → 109 → 106 → 88 → 81 → **7**
 
 ## What's in progress
 
-- **Burning the R8 closure to zero (81 → 0)**: next is SettingsLib (74 refs — the
-  largest chunk), followed by the platform classpath bridge (group B)
+- **Burning the R8 closure to zero (7 → 0)**: SettingsLib's 74 refs are now closed;
+  next are the six platform/build classpath refs, then the single `AssumeTrueForR8` ref
 - After the closure reaches zero: full `:app:assembleRelease` (R8 + resource shrinking +
   signing)
 - Emulator/device validation (plan: `docs/issues/2026-08-20-device-emulator-validation-plan.md`)
@@ -89,7 +89,7 @@ SystemUI-Gradle/
 ├── libs/                       # All prebuilt artifacts, committed to git
 │   ├── framework.jar           # AOSP framework (with @hide APIs)
 │   ├── *-flags.jar             # aconfig-generated flags classes
-│   ├── aars/                   # 17+ AOSP-produced AARs (SettingsLib, WM-Shell, iconloader…)
+│   ├── aars/                   # 29 AOSP-produced AARs (SettingsLib, WM-Shell, iconloader…)
 │   └── maven/                  # Local Maven repo (AAR + POM, consumed via catalog)
 ├── tools/                      # Python tooling (AAR packaging, SDK build, alignment checks…)
 └── docs/                       # State, plans, pitfalls, issue records, ADRs
@@ -129,7 +129,7 @@ Every AAR/JAR is **deterministically** packaged from AOSP Soong outputs by scrip
 ```bash
 ./gradlew :app:assembleDebug            # Build the debug APK (current hard gate)
 ./gradlew :SystemUI-core:compileDebugKotlin
-python3 -m unittest discover -s tools/tests   # Toolchain tests (179)
+python3 -m unittest discover -s tools/tests   # Toolchain tests (195)
 ```
 
 All of `libs/` is committed to git — **a fresh clone builds out of the box**.

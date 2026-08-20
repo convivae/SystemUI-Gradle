@@ -205,3 +205,18 @@ platform/build classpath 6 项与 `AssumeTrueForR8` 1 项，本批不得处理�
 - （后续）docs: record SettingsLib closure evidence
 
 worker 未 push（按 brief 要求，由 architect 审核后 push）。
+
+## Architect main fresh 验收（2026-08-21）
+
+固定 worker head `568114433108c34cd990909d2242b38e0037d949` 通过双轴静态审查：
+Standards PASS（0 BLOCKER/HIGH/MEDIUM；经用户 H.6 授权将 AGENTS/CHARTER 的历史 7 边事实同步为 17），Spec PASS（零发现）。四个 worker commits 已分别落到 main：
+`d2e1569a`、`01c7e58d`、`1aea7ace`、`f1952172`。
+
+main 独立验收结果：
+
+1. `python3 -m unittest discover -s tools/tests -p 'test_*.py'`：**195/195**，exit 0。
+2. 12 个变化/新增 AAR 各连续重建两次，全部 byte-identical；重装本地 Maven 后 12/12 副本与 `libs/aars` byte-identical；哈希与 worker 表一致。
+3. `:app:checkDebugDuplicateClasses :app:assembleDebug`：exit **0**，`BUILD SUCCESSFUL in 1m 10s`；APK SHA-256 `1335957d70e6fb92dbe6a35f773f20af20ad3744214f81422b87cc65a9957ae9`。
+4. main debug APK：pre-change SettingsLib targets **74/74 defined**。
+5. `:app:minifyReleaseWithR8 --rerun-tasks`：真实 exit **1**，`BUILD FAILED in 2m 17s`，仅因 7 个 deferred refs；精确差分 **BEFORE=81 AFTER=7 REMOVED=74 ADDED=0**，removed 恰为 74 个 SettingsLib refs，after 无 SettingsLib ref，`AssumeTrueForR8` 保留。
+6. `git diff --check` 干净；工程硬门禁与本批全部验收标准满足。

@@ -97,7 +97,7 @@ R8 missing_rules 只列出当前 shrink 触及的类；翻转 scope 后 R8 会�
 | 组 | 修复→批次 | 重复类风险 | 清理项 |
 |---|---|---|---|
 | A1/A2 | Batch 2（aconfig javac 全量 jar） | A2 重产后与旧本地 Maven jar 同类 → 迁移直引时删旧目录 | A2 本地 Maven jar/POM/alias 全套移除（§7 Batch 2） |
-| A3 | Batch 4（主 SettingsLib AAR：主 src javac+kotlin + DeviceStateRotationLock javac + 31 子命名空间 R；SettingsTheme 2 类由 SettingsLibSettingsTheme AAR **自身**补回 javac+kotlin，不并入主 AAR；2 flags 以独立 runtime jar 在 Batch 2） | 主 src 与 `SettingsLib-full.jar` 双来源 → 同批删 full.jar；主 AAR 不得含 SettingsTheme 两类（防双产物重复类）；7 条 POM 边不动 | `SettingsLib-full.jar` 退役；`git grep` 归零 |
+| A3 | Batch 4D（Task 040，已完成：主 SettingsLib AAR 1153 类，SettingsTheme AAR 15 类且与主类集交集为 0；17 个 per-target res-only AAR，其中 10 个本批新增、共 346 个 byte-exact res；主 POM 17 条 bp 顺序依赖边；fresh R8 实测 81→7，removed 恰为 74 个 SettingsLib 目标、added=0） | 主/Theme 类集零重叠；资源 namespace 由真实 owner AAR 交付，不将 `R$*` 手工并入主 AAR | `SettingsLib-full.jar` 已退役；旧 SettingsLib/Theme 1.0.0 目录已删除 |
 | A4 | Batch 4（AAR 并入 lite-proto + proto javac） | launcher3 flags 双入（WM-Shell bp L185 同源）→ flags 只由独立 jar 供给，禁止并入 AAR | 无 |
 | A5 | Batch 3（官方 `protobuf-javalite:3.21.12`） | 与 view_capture.jar 内嵌 lite runtime 重复 → 同批换干净重打包 jar | 旧 FAT view_capture.jar 替换 |
 | A6 | Batch 1（scope 翻转） | errorprone 27 类为 libmonet static 闭包（AOSP 同样作为 APK 打包闭包供给，R8 可按需 shrink），无其他产物重复（实测）→ **保留，不剥离** | 无 |
