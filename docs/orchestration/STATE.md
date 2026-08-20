@@ -5,10 +5,7 @@
 
 ## Active Workers
 
-| Pane | Agent | Task brief | Worktree | Stage | Since |
-|------|-------|------------|----------|-------|-------|
-| w2:p19 | w031g53 | `tasks/031-r8-runtime-closure-audit.md` | wt-031 | researching A-class runtime closure (GLM 5.3) | 2026-08-20 |
-| w2:p1A | w032g52 | `tasks/032-r8-platform-classpath-bridge.md` | wt-032 | researching B-class platform bridge (GLM 5.2) | 2026-08-20 |
+无。Tasks 031/032 已完成双轴审查并合并；实现批次待派发。
 
 ## Queue
 
@@ -18,7 +15,7 @@
 4. Task 023 (merged): experiment concluded — disallowKotlinSourceSets=false is REQUIRED (KSP config error without it); flag stays, documented.
 5. Task 024 (merged): heap now 16G; default-config assembleDebug SUCCESS (2m54s), no OOM; historical javac OOM point re-verified clean.
 6. Tasks 026+027 (merged): official-Maven audit (49 artifacts) landed — zxing 3.5.4 (latest, full build passed), protobuf-javanano 3.1.0, dynamicanimation 1.1.0; 4 jars retired (3 replaced + SettingsLib-javac orphan); tooling entry retired; test baseline now 147 (zxing packaging test retired with it).
-7. Task 028 (merged): AOSP release config deep analysis complete; user approved G1/R1/R2/R3 and diagnostic boundaries. Task 029 merged: core zero-ProGuard + plugin export flags + unobfuscated release baseline SUCCESS (126,642,058 B, V2 signed, 147/147). Task 030 partial merged after user approval: release R8+shrinkResources remain enabled; 140-class closure blocker fully documented. Tasks 031/032 run in parallel: A-class runtime closure audit and B-class SysUISdk/AGP classpath bridge research; user approved subsequent structural fixes and narrow Aconfig dontwarn only if no supported bridge exists.
+7. Task 028 (merged): AOSP release config deep analysis complete; user approved G1/R1/R2/R3 and diagnostic boundaries. Task 029 merged: core zero-ProGuard + plugin export flags + unobfuscated release baseline SUCCESS (126,642,058 B, V2 signed, 147/147). Task 030 partial merged after user approval: release R8+shrinkResources remain enabled; 140-class closure blocker fully documented. Tasks 031/032 merged after Standards+Spec review: A=135 runtime/program-closure classes, B=5 R8-library/build classes; implementation order is A batches first, declarative SysUISdk bridge for B1/B2, exact B3 dontwarn only as approved fallback, and separate keepanno R8-visibility investigation.
 8. After debug+release compile milestones: emulator/device validation plan recorded at docs/issues/2026-08-20-device-emulator-validation-plan.md; first audit AVD signature/root/framework compatibility before replacing preinstalled SystemUI.
 6. Grill item 9 closed (user approved): :SystemUI-plugin keeps NO compose compiler — AOSP bp has none; see docs/issues/2026-08-19-plugin-no-compose-compiler.md. Item 10 approved (16G heap, task 024). Next: 11 (assembleRelease). Device/runtime verification of APK still open.
 2. Task 015 (merged): **FIRST APK** — :app:processDebugResources and :app:assembleDebug BUILD SUCCESSFUL; app-debug.apk 158775460 bytes; main-verified SHA-256 d591ec2dbaf51c70dcb5f3f8e0e836da6a4b6212aa07a7ed91fdc5a2ecc21054 (post-015+018 merge, same size; zip timestamps make hashes build-dependent); 148/148 tests; 7 B2 AARs provenance-verified.
@@ -36,8 +33,8 @@
 
 ## Blocked
 
-无构建阻塞：`:app:processDebugResources` 与 `:app:assembleDebug` 均已 BUILD SUCCESSFUL（2026-08-19，Task 015）。剩余：APK 装机/运行验证未做。
+Debug 无构建阻塞：`:app:assembleDebug` 已成功。优化 Release 仍被 R8 的 140 个 missing class 阻塞；Tasks 031/032 已将其精确归为 A=135/B=5 并给出依赖序实施方案，尚未落地。APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-19 — **APK MILESTONE** (task 015). Tasks 017/018 audit+cleanup merged. 019/020/021 merged: cleanups, Room schema export, Kotlin-2.3-blocked confirmation.
+2026-08-20 — Tasks 031/032 runtime-closure 与 platform-classpath 审计完成、双轴审查通过并合并；下一步实施 A 类依赖闭包与 B 类 bridge。
