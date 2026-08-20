@@ -58,7 +58,7 @@ automatically appear on the Gradle compile classpath (all eight javac
 root-cause groups from the 2026-08-12 Task 7 run stem from this). The POMs in
 `libs/maven/` are dependency-free skeletons by default; the SettingsLib
 resource closure is the sole exception (ADR 0005) — the `SettingsLib` POM
-carries 7 per-target dependency edges mechanically mirroring `Android.bp`
+carries 17 per-target dependency edges mechanically mirroring `Android.bp`
 `static_libs`.
 
 ## Part 4 · Toolchain Facts
