@@ -9,9 +9,9 @@
 
 | Task | Workspace / pane | Worktree / branch | Model | Stage |
 |---|---|---|---|---|
-| 040 SettingsLib closure | `w1H:p1` / `task040-settingslib` | `/home/conv/myspace/SystemUI-Gradle-wt-040` / `task-040-settingslib` | `joycode/GLM-5.3` | worker done at `56811443`; awaiting dual-axis review |
-| 040 Standards review | `w1J:p1` / `review040-standards` | `/home/conv/myspace/SystemUI-Gradle-wt-040-standards` / `review-040-standards` | `joycode/GLM-5.2` | reviewing fixed `be1277fd...56811443`, static-only |
-| 040 Spec review | `w1K:p1` / `review040-spec` | `/home/conv/myspace/SystemUI-Gradle-wt-040-spec` / `review-040-spec` | `joycode/GLM-5.2` | reviewing fixed `be1277fd...56811443`, static-only |
+| 040 SettingsLib closure | `w1H:p1` / `task040-settingslib` | `/home/conv/myspace/SystemUI-Gradle-wt-040` / `task-040-settingslib` | `joycode/GLM-5.3` | worker done at `56811443`; dual-axis PASS; merge awaits rule-doc sync decision |
+| 040 Standards review | `w1J:p1` / `review040-standards` | `/home/conv/myspace/SystemUI-Gradle-wt-040-standards` / `review-040-standards` | `joycode/GLM-5.2` | PASS — 0 B/H/M, 1 LOW stale 7→17 rule-doc count, 1 TRIVIAL |
+| 040 Spec review | `w1K:p1` / `review040-spec` | `/home/conv/myspace/SystemUI-Gradle-wt-040-spec` / `review-040-spec` | `joycode/GLM-5.2` | PASS — zero findings |
 
 ## Queue
 
@@ -38,10 +38,13 @@
 - 2026-08-21 — Task 040 worker completed four focused commits through `56811443`; reported
   195 tests, debug success, APK 74/74, and exact R8 81→7. Parallel isolated Standards and
   Spec reviewers dispatched at fixed base/head with explicit `joycode/GLM-5.2`, static-only.
+- 2026-08-21 — Task 040 Standards PASS (0 BLOCKER/HIGH/MEDIUM; 1 LOW factual rule-doc
+  count drift, 1 TRIVIAL explicit config repetition) and Spec PASS (zero findings).
+  `AGENTS.md`/`CHARTER.md` 7→17 factual sync requires explicit H.6 authorization.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 040 worker done at `56811443`; dual-axis static reviewers are active in
-`w1J:p1` and `w1K:p1` over fixed range `be1277fd...56811443`. No Gradle runs are permitted
-in reviewer worktrees. Live technical details remain owned by `docs/CURRENT_STATE.md`.
+2026-08-21 — Task 040 fixed-range Standards and Spec reviews both PASS. Merge is paused
+only for explicit authorization to synchronize the stale `7`→`17` POM-edge count in
+`AGENTS.md` and `docs/orchestration/CHARTER.md`; this is an H.6 red-line file touch.
