@@ -152,7 +152,7 @@ androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", 
 # 再由 tools/install_aar_to_maven.py 安装到 libs/maven/ 并生成 POM 骨架
 systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "1.0.0" }
 systemui-wifitrackerlib = { group = "com.android.systemui", name = "WifiTrackerLib", version = "1.0.0" }
-systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "1.0.0" }
+systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "1.0.1" }
 systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "1.0.0" }
 systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "1.0.0" }
 systemui-iconloader = { group = "com.android.systemui", name = "iconloader", version = "1.0.1" }

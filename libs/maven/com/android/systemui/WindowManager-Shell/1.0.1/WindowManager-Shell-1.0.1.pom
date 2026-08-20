@@ -5,6 +5,6 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.android.systemui</groupId>
   <artifactId>WindowManager-Shell</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <packaging>aar</packaging>
 </project>

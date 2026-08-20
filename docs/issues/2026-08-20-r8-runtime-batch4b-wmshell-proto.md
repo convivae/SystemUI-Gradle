@@ -77,7 +77,89 @@ Soong 中间产物实测：
 
 ## 错误数演变 / 证据
 
-（worker 实施时如实填写；架构师主分支复验后补充最终值）
+以下为 Task 037 worker 于 2026-08-20 在 worktree `SystemUI-Gradle-wt-037`（base `2bd9ea4f`）
+填写的真实证据（全部命令真实运行，退出码未伪造）。
+
+### 1. Fresh 106 基线（改动前）
+
+- 命令：`./gradlew :app:minifyReleaseWithR8 -Dorg.gradle.workers.max=4`
+  （`set -o pipefail` + `tee /tmp/task037-r8-before.log`，真实退出码存
+  `/tmp/task037-r8-before.status`）
+- 结果：`GRADLE_EXIT=1`，`BUILD FAILED in 1m 53s`；
+  `missing_rules.txt` unique `-dontwarn` refs = **106**；18 个 wm.shell 目标与
+  `AssumeTrueForR8` 均在集合内（差分脚本断言 PASS）。
+
+### 2. TDD 红/绿
+
+- RED：新增 7 个聚焦测试（`TestWMShellProtoProvenance` 5 个 +
+  `ArtifactRegistryTest` 2 个）后，焦点运行 `FAILED (failures=4)`——config
+  code 列表缺两个 proto JAR、并集测试 1848≠1888、18 目标缺失、坐标
+  1.0.0≠1.0.1，均符合预期失败原因；res 溯源/确定性/shared 不动 3 个回归
+  守卫测试本来就绿（验证未变行为）。
+- GREEN：实施最小修复（config 追加两 JAR + 版本 1.0.1）后，
+  焦点 7 测试 `Ran 7 tests / OK`（exit 0）。
+
+### 3. 确定性重建与产物溯源
+
+- `python3 tools/package_aosp_aar.py WindowManager-Shell` 运行两次，
+  SHA-256 均为 `37e3e78625d8ae61f7cd3259b17346df36d997156e161f477d06f61ba1fec763`
+  （4396336 bytes），`cmp` byte-identical。
+- `classes.jar` class 数 = **1888**（主 javac 1183 + 主 kotlin 677 − exclude 12 =
+  1848 基线，∪ nano proto 4 + lite proto 36；四源两两不相交，并集精确相等，
+  逐字节一致）。
+- 命名空间说明：40 个 proto 类全部在 `com/android/wm/shell/**` 下；
+  AAR 内另有 2 个 `com/android/internal/protolog/ProtoLogImpl_992223594{,$Cache}`
+  类，系 1.0.0 基线既有（主 javac JAR 的 wm_shell protolog cache，owning
+  Soong 产物），本批未新增任何越界类（单测断言固定该 2 类集合）。
+- `res/**`、`AndroidManifest.xml`、`R.txt` 与配置的 AOSP/Soong 源逐字节一致
+  （单测断言）；18 个 R8 目标类全部在 AAR（单测断言）。
+
+### 4. 本地 Maven 替换
+
+- `rm -rf libs/maven/com/android/systemui/WindowManager-Shell/1.0.0` 后
+  `python3 tools/install_aar_to_maven.py WindowManager-Shell`。
+- 仅剩 `1.0.1/WindowManager-Shell-1.0.1.aar` + `.pom`；AAR 与
+  `libs/aars/WindowManager-Shell.aar` `cmp` 字节相同；POM 版本 `1.0.1`、
+  `packaging aar`、无 `<dependencies>`。
+- `gradle/libs.versions.toml` 仅 `systemui-wmshell` 一行 `1.0.0`→`1.0.1`
+  （`systemui-wmshell-shared` 不动）。
+
+### 5. 测试 / Debug / APK
+
+- 全量：`python3 -m unittest discover -s tools/tests -p 'test_*.py'` →
+  `Ran 171 tests in 41.594s / OK`（exit 0；164 基线 + 7 新增）。
+- Debug：`./gradlew :app:checkDebugDuplicateClasses :app:assembleDebug
+  -Dorg.gradle.workers.max=4` → `GRADLE_EXIT=0`，
+  `BUILD SUCCESSFUL in 2m 33s`，APK `app/build/outputs/apk/debug/app-debug.apk`
+  生成（160613321 bytes；log 中 9 处 duplicate 均为已知 manifest 重复权限
+  warning，非 duplicate-class 失败）。
+- APK 定义：`apkanalyzer dex packages --defined-only` 中 18 个目标类全部有
+  `C d` 行（脚本断言 `TOTAL=18 DEFINED=18 MISSING=0`，exit 0）。
+
+### 6. Fresh R8 差分（改动后）
+
+- 命令同基线，真实退出码 `/tmp/task037-r8-after.status`：`GRADLE_EXIT=1`
+  （剩余 88 个 missing refs 阻塞，符合预期）。
+- 机械差分（脚本断言，exit 0）：before = 106，after = **88**；
+  removed = 恰好 18 个 wm.shell proto 目标；added = 空；
+  `AssumeTrueForR8` 保留。**PASS**。
+
+### 7. 卫生检查
+
+- `git diff --check` 干净；改动文件仅为 Allowed Paths：
+  `tools/package_aosp_aar.py`、`tools/tests/test_package_aosp_aar.py`、
+  `tools/install_aar_to_maven.py`、`tools/tests/test_install_aar_to_maven.py`、
+  `libs/aars/WindowManager-Shell.aar`、
+  `libs/maven/.../WindowManager-Shell/1.0.0/*`（删）、
+  `libs/maven/.../WindowManager-Shell/1.0.1/*`（新）、
+  `gradle/libs.versions.toml`（仅 systemui-wmshell 一行）、本 issue 文档。
+- 单个英文 commit，未 push。
+- 正式优化 Release 在剩余 88 个 missing refs 清零前仍不声明成功。
+
+| 阶段 | R8 unique missing refs | 说明 |
+|---|---:|---|
+| Task 036 后 | 106 | fresh 基线（本批实测复现） |
+| 本批完成后 | 88 | 精确移除 WM-Shell proto 18 项，新增 0（实测） |
 
 ## 待解决问题
 

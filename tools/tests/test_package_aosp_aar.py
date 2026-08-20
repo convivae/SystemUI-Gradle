@@ -502,6 +502,146 @@ class TestIconloaderProvenance(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
 
 
+class TestWMShellProtoProvenance(unittest.TestCase):
+    """Task 037：WM-Shell AAR proto closure——(主 javac∪kotlin 去除 exclude)∪40 proto=1888 类精确并集。"""
+
+    SHELL = paar.SOONG_DIR / "frameworks/base/libs/WindowManager/Shell"
+    PROTO_JAR = SHELL / "WindowManager-Shell-proto/android_common/javac/WindowManager-Shell-proto.jar"          # noqa: E501  bp L138（nano）
+    LITE_PROTO_JAR = SHELL / "WindowManager-Shell-lite-proto/android_common/javac/WindowManager-Shell-lite-proto.jar"  # noqa: E501  bp L148（lite）
+
+    # 审计 docs/architecture/2026-08-20-r8-runtime-closure-audit.md §7 的 A4 18 项目标
+    R8_TARGETS = (
+        "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto.class",
+        "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$AppHandleEducation.class",      # noqa: E501
+        "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$AppHandleEducation$Builder.class",  # noqa: E501
+        "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$AppToWebEducation.class",       # noqa: E501
+        "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$AppToWebEducation$Builder.class",   # noqa: E501
+        "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$Builder.class",               # noqa: E501
+        "com/android/wm/shell/desktopmode/persistence/Desktop.class",
+        "com/android/wm/shell/desktopmode/persistence/Desktop$Builder.class",
+        "com/android/wm/shell/desktopmode/persistence/DesktopPersistentRepositories.class",
+        "com/android/wm/shell/desktopmode/persistence/DesktopPersistentRepositories$Builder.class",            # noqa: E501
+        "com/android/wm/shell/desktopmode/persistence/DesktopRepositoryState.class",
+        "com/android/wm/shell/desktopmode/persistence/DesktopRepositoryState$Builder.class",
+        "com/android/wm/shell/desktopmode/persistence/DesktopTask.class",
+        "com/android/wm/shell/desktopmode/persistence/DesktopTask$Builder.class",
+        "com/android/wm/shell/desktopmode/persistence/DesktopTaskState.class",
+        "com/android/wm/shell/nano/HandlerMapping.class",
+        "com/android/wm/shell/nano/Transition.class",
+        "com/android/wm/shell/nano/WmShellTransitionTraceProto.class",
+    )
+
+    def _config_code(self):
+        return list(paar.CONFIGS["WindowManager-Shell"]["code"])
+
+    def _input_classes(self, jar):
+        with zipfile.ZipFile(jar) as z:
+            return {n: z.read(n) for n in z.namelist() if n.endswith(".class")}
+
+    def test_config_code_ordered_four_jars(self):
+        """Task 037：code 必须是主 javac、主 kotlin、proto（nano）、lite-proto 四项有序列表。"""
+        self.assertEqual(
+            self._config_code(),
+            [
+                self.SHELL / "WindowManager-Shell/android_common/javac/WindowManager-Shell.jar",
+                self.SHELL / "WindowManager-Shell/android_common/kotlin/WindowManager-Shell.jar",
+                self.PROTO_JAR,
+                self.LITE_PROTO_JAR,
+            ],
+        )
+
+    def test_classes_exact_disjoint_union(self):
+        from io import BytesIO
+        javac = self._input_classes(self._config_code()[0])
+        kotlin = self._input_classes(self._config_code()[1])
+        proto = self._input_classes(self.PROTO_JAR)
+        lite = self._input_classes(self.LITE_PROTO_JAR)
+        # 输入贡献规模固定：主 1183+677（去 exclude 后 1848）、nano 4、lite 36
+        self.assertEqual(len(javac), 1183)
+        self.assertEqual(len(kotlin), 677)
+        self.assertEqual(len(proto), 4)
+        self.assertEqual(len(lite), 36)
+        excluded = paar.CONFIGS["WindowManager-Shell"]["exclude_prefixes"]
+        main = {**javac, **kotlin}
+        main = {n: b for n, b in main.items()
+                if not any(n.startswith(p) for p in excluded)}
+        self.assertEqual(len(main), 1848)
+        # 四个来源两两不相交（主 javac/kotlin 之间由 merge 检查；这里验证 proto 侧）
+        self.assertEqual(set(proto) & set(lite), set())
+        self.assertEqual((set(proto) | set(lite)) & set(main), set())
+        expected = {**main, **proto, **lite}
+        self.assertEqual(len(expected), 1888)
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "WindowManager-Shell.aar"
+            paar.build_artifact("WindowManager-Shell", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    actual = {n: cj.read(n) for n in cj.namelist() if n.endswith(".class")}
+        self.assertEqual(set(actual), set(expected),
+                         "输出 class 集不是四输入（去 exclude）的精确并集")
+        for name, data in expected.items():
+            self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
+        self.assertEqual(len(actual), 1888)
+        # 命名空间约束：40 个 proto 类全部在 com/android/wm/shell/ 下；
+        # 主产物带来的 com/android/internal/protolog 2 类是 1.0.0 基线既有
+        # （wm_shell protolog cache，owning Soong javac 产物），不得新增其它越界类
+        proto_names = set(proto) | set(lite)
+        for name in proto_names:
+            self.assertTrue(name.startswith("com/android/wm/shell/"),
+                            f"proto 越界类名: {name}")
+        baseline_ns = {n for n in actual if not n.startswith("com/android/wm/shell/")}
+        self.assertEqual(
+            baseline_ns,
+            {"com/android/internal/protolog/ProtoLogImpl_992223594.class",
+             "com/android/internal/protolog/ProtoLogImpl_992223594$Cache.class"},
+            "除基线既有的 2 个 protolog 类外出现新增越界类")
+
+    def test_proto_r8_targets_present(self):
+        from io import BytesIO
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "WindowManager-Shell.aar"
+            paar.build_artifact("WindowManager-Shell", out)
+            with zipfile.ZipFile(out) as aar:
+                with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
+                    names = set(cj.namelist())
+        for t in self.R8_TARGETS:
+            self.assertIn(t, names, f"R8 目标类缺失: {t}")
+
+    def test_resource_manifest_rtxt_provenance(self):
+        cfg = paar.CONFIGS["WindowManager-Shell"]
+        res_root = cfg["res"][0]
+        source_res = {
+            f"res/{p.relative_to(res_root)}": p.read_bytes()
+            for p in sorted(res_root.rglob("*")) if p.is_file()
+        }
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "WindowManager-Shell.aar"
+            paar.build_artifact("WindowManager-Shell", out)
+            with zipfile.ZipFile(out) as z:
+                aar_res = {n: z.read(n) for n in z.namelist() if n.startswith("res/")}
+                manifest_bytes = z.read("AndroidManifest.xml")
+                rtxt_bytes = z.read("R.txt")
+        self.assertEqual(set(aar_res), set(source_res),
+                         "AAR res entry 集与 AOSP Shell res 树不一致")
+        for name, data in source_res.items():
+            self.assertEqual(aar_res[name], data, f"{name} 字节与 AOSP 源不一致")
+        self.assertEqual(manifest_bytes, cfg["manifest"].read_bytes(),
+                         "AndroidManifest.xml 字节与 AOSP 源不一致")
+        self.assertEqual(rtxt_bytes, cfg["rtxt"].read_bytes(),
+                         "R.txt 字节与 Soong 输出不一致")
+
+    def test_rebuild_is_byte_identical(self):
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            first = d / "first.aar"
+            second = d / "second.aar"
+            paar.build_artifact("WindowManager-Shell", first)
+            time.sleep(2)
+            paar.build_artifact("WindowManager-Shell", second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+
+
 class TestAbsentInputFails(unittest.TestCase):
     """Step 1: 缺输入报 FileNotFoundError。"""
 

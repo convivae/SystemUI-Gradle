@@ -141,6 +141,20 @@ class ArtifactRegistryTest(unittest.TestCase):
             {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.1"},
         )
 
+    def test_wmshell_coordinate(self):
+        """Task 037：WM-Shell 升级为用户批准的 1.0.1（并入两个 proto static_libs）。"""
+        self.assertEqual(
+            iam.ARTIFACTS["WindowManager-Shell"],
+            {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "1.0.1"},
+        )
+
+    def test_wmshell_shared_coordinate_unchanged(self):
+        """Task 037：WindowManager-Shell-shared 保持 1.0.0 不动。"""
+        self.assertEqual(
+            iam.ARTIFACTS["WindowManager-Shell-shared"],
+            {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "1.0.0"},
+        )
+
     def test_settingslib_settings_theme_coordinate(self):
         """Task 013：SettingsLibSettingsTheme 固定本地坐标。"""
         self.assertEqual(

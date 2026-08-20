@@ -50,7 +50,7 @@ ARTIFACTS = {
         "deps": _settingslib_closure_dep_entries(),
     },
     "WifiTrackerLib": {"group": "com.android.systemui", "name": "WifiTrackerLib", "version": "1.0.0"},
-    "WindowManager-Shell": {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "1.0.0"},
+    "WindowManager-Shell": {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "1.0.1"},  # Task 037: proto closure, 1.0.0 retired
     "WindowManager-Shell-shared": {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "1.0.0"},
     "animationlib": {"group": "com.android.systemui", "name": "animationlib", "version": "1.0.0"},
     "iconloader": {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.1"},

@@ -85,10 +85,14 @@ CONFIGS = {
         "output": "libs/aars/SettingsLib.aar",
     },
     "WindowManager-Shell": {
-        # javac JAR (Java classes) + kotlin JAR (Kotlin classes, 如 HasWMComponent) 合并
+        # javac JAR (Java classes) + kotlin JAR (Kotlin classes, 如 HasWMComponent) 合并；
+        # Task 037：再并入两个 proto static_libs 的 Soong javac 产物（bp L188-189）——
+        # nano proto（bp L138, 4 类）+ lite proto（bp L148, 36 类），共 1888 类
         "code": [
             SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/javac/WindowManager-Shell.jar",
             SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/kotlin/WindowManager-Shell.jar",
+            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell-proto/android_common/javac/WindowManager-Shell-proto.jar",
+            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell-lite-proto/android_common/javac/WindowManager-Shell-lite-proto.jar",
         ],
         "res": [AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/res"],
         "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/AndroidManifest.xml",
