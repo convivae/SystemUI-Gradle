@@ -5,7 +5,7 @@
 
 ## Active Workers
 
-- Task 033 — `wJ:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033`, branch `task-033`, GLM-5.3. Implementing A-class Batch 1 scope corrections for msdl/monet/wifi-flags/wm-shell-flags; two-path scope, no push.
+- Task 033 — `wJ:p1`, worktree `/home/conv/myspace/SystemUI-Gradle-wt-033`, branch `task-033`, GLM-5.3. **REDLINE halted, no commit**: four scope flips expose 27 duplicate classes between FAT `libs/monet.jar` and official Maven `error_prone_annotations:2.50.0`; uncommitted two-path diff preserved pending user decision.
 
 ## Queue
 
@@ -33,8 +33,8 @@
 
 ## Blocked
 
-Debug 无构建阻塞：`:app:assembleDebug` 已成功。优化 Release 仍被 R8 的 140 个 missing class 阻塞；Tasks 031/032 已将其精确归为 A=135/B=5 并给出依赖序实施方案。Task 033 正在实施首批 4 个纯 scope 修正，预期本批后剩余 125，最终以 fresh R8 实测为准。APK 装机/运行验证未做。
+Debug 主分支无构建阻塞；Task 033 的候选 scope 改动在 `checkDebugDuplicateClasses` 暴露 27 个 `monet.jar` × 官方 Maven `error_prone_annotations:2.50.0` 重复类，已按 REDLINE 停止。优化 Release 主分支仍为 140 个 R8 missing class；首批 scope 修正尚未合并。APK 装机/运行验证未做。
 
 ## Last Updated
 
-2026-08-20 — Task 033 已派发到独立 worktree，实施首批 4 个 AOSP `static_libs` runtime scope 修正。
+2026-08-20 — Task 033 REDLINE：AOSP turbine-combined `monet.jar` 内嵌 27 个 errorprone 类，与 Gradle 官方 runtime 图重复；等待用户选择 clean javac-jar 重打包（推荐）或其他方向。
