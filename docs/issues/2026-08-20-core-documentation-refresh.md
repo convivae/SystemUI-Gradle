@@ -143,3 +143,33 @@ Task 038 已在 main 完成 fresh verification：179/179 tests、debug 成功、
 - SettingsLib 74 refs 的实现方案属于下一 bounded build task，不在本任务设计。
 - frozen 历史文档中出现旧数字是合法历史；只有把它误当当前入口时才需要修导航。
 - 删除候选若不能满足五项准则，本次一律保留。
+
+---
+
+## 执行审计（worker，2026-08-20）
+
+```text
+baseline_commit=7b24b7c6 (Task 039 设计提交，2545bdc9 的后代；merge-base --is-ancestor 2545bdc9 HEAD 通过)
+current_owner=docs/CURRENT_STATE.md
+stale_current_entries=
+  AGENTS.md: §四/4.1 动态表（2026-08-12 javac 42/APK 未生成行、2026-08-19 131 tests/SettingsLib blocker 行）；§4.2 当前构建状态（SettingsLib switch drawable blocker、131 tests）；§4.4 待解决（SettingsLib 重打包、Deferred Follow-ups 旧清单）
+  docs/CURRENT_STATE.md: 文件头（131/131、APK 尚未生成、SettingsLib AAR 缺）；§0 TL;DR（APK 未生成、131/131）；§2.3（SettingsLib AAR 阻塞、APK 未生成）；§4（8 个 AAR、APK 未生成）；§6 表（javac 42）
+  docs/HANDOFF.md: §1.2 当前状态（131/131、SettingsLib AAR 缺阻塞）；§4.6（当前阻塞 SettingsLib switch drawable）
+  docs/PLAN.md: 文件头当前优先级（2026-08-12 checkpoint、2 个 pre-existing 错误、APK 待验证）
+  docs/README.md: 必读段里程碑（42 个 javac 错误、APK 未生成）
+  docs/orchestration/STATE.md: Done 段 131/131（历史 transition，随收窄重写移除）；Blocked 段复制 81 构成（随收窄改为链接）
+  docs/orchestration/CHARTER.md: Part 6 动态快照（42 javac errors、APK not produced、131 tests）
+  docs/PITFALLS.md: 扫描无命中；内部 "当前" 为各条目状态注记，Task 4 校准
+frozen_directories=docs/issues(除本文件), docs/architecture, docs/superpowers, docs/orchestration/tasks
+move_candidates=none
+delete_candidates=none（未发现满足五项准则的候选）
+gradle=NOT RUN
+```
+
+Task 1 基线验证命令与结果：
+
+- `git merge-base --is-ancestor 2545bdc9 HEAD` → exit 0
+- `git status --short` → 空（worktree clean）
+- `grep -q '179/179' docs/orchestration/STATE.md` → exit 0
+- `grep -q '81' docs/orchestration/STATE.md` → exit 0
+- 陈旧状态扫描（plan Task 1 Step 2 rg 命令）→ 命中见上表 `stale_current_entries`
