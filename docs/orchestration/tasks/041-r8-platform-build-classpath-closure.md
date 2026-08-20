@@ -90,26 +90,26 @@ must use `set -o pipefail`, `tee`, and preserve the real Gradle exit status.
 
 ## Checklist
 
-- [ ] Capture fresh baseline: exact 7 refs and real R8 exit 1.
-- [ ] Assert four source artifacts and exact `2+4+4+2+1+22=35` inventory.
-- [ ] Add patcher tests first and capture RED.
-- [ ] Implement deterministic exact-entry patcher and capture GREEN.
-- [ ] Commit patcher as `build: add exact SysUISdk library class patcher`.
-- [ ] Add `S3b` pipeline tests first and capture RED.
-- [ ] Implement source defaults/CLI/stage order/both-target integration and capture GREEN.
-- [ ] Commit pipeline as `build: add SysUISdk R8 library bridge stage`.
-- [ ] Run full Python suite; exit 0 and test count not below baseline 195.
-- [ ] Build two full `s0,s1,s2,s3,s3b,s4` staging SDKs; prove inventory-identical target JAR pairs.
-- [ ] Prove exact 35 source-identical entries per target and no `AssumeTrueForR8`.
-- [ ] Pre-apply S5 differs only by 35 entries per target JAR.
-- [ ] Apply only through guarded `build_sysuisdk.py --apply`.
-- [ ] Post-apply strict S5 reports `ALL PASS`.
-- [ ] Debug duplicate-class + assemble hard gate exits 0.
-- [ ] Debug APK reports `BRIDGED=35 PACKAGED=0`.
-- [ ] Fresh R8 real exit 1 and exact `BEFORE=7 AFTER=1 REMOVED=6 ADDED=0`.
-- [ ] Sole remaining ref is `com.android.aconfig.annotations.AssumeTrueForR8`.
-- [ ] Issue contains truthful commands/status/counts/hashes; task checkboxes are accurate.
-- [ ] `git diff --check` passes; worktree clean after focused English commits; never push.
+- [x] Capture fresh baseline: exact 7 refs and real R8 exit 1.
+- [x] Assert four source artifacts and exact `2+4+4+2+1+22=35` inventory.
+- [x] Add patcher tests first and capture RED.
+- [x] Implement deterministic exact-entry patcher and capture GREEN.
+- [x] Commit patcher as `build: add exact SysUISdk library class patcher`.
+- [x] Add `S3b` pipeline tests first and capture RED.
+- [x] Implement source defaults/CLI/stage order/both-target integration and capture GREEN.
+- [x] Commit pipeline as `build: add SysUISdk R8 library bridge stage`.
+- [x] Run full Python suite; exit 0 and test count not below baseline 195.
+- [x] Build two full `s0,s1,s2,s3,s3b,s4` staging SDKs; prove inventory-identical target JAR pairs.
+- [x] Prove exact 35 source-identical entries per target and no `AssumeTrueForR8`.
+- [x] Pre-apply S5 differs only by 35 entries per target JAR.
+- [x] Apply only through guarded `build_sysuisdk.py --apply`.
+- [x] Post-apply strict S5 reports `ALL PASS`.
+- [x] Debug duplicate-class + assemble hard gate exits 0.
+- [x] Debug APK reports `BRIDGED=35 PACKAGED=0`.
+- [x] Fresh R8 real exit 1 and exact `BEFORE=7 AFTER=1 REMOVED=6 ADDED=0`.
+- [x] Sole remaining ref is `com.android.aconfig.annotations.AssumeTrueForR8`.
+- [x] Issue contains truthful commands/status/counts/hashes; task checkboxes are accurate.
+- [x] `git diff --check` passes; worktree clean after focused English commits; never push.
 
 ## Acceptance
 
