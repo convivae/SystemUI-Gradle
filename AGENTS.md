@@ -25,6 +25,7 @@
 - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 下脚本一律 Python，禁止 .sh
 - **ADR 0003** `app-module-aligns-aosp-bp.md` — 模块划分/依赖/入口类位置严格按 AOSP `Android.bp`
 - **ADR 0004** `conv-markup-and-alignment-discipline.md` — AOSP 源码改动用 CONV 标记追溯；对齐工具 strict 不卡 MODIFIED，靠人工对账
+- **ADR 0006** `sysuisdk-r8-library-class-bridge.md` — 用声明式 SysUISdk stage 向 AGP/R8 提供真实平台与构建期 library classes，禁止 runtime 打包或 dontwarn 掩盖
 
 写 ADR 的判定：决策 **难以反转 + 没有上下文会令人困惑 + 有真正权衡**。
 
