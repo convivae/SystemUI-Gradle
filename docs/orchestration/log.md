@@ -127,3 +127,5 @@
 2026-08-20 11:27 | wT:p1+wS:p1 | 034 | review-pass | Standards PASS (no hard violations; one LOW and one TRIVIAL optional smell) and Spec PASS; exact artifact provenance/class sets, 154 tests, and R8 126->119 independently checked
 2026-08-20 11:27 | main | 034 | merge | worker 5a26df9a cherry-picked as bdbb5a55; architect fresh verification: 154/154, byte-identical five-class JARs, debug duplicate/build SUCCESS in 1m06s, five dex classes DEFINED, R8 119 exact with AssumeTrueForR8 retained
 2026-08-20 11:28 | main | 034 | push+close | main pushed through b5aa078f; implementation and both review workspaces closed after final HANDOFF/review tails were captured
+2026-08-20 11:36 | main | 035 | user-approved+plan | user said continue and authorized worker dispatch; Batch 3 issue+TDD plan+brief committed as 90945f7d; latest-stable protobuf policy selects 4.35.1; target R8 119->108
+2026-08-20 11:40 | wV:p1 | 035 | dispatch | task-035 worktree from 90945f7d; explicit joycode/GLM-5.3 modelId verified; worker-contract startup reads in progress; all waits capped at 90s
