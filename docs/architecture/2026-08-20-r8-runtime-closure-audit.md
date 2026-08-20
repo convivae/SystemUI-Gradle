@@ -1,5 +1,8 @@
 # 2026-08-20 — R8 运行时依赖闭包逐类审计（Task 031，report-only）
 
+> **Lifecycle: Active operational audit** — bounded until the R8 runtime closure reaches zero missing refs; after closure this document becomes a frozen historical snapshot, and new findings get new issue/audit records.
+> 本文的"只读"指不修改任何构建输入（build files / 依赖 / 产物），修复均为待批准建议；在 closure 归零前，审计域内的 ledger（分类与批次映射）可持续追加。
+
 > **性质**：只读审计报告。本文不改任何构建文件/依赖/产物；所有修复均为待批准建议。
 > 输入：Task 030 的 `app/build/outputs/mapping/release/missing_rules.txt`（140 条，架构师存于
 > `/tmp/task030-missing_rules.txt`，实测 140 rules / 140 个唯一 class）。

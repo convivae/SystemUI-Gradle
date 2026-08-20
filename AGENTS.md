@@ -242,7 +242,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ### 3.1 模块结构
 
-按 AOSP `frameworks/base/packages/SystemUI/Android.bp` 的**语义**对齐（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1）。目标 13-module 拓扑（实施中，见 `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`）：
+按 AOSP `frameworks/base/packages/SystemUI/Android.bp` 的**语义**对齐（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1）。项目采用以下 13-module Gradle 拓扑（静态架构描述；实时构建/验证状态见 `docs/CURRENT_STATE.md`）：
 
 ```
 :app                          # android_app "SystemUI"（无独立源码；负责 manifest、签名和最终 APK 打包）
@@ -264,79 +264,27 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 `compilelib` → debug/release JAR；`kairos` → test-only，不进本 APK 生产图。
 
 > **历史**：2026-07-29 源码化里程碑将 tier① 自有代码由 jar 改为源码依赖（规则 S）；
-> unfold 引入 KSP（`2.2.10-2.0.2`，对齐编译器 2.2.10）跑 Dagger。详见
-> `docs/architecture/2026-07-29-dependency-audit.md` §6。
-> **2026-08-12 更新（Task 1–6）**：依赖升级 + 迁移 AGP `builtInKotlin=true`；
-> KSP 0 错误（2933 文件生成），core Kotlin 编译 0 错误；Compose inline 问题消失。
-> 后置审查发现的 `jsr305`、WM-Shell AAR 重复类、header flag JAR 与 release KSP/AIDL
-> 依赖问题均已在 Task 1–5 修复；最终 APK 基线待 `:app:assembleDebug` 复验。
+> unfold 引入 KSP 跑 Dagger。详见 `docs/architecture/2026-07-29-dependency-audit.md` §6。
 
-### 3.2 libs/ 内容
+### 3.2 libs/ 交付规则（静态规则；当前清单与坐标见 `docs/CURRENT_STATE.md`）
 
-> **AAR 统一管理（2026-08-11 建立；2026-08-12 起提交入 git）**：所有 AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`，
-> 再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（AAR + POM 骨架，默认无传递依赖；
-> 唯一例外见 ADR 0005：SettingsLib 资源闭包的 `SettingsLib` POM 携带 7 条机械镜像
-> `Android.bp static_libs` 的 per-target 依赖边），
-> 在 `libs.versions.toml` 声明 catalog alias（如 `libs.systemui.settingslib`）统一引用。
-> build.gradle.kts 中不再直接 `files("libs/aars/xxx.aar")`。
-> **2026-08-12 起 `libs/`（含 jar/aars/maven）全部提交入 git**（用户明确要求），新 clone 可直接构建；
-> 仅当需要重新生成 AOSP 产物时才跑 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py`。
+1. **`libs/` 全部提交入 git**（jar + aars + maven；用户明确要求）：新 clone 无需重新生成 AOSP 产物即可构建。
+2. **AAR 统一交付管线**：AAR 由 `tools/package_aosp_aar.py` 生成到 `libs/aars/`（多 JAR 合并、reject_sysui、
+   确定性），再由 `tools/install_aar_to_maven.py` 安装到 `libs/maven/`（AAR + POM 骨架，默认无传递依赖；
+   唯一例外见 ADR 0005：SettingsLib 资源闭包的 `SettingsLib` POM 携带 7 条机械镜像
+   `Android.bp static_libs` 的 per-target 依赖边），在 `libs.versions.toml` 声明 catalog alias
+   （如 `libs.systemui.settingslib`）统一引用；build.gradle.kts 中不得直接 `files("libs/aars/xxx.aar")`。
+3. **本地 Maven 仓（`libs/maven/`）只交付 AAR**；JAR（framework.jar、android.car.jar、aconfig flags jar 等）
+   位于 `libs/` 根目录直接引用。
+4. **内容变化必须升坐标**：本地 Maven AAR 的类集/资源变化时必须升 version 并退役旧版
+   （如 iconloader、WindowManager-Shell 的 1.0.0→1.0.1），禁止同版本原地覆盖。
+5. **重新生成入口**：仅在需要重新生成 AOSP 产物时运行
+   `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py`。
+6. 当前 `libs/` 实际清单、版本坐标与产物状态**唯一见 `docs/CURRENT_STATE.md`**
+   （"Dependency and artifact state" 一节），本节不维护逐文件快照。
 
-```
-libs/
-├── framework.jar                       # AOSP 框架 jar (隐藏 API)
-├── framework-statsd.jar
-├── android.car.jar                     # Car API
-├── android_module_lib_stubs_current.jar
-├── monet.jar                           # ColorScheme/Shades/Style
-├── systemui-flags.jar                  # com.android.systemui.Flags
-├── systemui-shared-flags.jar           # com.android.systemui.shared.Flags
-├── settingslib-flags.jar               # com.android.settingslib.flags.Flags (aconfig)
-├── settingslib-media-flags.jar         # com.android.settingslib.media.flags.Flags
-├── device-state-flags.jar              # com.android.server.policy.feature.flags.Flags
-├── aars/                               # 直接 AAR（package_aosp_aar.py 生成；2026-08-12 起提交入 git）
-│   ├── animationlib.aar                # frameworks/libs/systemui:animationlib
-│   ├── WifiTrackerLib.aar              # frameworks/opt/net/wifi/libs/WifiTrackerLib
-│   ├── iconloader.aar                  # frameworks/libs/systemui:iconloaderlib
-│   ├── SettingsLib.aar                 # frameworks/base/packages/SettingsLib（含 32 个子模块合并）
-│   ├── WindowManager-Shell.aar         # frameworks/base/libs/WindowManager/Shell
-│   ├── WindowManager-Shell-shared.aar  # WM-Shell static_libs 子模块（javac+kotlin 合并，含 PhysicsAnimator）
-│   ├── TraceurCommon.aar               # Traceur common + perfetto_config_java_protos（640 类；manifest 合并 5 个权限）
-│   ├── Traceur-res.aar                 # Traceur 资源 namespace（105 个 AOSP res；0 类）
-│   ├── LowLightDreamLib.aar            # frameworks/base/libs/dream/lowlight:LowLightDreamLib
-│   ├── setupcompat.aar                 # external/setupcompat:setupcompat
-│   ├── SettingsLibColor.aar            # SettingsLib/Color（Maven 坐标 com.android.settingslib:color）
-│   ├── SettingsLibSettingsTheme.aar    # SettingsLib/SettingsTheme
-│   └── SettingsLib{ActionButtonsPreference,AdaptiveIcon,LayoutPreference,ProgressBar,
-│       RestrictedLockUtils,SelectorWithWidgetPreference,TwoTargetPreference}.aar
-│                                       # 7 个 per-target res-only AAR（Task 015/ADR 0005）
-├── prebuilts/                          # 历史 prebuilt jar（逐步清理中）
-└── maven/                              # 本地 Maven 仓库（install_aar_to_maven.py 安装；2026-08-12 起提交入 git）
-    ├── com.android.systemui/
-    │   ├── SettingsLib/1.0.0/                          # libs.systemui.settingslib（POM 携 7 条传递依赖边，ADR 0005）
-    │   ├── SettingsLibSettingsTheme/1.0.0/             # libs.systemui.settingslib.theme
-    │   ├── LowLightDreamLib/1.0.0/                     # libs.systemui.lowlight.dream.lib
-    │   ├── WifiTrackerLib/1.0.0/                       # libs.systemui.wifitrackerlib
-    │   ├── WindowManager-Shell/1.0.1/                  # libs.systemui.wmshell（Task 037：proto 闭包并入 1888 类，1.0.0 已退役）
-    │   ├── WindowManager-Shell-shared/1.0.0/           # libs.systemui.wmshell.shared
-    │   ├── animationlib/1.0.0/                         # libs.systemui.animationlib
-    │   ├── iconloader/1.0.1/                           # libs.systemui.iconloader（Task 036：javac+kotlin 合并 75 类，1.0.0 已退役）
-    │   ├── setupcompat/1.0.0/                          # libs.systemui.setupcompat
-    │   ├── SettingsLibActionButtonsPreference/1.0.0/   # libs.systemui.settingslib.action.buttons.preference（经 SettingsLib POM 传递依赖，ADR 0005）
-    │   ├── SettingsLibAdaptiveIcon/1.0.0/              # libs.systemui.settingslib.adaptive.icon（同上）
-    │   ├── SettingsLibLayoutPreference/1.0.0/          # libs.systemui.settingslib.layout.preference（同上）
-    │   ├── SettingsLibProgressBar/1.0.0/               # libs.systemui.settingslib.progress.bar（同上）
-    │   ├── SettingsLibRestrictedLockUtils/1.0.0/       # libs.systemui.settingslib.restricted.lock.utils（同上）
-    │   ├── SettingsLibSelectorWithWidgetPreference/1.0.0/  # libs.systemui.settingslib.selector.with.widget.preference（同上）
-    │   └── SettingsLibTwoTargetPreference/1.0.0/       # libs.systemui.settingslib.two.target.preference（同上）
-    ├── com.android.settingslib/
-    │   └── color/1.0.0/                # libs.systemui.settingslib.color
-    └── com.android.server/
-        └── notification-flags/1.0.0/   # libs.android.server.notification.flags
-```
-```
-
-**历史**: `libs/server-notification-flags.jar` 已在 Phase B 清理。notification flags 现由 `libs/maven/com/android/server/notification-flags/` 提供。
+**历史**：notification flags 原以本地 Maven JAR 形态位于 `libs/maven/com/android/server/notification-flags/`，
+Task 034 已迁出，现为 `libs/notification-flags.jar`。
 
 ### 3.3 AOSP 源码镜像
 
@@ -373,9 +321,9 @@ unzip -l /home/conv/Android/Sdk/platforms/android-SysUISdk/android.jar | grep <�
 # 3. 在 framework.jar 查
 unzip -l libs/framework.jar | grep <符号所在包>
 
-# 4. 在 systemui-flags / monet / server-notification-flags 查
+# 4. 在 systemui-flags / monet / notification-flags 查
 unzip -l libs/systemui-flags.jar | grep <符号>
-unzip -l libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar
+unzip -l libs/notification-flags.jar
 
 # 5. javap 看具体方法
 javap -p <ClassName>

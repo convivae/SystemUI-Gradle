@@ -40,6 +40,10 @@
 - [`docs/orchestration/STATE.md`](./orchestration/STATE.md) — 仅活跃 worker / queue / 编排 transition；技术状态链接 CURRENT_STATE。
 - **Active operational audit 定义**：文档头明确标记 `Lifecycle: Active operational audit` 且 bounded audit 尚未关闭的审计文档，可继续更新其**审计域内 ledger**，但不得成为全项目状态源。当前唯一实例：[`docs/architecture/2026-08-20-r8-runtime-closure-audit.md`](./architecture/2026-08-20-r8-runtime-closure-audit.md)（R8 closure 归零前维护 class mapping）。audit 关闭后改 frozen；新问题建新 issue/audit，不改写旧结论。
 
+## Maintained knowledge（维护型经验库，持续维护）
+
+- [`docs/PITFALLS.md`](./PITFALLS.md) — 可复用根因/防错经验（**持续维护**；不保存当前错误数/动态状态，实时状态见 CURRENT_STATE）。更新触发：出现可复用根因/防错经验。
+
 ## Historical archives（冻结历史归档）
 
 完成后原地保留，**不因当前状态变化而重写**；旧数字是合法历史快照。只允许纠正明确 typo/provenance 且注明原因。
@@ -51,7 +55,6 @@
 | [`docs/superpowers/`](./superpowers/) | specs 与 plans | 按任务配套 |
 | [`docs/orchestration/tasks/`](./orchestration/tasks/) | 已派发任务 brief | Task 031 R8 closure audit、Task 038 Traceur |
 | [`docs/audit-2026-07-30-aosp-src-parity.md`](./audit-2026-07-30-aosp-src-parity.md) / [`docs/mapping-2026-07-30-aosp-bp-to-gradle.md`](./mapping-2026-07-30-aosp-bp-to-gradle.md) | 早期对齐审计与 bp 映射 | — |
-| [`docs/PITFALLS.md`](./PITFALLS.md) | 可复用踩坑经验（**不维护当前错误数**，实时状态见 CURRENT_STATE） | — |
 
 ## 删除准则（五项须同时满足，本次未删除任何文档）
 

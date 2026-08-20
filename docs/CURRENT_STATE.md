@@ -79,10 +79,10 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 ## Dependency and artifact state
 
 - `libs/`（jar + aars + maven）全部提交入 git；新 clone 可直接构建。仅在重新生成 AOSP 产物时运行 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py`。
-- 本地 Maven AAR（`libs/maven/`）均为确定性产物：SettingsLib（POM 携 7 条 per-target 依赖边，ADR 0005）、SettingsLibSettingsTheme、7 个 SettingsLib per-target res-only AAR、WindowManager-Shell 1.0.1（含 proto 闭包 1888 类）、iconloader 1.0.1（75 类）、animationlib、WifiTrackerLib、LowLightDreamLib、setupcompat、SettingsLibColor、notification-flags。
+- 本地 Maven AAR（`libs/maven/`）均为确定性产物：SettingsLib（POM 携 7 条 per-target 依赖边，ADR 0005）、SettingsLibSettingsTheme、7 个 SettingsLib per-target res-only AAR、WindowManager-Shell 1.0.1（含 proto 闭包 1888 类）、iconloader 1.0.1（75 类）、animationlib、WifiTrackerLib、LowLightDreamLib、setupcompat、SettingsLibColor。
 - Traceur：双直接 AAR（TraceurCommon 640 类 + Traceur-res 105 res，Task 038）；占位 jar 已退役。
 - 官方 Maven 坐标优先（Task 026 审计后）：zxing、protobuf-javalite、coroutines 1.10.2、errorprone 等走公网；AOSP prebuilts 版本多数不在公网，逐个查 `maven-metadata.xml`。
-- aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034），notification flags 已从本地 Maven 迁出。
+- aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034，位于 `libs/` 根目录）；notification flags 已从本地 Maven 迁出，现为 `libs/notification-flags.jar`。
 - `libs/prebuilts/` 仅剩 `tracinglib-platform.jar`（历史遗留，逐步清理）。
 
 ## Release closure blocker（81 构成）

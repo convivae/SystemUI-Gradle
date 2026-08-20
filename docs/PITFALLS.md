@@ -131,23 +131,21 @@ constraintlayout 2.3.0-alpha01 → 公网最新 2.2.2。
 
 ## 2. aconfig Flags 类踩坑
 
-### 2.1 `libs/server-notification-flags.jar` 是空 jar
+### 2.1 [历史案例] `libs/server-notification-flags.jar` 是空 jar
 
-**现象**:
+**现象（2026-07，历史案例）**:
 ```bash
 $ unzip -l libs/server-notification-flags.jar
 (empty)
 ```
 
-**真实位置**: `libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar`
+**当时真实位置**: 本地 Maven `notification-flags` JAR（后被 Task 034 迁出本地 Maven）。
 
 **根因**: 历史拷贝错，或 git LFS 丢失。文件名误导。
 
-**正确做法**:
-```kotlin
-// build.gradle.kts (root)
-val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar")
-```
+**教训**: 同名/易混文件名会误导 classpath 排查；引入或排查 flags JAR 时先 `unzip -l` 实测内容与真实坐标。
+
+**当前状态**: 该 jar 已不存在；notification flags 现为 `libs/notification-flags.jar`（Task 034 落地的完整 Soong `javac` 产物）。
 
 ### 2.2 [已证伪 2026-07-28] Kotlin 2.2.10 看不到 aconfig Flags `@UnsupportedAppUsage` 注解的类
 
@@ -470,26 +468,21 @@ keytool -importkeystore -deststorepass android -destkeystore platform.keystore \
 
 ## 12. 配置模板速查
 
-### 12.1 加 aconfig Flag 依赖的完整流程
+### 12.1 加 aconfig Flag 依赖（历史模板；机制仍有效）
 
-```toml
-# gradle/libs.versions.toml
-android-server-notification-flags = { group = "com.android.server", name = "notification-flags", version = "1.0.0" }
-```
-
-```kotlin
-// SystemUI-core/build.gradle.kts
-implementation(libs.android.server.notification.flags)
-```
+> 本节为历史模板：notification flags 原经本地 Maven 坐标引入，Task 034 后改为
+> `libs/notification-flags.jar` 直接 JAR（当前坐标/位置以 `docs/CURRENT_STATE.md` 为准）。
+> 仍然有效的机制：**内部 flags jar 必须排在 framework.jar 之前**（顺序即优先级），
+> 否则 framework.jar 的同名 stub 会遮蔽真实 flags 类。
 
 ```kotlin
 // build.gradle.kts (root)
-val serverNotificationFlagsJar = file("${rootProject.projectDir}/libs/maven/com/android/server/notification-flags/1.0.0/notification-flags-1.0.0.jar")
+val notificationFlagsJar = file("${rootProject.projectDir}/libs/notification-flags.jar")
 tasks.withType<JavaCompile>().configureEach {
-    classpath = files(serverNotificationFlagsJar) + classpath
+    classpath = files(notificationFlagsJar) + classpath
 }
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    libraries.from(serverNotificationFlagsJar)
+    libraries.from(notificationFlagsJar)
     libraries.from(internalFlagsJars)
     libraries.from(frameworkJar)
 }

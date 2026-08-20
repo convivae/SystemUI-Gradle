@@ -213,3 +213,44 @@ Task 1 基线验证命令与结果：
 
 - AGENTS.md §3.2（libs/ 内容清单）与 §4.3 引用等历史性描述按"规则文档冻结语义"保留，其中版本矩阵现由 CURRENT_STATE "Toolchain and module topology" 为实时 owner；未来 libs 结构变化时按 docs/README 维护触发条件同步。
 - 双语 README 的短摘要由架构师维护，worker 只读验收通过。
+
+---
+
+## Review 修订记录（worker，2026-08-20，Task 039 双轴 review 后）
+
+### Review 发现与裁定
+
+- **Standards（MEDIUM）**：`docs/architecture/2026-08-20-r8-runtime-closure-audit.md` 缺少 `Lifecycle: Active operational audit` 元数据——本 issue 的 audit 边界设计依赖该标记，缺失会导致 active audit 被误当 frozen。架构师独立核实成立。
+- **Spec（LOW）**：AGENTS §3.1/§3.2 仍残留动态历史快照（`最终 APK 基线待 :app:assembleDebug 复验`、`目标 13-module 拓扑（实施中）`、逐文件且含已退役坐标的 `libs/` inventory）；CURRENT_STATE 本地 Maven AAR 列表仍含 Task 034 已迁出的 `notification-flags`；docs/README 把 PITFALLS 归入 Historical archives 而非维护型经验库。架构师独立核实成立。
+
+### 裁定与执行（review-time architect authorization）
+
+1. **范围扩展（单路径）**：授权在原 10 个 allowed paths 之外修改
+   `docs/architecture/2026-08-20-r8-runtime-closure-audit.md`，**仅限顶部 lifecycle 元数据**
+   （`Lifecycle: Active operational audit`、bounded until R8 closure 归零、澄清"只读"指不改构建输入而域内 ledger 可追加）。
+   实际 diff 仅文件头新增 3 行，审计正文/证据零改动（`git diff` 已核）。
+2. **AGENTS.md**：删除 §3.1 末尾 2026-08-12 历史 build-status 段（含 `最终 APK 基线待...`；2026-07-29 源码化
+   架构史保留）；§3.1 拓扑句改为静态架构描述（去掉"实施中"与 frozen plan 链接，指向 CURRENT_STATE）；
+   §3.2 逐文件/versioned inventory 替换为 6 条静态交付规则（tracked libs、AAR 管线 package→install→catalog、
+   本地 Maven 只交付 AAR、JAR 位于 libs/ 根、ADR 0005 POM 例外、升坐标退役旧版、重生成入口），
+   当前清单/坐标链接 CURRENT_STATE；§5 诊断命令由已退役本地 Maven 路径改为 `libs/notification-flags.jar`。
+3. **CURRENT_STATE**：本地 Maven AAR 列表移除 `notification-flags`；aconfig bullet 补明
+   notification flags 现为 `libs/notification-flags.jar`（Task 034）。
+4. **docs/README**：PITFALLS 移出 Historical archives，新增 "Maintained knowledge（维护型经验库）" 分类，
+   保留其更新触发。
+5. **连带修正（expanded scan 发现）**：修订版陈旧扫描（新增 `APK 基线待|notification-flags/1.0.0`）暴露
+   PITFALLS §2.1/§12.1 仍把已退役本地 Maven 路径写作"真实位置/正确做法"。已改为历史案例标注
+   （§2.1 标注 [历史案例] + 当前状态指向 `libs/notification-flags.jar`；§12.1 改为历史模板并保留
+   "内部 flags jar 必须先于 framework.jar"的机制教训）。PITFALLS 属原 allowed paths。
+
+### 修订后静态证据（真实命令输出）
+
+- **Markdown local-link check**（含 active audit 共 11 文件）→ `markdown links: OK`
+- **Expanded stale-current scan**（8 核心文档，pattern 增加 `APK 基线待|notification-flags/1.0.0`）→ 0 命中（`expanded stale scan: CLEAN`）
+- **Rule-token preservation**（P/S/C/F/R/B/H/D/I）→ 全部命中（`rule tokens preserved: OK`）
+- **No-delete check**（`git diff --diff-filter=D --name-only 2545bdc9...HEAD`）→ 空（`no deletions: OK`）
+- **git diff --check**（`2545bdc9...HEAD`）→ exit 0（`diff --check: OK`）
+- **Scope check**：worker 全量改动（`7b24b7c6` 至工作树）= 原 10 个 allowed paths **加上仅**
+  `docs/architecture/2026-08-20-r8-runtime-closure-audit.md`；audit 文件 diff 仅为顶部 3 行元数据新增
+- **AGENTS 结构完整性**：代码围栏 8 个（成对）；章节编号未变
+- **Gradle: NOT RUN (task boundary)**；未生成任何构建产物
