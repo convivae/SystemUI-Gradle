@@ -51,6 +51,48 @@ _BASE_PKG_XML = """\
 """
 
 
+# --- Task 041 (S3b) approved entry fixtures ---------------------------------
+
+_S3B_IO_UTILS = (
+    "libcore/io/IoUtils.class",
+    "libcore/io/IoUtils$FileReader.class",
+)
+_S3B_NATIVE_ALLOCATION = (
+    "libcore/util/NativeAllocationRegistry.class",
+    "libcore/util/NativeAllocationRegistry$CleanerRunner.class",
+    "libcore/util/NativeAllocationRegistry$CleanerThunk.class",
+    "libcore/util/NativeAllocationRegistry$Metrics.class",
+)
+_S3B_DDMC = (
+    "org/apache/harmony/dalvik/ddmc/Chunk.class",
+    "org/apache/harmony/dalvik/ddmc/ChunkHandler.class",
+    "org/apache/harmony/dalvik/ddmc/DdmServer.class",
+    "org/apache/harmony/dalvik/ddmc/DdmVmInternal.class",
+)
+_S3B_UNSUPPORTED = (
+    "android/compat/annotation/UnsupportedAppUsage.class",
+    "android/compat/annotation/UnsupportedAppUsage$Container.class",
+)
+_S3B_ACONFIG = ("com/android/aconfig/annotations/AconfigFlagAccessor.class",)
+_S3B_KEEPANNO_ENTRIES = tuple(
+    f"com/android/tools/r8/keepanno/annotations/{n}.class" for n in (
+        "AnnotationPattern", "CheckOptimizedOut", "CheckRemoved",
+        "ClassAccessFlags", "ClassNamePattern", "FieldAccessFlags",
+        "InstanceOfPattern", "KeepBinding", "KeepCondition", "KeepConstraint",
+        "KeepEdge", "KeepForApi", "KeepItemKind", "KeepOption", "KeepTarget",
+        "MemberAccessFlags", "MethodAccessFlags", "StringPattern",
+        "TypePattern", "UsedByNative", "UsedByReflection", "UsesReflection"))
+
+S3B_APPROVED_35 = sorted(_S3B_IO_UTILS + _S3B_NATIVE_ALLOCATION + _S3B_DDMC
+                          + _S3B_UNSUPPORTED + _S3B_ACONFIG + _S3B_KEEPANNO_ENTRIES)
+assert len(S3B_APPROVED_35) == 35
+
+
+def _s3b_payload(entry: str) -> bytes:
+    """Deterministic distinct fake class bytes for an S3b fixture entry."""
+    return b"\xCA\xFE\xBA\xBE" + entry.encode("utf-8")
+
+
 def _make_base_platform(root: Path) -> Path:
     """A minimal but realistic base platform fixture (android-37.0-like)."""
     root.mkdir(parents=True, exist_ok=True)
@@ -126,14 +168,78 @@ def _make_framework_res_apk(path: Path) -> Path:
 
 
 def _make_core_libart_jar(path: Path) -> Path:
-    """core-libart fixture with the dalvik/annotation/optimization classes."""
+    """core-libart fixture with the dalvik/annotation/optimization classes
+    plus the Task 041 libcore slices (IoUtils, NativeAllocationRegistry, ddmc)."""
     _make_jar(path, {
         "dalvik/annotation/optimization/NeverCompile.class": b"\xCA\xFE\xBA\xBEnc",
         "dalvik/annotation/optimization/NeverInline.class": b"\xCA\xFE\xBA\xBEni",
         "dalvik/annotation/optimization/DeadReferenceSafe.class": b"\xCA\xFE\xBA\xBEdrs",
         "dalvik/annotation/optimization/ReachabilitySensitive.class": b"\xCA\xFE\xBA\xBErs",
         "java/lang/X.class": b"\xCA\xFE\xBA\xBEcoreX-libart",
+        # --- Task 041 approved libcore slices (fake fixture bytes) ---
+        "libcore/io/IoUtils.class": _s3b_payload("libcore/io/IoUtils.class"),
+        "libcore/io/IoUtils$FileReader.class": _s3b_payload(
+            "libcore/io/IoUtils$FileReader.class"),
+        "libcore/util/NativeAllocationRegistry.class": _s3b_payload(
+            "libcore/util/NativeAllocationRegistry.class"),
+        "libcore/util/NativeAllocationRegistry$CleanerRunner.class": _s3b_payload(
+            "libcore/util/NativeAllocationRegistry$CleanerRunner.class"),
+        "libcore/util/NativeAllocationRegistry$CleanerThunk.class": _s3b_payload(
+            "libcore/util/NativeAllocationRegistry$CleanerThunk.class"),
+        "libcore/util/NativeAllocationRegistry$Metrics.class": _s3b_payload(
+            "libcore/util/NativeAllocationRegistry$Metrics.class"),
+        "org/apache/harmony/dalvik/ddmc/Chunk.class": _s3b_payload(
+            "org/apache/harmony/dalvik/ddmc/Chunk.class"),
+        "org/apache/harmony/dalvik/ddmc/ChunkHandler.class": _s3b_payload(
+            "org/apache/harmony/dalvik/ddmc/ChunkHandler.class"),
+        "org/apache/harmony/dalvik/ddmc/DdmServer.class": _s3b_payload(
+            "org/apache/harmony/dalvik/ddmc/DdmServer.class"),
+        "org/apache/harmony/dalvik/ddmc/DdmVmInternal.class": _s3b_payload(
+            "org/apache/harmony/dalvik/ddmc/DdmVmInternal.class"),
     })
+    return path
+
+
+def _make_unsupportedappusage_jar(path: Path) -> Path:
+    """unsupportedappusage fixture: the 2 approved classes + 1 unrelated."""
+    _make_jar(path, {
+        "android/compat/annotation/UnsupportedAppUsage.class": _s3b_payload(
+            "android/compat/annotation/UnsupportedAppUsage.class"),
+        "android/compat/annotation/UnsupportedAppUsage$Container.class": _s3b_payload(
+            "android/compat/annotation/UnsupportedAppUsage$Container.class"),
+        "java/lang/Y.class": b"\xCA\xFE\xBA\xBEunrelated-unsupported",
+    })
+    return path
+
+
+def _make_aconfig_annotations_jar(path: Path) -> Path:
+    """aconfig-annotations-lib fixture: AconfigFlagAccessor (approved) plus
+    the deliberately-unapproved siblings (Assume*ForR8, VisibleForTesting)."""
+    _make_jar(path, {
+        "com/android/aconfig/annotations/AconfigFlagAccessor.class": _s3b_payload(
+            "com/android/aconfig/annotations/AconfigFlagAccessor.class"),
+        "com/android/aconfig/annotations/AssumeTrueForR8.class": _s3b_payload(
+            "com/android/aconfig/annotations/AssumeTrueForR8.class"),
+        "com/android/aconfig/annotations/AssumeFalseForR8.class": _s3b_payload(
+            "com/android/aconfig/annotations/AssumeFalseForR8.class"),
+        "com/android/aconfig/annotations/VisibleForTesting.class": _s3b_payload(
+            "com/android/aconfig/annotations/VisibleForTesting.class"),
+        "com/android/aconfig/annotations/VisibleForTesting$Visibility.class": _s3b_payload(
+            "com/android/aconfig/annotations/VisibleForTesting$Visibility.class"),
+    })
+    return path
+
+
+def _make_keepanno_annotations_jar(path: Path) -> Path:
+    """keepanno fixture: the 22 approved annotation classes + out-of-package
+    siblings and jar-level metadata that must never be injected."""
+    entries = {
+        e: _s3b_payload(e) for e in _S3B_KEEPANNO_ENTRIES
+    }
+    entries["com/android/tools/r8/other/Foo.class"] = b"\xCA\xFE\xBA\xBEout-of-pkg"
+    entries["META-INF/MANIFEST.MF"] = b"Manifest-Version: 1.0\n"
+    entries["r8-version.properties"] = b"version=fixture\n"
+    _make_jar(path, entries)
     return path
 
 
@@ -148,6 +254,12 @@ class _FixtureCase(unittest.TestCase):
         self.merged = _make_merged_jar(root / "android-merged.jar")
         self.corelib = _make_core_libart_jar(root / "core-libart.jar")
         self.fwres = _make_framework_res_apk(root / "framework-res.apk")
+        self.unsupported = _make_unsupportedappusage_jar(
+            root / "unsupportedappusage.jar")
+        self.aconfig = _make_aconfig_annotations_jar(
+            root / "aconfig-annotations-lib.jar")
+        self.keepanno = _make_keepanno_annotations_jar(
+            root / "keepanno-annotations.jar")
         self.staging = root / "android-SysUISdk-staging"
 
     def _build_live_like(self) -> Path:
@@ -173,6 +285,16 @@ class _FixtureCase(unittest.TestCase):
         b.stage_s2(self.staging)
         b.stage_s3(self.staging, self.corelib)
         b.stage_s4(self.staging, self.fwres)
+
+    def _run_s3b(self, target: Path | None = None) -> None:
+        b.stage_s3b(target or self.staging, self.corelib, self.unsupported,
+                    self.aconfig, self.keepanno)
+
+    def _build_to_s3(self, target: Path) -> None:
+        b.stage_s0(self.base, target, clean=True)
+        b.stage_s1(target, self.merged)
+        b.stage_s2(target)
+        b.stage_s3(target, self.corelib)
 
 
 # --- live-guard tests ------------------------------------------------------
@@ -581,6 +703,206 @@ class StageS4Test(_FixtureCase):
             b.stage_s4(self.staging, self.fwres)
             self.assertEqual(_jar_entries(self.staging / "android.jar"),
                              _jar_entries(staging2 / "android.jar"))
+
+
+# --- S3b tests (Task 041: R8 library-class bridge) ------------------------
+
+class StageS3bTest(_FixtureCase):
+    def _build_to_s3_staging(self) -> None:
+        self._build_to_s3(self.staging)
+
+    def test_injects_exactly_35_entries_into_both_targets(self):
+        self._build_to_s3_staging()
+        self._run_s3b()
+        for name in ("android.jar", "core-for-system-modules.jar"):
+            entries = _jar_entries(self.staging / name)
+            approved_present = [e for e in S3B_APPROVED_35 if e in entries]
+            self.assertEqual(approved_present, S3B_APPROVED_35,
+                             f"{name}: missing approved entries")
+
+    def test_injected_bytes_equal_assigned_source_fixture(self):
+        self._build_to_s3_staging()
+        self._run_s3b()
+        for name in ("android.jar", "core-for-system-modules.jar"):
+            with zipfile.ZipFile(self.staging / name) as zf:
+                for entry in S3B_APPROVED_35:
+                    self.assertEqual(zf.read(entry), _s3b_payload(entry),
+                                     f"{name}: {entry}")
+
+    def test_no_unrelated_source_entry_injected(self):
+        self._build_to_s3_staging()
+        self._run_s3b()
+        for name in ("android.jar", "core-for-system-modules.jar"):
+            with zipfile.ZipFile(self.staging / name) as zf:
+                names = set(zf.namelist())
+            for unrelated in (
+                "java/lang/Y.class",                      # unsupported jar
+                "com/android/aconfig/annotations/AssumeTrueForR8.class",
+                "com/android/aconfig/annotations/AssumeFalseForR8.class",
+                "com/android/aconfig/annotations/VisibleForTesting.class",
+                "com/android/aconfig/annotations/VisibleForTesting$Visibility.class",
+                "com/android/tools/r8/other/Foo.class",    # keepanno jar
+                "r8-version.properties",                   # keepanno jar
+            ):
+                self.assertNotIn(unrelated, names,
+                                 f"{name}: unrelated entry injected")
+
+    def test_backups_use_bak_prer8lib_and_preserve_pre_s3b_bytes(self):
+        self._build_to_s3_staging()
+        pre = {
+            name: (self.staging / name).read_bytes()
+            for name in ("android.jar", "core-for-system-modules.jar")
+        }
+        self._run_s3b()
+        for name, pre_bytes in pre.items():
+            bak = self.staging / f"{name}.bak-prer8lib"
+            self.assertTrue(bak.exists(), f"{name}: missing backup")
+            self.assertEqual(bak.read_bytes(), pre_bytes,
+                             f"{name}: backup does not preserve pre-S3b bytes")
+
+    def test_rerun_is_byte_for_byte_noop(self):
+        self._build_to_s3_staging()
+        self._run_s3b()
+        after_first = {
+            name: (self.staging / name).read_bytes()
+            for name in ("android.jar", "core-for-system-modules.jar")
+        }
+        self._run_s3b()
+        for name, data in after_first.items():
+            self.assertEqual((self.staging / name).read_bytes(), data,
+                             f"{name}: rerun mutated the jar")
+
+    def test_collision_raises_before_either_target_is_changed(self):
+        self._build_to_s3_staging()
+        # tamper one approved entry in core-for-system-modules.jar
+        core = self.staging / "core-for-system-modules.jar"
+        with zipfile.ZipFile(core, "a") as zf:
+            zf.writestr(_S3B_ACONFIG[0], b"\xCA\xFE\xBA\xBETAMPERED")
+        pre_core = core.read_bytes()
+        pre_android = (self.staging / "android.jar").read_bytes()
+        with self.assertRaises(RuntimeError) as ctx:
+            self._run_s3b()
+        self.assertIn("collision", str(ctx.exception))
+        # neither target was mutated
+        self.assertEqual(core.read_bytes(), pre_core)
+        self.assertEqual((self.staging / "android.jar").read_bytes(),
+                         pre_android)
+        self.assertFalse(
+            (self.staging / "android.jar.bak-prer8lib").exists())
+
+    def test_android_manifest_remains_audited_bytes(self):
+        self._build_to_s3_staging()
+        self._run_s3b()
+        with zipfile.ZipFile(self.staging / "android.jar") as zf:
+            mf = zf.read("META-INF/MANIFEST.MF")
+        self.assertEqual(mf, b.ANDROID_MANIFEST_BYTES)
+
+    def test_all_stages_order_places_s3b_between_s3_and_s4(self):
+        self.assertEqual(b.ALL_STAGES,
+                         ("s0", "s1", "s2", "s3", "s3b", "s4"))
+
+    def test_run_stages_invokes_s3b_between_s3_and_s4(self):
+        from unittest import mock
+        order = []
+        stamps = {
+            "stage_s0": lambda *a, **k: order.append("s0"),
+            "stage_s1": lambda *a, **k: order.append("s1"),
+            "stage_s2": lambda *a, **k: order.append("s2"),
+            "stage_s3": lambda *a, **k: order.append("s3"),
+            "stage_s3b": lambda *a, **k: order.append("s3b"),
+            "stage_s4": lambda *a, **k: order.append("s4"),
+        }
+        with mock.patch.multiple(b, **stamps):
+            b._run_stages(list(b.ALL_STAGES), self.base, self.staging,
+                          self.merged, self.corelib, self.fwres,
+                          unsupported_jar=self.unsupported,
+                          aconfig_jar=self.aconfig,
+                          keepanno_jar=self.keepanno, clean=True)
+        self.assertEqual(order, ["s0", "s1", "s2", "s3", "s3b", "s4"])
+
+    def test_default_stages_include_s3b_but_not_s4(self):
+        self.assertIn("s3b", b.DEFAULT_STAGES.split(","))
+        self.assertNotIn("s4", b.DEFAULT_STAGES.split(","))
+
+    def test_default_source_jars_pinned(self):
+        # core-libart default is shared with S3
+        self.assertEqual(b.DEFAULT_UNSUPPORTEDAPPUSAGE_JAR.name,
+                         "unsupportedappusage.jar")
+        self.assertEqual(b.DEFAULT_ACONFIG_ANNOTATIONS_JAR.name,
+                         "aconfig-annotations-lib.jar")
+        self.assertEqual(b.DEFAULT_KEEPANNO_ANNOTATIONS_JAR.name,
+                         "keepanno-annotations.jar")
+        self.assertEqual(b.DEFAULT_KEEPANNO_ANNOTATIONS_JAR.parent.name,
+                         "libs")
+
+
+class FullPipelineWithS3bTest(_FixtureCase):
+    """s0,s1,s2,s3,s3b,s4 full-pipeline determinism and S5 interaction."""
+
+    def _build_full(self, target: Path) -> None:
+        b.stage_s0(self.base, target, clean=True)
+        b.stage_s1(target, self.merged)
+        b.stage_s2(target)
+        b.stage_s3(target, self.corelib)
+        b.stage_s3b(target, self.corelib, self.unsupported, self.aconfig,
+                    self.keepanno)
+        b.stage_s4(target, self.fwres)
+
+    def test_two_independent_builds_have_equal_inventories(self):
+        self._build_full(self.staging)
+        with tempfile.TemporaryDirectory() as td2:
+            staging2 = Path(td2) / "android-SysUISdk-staging"
+            # independent fixtures -> independent inputs
+            base2 = _make_base_platform(Path(td2) / "android-37.0")
+            merged2 = _make_merged_jar(Path(td2) / "android-merged.jar")
+            corelib2 = _make_core_libart_jar(Path(td2) / "core-libart.jar")
+            fwres2 = _make_framework_res_apk(Path(td2) / "framework-res.apk")
+            unsup2 = _make_unsupportedappusage_jar(
+                Path(td2) / "unsupportedappusage.jar")
+            aconfig2 = _make_aconfig_annotations_jar(
+                Path(td2) / "aconfig-annotations-lib.jar")
+            keepanno2 = _make_keepanno_annotations_jar(
+                Path(td2) / "keepanno-annotations.jar")
+            b.stage_s0(base2, staging2, clean=True)
+            b.stage_s1(staging2, merged2)
+            b.stage_s2(staging2)
+            b.stage_s3(staging2, corelib2)
+            b.stage_s3b(staging2, corelib2, unsup2, aconfig2, keepanno2)
+            b.stage_s4(staging2, fwres2)
+            for name in ("android.jar", "core-for-system-modules.jar"):
+                self.assertEqual(_jar_entries(self.staging / name),
+                                 _jar_entries(staging2 / name),
+                                 f"{name}: inventories differ between builds")
+
+    def test_strict_s5_passes_when_live_built_through_same_stages(self):
+        live = Path(self.tmp.name) / "android-SysUISdk-live"
+        self._build_full(live)
+        self._build_full(self.staging)
+        rc = b.stage_verify(self.staging, live)
+        self.assertEqual(rc, 0)
+
+    def test_s3_only_live_reports_exactly_35_extras_per_jar(self):
+        live = Path(self.tmp.name) / "android-SysUISdk-live"
+        self._build_to_s3(live)  # live fixture without S3b
+        # staging: same stages + s3b (no s4, so the only delta is the 35)
+        b.stage_s0(self.base, self.staging, clean=True)
+        b.stage_s1(self.staging, self.merged)
+        b.stage_s2(self.staging)
+        b.stage_s3(self.staging, self.corelib)
+        b.stage_s3b(self.staging, self.corelib, self.unsupported,
+                    self.aconfig, self.keepanno)
+        for name in ("android.jar", "core-for-system-modules.jar"):
+            s = _jar_entries(self.staging / name)
+            l = _jar_entries(live / name)
+            extras = sorted(set(s) - set(l))
+            missing = sorted(set(l) - set(s))
+            self.assertEqual(extras, S3B_APPROVED_35,
+                             f"{name}: staging-only entries are not exactly "
+                             f"the 35 approved")
+            self.assertEqual(missing, [], f"{name}: unexpected missing")
+        # strict S5 reports DIFF before the apply-equivalent sync
+        rc = b.stage_verify(self.staging, live)
+        self.assertEqual(rc, 1)
 
 
 # --- S5 verify with --expect-s4-delta --------------------------------------

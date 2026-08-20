@@ -19,6 +19,13 @@ Stages (see docs/architecture/2026-08-13-sysuisdk-reproducible-build.md):
   S2  framework.aidl hidden-iface/parcelable patch (reuses tools/install_sdk.py).
   S3  dalvik.annotation.optimization patch into both jars (reuses
       tools/patch_sdk_dalvik_annotations.py; source: AOSP core-libart javac jar).
+  S3b R8 library-class bridge (Task 041, user approval 2026-08-21): inject
+      exactly 35 approved source-identical library classes (IoUtils,
+      NativeAllocationRegistry, ddmc, UnsupportedAppUsage, AconfigFlagAccessor,
+      keepanno annotations) into both jars via tools/
+      patch_sdk_r8_library_classes.py, so AGP R8 resolves them as library
+      classes without packaging them into the APK. AssumeTrueForR8 is
+      deliberately excluded (Task 042).
   S4  overlay the current AOSP framework-res.apk resources.arsc + res/** onto
       android.jar, replacing S1's stale May-27 snapshot — fixes androidprv:
       private-resource linking (AGENTS.md §2.4 point 2). Opt-in via --stages;
@@ -51,6 +58,7 @@ if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 import install_sdk  # noqa: E402
 import patch_sdk_dalvik_annotations as _dalvik  # noqa: E402
+import patch_sdk_r8_library_classes as _r8lib  # noqa: E402
 
 # --- Configuration ---------------------------------------------------------
 
@@ -65,6 +73,17 @@ DEFAULT_CORE_LIBART_JAR = Path(
     "/home/conv/myspace/aosp/out/soong/.intermediates/libcore/"
     "core-libart/android_common_apex31/javac/core-libart.jar"
 )
+DEFAULT_UNSUPPORTEDAPPUSAGE_JAR = Path(
+    "/home/conv/myspace/aosp/out/soong/.intermediates/tools/platform-compat/"
+    "java/android/compat/annotation/unsupportedappusage/linux_glibc_common/"
+    "javac/unsupportedappusage.jar"
+)
+DEFAULT_ACONFIG_ANNOTATIONS_JAR = Path(
+    "/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/libs/"
+    "modules-utils/java/aconfig-annotations-lib/linux_glibc_common/javac/"
+    "aconfig-annotations-lib.jar"
+)
+DEFAULT_KEEPANNO_ANNOTATIONS_JAR = _REPO_ROOT / "libs" / "keepanno-annotations.jar"
 DEFAULT_FRAMEWORK_RES_APK = _REPO_ROOT / "libs" / "framework-res.apk"
 
 STAGING_DIR_NAME = "android-SysUISdk-staging"
@@ -87,7 +106,11 @@ ANDROID_MANIFEST_BYTES = (
 # backup of the freshly-copied base, matching the live SDK's backup pattern.
 _BASE_SKIP_SUFFIXES = (".orig", ".bak-preaidl")
 
-ALL_STAGES = ("s0", "s1", "s2", "s3", "s4")
+ALL_STAGES = ("s0", "s1", "s2", "s3", "s3b", "s4")
+
+# Default CLI stages: S3b (R8 library-class bridge) is now part of the
+# default staging build; S4 (framework-res overlay) stays opt-in/explicit.
+DEFAULT_STAGES = "s0,s1,s2,s3,s3b"
 
 
 # --- Helpers ---------------------------------------------------------------
@@ -320,6 +343,52 @@ def stage_s3(target: Path, core_libart_jar: Path) -> None:
     # manifest, which S3 preserves; only android.jar was repackaged by S1).
     _rewrite_manifest_entry(target / "android.jar", ANDROID_MANIFEST_BYTES)
     print("S3: normalized android.jar MANIFEST.MF to audited live bytes")
+
+
+# --- S3b: R8 library-class bridge (Task 041) ------------------------------
+
+def stage_s3b(target: Path, core_libart_jar: Path, unsupported_jar: Path,
+              aconfig_jar: Path, keepanno_jar: Path) -> None:
+    """Inject the 35 user-approved R8 library classes into both target JARs.
+
+    Stage S3b closes the six B1–B4 platform/build refs that AOSP Soong exposes
+    to R8 via bootclasspath (Ch2) or transitive header jars (Ch4) but AGP
+    9.3.1 only exposes via the compileSdk platform jars (see
+    docs/architecture/2026-08-20-r8-platform-classpath-bridge.md and
+    docs/issues/2026-08-21-r8-platform-build-classpath-closure.md). Exactly
+    35 allowlisted, source-byte-identical entries are injected into both
+    android.jar and core-for-system-modules.jar; ``AssumeTrueForR8`` stays
+    out (Task 042). Both targets are validated read-only BEFORE either is
+    mutated, so a source/collision failure cannot leave one target patched
+    and the other untouched.
+    """
+    _ensure_file(core_libart_jar, "core-libart javac jar (S3b source)")
+    _ensure_file(unsupported_jar, "unsupportedappusage javac jar (S3b source)")
+    _ensure_file(aconfig_jar, "aconfig-annotations-lib javac jar (S3b source)")
+    _ensure_file(keepanno_jar, "keepanno-annotations jar (S3b source)")
+    slices = _r8lib.task041_slices(core_libart_jar, unsupported_jar,
+                                   aconfig_jar, keepanno_jar)
+    # Read-only validation of BOTH targets before mutating either.
+    for name in _dalvik.TARGET_JARS:
+        jar = target / name
+        _ensure_file(jar, f"staging {name}")
+        _r8lib.validate_target(jar, slices)
+    for name in _dalvik.TARGET_JARS:
+        jar = target / name
+        res = _r8lib.patch_target(jar, slices)
+        if res["backup"]:
+            print(f"S3b: {name}: backup {res['backup']}")
+        if res["injected"]:
+            print(f"S3b: {name}: injected {len(res['injected'])} library "
+                  f"classes")
+            for cls in res["injected"]:
+                print(f"S3b:    + {cls}")
+        else:
+            print(f"S3b: {name}: already patched (no-op)")
+    # Defensive: keep android.jar manifest pinned to the audited live bytes
+    # after the S3b rewrite (same normalization S3 applies).
+    _rewrite_manifest_entry(target / "android.jar", ANDROID_MANIFEST_BYTES)
+    print("S3b: normalized android.jar MANIFEST.MF to audited live bytes")
 
 
 # --- S4: framework-res resource overlay ------------------------------------
@@ -618,7 +687,10 @@ def apply_to_live(source: Path) -> int:
 
 def _run_stages(stages: list[str], base: Path, target: Path,
                 merged_jar: Path, core_libart_jar: Path,
-                framework_res_apk: Path, clean: bool) -> None:
+                framework_res_apk: Path, clean: bool,
+                unsupported_jar: Path = DEFAULT_UNSUPPORTEDAPPUSAGE_JAR,
+                aconfig_jar: Path = DEFAULT_ACONFIG_ANNOTATIONS_JAR,
+                keepanno_jar: Path = DEFAULT_KEEPANNO_ANNOTATIONS_JAR) -> None:
     if "s0" in stages:
         stage_s0(base, target, clean)
     if "s1" in stages:
@@ -627,6 +699,9 @@ def _run_stages(stages: list[str], base: Path, target: Path,
         stage_s2(target)
     if "s3" in stages:
         stage_s3(target, core_libart_jar)
+    if "s3b" in stages:
+        stage_s3b(target, core_libart_jar, unsupported_jar, aconfig_jar,
+                  keepanno_jar)
     if "s4" in stages:
         stage_s4(target, framework_res_apk)
 
@@ -640,14 +715,25 @@ def main() -> int:
     ap.add_argument("--merged-jar", default=str(DEFAULT_MERGED_JAR),
                     help="S1 android-merged.jar source (default libs/android-merged.jar)")
     ap.add_argument("--core-libart-jar", default=str(DEFAULT_CORE_LIBART_JAR),
-                    help="S3 core-libart javac jar source")
+                    help="S3/S3b core-libart javac jar source")
+    ap.add_argument("--unsupportedappusage-jar",
+                    default=str(DEFAULT_UNSUPPORTEDAPPUSAGE_JAR),
+                    help="S3b unsupportedappusage javac jar source")
+    ap.add_argument("--aconfig-annotations-jar",
+                    default=str(DEFAULT_ACONFIG_ANNOTATIONS_JAR),
+                    help="S3b aconfig-annotations-lib javac jar source")
+    ap.add_argument("--keepanno-annotations-jar",
+                    default=str(DEFAULT_KEEPANNO_ANNOTATIONS_JAR),
+                    help="S3b keepanno-annotations jar source "
+                         "(default libs/keepanno-annotations.jar)")
     ap.add_argument("--framework-res-apk", default=str(DEFAULT_FRAMEWORK_RES_APK),
                     help="S4 framework-res.apk source (default libs/framework-res.apk)")
     ap.add_argument("--clean", action="store_true",
                     help="remove the staging target before S0 (S0 only)")
-    ap.add_argument("--stages", default="s0,s1,s2,s3",
-                    help="comma-separated stages to run (default s0,s1,s2,s3; "
-                         "append s4 for the framework-res overlay)")
+    ap.add_argument("--stages", default=DEFAULT_STAGES,
+                    help="comma-separated stages to run (default "
+                         f"{DEFAULT_STAGES}; append s4 explicitly for the "
+                         "framework-res overlay)")
     ap.add_argument("--verify", action="store_true",
                     help="run S5 verify against the live SDK and exit")
     ap.add_argument("--expect-s4-delta", action="store_true",
@@ -679,7 +765,10 @@ def main() -> int:
     _run_stages(stages, _resolve(Path(args.base)), _resolve(target),
                 _resolve(Path(args.merged_jar)),
                 _resolve(Path(args.core_libart_jar)),
-                _resolve(Path(args.framework_res_apk)), args.clean)
+                _resolve(Path(args.framework_res_apk)), args.clean,
+                unsupported_jar=_resolve(Path(args.unsupportedappusage_jar)),
+                aconfig_jar=_resolve(Path(args.aconfig_annotations_jar)),
+                keepanno_jar=_resolve(Path(args.keepanno_annotations_jar)))
     print("")
     print("Done. Run with --verify to compare staging against the live SDK.")
     return 0
