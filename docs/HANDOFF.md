@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：debug APK 构建成功、Python 测试 195/195、release R8 剩 7 个真实 missing refs）。
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：debug APK 构建成功、Python 测试 233/233、release R8 仅剩 `AssumeTrueForR8` 1 个真实 missing ref）。
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：B1–B4 platform/build classpath 6 refs（详见 CURRENT_STATE "Next ordered work"）。
+5. **当前唯一工程优先级**：Task 042，以真实 build-time annotation classpath closure 清零 `AssumeTrueForR8` 1 ref（详见 CURRENT_STATE "Next ordered work"）。
 
 ## 2. 环境确认
 

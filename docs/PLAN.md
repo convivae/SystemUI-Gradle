@@ -8,24 +8,19 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
-### 1. B1–B4 platform/build classpath 6 refs（当前唯一优先级）
+### 1. `AssumeTrueForR8` build-time annotation 1 ref（当前唯一优先级）
 
-- **范围**: 6 个 platform/build classpath 桥接类（需 SysUISdk/AGP 桥或窄域处理，禁止宽泛 `-dontwarn`）。
-- **完成条件**: 该组 refs 清零且不引入掩盖性配置。
+- **完成条件**: 该 ref 以真实 build-time annotation classpath closure 消除，并保留 R8 flag-assumption 语义；不得使用 runtime `implementation` 或 `-dontwarn`。
 
-### 2. `AssumeTrueForR8` build-time annotation 1 ref
-
-- **完成条件**: 该 ref 以真实产物/桥接消除。
-
-### 3. Release R8 达到 0 missing refs
+### 2. Release R8 达到 0 missing refs
 
 - **完成条件**: fresh `:app:minifyReleaseWithR8 --rerun-tasks` BUILD SUCCESSFUL。
 
-### 4. `shrinkResources` + 签名/打包验证
+### 3. `shrinkResources` + 签名/打包验证
 
 - **完成条件**: release 构建含资源收缩成功产出，V2 签名校验通过。
 
-### 5. 兼容模拟器/设备安装与运行验证
+### 4. 兼容模拟器/设备安装与运行验证
 
 - **范围**: AVD 签名/root/framework 兼容性预审后替换预装 SystemUI 并运行验证。
 - **计划**: `docs/issues/2026-08-20-device-emulator-validation-plan.md`。
@@ -41,6 +36,6 @@
 
 ## 已完成工作
 
-从 5296 个编译错误到 debug APK 成功、195/195 测试、release R8 140→7 的完整历程与证据，
+从 5296 个编译错误到 debug APK 成功、233/233 测试、release R8 140→1 的完整历程与证据，
 见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 的 Verified milestones 与
 [`docs/GRADLE_MIGRATION_LOG.md`](./GRADLE_MIGRATION_LOG.md)。

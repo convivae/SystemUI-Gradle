@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-21（Task 040 合并后 main fresh 验证，commits `d2e1569a` + `01c7e58d` + `1aea7ace` + `f1952172`）
+> **Last verified**: 2026-08-21（Task 041 合并后 main fresh 验证，commits `f51caf76` + `3379600d` + `5d4d62ea` + `344aa344`）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -10,14 +10,14 @@
 
 | 维度 | 状态 |
 |------|------|
-| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 040 main fresh 1m10s） |
-| Python 工具测试 | **195/195 通过** |
-| Release R8 | **仍失败**：7 个真实 missing refs（closure 缺失，非成功状态） |
+| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 041 main fresh 1m18s） |
+| Python 工具测试 | **233/233 通过** |
+| Release R8 | **仍失败**：1 个真实 missing ref（`AssumeTrueForR8`；Task 042 边界，非成功状态） |
 | `shrinkResources` | 未完成有效验收 |
 | 设备/模拟器运行验证 | 未开始 |
-| 当前唯一工程优先级 | **B1–B4 platform/build classpath 6 refs** |
+| 当前唯一工程优先级 | **Task 042：`AssumeTrueForR8` build-time annotation 1 ref** |
 
-R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → **7**（每批精确差分，零新增未解释引用）。
+R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → **1**（每批精确差分，零新增未解释引用）。
 
 ## Verified milestones（已完成里程碑，最新在后）
 
@@ -32,18 +32,19 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → *
 | 2026-08-20 | R8 Batch 1–4C：clean monet/aconfig/view-capture/iconloader/WM-Shell proto/Traceur 产物；140→81 | `docs/architecture/2026-08-20-r8-runtime-closure-audit.md` |
 | 2026-08-20 | Traceur 双 AAR（Task 038）：640 类 + 105 res；R8 88→81 精确；179/179 | `docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md` |
 | 2026-08-21 | SettingsLib program/resource 闭包（Task 040）：主 AAR 1153 类、Theme 15 类、17 个 per-target 资源 AAR；R8 81→7 精确；195/195 | `docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md` |
+| 2026-08-21 | SysUISdk R8 library bridge（Task 041）：两个 SDK target 各注入 35 个真实 library classes；APK 0 打包；R8 7→1 精确；233/233 | `docs/issues/2026-08-21-r8-platform-build-classpath-closure.md` |
 
 ## Current build and verification matrix
 
 | 验证项 | 状态 | 最新证据 |
 |--------|------|---------|
-| KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 040 main fresh |
-| core Kotlin | ✅ 0 错误 | Task 040 main fresh |
-| core javac | ✅ 0 错误 | Task 040 main fresh |
-| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 040 main fresh，exit 0 in 1m10s |
-| Python 工具测试 | ✅ 195/195 | Task 040 main fresh |
-| APK 类定义检查 | ✅ SettingsLib pre-change targets 74/74 defined | Task 040 main fresh |
-| `:app:minifyReleaseWithR8` | ❌ 预期失败：7 个 missing refs（真实 closure 缺失） | Task 040 main fresh，exit 1，精确 81→7 |
+| KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 041 main fresh |
+| core Kotlin | ✅ 0 错误 | Task 041 main fresh |
+| core javac | ✅ 0 错误 | Task 041 main fresh |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 041 main fresh，exit 0 in 1m18s |
+| Python 工具测试 | ✅ 233/233 | Task 041 main fresh |
+| APK 类定义检查 | ✅ SysUISdk bridge 35/35 present；APK 0/35 packaged | Task 041 main fresh |
+| `:app:minifyReleaseWithR8` | ❌ 预期失败：1 个 missing ref（Task 042 边界） | Task 041 main fresh，exit 1，精确 7→1 |
 | `shrinkResources` 有效验收 | ❌ 未完成 | — |
 | 设备/模拟器 install + runtime | ❌ 未开始 | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
 
@@ -86,37 +87,37 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 - aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034，位于 `libs/` 根目录）；notification flags 已从本地 Maven 迁出，现为 `libs/notification-flags.jar`。
 - `libs/prebuilts/` 仅剩 `tracinglib-platform.jar`（历史遗留，逐步清理）。
 
-## Release closure blocker（7 构成）
+## Release closure blocker（1 个）
 
-Release R8 在 `:app:minifyReleaseWithR8` 阶段因 **7 个真实 missing refs** 失败（exit 1，这是**预期失败**，不是成功状态）：
+Release R8 在 `:app:minifyReleaseWithR8` 阶段因唯一真实 missing ref 失败（exit 1，这是**预期失败**，不是成功状态）：
 
 | 组 | 数量 | 内容 | 处置路径 |
 |----|------|------|---------|
-| B1–B4 | 6 | `UnsupportedAppUsage`、`AconfigFlagAccessor`、`UsesReflection`、`IoUtils`、`NativeAllocationRegistry`、`ChunkHandler` | SysUISdk/AGP 或窄域 classpath 桥接，禁止宽泛 `-dontwarn` |
-| `AssumeTrueForR8` | 1 | build-time annotation 类 | 单独批次处理 |
+| Task 042 | 1 | `com.android.aconfig.annotations.AssumeTrueForR8` | build-time annotation classpath；保留 R8 flag-assumption 语义，禁止 runtime `implementation` 或 `-dontwarn` |
+
+Task 041 已通过声明式 SysUISdk S3b bridge 清零 B1–B4 的 6 个 platform/build refs；两个 SDK target 各有 35 个真实 library classes，且 APK 中 0 个被打包。
 
 ## Next ordered work
 
-1. **B1–B4 platform/build classpath 6 refs**（当前唯一工程优先级）
-2. `AssumeTrueForR8` 1 ref
-3. release R8 达到 0 missing refs
-4. `shrinkResources` + 签名/打包验证
-5. 兼容模拟器/设备安装与运行验证（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
+1. **Task 042：`AssumeTrueForR8` 1 ref**（当前唯一工程优先级）
+2. release R8 达到 0 missing refs
+3. `shrinkResources` + 签名/打包验证
+4. 兼容模拟器/设备安装与运行验证（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
 
 ## Verification commands and evidence
 
 ```bash
 # 单元测试（Python 工具测试）
-python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 195/195
+python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 233/233
 
 # Debug APK（每批硬门禁）
 ./gradlew :app:assembleDebug --console=plain
 
-# Release R8（当前预期 exit 1，7 missing refs）
+# Release R8（当前预期 exit 1，唯一 missing ref 为 AssumeTrueForR8）
 ./gradlew :app:minifyReleaseWithR8 --rerun-tasks --console=plain
 ```
 
-最新证据：Task 040 main fresh（2026-08-21）— 195/195 tests；12 个变化/新增 SettingsLib AAR 两次打包 byte-identical，Maven 副本 12/12 一致；`:app:assembleDebug` exit 0（1m10s）；APK 目标类 74/74 defined；fresh R8 exit 1（2m17s），精确 81→7（74 removed、0 added、无 SettingsLib refs、`AssumeTrueForR8` retained）。详细证据：`docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
+最新证据：Task 041 main fresh（2026-08-21）— 233/233 tests；两个独立 staging SDK 构建成功，`android.jar` 与 `core-for-system-modules.jar` 各有 35 个 source-identical entries 且 A/B `name→CRC` inventory 一致；guarded `--apply` 后 S5 `ALL PASS`；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（1m18s）；APK `BRIDGED=35 PACKAGED=0`；fresh R8 exit 1（2m09s），精确 7→1（6 removed、0 added），唯一 remaining 为 `com.android.aconfig.annotations.AssumeTrueForR8`。详细证据：`docs/issues/2026-08-21-r8-platform-build-classpath-closure.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 

@@ -258,6 +258,31 @@ core-libart `org/apache/harmony/dalvik/ddmc/` non-directory entries are exactly 
   - No dontwarn/keep/implementation/compileOnly change;
     `git diff --check` exit 0.
 
+## Architect main fresh acceptance
+
+After cherry-picking the four reviewed worker commits onto `main` as `f51caf76`,
+`3379600d`, `5d4d62ea`, and `344aa344`, the architect independently repeated the
+acceptance sequence:
+
+- `python3 -m unittest discover -s tools/tests -p 'test_*.py'` → exit 0,
+  **233/233** (`/tmp/task041-main-python-tests.log`).
+- Two fresh staging SDK builds → exit 0; both target JARs contain exactly 35
+  approved source-identical entries, exclude `AssumeTrueForR8`, and have identical
+  complete `name→CRC` inventories between staging A/B
+  (`/tmp/task041-main-inventory.log`).
+- Pre-apply S5 → `ALL PASS`; guarded `build_sysuisdk.py --apply` from staging A
+  created timestamped live backups with suffix `20260821-013303`; post-apply S5 →
+  `ALL PASS` (`/tmp/task041-main-s5-after-apply.log`).
+- `:app:checkDebugDuplicateClasses :app:assembleDebug` → exit 0,
+  `BUILD SUCCESSFUL in 1m 18s`; APK SHA-256
+  `1335957d70e6fb92dbe6a35f773f20af20ad3744214f81422b87cc65a9957ae9`.
+- Independent APK inventory assertion → `BRIDGED=35 PACKAGED=0`.
+- Fresh `:app:minifyReleaseWithR8 --rerun-tasks` used `set -o pipefail` + `tee`
+  and returned the required real exit 1 in 2m 09s. Independent set parsing asserted
+  `BEFORE=7 AFTER=1 REMOVED=6 ADDED=0`; the sole remaining class is
+  `com.android.aconfig.annotations.AssumeTrueForR8`
+  (`/tmp/task041-main-r8-after.log`, `/tmp/task041-main-r8-after.status`).
+
 ## Conclusion
 
 Task 041 acceptance is fully met: Python suite exit 0 (233 tests ≥ 195),

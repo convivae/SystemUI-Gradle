@@ -9,9 +9,9 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 041 implementation | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | revised clean at `db361ea4`; implementation unchanged |
-| 041 Standards review | `w1R:p1` (`review041-standards`) | `review-041-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-041-standards` | `joycode/GLM-5.2` | re-review `a4876fe5...db361ea4` |
-| 041 Spec review | `w1S:p1` (`review041-spec`) | `review-041-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-041-spec` | `joycode/GLM-5.2` | re-review `a4876fe5...db361ea4` |
+| 041 implementation | `w1Q:p1` (`task041-sysuisdk`) | `task-041-sysuisdk-classpath` / `/home/conv/myspace/SystemUI-Gradle-wt-041` | `joycode/GLM-5.3` | merged + main fresh verified; cleanup pending |
+| 041 Standards review | `w1R:p1` (`review041-standards`) | `review-041-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-041-standards` | `joycode/GLM-5.2` | PASS; cleanup pending |
+| 041 Spec review | `w1S:p1` (`review041-spec`) | `review-041-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-041-spec` | `joycode/GLM-5.2` | PASS; cleanup pending |
 
 ## Queue
 
@@ -63,10 +63,16 @@
   and actual scope passed. Original worker is pinning the evidence to immutable ranges.
 - 2026-08-21 — Worker revision `db361ea4` replaced the moving scope command with exact
   immutable checkpoint and reviewed ranges; implementation was untouched. Both isolated
-  GLM-5.2 reviewers are re-reviewing fixed base/head `a4876fe5...db361ea4`.
+  GLM-5.2 re-reviews passed: Standards had no BLOCKER/HIGH/MEDIUM (one non-blocking LOW
+  Data Clump and two TRIVIAL notes); Spec had no BLOCKER/HIGH/MEDIUM/LOW.
+- 2026-08-21 — Four worker commits merged to main as `f51caf76`, `3379600d`, `5d4d62ea`,
+  and `344aa344`. Architect main fresh acceptance passed: 233/233 tests, dual staging
+  inventories equivalent with 35 source-identical classes per SDK target, S5 `ALL PASS`,
+  debug hard gate exit 0, APK `BRIDGED=35 PACKAGED=0`, and fresh R8 exact 7→1 with only
+  `AssumeTrueForR8` remaining. Workspace cleanup is pending the closure push.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 041 evidence-only revision `db361ea4` is under dual-axis static
-re-review against fixed base `a4876fe5`.
+2026-08-21 — Task 041 merged and independently verified on main; closure documentation
+is ready to push, then the clean worker/reviewer workspaces will be removed.

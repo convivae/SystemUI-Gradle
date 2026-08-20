@@ -48,6 +48,26 @@ dontwarn。用户政策明确：B1/B2 **不允许 dontwarn**，优先结构性 c
 classpath 而不进 dex）同样待调查验证。Task 032 维持其原有 scope（B1–B3 四个 platform 类），
 B4 不并入 Task 032。
 
+### 2.1 Task 041 resolution ledger（2026-08-21）
+
+Task 041 以 ADR 0006 的声明式 SysUISdk `S3b` library-class bridge 关闭了 B1–B4
+的全部 5 个 root refs；为满足真实字节码依赖闭包，向 `android.jar` 与
+`core-for-system-modules.jar` 各注入精确 **35 个**真实 AOSP library classes：
+
+- B1 `UnsupportedAppUsage`：2 类；
+- B2 `IoUtils` / `NativeAllocationRegistry`：10 类；
+- B3 `AconfigFlagAccessor`：1 类；
+- B4 keepanno annotations：完整 22 类。
+
+两个 SDK target 的 entries 均与批准 source artifacts byte-identical；debug APK
+验证 `BRIDGED=35 PACKAGED=0`，因此未将 build/platform classes 变成 runtime program
+input。Main fresh R8 精确 **7→1**（removed=6、added=0）；其中第六个 root
+`org.apache.harmony.dalvik.ddmc.ChunkHandler` 来自此前 Task 040 后的七项基线，随
+真实 4-class DDMS slice 一并关闭。唯一剩余项
+`com.android.aconfig.annotations.AssumeTrueForR8` 刻意留给独立 Task 042，以验证并
+保留 R8 flag-assumption 语义。证据见
+`docs/issues/2026-08-21-r8-platform-build-classpath-closure.md`。
+
 ## 3. A 类组级总表（Acceptance #2 骨架）
 
 | # | 缺失（数量） | owning Soong module（bp 证据） | 通向 SystemUI 的 edge | 资源 | 形态判定 | 我方现状 scope | 产物实测 | 根因 |
