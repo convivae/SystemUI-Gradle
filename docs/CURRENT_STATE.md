@@ -1,257 +1,130 @@
-# SystemUI-Gradle 当前状态快照 (CURRENT_STATE.md)
+# Current State（唯一完整实时技术状态）
 
-> **当前阶段（2026-08-19 resource-link 波次）**：core javac 0 错误；featureFlag、可复现 SysUISdk、framework-res overlay 和 AGP `androidprv` namespace 丢失均已修。架构师亲验 `androidprv` 20→0、Python 工具测试 131/131 OK。`:app:processDebugResources` 当前仅被 SettingsLib AAR 缺 `drawable/settingslib_switch_{track,thumb}` 阻塞，APK 尚未生成。SysUISdk 从零重建流程见 `docs/architecture/2026-08-13-sysuisdk-reproducible-build.md`。
-
----
-
-## 0. TL;DR — 2026-08-12 里程碑
-
-| 指标 | 值 |
-|------|-----|
-| KSP 编译 | **BUILD SUCCESSFUL**，0 个 KSP 错误（debug/release 均验证） |
-| KSP 生成文件 | 2933 个（含 `DaggerReferenceGlobalRootComponent.java`） |
-| Kotlin 编译 | **BUILD SUCCESSFUL**，0 个 Kotlin 错误 |
-| APK 编译 | **未生成**：core javac 0 错误；featureFlag/framework-res/androidprv namespace 已修；`processDebugResources` 现被 SettingsLib AAR 缺两个 switch drawable 阻塞 |
-| Python 工具测试 | **131/131 OK**（task 012 架构师亲验） |
-| 实施基线 | Task 1–7 已完成 |
-
-**前一次里程碑（commit `05ea2064`）**：KSP + Dagger 2.55 useBindingGraphFix 首次通过，
-但 Kotlin 编译被 Compose inline 问题（`Couldn't inline method call: Box$default`）阻塞。
-
-**本次关键突破**：通过升级 Compose 到 1.11.4 + 迁移到 AGP `builtInKotlin=true`，
-**Compose inline 问题已消失**；Task 1 补齐 JSR-305 与 Compose compiler plugin 后，core Kotlin 编译达到 0 错误。
-
-**2026-08-19 resource-link 补充**：brief 008 已将 core javac 清零；brief 009 修复 WM-Shell featureFlag；brief 010/010b 建立可复现 SysUISdk S0–S3+S5（strict verify 7/7 PASS）；brief 011 加入 S4 framework-res overlay；brief 012 修复 AGP 9.3.1 丢弃 `xmlns:androidprv` 的问题。架构师亲验 helper `scanned=419 patched=8 compiled=8 unresolved=0`、`androidprv` 20→0、131/131 tests OK。当前新浮出层为 SettingsLib AAR 缺两个 AOSP SettingsTheme switch drawable。完整证据见
-[`issues/2026-08-13-agp-androidprv-namespace-fix.md`](./issues/2026-08-13-agp-androidprv-namespace-fix.md)。
+> **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
+> **Last verified**: 2026-08-20（Task 038 合并后 main fresh 验证，commit `dee92a90` + `8b3bb275`）
+> **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
 
-## 1. 本次升级详情（2026-08-12）
+## TL;DR
 
-### 1.1 版本兼容性调研结论
+| 维度 | 状态 |
+|------|------|
+| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 038 main fresh 2m35s） |
+| Python 工具测试 | **179/179 通过** |
+| Release R8 | **仍失败**：81 个真实 missing refs（closure 缺失，非成功状态） |
+| `shrinkResources` | 未完成有效验收 |
+| 设备/模拟器运行验证 | 未开始 |
+| 当前唯一工程优先级 | **SettingsLib 74 refs 的 program/resource closure** |
 
-**核心约束**：AGP 9.2.0 ~ 9.4.0-alpha08 **全部** 嵌入 Kotlin 2.2.10（查 POM 确认），
-没有更高版本的 AGP 支持 Kotlin 2.3.x。因此无法使用 Kotlin 2.3.x / 2.4.x。
+R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → **81**（每批精确差分，零新增未解释引用）。
 
-**最终版本矩阵**：
+## Verified milestones（已完成里程碑，最新在后）
 
-| 组件 | 升级前 | 升级后 | 说明 |
-|------|--------|--------|------|
-| Kotlin | 2.1.0（显式插件） | 2.2.10（AGP builtInKotlin） | AGP 9.2.0 内置，无法更高 |
-| KSP | 2.2.10-2.0.2 | 2.2.10-2.0.2（不变） | 对齐 AGP 内置 Kotlin 2.2.10 |
-| Dagger | 2.55 | 2.59.2 | useBindingGraphFix 自 2.58 起默认启用 |
-| Compose | 1.8.3 | 1.11.4 | **最高保留 `ExperimentalAnimatableApi` 的版本**（1.12.0 已移除） |
-| material3 | 1.4.0-alpha09 | 1.5.0-alpha18 | 对齐 compose 1.11.x（1.5.0-alpha25 需 compose 1.12.0） |
-| androidx.core | 1.16.0-beta01 | 1.19.0 | 公网最新 |
-| androidx.lifecycle | 2.9.0-alpha11 | 2.11.0 | 公网最新 |
-| androidx.activity | 1.11.0-alpha01 | 1.13.0 | 公网最新 |
-| androidx.room | 2.7.0-beta01 | 2.8.4 | 公网最新 |
-| androidx.recyclerview | 1.5.0-alpha01 | 1.4.0 | 公网最新（AOSP 版本不在公网） |
-| constraintlayout | 2.3.0-alpha01 | 2.2.2 | 公网最新（AOSP 版本不在公网） |
-| kotlinx-coroutines | 1.10.2 | 1.11.0 | 公网最新 |
-| guava | 33.4.8-android | 33.4.8-android（不变） | 已是最新 |
-| lottie | 6.6.6 | 6.6.6（不变） | 已是最新 |
-| media3 | 1.11.0 | 1.11.0（不变） | 已是最新 |
-| errorprone | 2.50.0 | 2.50.0（不变） | 已是最新 |
+| 时间 | 里程碑 | 证据 |
+|------|--------|------|
+| 2026-08-11 | KSP + Dagger 首次通过（0 KSP 错误） | commit `05ea2064` |
+| 2026-08-12 | 全依赖升级 + AGP builtInKotlin；KSP/Kotlin/core javac 全部 0 错误 | `docs/issues/2026-08-12-current-progress-standards-review.md` |
+| 2026-08-13 | core javac 0 错误（8 组根因清零）；SysUISdk 可复现 + framework-res + `androidprv` 修复 | `docs/issues/2026-08-13-agp-androidprv-namespace-fix.md` |
+| 2026-08-19 | **首个 debug APK**（Task 015，158,775,460 B）；SettingsLib per-target res closure（ADR 0005） | `docs/issues/2026-08-19-settingslib-per-target-aars.md` |
+| 2026-08-19 | 无混淆 release 基线（Task 029，126,642,058 B，V2 签名）；AOSP release 配置对齐 | `docs/issues/2026-08-20-release-r8-alignment-decisions.md` |
+| 2026-08-20 | 官方 Maven 依赖审计落地（zxing 3.5.4 等，4 个本地 jar 退役） | `docs/issues/2026-08-20-official-maven-audit.md` |
+| 2026-08-20 | R8 Batch 1–4C：clean monet/aconfig/view-capture/iconloader/WM-Shell proto/Traceur 产物；140→81 | `docs/architecture/2026-08-20-r8-runtime-closure-audit.md` |
+| 2026-08-20 | Traceur 双 AAR（Task 038）：640 类 + 105 res；R8 88→81 精确；179/179 | `docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md` |
 
-> **注意**：AOSP prebuilts 中的 `recyclerview:1.5.0-alpha01`、`constraintlayout:2.3.0-alpha01`
-> 等版本是 AOSP 内部构建，**不在公网 Maven 发布**。升级时改用公网可用的最新版。
+## Current build and verification matrix
 
-### 1.2 AGP builtInKotlin 迁移
+| 验证项 | 状态 | 最新证据 |
+|--------|------|---------|
+| KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 038 main fresh |
+| core Kotlin | ✅ 0 错误 | Task 038 main fresh |
+| core javac | ✅ 0 错误 | Task 038 main fresh |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 038 main fresh，exit 0 in 2m35s |
+| Python 工具测试 | ✅ 179/179 | Task 038 main fresh |
+| APK 类定义检查 | ✅ Traceur 640/640 source classes defined；manifest 含 `CONTROL_UI_TRACING` | Task 038 main fresh |
+| `:app:minifyReleaseWithR8` | ❌ 预期失败：81 个 missing refs（真实 closure 缺失） | Task 038 main fresh，exit 1，精确 88→81 |
+| `shrinkResources` 有效验收 | ❌ 未完成 | — |
+| 设备/模拟器 install + runtime | ❌ 未开始 | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
 
-**背景**：Kotlin 2.3.x 的 `kotlin-android` 插件与 AGP `newDsl=true`（9.0 默认）不兼容，
-报 `ClassCastException: ApplicationExtensionImpl$AgpDecorated → BaseExtension`。
-AGP 建议用 `android.builtInKotlin=true` 迁移到 AGP 内置 Kotlin。
+## Toolchain and module topology
 
-**改动**：
-1. `gradle.properties`：`android.builtInKotlin=true`
-2. 所有 Android 模块移除 `alias(libs.plugins.kotlin.android)`（AGP 内置提供）
-3. JVM 模块（common, plugin-core, plugin-processor）用 `id("org.jetbrains.kotlin.jvm")`（无版本，根 settings 声明 `apply false`）
-4. `settings.gradle.kts` 声明 `id("org.jetbrains.kotlin.jvm") version "2.2.10" apply false`
-5. catalog `kotlin = "2.2.10"`（仅 `kotlin-compose` 插件引用，须与 AGP 内置版本一致）
+版本矩阵（升级须先与用户沟通；Compose **不得升 1.12**，`ExperimentalAnimatableApi` 已移除而 AOSP 在用）：
 
-### 1.3 DSL 迁移
-
-所有 Android模块的 `android { kotlinOptions { } }` → 顶层 `kotlin { compilerOptions { } }`：
-- `freeCompilerArgs = listOf(...)` → `freeCompilerArgs.addAll(...)`
-- 涉及 8 个文件：app, SystemUI-core, SystemUI-compose, SystemUI-customization, SystemUI-animation, SystemUI-unfold, SystemUI-shared, SystemUI-shared-biometrics
-
-### 1.4 builtInKotlin + KSP + AIDL 兼容性修复
-
-迁移到 `builtInKotlin=true` 后出现三个兼容性问题，逐一解决：
-
-| 问题 | 根因 | 解决方案 |
-|------|------|---------|
-| KSP 通过 `kotlin.sourceSets` 添加源码被禁止 | builtInKotlin 不允许第三方插件操作 kotlin sourceSets | `android.disallowKotlinSourceSets=false` |
-| KSP `NO-SOURCE`（找不到 Kotlin 源码） | builtInKotlin 下 `java.srcDirs()` 不自动包含 `.kt` 文件 | 所有模块添加 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` |
-| KSP 无法解析 AIDL 生成的接口（`IHomeControlsRemoteProxy`） | builtInKotlin 下 AIDL 输出不在 KSP 源码集中，且 KSP 不自动依赖 AIDL 编译 | AIDL 输出按 variant 加入 `kotlin.srcDir(...)`；`kspDebugKotlin→compileDebugAidl`、`kspReleaseKotlin→compileReleaseAidl` |
-
-### 1.5 新增依赖
-
-- `androidx.asynclayoutinflater:1.1.0` — 解决 `AsyncLayoutInflater` 未解析（KSP 111→4 错误）
-- `androidx.leanback-preference:1.2.0` — 独立版本（与 leanback 1.3.0-alpha02 分离，因 leanback-preference 最新仅 1.2.0）
-
-### 1.6 Dagger useBindingGraphFix 简化
-
-- **之前**（commit `05ea2064`）：Dagger 2.55 需手动 `ksp { arg("dagger.useBindingGraphFix", "ENABLED") }`
-- **现在**：Dagger 2.59.2（≥2.58）默认启用 useBindingGraphFix，移除手动 `ksp{}` arg
-- `ksp.incremental=false` 仍保留（避免 KSP2 FIR 非确定性崩溃 google/ksp#2542）
-
----
-
-## 2. 当前构建状态详解
-
-### 2.1 KSP 编译（通过）
-
-```bash
-./gradlew :SystemUI-core:kspDebugKotlin --console=plain
-# → BUILD SUCCESSFUL
-# → 0 个 KSP 错误
-# → 2933 个文件生成（含 DaggerReferenceGlobalRootComponent.java）
-```
-
-**KSP 关键配置**（缺一不可）：
-1. `android.builtInKotlin=true`（gradle.properties）— AGP 内置 Kotlin
-2. `android.disallowKotlinSourceSets=false`（gradle.properties）— 允许 KSP 操作 kotlin sourceSets
-3. `ksp.incremental=false`（gradle.properties）— 避免 KSP2 FIR 崩溃
-4. Dagger 2.59.2（≥2.58 默认启用 useBindingGraphFix）
-5. SystemUI-core: `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)` + AIDL 输出目录加入 kotlin sourceSet
-6. KSP/AIDL 按 variant 精确接线：debug→debug、release→release
-
-### 2.2 Kotlin 编译（通过）
-
-```bash
-./gradlew :SystemUI-core:kspDebugKotlin :SystemUI-core:compileDebugKotlin --console=plain
-# → BUILD SUCCESSFUL
-# → 0 个 Kotlin 错误
-```
-
-Task 1 补充了 AOSP `Android.bp` 明确声明的 `com.google.code.findbugs:jsr305:3.0.2`，
-并应用了 Soong 等价的 Compose compiler plugin；此前的 `GuardedBy` 与 Box inline 错误均消失。
-
-### 2.3 APK 入口（资源链接阶段）
-
-- `:SystemUI-core:compileDebugJavaWithJavac`：BUILD SUCCESSFUL，0 errors。
-- WM-Shell featureFlag：已通过 AGP `androidResources.additionalParameters` 修复。
-- SysUISdk：S0–S5 可由受控输入从零重建；S4 已覆盖 AOSP framework resources。
-- AGP `androidprv` namespace：task 012 以受控 post-merge/pre-link AAPT2 重编译修复；架构师亲验 `scanned=419 patched=8 compiled=8 unresolved=0`，错误 20→0。
-- 当前首个失败层：SettingsLib AAR 未包含 AOSP `SettingsTheme/res/drawable-v31/settingslib_switch_{track,thumb}.xml`（track 另有 v34）。`app-debug.apk` 尚未生成。
-
-### 2.4 Compose inline 问题已解决
-
-**之前**（commit `05ea2064`）：`:SystemUI-core:compileDebugKotlin` 被
-`Couldn't inline method call: Box$default` 阻塞（AGENTS.md §2.4 已知问题：
-framework.jar 污染 KotlinCompile Compose inline metadata）。
-
-**现在**：升级到 Compose 1.11.4 + Kotlin 2.2.10（builtInKotlin）后，
-**Compose inline 问题已消失**，Kotlin 编译可正常运行到源码错误。
-
----
-
-## 3. 工具链版本
-
-| 工具 | 版本 | 备注 |
+| 组件 | 版本 | 备注 |
 |------|------|------|
 | Gradle | 9.5.0 | wrapper |
-| AGP | 9.3.1 | `libs.plugins.android.library` |
-| Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置（无显式插件） |
-| KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin 2.2.10 |
+| AGP | 9.3.1 | settings.gradle.kts 硬编码 |
+| Kotlin | 2.2.10 | AGP `builtInKotlin=true` 内置，无显式 kotlin-android 插件 |
+| KSP | 2.2.10-2.0.2 | 对齐 AGP 内置 Kotlin |
 | Dagger | 2.59.2 | useBindingGraphFix 默认启用（≥2.58） |
-| Compose | 1.11.4 | 最高保留 `ExperimentalAnimatableApi` |
+| Compose | 1.11.4 | **上限**（1.12.0 移除 `ExperimentalAnimatableApi`） |
 | material3 | 1.5.0-alpha18 | 对齐 compose 1.11.x |
 | JDK | 21 | 工具链 |
-| 目标 SDK | `SysUISdk` | 自定义 preview |
+| compileSdk | `SysUISdk`（自定义 preview） | 可由 tracked inputs 从零重建（`tools/build_sysuisdk.py --apply`） |
+| kotlinx-coroutines | 1.10.2 | **上限**：1.11.0 新 `SharedFlow.collectLatest` overload 破坏 AOSP 源码（Task 035 REDLINE 裁定） |
+| protobuf-javalite | 4.35.1 | latest-stable 政策（Task 035） |
+| zxing | 3.5.4 | 官方 Maven 最新（Task 026/027） |
 
----
+builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`android.disallowKotlinSourceSets=false`（Task 023 实验证实 REQUIRED）、每个 Android 模块 `kotlin.srcDirs(...)` 对齐 `java.srcDirs(...)`。
 
-## 4. 模块结构
-
-**最终 13 个 Gradle module**：
+13-module 拓扑（语义对齐 AOSP `Android.bp`，ADR 0003）：
 
 ```
-:app                          # APK 入口（无源码，只依赖 :SystemUI-core）
-:SystemUI-core                # 主模块（src + compose + pods + 入口类）
-:SystemUI-res                 # 独立资源 namespace（res/res-keyguard/res-product）
-:SystemUI-common              # Common + Log + utils 合并（JVM）
-:SystemUI-animation           # PlatformAnimation + Shader 合并
-:SystemUI-plugin-core         # Plugin runtime API（JVM）
-:SystemUI-plugin-processor    # Plugin annotation processor（build-time）
-:SystemUI-plugin              # PluginLib runtime（含 bcsmartspace）
-:SystemUI-unfold              # Unfold（KSP Dagger）
-:SystemUI-customization       # Customization（含 res）
-:SystemUI-shared              # Shared + keyguard 合并
-:SystemUI-shared-biometrics   # biometrics（独立 R namespace）
-:SystemUI-compose             # Compose Core + Scene 合并
+:app :SystemUI-core :SystemUI-res :SystemUI-common :SystemUI-animation
+:SystemUI-plugin-core :SystemUI-plugin-processor :SystemUI-plugin
+:SystemUI-unfold :SystemUI-customization :SystemUI-shared
+:SystemUI-shared-biometrics :SystemUI-compose
 ```
 
-**8 个 AAR**（`libs/aars/` + `libs/maven/`，2026-08-12 起随 `libs/` 全部提交入 git）：
-animationlib、WifiTrackerLib、iconloader、SettingsLib、WindowManager-Shell、WindowManager-Shell-shared、LowLightDreamLib、SettingsLibColor。
+## Dependency and artifact state
 
-**构建依赖**：`libs/` 已提交入 git，新 clone 无需重新生成 AOSP 产物即可复现当前构建基线；
-当前尚不能成功产出 APK：首个失败层是 `:app:processDebugResources`（SettingsLib AAR 缺两个 SettingsTheme switch drawable）。仅在需要更新 AOSP 产物时才跑
-`python3 tools/package_aosp_aar.py --all` → `python3 tools/install_aar_to_maven.py`。
+- `libs/`（jar + aars + maven）全部提交入 git；新 clone 可直接构建。仅在重新生成 AOSP 产物时运行 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py`。
+- 本地 Maven AAR（`libs/maven/`）均为确定性产物：SettingsLib（POM 携 7 条 per-target 依赖边，ADR 0005）、SettingsLibSettingsTheme、7 个 SettingsLib per-target res-only AAR、WindowManager-Shell 1.0.1（含 proto 闭包 1888 类）、iconloader 1.0.1（75 类）、animationlib、WifiTrackerLib、LowLightDreamLib、setupcompat、SettingsLibColor、notification-flags。
+- Traceur：双直接 AAR（TraceurCommon 640 类 + Traceur-res 105 res，Task 038）；占位 jar 已退役。
+- 官方 Maven 坐标优先（Task 026 审计后）：zxing、protobuf-javalite、coroutines 1.10.2、errorprone 等走公网；AOSP prebuilts 版本多数不在公网，逐个查 `maven-metadata.xml`。
+- aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034），notification flags 已从本地 Maven 迁出。
+- `libs/prebuilts/` 仅剩 `tracinglib-platform.jar`（历史遗留，逐步清理）。
 
----
+## Release closure blocker（81 构成）
 
-## 5. 待解决
+Release R8 在 `:app:minifyReleaseWithR8` 阶段因 **81 个真实 missing refs** 失败（exit 1，这是**预期失败**，不是成功状态）：
 
-1. 用户批准后重新打包 SettingsLib AAR，将 AOSP `SettingsLib/SettingsTheme` 的 switch drawable 变体纳入产物，再运行 `:app:processDebugResources` 和 `:app:assembleDebug`
-2. 处理 Deferred Follow-ups：Room schema 导出、Kotlin 2.3 data-class copy 可见性、~~manifest 重复权限~~（2026-08-19 查实：3 条重复均 AOSP manifest 自带，merger 已去重，按规则 C 不修，关闭）、评估移除 `android.disallowKotlinSourceSets=false`
+| 组 | 数量 | 内容 | 处置路径 |
+|----|------|------|---------|
+| SettingsLib | 74 | SettingsLib 程序/资源 closure 缺口 | 下一 bounded task（当前唯一优先级） |
+| B1–B4 | 6 | platform/build classpath 桥接类 | 需 SysUISdk/AGP 桥或窄域处理，禁止宽泛 `-dontwarn` |
+| `AssumeTrueForR8` | 1 | build-time annotation 类 | 单独批次处理 |
 
-执行计划：[`superpowers/plans/2026-08-12-build-to-apk-readiness.md`](./superpowers/plans/2026-08-12-build-to-apk-readiness.md)
+## Next ordered work
 
----
+1. **SettingsLib 74 program/resource closure**（当前唯一工程优先级）
+2. B1–B4 platform/build classpath 6 refs
+3. `AssumeTrueForR8` 1 ref
+4. release R8 达到 0 missing refs
+5. `shrinkResources` + 签名/打包验证
+6. 兼容模拟器/设备安装与运行验证（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
 
-## 6. 历史错误数演变（供诊断参考）
-
-| 日期 | 错误数 | 关键改动 |
-|------|--------|----------|
-| 2026-07-22 初 | 5296 | 仅有 sdk android.jar |
-| 2026-07-22 | 2000 | framework.jar + 删 stub + Monet + Flags jar |
-| 2026-07-28 | 1979 | 删 server-notification-flags stub |
-| 2026-07-28 | 1879 | 全项目 R import 歧义清零 |
-| 2026-07-29 | 509 | 大批源码补齐 |
-| 2026-07-29 | 70 | tier① 全源码化 + KSP + AIDL 源码编译 + 规则 C 审查 |
-| 2026-08-11 | — | KSP + Dagger 2.55 useBindingGraphFix 首次通过（0 KSP 错误） |
-| **2026-08-12** | **KSP: 0, Kotlin: 2** | **全依赖升级 + builtInKotlin 迁移** |
-| **2026-08-12 实施** | **KSP: 0, Kotlin: 0** | **Task 1–6：jsr305、aconfig JAR、WM-Shell AAR、variant KSP/AIDL、AGP 9.3.1、文档/格式清理** |
-| **2026-08-12 验证** | **KSP: 0, Kotlin: 0, javac: 42** | **Task 7：完整验证链；`:app:assembleDebug` 在 core Java 编译阶段失败，APK 未生成** |
-
-> **注意**：错误数仅作诊断参考，不是提交/回滚/审批门槛（规则 I）。
-
----
-
-## 7. 验证清单
-
-提交前确认：
-
-- [ ] 改动是否让模块结构、依赖来源、源码/资源对齐或最终可构建性向前推进
-- [ ] 来源和决策已记录；中间态的已知问题没有被隐瞒
-- [ ] 没引入新 stub
-- [ ] 没有凭空生成或擅自修改 res/ 资源
-- [ ] 已如实记录本次是否运行编译/验证及实际结果
-
----
-
-## 8. 快速命令
+## Verification commands and evidence
 
 ```bash
-# 重新生成 AOSP 产物（可选——libs/ 已提交入 git，新 clone 无需此步）
-python3 tools/package_aosp_aar.py --all && python3 tools/install_aar_to_maven.py
+# 单元测试（Python 工具测试）
+python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 179/179
 
-# KSP 编译 + 统计错误
-./gradlew :SystemUI-core:kspDebugKotlin --console=plain 2>&1 | tee /tmp/build.log
-echo "KSP errors: $(grep -c 'e: \[ksp\]' /tmp/build.log)"
+# Debug APK（每批硬门禁）
+./gradlew :app:assembleDebug --console=plain
 
-# Kotlin 编译 + 统计错误
-./gradlew :SystemUI-core:compileDebugKotlin --console=plain 2>&1 | tee /tmp/build2.log
-echo "Kotlin errors: $(grep -c '^e: file:' /tmp/build2.log)"
-
-# 分类错误
-grep "^e: file:" /tmp/build2.log | \
-  sed -E 's|.*/SystemUI-Gradle/SystemUI-core/src/com/android/||; s|/[^/]+\.kt.*||' | \
-  sort | uniq -c | sort -rn | head -20
-
-# 单元测试
-python3 -m unittest discover -s tools/tests -p 'test_*.py'
+# Release R8（当前预期 exit 1，81 missing refs）
+./gradlew :app:minifyReleaseWithR8 --rerun-tasks --console=plain
 ```
+
+最新证据：Task 038 main fresh（2026-08-20）— 179/179 tests；`:app:assembleDebug` exit 0（2m35s）；Traceur AAR 哈希与确定性 worker 产物一致；640/640 类 defined；R8 88→81 精确差分（7 removed、0 added、`AssumeTrueForR8` retained）。详细证据：`docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
+
+构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
+
+## Historical pointers
+
+- 错误数/迁移历史：`docs/GRADLE_MIGRATION_LOG.md`（append-only）
+- 深度调研与 audit：`docs/architecture/`（含 active operational audit `2026-08-20-r8-runtime-closure-audit.md`）
+- 每日问题记录：`docs/issues/`
+- 踩坑经验：`docs/PITFALLS.md`
+- 未完成路线：`docs/PLAN.md`
