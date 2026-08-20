@@ -317,7 +317,7 @@ libs/
     │   ├── WindowManager-Shell/1.0.0/                  # libs.systemui.wmshell
     │   ├── WindowManager-Shell-shared/1.0.0/           # libs.systemui.wmshell.shared
     │   ├── animationlib/1.0.0/                         # libs.systemui.animationlib
-    │   ├── iconloader/1.0.0/                           # libs.systemui.iconloader
+    │   ├── iconloader/1.0.1/                           # libs.systemui.iconloader（Task 036：javac+kotlin 合并 75 类，1.0.0 已退役）
     │   ├── setupcompat/1.0.0/                          # libs.systemui.setupcompat
     │   ├── SettingsLibActionButtonsPreference/1.0.0/   # libs.systemui.settingslib.action.buttons.preference（经 SettingsLib POM 传递依赖，ADR 0005）
     │   ├── SettingsLibAdaptiveIcon/1.0.0/              # libs.systemui.settingslib.adaptive.icon（同上）
