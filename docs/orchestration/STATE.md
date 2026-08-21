@@ -10,8 +10,8 @@
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
 | 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | amended one commit to `229e39fc`; done, clean, unpushed |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | awaiting reset/re-review of `229e39fc` |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | awaiting reset/re-review of `229e39fc` |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | final static re-review working at `229e39fc` |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | final static re-review working at `229e39fc` |
 
 ## Queue
 
