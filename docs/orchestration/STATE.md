@@ -7,14 +7,16 @@
 
 ## Active Workers
 
-None.
+| Task | Workspace / Pane | Branch / Worktree | Model | Stage |
+|---|---|---|---|---|
+| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1` | `task-044-r8-aconfig-narrow-dontwarn` / `/home/conv/myspace/SystemUI-Gradle-wt-044` | `joycode/GLM-5.3` | dispatched; CONTRACT verification pending |
 
 ## Queue
 
-1. Await explicit approval of the exact Task 044 Worker brief.
-2. After approval, dispatch the isolated Task 044 implementation for the user-approved
-   `AssumeTrueForR8` option A treatment.
-3. Return to the other seven `NOT APPROVED` packets only after Task 044 closure.
+1. Verify Task 044 Worker CONTRACT, then monitor implementation through review and merge.
+2. Design a separate read-only-first SysUISdk composition/script audit; no existing stage is
+   removed or changed until its role and replacement evidence are approved.
+3. Return to the other seven `NOT APPROVED` packets after Task 044 closure.
 
 ## Recent Orchestration Transitions
 
@@ -126,10 +128,14 @@ None.
   release-only AGP/R8 `dontwarn`, with no SysUISdk class, artifact, or assumption rules.
   Task 044 issue, TDD plan, and redline-gated exact brief were drafted; implementation dispatch
   awaits separate exact-brief approval.
+- 2026-08-21 — User approved the exact Task 044 brief. Isolated worktree/workspace `w28:p1`
+  started at planning base `3cc95a49` with explicit `joycode/GLM-5.3`; model was verified from
+  the live pane. CONTRACT verification is pending. The separate SysUISdk cleanup request is not
+  part of Task 044 and will begin read-only-first after design clarification.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 044 option A is approved at design level. Its bounded issue, TDD plan, and
-redline-gated exact Worker brief are prepared. No implementation, Gradle command, Worker dispatch,
-or build-behavior change has occurred; exact-brief approval is pending.
+2026-08-21 — Task 044 exact brief is approved and the isolated GLM-5.3 Worker is dispatched at
+`w28:p1`; CONTRACT verification is pending. The requested SysUISdk/script follow-up is queued as a
+separate architectural audit and has no implementation authorization yet.
