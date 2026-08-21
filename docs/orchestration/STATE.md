@@ -11,12 +11,14 @@ None.
 
 ## Queue
 
-1. Obtain H.6 authorization before correcting stale old SysUISdk workflow text in
-   `AGENTS.md`, both READMEs, two Gradle comments, and ADR 0006.
-2. Separately inventory the legacy live SysUISdk's nine historical backups; request
-   explicit approval before any irreversible deletion.
-3. Run installation/SystemUI restart/runtime validation on a compatible root/remount
-   device or system image; then return to the seven remaining `NOT APPROVED` packets.
+1. Tasks 046–048 approved at design level; their exact documentation-sync,
+   backup-inventory, and device-preflight briefs are prepared and await dispatch approval.
+2. After Task 047, present the exact candidate backup deletions and reclaimed bytes for
+   a separate irreversible-action decision.
+3. After Task 048, request a second approval only if a target reaches
+   `READY_FOR_REPLACEMENT_REVIEW`; otherwise retain explicit runtime deferment.
+4. Return to the seven remaining `NOT APPROVED` architecture packets after these
+   follow-ups close.
 
 ## Recent Orchestration Transitions
 
@@ -175,11 +177,15 @@ None.
   leftover Kotlin daemon; it was truthfully isolated as an environment/memory-pressure
   event, then recovered by serialized R8 and optimized/package runs without code changes.
   Device/runtime validation remains deferred.
+- 2026-08-21 — User approved follow-up design A: separate Task 046 factual SysUISdk
+  workflow documentation sync, Task 047 read-only nine-backup inventory, and Task 048
+  read-only device/runtime preflight. Public READMEs must contain no internal development
+  identifiers. Planning issues, checkbox plans, and exact briefs are prepared; dispatch
+  awaits exact-brief approval. Backup deletion and device mutation remain separately gated.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 045 final review, main merge, architect fresh acceptance,
-closure push, and worker/reviewer cleanup are complete. No SystemUI worker remains
-active. Device/runtime validation is explicitly deferred; the queue above requires
-separate user decisions.
+2026-08-21 — Follow-up design A is approved and decomposed into three isolated exact
+briefs. No Worker is active. Dispatch awaits user approval of Tasks 046–048; all external
+backup deletion and device state changes remain explicitly unapproved.
