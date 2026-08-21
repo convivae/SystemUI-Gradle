@@ -9,14 +9,15 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1` | `task-044-r8-aconfig-narrow-dontwarn` / `/home/conv/myspace/SystemUI-Gradle-wt-044` | `joycode/GLM-5.3` | CONTRACT verified; fresh pre-change R8 baseline running |
+| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1` | `task-044-r8-aconfig-narrow-dontwarn` / `/home/conv/myspace/SystemUI-Gradle-wt-044` | `joycode/GLM-5.3` | Worker completed at `4a0a8b08`; dual-axis review found one REDLINE-process BLOCKER plus stale-hash MEDIUM; user accepted the disclosed AGP-native adjudication; docs-only revision in progress |
 
 ## Queue
 
-1. Verify Task 044 Worker CONTRACT, then monitor implementation through review and merge.
+1. Finish Task 044 docs-only review revision, static re-review, main fresh verification, merge/push, and full workspace/worktree/branch cleanup.
 2. Design a separate read-only-first SysUISdk composition/script audit; no existing stage is
    removed or changed until its role and replacement evidence are approved.
-3. Return to the other seven `NOT APPROVED` packets after Task 044 closure.
+3. After replacement proof, delete repository files proven unused; inventory external historical SDK backups separately before irreversible deletion.
+4. Return to the other seven `NOT APPROVED` packets after Task 044/SysUISdk closure.
 
 ## Recent Orchestration Transitions
 
@@ -133,11 +134,23 @@
   were verified. The Worker is running the serialized fresh pre-change R8 baseline. The separate
   SysUISdk cleanup request is not part of Task 044 and will begin read-only-first after design
   clarification.
+- 2026-08-21 — Task 044 Worker completed implementation `ec98a979` plus evidence `4a0a8b08`:
+  239/239 Python tests, Debug hard gate, fresh R8 zero missing refs, full optimized-resource Release,
+  APK integrity/content checks, and V2 signing all reported successful; device validation deferred.
+- 2026-08-21 — Fixed-range dual-axis review at `3cc95a49...4a0a8b08` failed: Spec found one
+  BLOCKER because the Worker substituted AGP 9.3.1's real optimized-resource tasks for the brief's
+  nonexistent literal `shrinkReleaseRes` task without first REDLINE-stopping; both axes found the
+  stale pre-amend hash `051ed6bd`. The architect disclosed both issues; the user replied OK and
+  authorized continuing. A docs-only revision must preserve the process deviation while recording
+  post-review acceptance of `optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` as
+  the corrected AGP-native semantic gate. User also requested deletion of proven-unused files after
+  completion; destructive external backup cleanup remains inventory-gated.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 044 exact brief is approved; the isolated GLM-5.3 Worker at `w28:p1` has a
-verified full CONTRACT and is running the serialized pre-change R8 baseline. The requested
-SysUISdk/script follow-up is queued as a separate architectural audit and has no implementation
-authorization yet.
+2026-08-21 — Task 044 implementation/build evidence is complete, but initial dual-axis review failed
+on one REDLINE-process BLOCKER and one stale-hash MEDIUM. After full disclosure the user authorized
+continuing with the AGP-native resource-shrink task adjudication. The original Worker is making a
+no-Gradle docs-only correction before static re-review. Proven-unused repository files must be deleted
+after replacement verification; external historical SDK backups remain separately inventory-gated.
