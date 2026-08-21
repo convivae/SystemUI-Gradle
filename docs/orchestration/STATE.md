@@ -9,14 +9,16 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | replacement working; CONTRACT verified; two predecessors stopped cleanly |
+| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | done at `86b514d2`; HANDOFF received; unpushed |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | static review working; fixed `67fe3284...86b514d2` |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | static review working; fixed `67fe3284...86b514d2` |
 
 ## Queue
 
-1. Task 043 Worker produces the static current-state architecture audit and one unpushed
-   documentation commit.
-2. After Worker HANDOFF: dual-axis static review at a fixed base/head, then architect static
-   verification. No Gradle is permitted for this audit or its review.
+1. Collect both fixed-range Task 043 static review reports; no Gradle.
+2. Resolve any BLOCKER/HIGH/MEDIUM through the original Worker and re-review before merge.
+3. If both axes pass, architect verifies the static gates at the worker head and then merges the
+   two documentation paths to main.
 
 ## Recent Orchestration Transitions
 
@@ -93,10 +95,13 @@
 - 2026-08-21 — The high-thinking replacement also remained in evidence synthesis and was
   stopped with a clean worktree. Final replacement `w1W:p3` uses the same explicit GLM-5.3 at
   low thinking, has an independently verified CONTRACT, and reuses the retained evidence.
+- 2026-08-21 — Final Worker completed `86b514d2` with 13 sections, all 85 artifact paths,
+  a 36-row decision ledger and 8 unapproved packets. Static completeness/scope/content gates
+  passed and HANDOFF was received. Fixed-range Standards and Spec reviewers were dispatched
+  in isolated worktrees with explicit GLM-5.2; Gradle remains prohibited.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 043 final replacement active in isolated `w1W:p3`; explicit GLM-5.3 low
-thinking and full CONTRACT verified. Both predecessors stopped cleanly with no repo diff; static
-audit continues from retained evidence with no Gradle, Git history, implementation, or rollback.
+2026-08-21 — Task 043 Worker done at `86b514d2`; two isolated GLM-5.2 static reviewers are
+working against fixed `67fe3284...86b514d2`. No Gradle, implementation, rollback, or push.
