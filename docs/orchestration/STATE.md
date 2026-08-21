@@ -9,16 +9,15 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | revision working after review FAIL |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | FAIL: 1 HIGH, 3 LOW, 2 TRIVIAL |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | PASS: 1 LOW, 2 TRIVIAL |
+| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | amended one commit to `60c8fa8d`; done, clean, unpushed |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | revised-head static re-review working |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | revised-head static re-review working |
 
 ## Queue
 
-1. Original Worker amends `86b514d2` to correct the nine Maven-AAR class counts and all
-   lower-severity factual/completeness findings; no Gradle.
-2. Reset both isolated reviewers to the revised immutable head and re-run both axes.
-3. If both axes pass, architect verifies static gates and merges the two documentation paths.
+1. Collect both static re-review reports at fixed `67fe3284...60c8fa8d`; no Gradle.
+2. If both axes pass, architect verifies static gates and merges the two documentation paths.
+3. Close all three workspaces/worktrees/branches after push and patch-equivalence checks.
 
 ## Recent Orchestration Transitions
 
@@ -103,10 +102,13 @@
   false class-count table plus three LOW factual citations/roles; Spec PASS found one LOW
   provider-field gap and two TRIVIAL citation/hash-format issues. Findings were independently
   verified and returned to the original Worker for a one-commit amend and full static recheck.
+- 2026-08-21 — Worker amended the sole audit commit to `60c8fa8d`, correcting all review
+  facts, expanding all 85 hashes to full SHA-256, and adding provider/registration status.
+  Both reviewer worktrees were clean-reset to the revised head and full static re-review began.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Initial Task 043 Standards review failed with one verified HIGH factual error;
-Spec review passed. Original Worker is amending the two-doc audit only; no Gradle, implementation,
-rollback, history investigation, or push.
+2026-08-21 — Task 043 audit revised to one commit `60c8fa8d`; isolated Standards and Spec
+reviewers are re-reviewing fixed `67fe3284...60c8fa8d`. No Gradle, implementation, rollback,
+history investigation, or push.
