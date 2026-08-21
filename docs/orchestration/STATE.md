@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 | `w1W:p2` (`task043-audit-r2`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` | replacement working; CONTRACT verified; predecessor stopped cleanly |
+| 043 | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | replacement working; CONTRACT verified; two predecessors stopped cleanly |
 
 ## Queue
 
@@ -90,10 +90,13 @@
   evidence synthesis without changing repository files. Its `/tmp/task043-inventory/` evidence
   was retained. A fresh GLM-5.3 replacement in `w1W:p2` has a separately verified modelId and
   CONTRACT and is producing the same two-document, static-only deliverable.
+- 2026-08-21 — The high-thinking replacement also remained in evidence synthesis and was
+  stopped with a clean worktree. Final replacement `w1W:p3` uses the same explicit GLM-5.3 at
+  low thinking, has an independently verified CONTRACT, and reuses the retained evidence.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 043 replacement active in isolated `w1W:p2`; explicit GLM-5.3 model and
-full CONTRACT verified. Predecessor stopped cleanly with no repo diff; static report-only audit
-continues with no Gradle, Git history, implementation, or rollback.
+2026-08-21 — Task 043 final replacement active in isolated `w1W:p3`; explicit GLM-5.3 low
+thinking and full CONTRACT verified. Both predecessors stopped cleanly with no repo diff; static
+audit continues from retained evidence with no Gradle, Git history, implementation, or rollback.
