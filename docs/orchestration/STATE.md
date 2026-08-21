@@ -9,16 +9,15 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 046 | `w2T:p1`; reviewers `w2X:p1`, `w2Y:p1` | `task-046-sysuisdk-workflow-docs` + review worktrees | GLM-5.3 / GLM-5.2 | dual PASS; merged as `138eee81`; main fresh PASS; push/cleanup pending | factual docs/comments only; no Gradle |
-| 047 | `w2V:p1`; reviewers `w2Z:p1`, `w20:p1` | `task-047-sysuisdk-backup-inventory` + review worktrees | GLM-5.3 / GLM-5.2 | worker done at `e939985e`; dual review working | nine external backups read-only; no deletion |
-| 048 | `w2W:p1` | `task-048-emulator-runtime-validation` / `SystemUI-Gradle-wt-048` | `joycode/GLM-5.3` | working; CONTRACT verified | mutation only on proven dedicated disposable emulator |
+| 047 | `w2V:p1`; reviewers `w2Z:p1`, `w20:p1` | `task-047-sysuisdk-backup-inventory` + review worktrees | GLM-5.3 / GLM-5.2 | dual PASS; merged as `b7ee1475`; main fresh PASS; push/cleanup pending | nine external backups read-only; no deletion |
+| 048 | original `w2W:p1`; replacement `w2W:p2` | `task-048-emulator-runtime-validation` / `SystemUI-Gradle-wt-048` | `joycode/GLM-5.3` | replacement working; original session ended on screenshot-read model 500 after safe baseline only | mutation only on proven dedicated disposable emulator |
 
 ## Queue
 
-1. Monitor Tasks 046–048 without interrupting `working`; review each fixed range after
-   terminal-final HANDOFF.
-2. After Task 047, present exact candidate backup deletions and reclaimed bytes for a
-   separate irreversible repository-external cleanup decision.
+1. Monitor Task 048 replacement without interrupting `working`; review its fixed range
+   after terminal-final HANDOFF.
+2. After Task 047 push/cleanup, present exact candidate backup deletions and reclaimed
+   bytes for a separate irreversible repository-external cleanup decision.
 3. Return to the seven remaining `NOT APPROVED` architecture packets after these
    follow-ups close.
 
@@ -201,10 +200,27 @@
   Architect main fresh acceptance passed README hygiene, retired-reference and CLI
   gates, 220/220 Python tests, diff/scope checks, and comment-only Gradle verification.
   Gradle was not run by design.
+- 2026-08-21 — Task 046 Worker and both reviewer workspaces/worktrees were clean
+  and removed after push; their three local branches were deleted. No other workspace
+  was touched.
+- 2026-08-21 — Task 047 Worker completed `e939985e`; fixed-range Standards and
+  Spec reviews both passed with no BLOCKER/HIGH/MEDIUM finding. The Standards LOW
+  claim that no terminal HANDOFF existed was adjudicated false: the required block was
+  captured from the Worker terminal, not stored in repository files. The commit was
+  cherry-picked as `b7ee1475` with matching patch ID. Architect fresh read-only
+  acceptance confirmed the nine-file set, ZIP integrity, zero duplicate entries,
+  unchanged metadata/hashes, exact advisory byte totals, `DELETED=0`, and canonical
+  generator success. No Gradle task ran.
+- 2026-08-21 — Task 048 original Worker session ended on a model-service 500 while
+  attempting to render a baseline screenshot. It had created and booted the dedicated
+  AVD, passed the three-part identity gate, and captured baseline evidence, but had not
+  run root/remount/push. Replacement `w2W:p2` was started with explicit GLM-5.3 and
+  instructed to re-read the contract, re-run identity after reconnect, and continue
+  without model image rendering.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 046 dual-axis review, merge, and main fresh static acceptance
-passed; push and workspace cleanup are pending. Task 047 dual review and Task 048
-runtime execution remain active.
+2026-08-21 — Task 046 is pushed and cleaned. Task 047 dual review, merge, and
+architect fresh acceptance passed; push/cleanup and the separate user deletion decision
+remain. Task 048 replacement execution remains active.
