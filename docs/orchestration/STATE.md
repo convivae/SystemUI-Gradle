@@ -9,12 +9,12 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| _None_ | — | — | — | Task 044 fully closed; no active SystemUI worker or reviewer |
+| 045 | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | dispatched; CONTRACT pending |
 
 ## Queue
 
-1. Freeze the single-entry SysUISdk composition table and present the exact Worker brief for user approval.
-2. After replacement proof, delete repository files proven unused; inventory external historical SDK backups separately before irreversible deletion.
+1. Task 045 Worker implements the approved single-entry SysUISdk composition and performs serialized Debug/Release validation.
+2. After Worker completion: fixed-range dual-axis review, architect main fresh verification, merge/push, then separately inventory external historical SDK backups before irreversible deletion.
 3. Return to the other seven `NOT APPROVED` packets after SysUISdk closure.
 
 ## Recent Orchestration Transitions
@@ -153,12 +153,14 @@
   closed; three clean patch-equivalent worktrees and local branches were removed; all temporary
   `/tmp/task044-*` logs were deleted. No repository implementation file was deleted because Task 044
   introduced no superseded repository file.
+- 2026-08-21 — User approved Task 045 Worker dispatch and expanded future Worker model choices to
+  Opus 4.8, Kimi K3, and GLM-5.3. The frozen single-entry SysUISdk architecture, TDD plan, issue,
+  and exact brief were committed at `eb81e644`. Isolated worktree `w2C:p1` started with explicit
+  `joycode/GLM-5.3`; live pane model verification passed and CONTRACT is pending.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 044 is fully closed, pushed, and cleaned: no active task/review workspace,
-worktree, branch, or `/tmp/task044-*` file remains. The next implementation track is the
-user-approved single-entry SysUISdk direction, but its artifact map and exact Worker brief must be
-frozen and separately approved first. Repository files are deleted only after the replacement is
-proven; external historical SDK backups remain separately inventory-gated.
+2026-08-21 — Task 045 is dispatched in isolated worktree `/home/conv/myspace/SystemUI-Gradle-wt-045`
+at planning base `eb81e644` with explicit `joycode/GLM-5.3`. The user approved Worker execution;
+the live pane confirms the requested model, and full CONTRACT verification is pending.
