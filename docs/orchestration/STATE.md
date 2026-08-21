@@ -9,14 +9,13 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1`; reviewers `w2A:p1`, `w2B:p1` | task/review worktrees | `joycode/GLM-5.3` / `joycode/GLM-5.2` | Revised range passed both axes; merged to main; architect fresh Debug/R8/Release/APK/V2 verification passed after one documented host-OOM retry; cleanup pending |
+| _None_ | — | — | — | Task 044 fully closed; no active SystemUI worker or reviewer |
 
 ## Queue
 
-1. Close Task 044 documentation, push, and remove worker/reviewer workspaces, worktrees, branches, and temporary logs.
-2. Freeze the single-entry SysUISdk composition table and present the exact Worker brief for user approval.
-3. After replacement proof, delete repository files proven unused; inventory external historical SDK backups separately before irreversible deletion.
-4. Return to the other seven `NOT APPROVED` packets after SysUISdk closure.
+1. Freeze the single-entry SysUISdk composition table and present the exact Worker brief for user approval.
+2. After replacement proof, delete repository files proven unused; inventory external historical SDK backups separately before irreversible deletion.
+3. Return to the other seven `NOT APPROVED` packets after SysUISdk closure.
 
 ## Recent Orchestration Transitions
 
@@ -150,12 +149,16 @@
   R8, full optimized-resource Release, APK integrity/content, and V2 signing. The first main
   Release attempt was truthfully recorded as a host OOM kill; terminating an orphaned 8.4 GiB
   Kotlin daemon and retrying without repository changes succeeded.
+- 2026-08-21 — Task 044 closure `d0addca7` was pushed. Worker and both reviewer workspaces were
+  closed; three clean patch-equivalent worktrees and local branches were removed; all temporary
+  `/tmp/task044-*` logs were deleted. No repository implementation file was deleted because Task 044
+  introduced no superseded repository file.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 044 is merged and architect main fresh verification is complete. The revised
-fixed range passed both review axes; R8 missing refs are zero and full optimized-resource Release
-plus V2 signing pass on main. Worker/reviewer/worktree/branch/temp-log cleanup remains before final
-closure. The next implementation track is the user-approved single-entry SysUISdk direction, but
-its artifact map and exact Worker brief must be frozen and separately approved first.
+2026-08-21 — Task 044 is fully closed, pushed, and cleaned: no active task/review workspace,
+worktree, branch, or `/tmp/task044-*` file remains. The next implementation track is the
+user-approved single-entry SysUISdk direction, but its artifact map and exact Worker brief must be
+frozen and separately approved first. Repository files are deleted only after the replacement is
+proven; external historical SDK backups remain separately inventory-gated.
