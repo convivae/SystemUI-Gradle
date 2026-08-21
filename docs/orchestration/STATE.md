@@ -9,16 +9,15 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | done at `229e39fc`; final precision revision pending |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | PASS: 1 LOW omitted animation-module consumer |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | PASS: 1 TRIVIAL acceptance-script wording |
+| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | final amend `df6e0b31`; done, clean, unpushed |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | awaiting final-head reset/re-review |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | awaiting final-head reset/re-review |
 
 ## Queue
 
-1. Original Worker adds the omitted `:SystemUI-plugin` animation-module consumer and clarifies
-   that ledger parsing was Task 043 revision verification, not a persisted plan gate.
-2. Reset both reviewers to the final amended head for focused plus regression re-review.
-3. Architect re-runs full static acceptance, then merges, pushes, and cleans all workspaces.
+1. Reset both reviewers to final amended head `df6e0b31` and perform focused regression review.
+2. Architect re-runs full static acceptance and patch-equivalence checks.
+3. Merge, push, and clean all three workspaces/worktrees/branches.
 
 ## Recent Orchestration Transitions
 
@@ -116,10 +115,13 @@
 - 2026-08-21 — Both final re-reviews passed `229e39fc`; Standards found one LOW omitted
   `:SystemUI-plugin` module consumer, Spec found one TRIVIAL ambiguity implying the persisted
   plan gate had changed. Both are being removed in one last precision-only amend.
+- 2026-08-21 — Final precision amend `df6e0b31` adds all five animation-module consumers and
+  states that ledger parsing was a Task 043 revision-time command, not a plan-gate change.
+  Worker reported all static inventory/hash/class/ledger/packet/scope gates passing.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Both axes pass `229e39fc` with one LOW and one TRIVIAL precision issue; a final
-minimal amend will remove both before merge. No Gradle, implementation, rollback, history
-investigation, or push.
+2026-08-21 — Final one-commit audit head is `df6e0b31`; all known review findings are amended.
+Focused final re-review and architect static verification remain; no Gradle, implementation,
+rollback, history investigation, or push.
