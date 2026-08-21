@@ -9,9 +9,9 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| 045 Worker | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | done; HANDOFF + commits `991b6302`/`76ad180f`/`379e07d0`, never pushed |
-| 045 Standards review | `w2G:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-standards` | `review-045-standards` at `379e07d0` | `joycode/GLM-5.2` | working; fixed base `eb81e644`, static-only |
-| 045 Spec review | `w2H:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-spec` | `review-045-spec` at `379e07d0` | `joycode/GLM-5.2` | working; fixed base `eb81e644`, static-only |
+| 045 Worker | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | docs-only precision revision requested after dual-axis PASS; no Gradle |
+| 045 Standards review | `w2G:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-standards` | `review-045-standards` at `379e07d0` | `joycode/GLM-5.2` | done; PASS, 0 BLOCKER/HIGH/MEDIUM, 2 LOW + 1 TRIVIAL |
+| 045 Spec review | `w2H:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-spec` | `review-045-spec` at `379e07d0` | `joycode/GLM-5.2` | done; PASS, zero findings |
 
 ## Queue
 
@@ -160,14 +160,17 @@
   and exact brief were committed at `eb81e644`. Isolated worktree `w2C:p1` started with explicit
   `joycode/GLM-5.3`; live pane model and full CONTRACT were verified, and the Worker started the
   TDD plan from the 239-test clean baseline.
+- 2026-08-21 — Task 045 fixed-base/head review at `eb81e644...379e07d0` completed:
+  Standards PASS with no BLOCKER/HIGH/MEDIUM (two LOW and one TRIVIAL), and Spec
+  PASS with zero findings. A docs-only precision revision is fixing one unrelated
+  `239/233` typo and fully inventorying stale old-workflow references in forbidden
+  rule/README/Gradle-comment/ADR paths; implementation and prior gates remain unchanged.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 045 Worker completed the exact brief in isolated worktree
-`/home/conv/myspace/SystemUI-Gradle-wt-045` with commits `991b6302`, `76ad180f`, and
-`379e07d0`, reported all functional gates green, restored the ignored
-`local.properties`, and produced a terminal `HANDOFF:` without pushing. Fixed-base
-`eb81e644` / head `379e07d0` Standards and Spec reviewers are now working in two
-isolated worktrees with explicit `joycode/GLM-5.2`; both are static-only and Gradle
-remains prohibited.
+2026-08-21 — Task 045 fixed-base `eb81e644` / head `379e07d0` dual-axis
+review completed: Standards PASS with 0 BLOCKER/HIGH/MEDIUM and two LOW plus one
+TRIVIAL; Spec PASS with zero findings. The original Worker is making a docs-only
+precision revision for a `239/233` typo and complete stale-reference inventory;
+no implementation or Gradle rerun is involved.
