@@ -9,7 +9,7 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1` | `task-044-r8-aconfig-narrow-dontwarn` / `/home/conv/myspace/SystemUI-Gradle-wt-044` | `joycode/GLM-5.3` | dispatched; CONTRACT verification pending |
+| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1` | `task-044-r8-aconfig-narrow-dontwarn` / `/home/conv/myspace/SystemUI-Gradle-wt-044` | `joycode/GLM-5.3` | CONTRACT verified; fresh pre-change R8 baseline running |
 
 ## Queue
 
@@ -129,13 +129,15 @@
   Task 044 issue, TDD plan, and redline-gated exact brief were drafted; implementation dispatch
   awaits separate exact-brief approval.
 - 2026-08-21 — User approved the exact Task 044 brief. Isolated worktree/workspace `w28:p1`
-  started at planning base `3cc95a49` with explicit `joycode/GLM-5.3`; model was verified from
-  the live pane. CONTRACT verification is pending. The separate SysUISdk cleanup request is not
-  part of Task 044 and will begin read-only-first after design clarification.
+  started at planning base `3cc95a49` with explicit `joycode/GLM-5.3`; model and full CONTRACT
+  were verified. The Worker is running the serialized fresh pre-change R8 baseline. The separate
+  SysUISdk cleanup request is not part of Task 044 and will begin read-only-first after design
+  clarification.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 044 exact brief is approved and the isolated GLM-5.3 Worker is dispatched at
-`w28:p1`; CONTRACT verification is pending. The requested SysUISdk/script follow-up is queued as a
-separate architectural audit and has no implementation authorization yet.
+2026-08-21 — Task 044 exact brief is approved; the isolated GLM-5.3 Worker at `w28:p1` has a
+verified full CONTRACT and is running the serialized pre-change R8 baseline. The requested
+SysUISdk/script follow-up is queued as a separate architectural audit and has no implementation
+authorization yet.
