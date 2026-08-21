@@ -101,3 +101,20 @@ paths changed. No Gradle task is run.
 Provide one focused English commit, exact per-file category/recommendation, total
 candidate-delete bytes, explicit `DELETED=0`, actual verification outputs, and the
 required terminal-final `HANDOFF:` block.
+
+## Completion state (worker, 2026-08-22)
+
+Executed read-only; completed. Report:
+`docs/architecture/2026-08-21-legacy-sysuisdk-backup-inventory.md`; execution record:
+`docs/issues/2026-08-21-legacy-sysuisdk-backup-inventory.md`; plan checkboxes all
+ticked with evidence.
+
+- Acceptance summary outputs (real): `BACKUPS=9 / HASHED=9 / MISSING=0`;
+  generator exit 0 with marker; `BACKUP_SET_UNCHANGED=true`; `DELETED=0`.
+- Nine report rows, nine recommendations: 8 × byte-identical/redundant →
+  candidate-delete (163,149,374 bytes total); 1 × unique historical snapshot
+  (`android.jar.bak-20260813-210816`) → retain.
+- Caveat A disclosed: `android.jar.bak-20260821-011116/013303` redundancy depends on
+  the live primary (legacy/unmarked; its content is not reproducible from immutable
+  inputs — live android.jar = canonical content + 1,266 legacy entries).
+- No Gradle task run; no SDK/AOSP file touched; only Allowed repository paths changed.
