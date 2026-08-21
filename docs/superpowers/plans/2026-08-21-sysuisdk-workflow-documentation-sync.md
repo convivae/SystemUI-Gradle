@@ -37,7 +37,7 @@
 
 ## Task 1: Capture the stale-reference baseline
 
-- [ ] **Step 1: Record exact stale references**
+- [x] **Step 1: Record exact stale references**
 
 Run:
 
@@ -52,13 +52,13 @@ into the issue before editing; do not reinterpret unrelated historical records.
 
 ## Task 2: Synchronize internal rule and decision documents
 
-- [ ] **Step 1: Update AGENTS and Gradle comments**
+- [x] **Step 1: Update AGENTS and Gradle comments**
 
 Replace only the deleted-installer/staged-pipeline facts with the normal single-entry
 command and source-derived AIDL/composition ownership. Keep rule F and §2.4 semantics
 unchanged. Add a dated AGENTS history entry for this factual synchronization.
 
-- [ ] **Step 2: Amend ADR 0006 without erasing history**
+- [x] **Step 2: Amend ADR 0006 without erasing history**
 
 The current decision must state:
 
@@ -76,7 +76,7 @@ not the current decision or rollback instructions.
 
 ## Task 3: Rewrite the public README status without internal codenames
 
-- [ ] **Step 1: Update Chinese README**
+- [x] **Step 1: Update Chinese README**
 
 Describe the supported command, current 220-test/Debug/optimized-Release results, zero
 R8 missing references, and pending device validation in user-facing terms. Replace
@@ -84,14 +84,14 @@ existing Task/rule/ADR/CONV and A/B closure shorthand with plain language. Do no
 internal stages, packets, workers, reviews, commits, red-line procedures, or the former
 implementation-only missing class.
 
-- [ ] **Step 2: Apply semantically equivalent English wording**
+- [x] **Step 2: Apply semantically equivalent English wording**
 
 Keep the two READMEs aligned in facts, commands, and completion state; translation need
 not be word-for-word.
 
 ## Task 4: Static and regression verification
 
-- [ ] **Step 1: Verify public README hygiene**
+- [x] **Step 1: Verify public README hygiene**
 
 ```bash
 python3 - <<'PY'
@@ -116,7 +116,7 @@ PY
 
 Expected: `README_PUBLIC_HYGIENE=PASS`.
 
-- [ ] **Step 2: Verify active workflow references**
+- [x] **Step 2: Verify active workflow references**
 
 ```bash
 ! rg -n 'tools/install_sdk\.py|build_sysuisdk\.py --apply' \
@@ -127,7 +127,7 @@ python3 tools/build_sysuisdk.py --help
 Expected: grep produces no output; help shows required `--aosp-root` plus optional
 `--sdk-root`, `--base-platform`, `--output`, and `--replace`, with no legacy option.
 
-- [ ] **Step 3: Run regression and scope gates**
+- [x] **Step 3: Run regression and scope gates**
 
 ```bash
 python3 -m unittest discover -s tools/tests -p 'test_*.py'
@@ -138,7 +138,7 @@ git status --short
 Expected: exit 0, `Ran 220 tests`, `OK`; no whitespace errors; only the File map paths
 changed. No Gradle command is run.
 
-- [ ] **Step 4: Record evidence and commit**
+- [x] **Step 4: Record evidence and commit**
 
 Update the issue with actual commands/results and any wording deviations. Commit in
 English, never push, and finish with the required `HANDOFF:` block.

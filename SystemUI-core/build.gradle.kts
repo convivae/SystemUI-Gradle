@@ -52,7 +52,7 @@ android {
             )
             // AOSP 源码里的 .aidl 参与源码编译（规则 S：AIDL 是 SystemUI 自有代码，不用 jar）
             // framework 隐藏接口（android.os.IRemoteCallback）由 SysUISdk 的 framework.aidl 补齐，
-            // 见 tools/install_sdk.py（规则 F：非 SystemUI 代码不源码复制）
+            // 见 tools/build_sysuisdk.py（规则 F：非 SystemUI 代码不源码复制）
             aidl.srcDirs("src")
             // 资源已独立为 :SystemUI-res（com.android.systemui.res.R namespace）
             manifest.srcFile("AndroidManifest.xml")
@@ -334,7 +334,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.datastore.core)
     // SystemUI AIDL：源码里的 .aidl 现由 AGP 源码编译（buildFeatures.aidl=true + aidl.srcDirs("src")）。
-    // framework 隐藏接口 android.os.IRemoteCallback 由 SysUISdk 的 framework.aidl 补齐（tools/install_sdk.py），
+    // framework 隐藏接口 android.os.IRemoteCallback 由 SysUISdk 的 framework.aidl 补齐（tools/build_sysuisdk.py），
     // 不源码复制 framework 代码（规则 F）。已删 libs/systemui-aidl.jar：AIDL 是 SystemUI 自有代码，规则 S 要求源码编译。
 
     // 注：compose/scene（com.android.compose.animation.scene，45 文件）与 compose/core

@@ -25,7 +25,7 @@
 - **ADR 0002** `tools-scripts-only-python.md` — `tools/` 下脚本一律 Python，禁止 .sh
 - **ADR 0003** `app-module-aligns-aosp-bp.md` — 模块划分/依赖/入口类位置严格按 AOSP `Android.bp`
 - **ADR 0004** `conv-markup-and-alignment-discipline.md` — AOSP 源码改动用 CONV 标记追溯；对齐工具 strict 不卡 MODIFIED，靠人工对账
-- **ADR 0006** `sysuisdk-r8-library-class-bridge.md` — 用声明式 SysUISdk stage 向 AGP/R8 提供真实平台与构建期 library classes，禁止 runtime 打包或 dontwarn 掩盖
+- **ADR 0006** `sysuisdk-r8-library-class-bridge.md` — 通过单入口 SysUISdk 生成器（`tools/build_sysuisdk.py --aosp-root`）向 AGP/R8 提供真实平台与构建期 library classes，禁止 runtime 打包或 dontwarn 掩盖
 
 写 ADR 的判定：决策 **难以反转 + 没有上下文会令人困惑 + 有真正权衡**。
 
@@ -119,9 +119,9 @@
 
 - 典型：SystemUI aidl `import android.os.IRemoteCallback`（framework @hide 接口），
   public `framework.aidl` 缺 → **在 SysUISdk 的 `framework.aidl` 追加 `interface X;` 声明**
-  （由 `tools/install_sdk.py` 幂等完成），**不是**把 `IRemoteCallback.aidl` 拷进 `SystemUI-core/`。
-- SysUISdk 不是不可变 SDK：可使用 AOSP `framework.jar` 补代码 API、使用 `framework-res.apk` 补私有资源、修改 `framework.aidl` 补 AIDL 声明；详见 §2.4。
-- SysUISdk 生成/补丁方法参考 `CarSystemUIGradle/docs/GRADLE_MIGRATION.md` 问题二十四至二十六，以及 `docs/architecture/2026-08-06-reference-project-rationale.md`。
+  （由 `tools/build_sysuisdk.py` 单入口生成器幂等完成，见 §2.4），**不是**把 `IRemoteCallback.aidl` 拷进 `SystemUI-core/`。
+- SysUISdk 不是不可变 SDK：由单入口生成器从只读官方 SDK platform + 已构建 AOSP `out/` 产物重建，补齐代码 API、私有资源与 AIDL 声明；详见 §2.4。
+- SysUISdk 当前生成机制见 `docs/architecture/2026-08-21-sysuisdk-single-entry-composition.md`；历史生成/补丁方法背景见 `docs/architecture/2026-08-06-reference-project-rationale.md` 与 `CarSystemUIGradle/docs/GRADLE_MIGRATION.md` 问题二十四至二十六。
 - 反面教训（2026-07-29）：一度把 framework `IRemoteCallback.aidl` 源码复制进 core → 被用户否决，
   改为补 SysUISdk。
 
@@ -203,10 +203,15 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 ### 2.4 自定义 SDK、framework.jar 与 framework-res.apk 的职责
 
 - 我们的自定义 SDK：`compileSdkPreview = "SysUISdk"`，位于 `/home/conv/Android/Sdk/platforms/android-SysUISdk/`
-- **自定义 SDK 不是不可变黑盒，可以从 AOSP/设备产物重新生成或补丁**（用户 2026-08-06 明确）：
-  1. 将 AOSP `framework.jar` 的类合并/暴露到 SysUISdk `android.jar`，或作为 compileOnly/bootclasspath → 补标准 SDK 缺失的 @hide API、内部类和常量
-  2. 将设备/AOSP `framework-res.apk` 的 `resources.arsc` + `res/` 写入 SysUISdk `android.jar` → 解决 `@*android:` 私有资源 ID 与设备 framework 不匹配
-  3. 修改 SysUISdk `framework.aidl` → 补 framework @hide AIDL interface/parcelable 声明（`tools/install_sdk.py` 当前负责此项）
+- **自定义 SDK 不是不可变黑盒，可以由单入口生成器从 AOSP 产物重新生成**（用户 2026-08-06 明确；机制于 2026-08-21 修订为单入口，ADR 0006）：
+  ```bash
+  python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp
+  ```
+  一次调用消费冻结的八输入 AOSP 映射（含 framework 聚合 JAR、framework-res.apk、core-libart、unsupportedappusage、aconfig-annotations、keepanno、两个隐藏 AIDL 源），事务性地生成完整 `android-SysUISdk`；官方 base platform（默认 `android-37.0`）只读，输出由生成器拥有并可用 `--replace` 替换（仅限生成器 marker 认定的自有输出）。详见 `docs/architecture/2026-08-21-sysuisdk-single-entry-composition.md`。
+  生成器同时完成旧补丁流程的三项职责：
+  1. 将 AOSP framework 聚合类的真实字节合并到 SysUISdk `android.jar` → 补标准 SDK 缺失的 @hide API、内部类和常量（根 `build.gradle.kts` 另将 `framework.jar` 注入 JavaCompile，见下）
+  2. 将 AOSP `framework-res.apk` 的 `resources.arsc` + `res/` 写入 SysUISdk `android.jar` → 解决 `@*android:` 私有资源 ID 与设备 framework 不匹配
+  3. 从 AOSP 源码派生并追加 SysUISdk `framework.aidl` 的 framework @hide AIDL interface/parcelable 声明
 - **framework.jar 与自定义 SDK 资源不是一回事**：framework.jar 主要提供代码签名；单独把它放到 bootclasspath 不能解决 framework 私有资源 ID（参考项目问题二十五已证伪），资源 ID 必须由自定义 SDK 的 android.jar 资源部分解决
 - 本项目根 `build.gradle.kts` 当前只把 framework.jar 注入 `JavaCompile.bootstrapClasspath/classpath`，**不注入 KotlinCompile**；后者会污染 Compose inline metadata，触发 `Couldn't inline method call` 等 IR 错误
 - Kotlin 所需隐藏 API 由合并后的 SysUISdk/AGP classpath 提供
@@ -399,7 +404,7 @@ javap -p <ClassName>
 | `tools/install_aar_to_maven.py` | 把 `libs/aars/*.aar` 安装到 `libs/maven/` 本地 Maven 仓（AAR + POM 骨架） |
 | `tools/package_compilelib_jars.py` | 打包 compilelib debug/release JAR（确定性） |
 | `tools/package_aconfig_jars.py` | 从 AOSP `javac` 产物打包完整 aconfig runtime JAR |
-| `tools/install_sdk.py` | 校验 + 补 SysUISdk framework.aidl（framework 隐藏接口） |
+| `tools/build_sysuisdk.py` | 单入口 SysUISdk 生成器：从只读官方 SDK platform + 已构建 AOSP `out/` 产物事务性生成 `android-SysUISdk`（含 39-entry library bridge、私有资源、framework.aidl 隐藏接口声明） |
 | `tools/clean_prebuilts.py` | 清理 prebuilt jar 中的冲突类（与 maven 重复） |
 
 ---
@@ -435,6 +440,7 @@ javap -p <ClassName>
 | 2026-08-07 增订 | 新增 ADR 0004（CONV 标记规范 + 对齐纪律）；规则 R 升级为“禁止无标记擅改”；`check_source_alignment.py --strict` 不再卡 MODIFIED |
 | 2026-08-12 增订 | §4 更新：全依赖升级 + builtInKotlin 迁移（commit `e3548016`）；§4.2 重写为当前构建状态；新增 §4.3 版本矩阵；§2.4 记录 Compose inline 问题已解决 |
 | 2026-08-20 增订 | Task 039 文档治理：§四 由动态进度快照改为实时状态归属（指向 CURRENT_STATE）；规则 P/S/C/F/R/B/H/D/I、依赖策略、SysUISdk 规则、诊断流程与用户偏好全部保留不变 |
+| 2026-08-21 增订 | SysUISdk 工作流事实同步：旧 SDK 补丁脚本已退役，ADR 索引、§1.7、§2.4、§7 工具表统一为单入口 `python3 tools/build_sysuisdk.py --aosp-root`（ADR 0006 机制已修订） |
 
 ---
 

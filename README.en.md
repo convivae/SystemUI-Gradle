@@ -7,8 +7,8 @@ the real SystemUI source tree, fully extracted from Soong/Blueprint, compilable 
 the AOSP source tree, while staying 1:1 aligned with AOSP sources and resources so it
 can flow back upstream at any time.
 
-> **Status:** active development. The debug APK builds; release (R8 whole-program
-> optimization) is being closed out batch by batch.
+> **Status:** active development. Both the debug and the optimized release APK build;
+> on-device runtime validation has not been performed yet.
 > Live snapshot: [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md).
 
 ---
@@ -34,39 +34,43 @@ Sibling project using the same approach: [CarSystemUIGradle](../CarSystemUIGradl
 | Dimension | Status |
 |---|---|
 | Toolchain | Gradle 9.5.0 · AGP 9.3.1 · Kotlin 2.2.10 (AGP `builtInKotlin`) · KSP 2.2.10-2.0.2 · Dagger 2.59.2 · Compose 1.11.4 |
-| Custom SDK | SysUISdk fully reproducible (`tools/build_sysuisdk.py --apply`: hidden APIs, framework-private `androidprv` resources, @hide AIDL declarations) |
+| Custom SDK | SysUISdk reproducible with a single command (`python3 tools/build_sysuisdk.py --aosp-root <aosp>`; transactional generation incl. hidden APIs, framework-private resources, @hide AIDL declarations) |
 | Compilation | KSP 0 errors · core Kotlin 0 errors · core javac 0 errors |
-| Unit tests | **233/233 passing** |
+| Unit tests | **220/220 passing** |
 | **Debug APK** | ✅ `:app:assembleDebug` succeeds (hard gate for every batch of changes) |
-| Release APK | 🚧 R8 config aligned with AOSP (zero obfuscation in core / unified R8+shrinkResources in app); missing runtime-closure refs converged 140 → **1**, with only `AssumeTrueForR8` remaining |
-| Device validation | ⏳ After release is green (emulator/device plan on file) |
+| Release APK | ✅ optimized release build succeeds (R8 whole-program optimization + resource shrinking + V2 signing); R8 missing references: **0** |
+| Device validation | ⏳ not yet performed (emulator/device plan on file) |
 
 ## What's been done
 
-- **13 Gradle modules** whose boundaries semantically follow AOSP `Android.bp` (ADR 0003);
-  all SystemUI-owned code is source-built (Rule S — never jarred), while non-SystemUI AOSP
-  artifacts are consumed only as jars/AARs (Rule F — no copying framework sources)
-- **Source/resources aligned 1:1 with AOSP** (Rule C — nothing missing, nothing extra),
-  with automated alignment checks; any unavoidable source edit is traceable via CONV
-  markup (ADR 0004)
-- **Reproducible SysUISdk pipeline**: hidden APIs, framework-private resources, and @hide
-  AIDL declarations are patched declaratively by script — no hand-edited SDK
+- **13 Gradle modules** whose boundaries semantically follow AOSP `Android.bp`;
+  all SystemUI-owned code is source-built (never jarred), while non-SystemUI AOSP
+  artifacts are consumed only as jars/AARs (no copying framework sources)
+- **Source/resources aligned 1:1 with AOSP** (nothing missing, nothing extra),
+  with automated alignment checks; any unavoidable source edit is recorded with
+  traceable markup comments — auditable and reversible
+- **Single-command SysUISdk generator**: builds `android-SysUISdk` transactionally
+  from a read-only official SDK platform plus built AOSP outputs; hidden APIs,
+  framework-private resources, and @hide AIDL declarations all come from real AOSP
+  inputs — no hand-edited SDK
 - **Full dependency governance**: AOSP libraries are deterministically packaged into 29
   AARs by `tools/package_aosp_aar.py`, served through a local Maven repo + version
   catalog; third-party libraries use official Maven coordinates at the latest compatible
   versions; all of `libs/` is committed to git
 - **Release aligned with AOSP**: Soong behavior is the baseline — zero ProGuard in core,
   unified R8 + shrinkResources in the app
-- **R8 runtime-closure audit and burn-down**: 140 missing refs classified into
-  A (program/runtime) and B (classpath) groups, cleared in batches:
-  140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → **1**
+- **R8 runtime-closure audit and burn-down**: 140 missing references cleared exactly,
+  batch by batch, down to **0**, with all platform/build-time bridge classes kept out of
+  the APK
 
 ## What's in progress
 
-- **Burning the R8 closure to zero (1 → 0)**: Task 041 used the SysUISdk library bridge to close the six platform/build classpath refs exactly; only the single `AssumeTrueForR8` ref remains
-- After the closure reaches zero: full `:app:assembleRelease` (R8 + resource shrinking +
-  signing)
-- Emulator/device validation (plan: `docs/issues/2026-08-20-device-emulator-validation-plan.md`)
+- **On-device runtime validation**: the optimized release APK builds, is signed, and passes
+  integrity checks, but has not yet been installed and exercised on a compatible emulator
+  or device (a green build is not a runtime validation; plan:
+  `docs/issues/2026-08-20-device-emulator-validation-plan.md`)
+- Ongoing alignment of sources/resources with the AOSP upstream, plus read-only inventory
+  and cleanup assessment of legacy artifacts
 
 ## Module layout
 
@@ -120,15 +124,17 @@ Every AAR/JAR is **deterministically** packaged from AOSP Soong outputs by scrip
 
 - Linux x86_64 · JDK 21
 - Android SDK with the **SysUISdk** platform installed
-  (`platforms/android-SysUISdk`, produced by `tools/install_sdk.py` / `build_sysuisdk.py`)
-- A local AOSP tree is needed only if you want to regenerate the AOSP artifacts
+  (`platforms/android-SysUISdk`, produced by
+  `python3 tools/build_sysuisdk.py --aosp-root <aosp>`)
+- A local AOSP tree is needed only to regenerate the SysUISdk platform or other AOSP
+  artifacts (and it must have been built once — the generator only consumes `out/` outputs)
 
 ### Common commands
 
 ```bash
 ./gradlew :app:assembleDebug            # Build the debug APK (current hard gate)
 ./gradlew :SystemUI-core:compileDebugKotlin
-python3 -m unittest discover -s tools/tests   # Toolchain tests (233)
+python3 -m unittest discover -s tools/tests   # Toolchain tests (220)
 ```
 
 All of `libs/` is committed to git — **a fresh clone builds out of the box**.
