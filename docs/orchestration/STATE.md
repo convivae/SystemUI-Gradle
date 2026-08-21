@@ -9,15 +9,16 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | amended one commit to `229e39fc`; done, clean, unpushed |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | final static re-review working at `229e39fc` |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | final static re-review working at `229e39fc` |
+| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | done at `229e39fc`; final precision revision pending |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | PASS: 1 LOW omitted animation-module consumer |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | PASS: 1 TRIVIAL acceptance-script wording |
 
 ## Queue
 
-1. Reset both isolated reviewers to `229e39fc` and re-run both full axes.
-2. Architect re-runs the complete static acceptance, including parsed ledger counts.
-3. Merge, push, then close and remove all three workspaces/worktrees/branches.
+1. Original Worker adds the omitted `:SystemUI-plugin` animation-module consumer and clarifies
+   that ledger parsing was Task 043 revision verification, not a persisted plan gate.
+2. Reset both reviewers to the final amended head for focused plus regression re-review.
+3. Architect re-runs full static acceptance, then merges, pushes, and cleans all workspaces.
 
 ## Recent Orchestration Transitions
 
@@ -112,10 +113,13 @@
 - 2026-08-21 — Worker amended the sole commit to `229e39fc`; report and issue now use
   machine-parsed 34 rows / keep 26, the gate parses recommendations and eight packets, and
   the animationlib summary accurately distinguishes direct aliases from core transitivity.
+- 2026-08-21 — Both final re-reviews passed `229e39fc`; Standards found one LOW omitted
+  `:SystemUI-plugin` module consumer, Spec found one TRIVIAL ambiguity implying the persisted
+  plan gate had changed. Both are being removed in one last precision-only amend.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 043 second revision is one clean unpushed commit `229e39fc`; parsed ledger
-is 34 rows / keep 26 and eight packets. Final dual-axis re-review is next; no Gradle, implementation,
-rollback, history investigation, or push.
+2026-08-21 — Both axes pass `229e39fc` with one LOW and one TRIVIAL precision issue; a final
+minimal amend will remove both before merge. No Gradle, implementation, rollback, history
+investigation, or push.
