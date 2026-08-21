@@ -13,9 +13,9 @@
 | Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 044 worker fresh 2m30s） |
 | Python 工具测试 | **239/239 通过**（Task 044 worker，含 6 个新增 adapter contract 测试） |
 | Release R8 | **SUCCESS（Task 044 worker fresh，exit 0，missing refs 1→0）**：option A 单 FQN release-only adapter（`app/proguard_gradle.flags`） |
-| `:app:assembleRelease` | **SUCCESS（首次）**：minify + AGP 9.3.1 optimized resource shrink + V2 签名；APK 28,600,808 B |
+| `:app:assembleRelease` | **SUCCESS（首次）**：minify + resource shrink（AGP 9.3.1 optimized shrinker 实际执行；brief 原字面 `shrinkReleaseRes` 任务名判据未满足，为 AGP 9.x 下不可满足项 — post-review 用户已批准以 AGP-native 证据作为修正后的语义验收）+ V2 签名；APK 28,600,808 B |
 | 设备/模拟器运行验证 | **未运行**（构建完成 ≠ 装机验证；另行排期） |
-| 当前唯一工程优先级 | 架构师 review/merge Task 044；随后兼容设备 install/SystemUI restart/runtime smoke test |
+| 当前唯一工程优先级 | merge Task 044（双轴 review 完成：Standards FAIL + Spec BLOCKER 已向用户披露并获 OK，post-review adjudication 已记录）；随后兼容设备 install/SystemUI restart/runtime smoke test |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
@@ -46,7 +46,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | Python 工具测试 | ✅ 239/239（含 Task 044 新增 6 个 adapter contract 测试） | Task 044 worker fresh |
 | APK 类定义检查 | ✅ SysUISdk bridge 35/35 present；APK 0/35 packaged | Task 041 main fresh |
 | `:app:minifyReleaseWithR8` | ✅ exit 0，missing refs 0；effective config 对 FQN 仅一条 exact `-dontwarn`，无 keep/assume | Task 044 worker fresh（`--rerun-tasks`，3m28s） |
-| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL（首次）：`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease`（AGP 9.x optimized shrinker；无 legacy `shrinkReleaseRes` 任务） | Task 044 worker，exit 0（3m49s） |
+| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL（首次）：resource shrinking **技术性已验证**（`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 实际执行）；但 brief 原字面任务名判据（`shrinkReleaseRes`）**未满足**（AGP 9.3.1 无此任务，字面不可满足；Worker 未先提 REDLINE 属流程偏差）— **post-review 用户已批准 adjudication**：接受 AGP-native 证据作为修正后的语义验收，非追溯性合规 | Task 044 worker，exit 0（3m49s） |
 | Release APK 检查 | ✅ 非空 28,600,808 B；`unzip -t` 无错；dex 无 `AssumeTrueForR8`（PACKAGED=0）；`apksigner verify` exit 0 且 V2 scheme true（platform 证书） | Task 044 worker |
 | 设备/模拟器 install + runtime | ❌ 未运行（构建完成不等于装机验证） | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
 
@@ -99,9 +99,16 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract 测试
 （`tools/tests/test_gradle_r8_adapter_rules.py`）机械钉住该边界。
 
+**Resource-shrink 验收裁定**：brief 原字面判据（日志含 `:app:shrinkReleaseRes`）在 AGP 9.3.1
+下不可满足（该任务已不存在）；Worker 未先提 REDLINE 而直接替换为 AGP-native 证据，属流程
+偏差。双轴 review（base `3cc95a49` / head `4a0a8b08`）判 Spec FAIL BLOCKER；架构师向用户
+披露后，用户批准继续，**post-review waiver** 接受 `optimizeReleaseResources` +
+`convertShrunkResourcesToBinaryRelease` 实际执行的证据作为修正后的语义验收。详见
+`docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md`。
+
 ## Next ordered work
 
-1. **架构师静态 review 并 merge Task 044**（adapter + 测试 + 文档两个 commit；主分支 fresh 复验在全部 worker 构建结束后进行）
+1. **merge Task 044**（adapter + 测试 + 文档 + review-fix 共四个 commit；双轴 review 的 stale hash / 验收对账 / 未提 REDLINE 偏差已披露并获用户 OK，post-review adjudication 已记录在案；主分支 fresh 复验在全部 worker 构建结束后进行）
 2. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`；Task 044 只完成了构建侧验收，未装机）
 3. Gradle-native 架构 Phase 2：对只读 audit ledger 的非 keep 项逐项向用户解释并决策（Task 043 ledger）
 
@@ -121,7 +128,7 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 239/239
 ./gradlew :app:assembleRelease --console=plain
 ```
 
-最新证据：Task 044 worker worktree（2026-08-21）— 239/239 tests（6 个新 adapter contract 测试先 RED 后 GREEN）；pre-change fresh R8 exit 1 且 missing set 恰为 singleton `AssumeTrueForR8`；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（2m30s）；post-change fresh R8 exit 0（3m28s）且 missing refs 0、`configuration.txt` 对 FQN 仅一条 exact `-dontwarn`；`:app:assembleRelease` exit 0（3m49s，首次尝试因 Gradle daemon 崩溃中止后重试成功），资源收缩由 AGP 9.3.1 optimized shrinker（`optimizeReleaseResources`/`convertShrunkResourcesToBinaryRelease`）执行；APK 28,600,808 B（SHA-256 `ea7425d6...`）`unzip -t` 无错；dex 不含 `AssumeTrueForR8`（PACKAGED=0）；`apksigner verify` exit 0 且 V2 scheme true（platform 证书）。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md`。前一证据（Task 041 main fresh）：`docs/issues/2026-08-21-r8-platform-build-classpath-closure.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
+最新证据：Task 044 worker worktree（2026-08-21）— 239/239 tests（6 个新 adapter contract 测试先 RED 后 GREEN）；pre-change fresh R8 exit 1 且 missing set 恰为 singleton `AssumeTrueForR8`；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（2m30s）；post-change fresh R8 exit 0（3m28s）且 missing refs 0、`configuration.txt` 对 FQN 仅一条 exact `-dontwarn`；`:app:assembleRelease` exit 0（3m49s，首次尝试因 Gradle daemon 崩溃中止后重试成功），资源收缩技术性已验证（AGP 9.3.1 optimized shrinker：`optimizeReleaseResources`/`convertShrunkResourcesToBinaryRelease` 实际执行；brief 原字面 `shrinkReleaseRes` 判据未满足，AGP 9.x 下不可满足，post-review 用户已批准 adjudication）；APK 28,600,808 B（SHA-256 `ea7425d6...`）`unzip -t` 无错；dex 不含 `AssumeTrueForR8`（PACKAGED=0）；`apksigner verify` exit 0 且 V2 scheme true（platform 证书）。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md`。前一证据（Task 041 main fresh）：`docs/issues/2026-08-21-r8-platform-build-classpath-closure.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 

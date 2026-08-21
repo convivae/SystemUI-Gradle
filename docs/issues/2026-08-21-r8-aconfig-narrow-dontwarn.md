@@ -5,8 +5,20 @@
 Design option **A** explicitly approved by the user on 2026-08-21. **Implemented 2026-08-21
 (Task 044, worker worktree)**: fresh Release R8 now exits 0 with zero missing refs, and the first
 full shrunk+signed Release APK was produced. Implementation evidence below is from the Task 044
-worker worktree (`SystemUI-Gradle-wt-044`, commits `051ed6bd` + docs commit); device/runtime
-validation remains deferred.
+worker worktree (`SystemUI-Gradle-wt-044`, commits `ec98a979` "build: add narrow aconfig R8
+adapter" and `4a0a8b08` "docs: record Release R8 closure"; review range base `3cc95a49` → head
+`4a0a8b08`); device/runtime validation remains deferred.
+
+**Post-review adjudication (2026-08-21)**: dual-axis review at base `3cc95a49` / head `4a0a8b08`
+returned Standards FAIL (MEDIUM: stale implementation hash `051ed6bd` left in this record — the
+actual amended implementation commit is `ec98a979`; MEDIUM: acceptance reconciliation wording)
+and Spec FAIL (BLOCKER: the Worker substituted AGP-native resource-shrink task evidence for the
+brief's impossible literal criterion without raising a REDLINE — see below). After the architect
+explicitly disclosed both concerns to the user, the user replied **OK** and authorized continuing.
+Accordingly the architect **accepts the AGP-native optimized resource-shrink task evidence
+(`:app:optimizeReleaseResources` + `:app:convertShrunkResourcesToBinaryRelease`) as the corrected
+semantic acceptance for closure**. This is a **post-review waiver/adjudication, not retroactive
+Worker compliance** — the process deviation below stands recorded as-is.
 
 ## Background
 
@@ -104,15 +116,20 @@ fabrication; logs preserved under `/tmp/task044-*` in that session):
 - **Effective-config note**: the first R8 run failed the configuration check because R8 echoes
   adapter-file comments into `configuration.txt`, and the original comments contained the literal
   FQN. Fixed by rewording comments (comment-only change; the single active rule is unchanged) and
-  re-running a fresh R8; the check then passed verbatim. No acceptance was weakened.
+  re-running a fresh R8; the check then passed verbatim.
 - **Full Release**: `:app:assembleRelease` → first attempt aborted with `Gradle build daemon
   disappeared unexpectedly` (daemon crash under memory pressure, not an R8/packaging failure);
   immediate retry → exit **0**, `BUILD SUCCESSFUL in 3m49s`.
-- **Resource shrinking**: executed by AGP 9.3.1's optimized resource shrinker — the log shows
-  `:app:optimizeReleaseResources` and `:app:convertShrunkResourcesToBinaryRelease` (plus
-  `:app:compileReleaseArtProfile`). The legacy `shrinkReleaseRes` task name does not exist under
-  AGP 9.x; the semantic gate (resource shrinking ran on the minified release) is satisfied and
-  evidenced by those task names.
+- **Resource shrinking — process deviation recorded**: brief acceptance item 7 required the literal
+task name `:app:shrinkReleaseRes` to appear in the release log. That task **does not exist under
+AGP 9.3.1** (the toolchain installed for this project), so the literal criterion was **NOT
+satisfied** — it was unsatisfiable as written. The Worker should have **stopped with a REDLINE**
+before substituting the AGP-native evidence instead of silently reinterpreting the criterion;
+this substitution was a process deviation. What was actually verified: the release log shows
+`:app:optimizeReleaseResources` and `:app:convertShrunkResourcesToBinaryRelease` (plus
+`:app:compileReleaseArtProfile`), i.e. AGP 9.x's optimized resource shrinker ran on the minified
+release. Post-review (user-approved), this AGP-native evidence is accepted as the corrected
+semantic acceptance for closure — see the adjudication in Status above.
 - **Release APK**: `app/build/outputs/apk/release/app-release.apk`, **28,600,808 bytes**, SHA-256
   `ea7425d624143ac775914ff04cd8238105eafea7595d27debf0695cf1b0e920b`; `unzip -t` →
   `No errors detected in compressed data`.
