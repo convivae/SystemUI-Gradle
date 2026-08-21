@@ -9,7 +9,7 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| 045 | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | dispatched; CONTRACT pending |
+| 045 | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | working; model + full CONTRACT verified |
 
 ## Queue
 
@@ -156,11 +156,12 @@
 - 2026-08-21 — User approved Task 045 Worker dispatch and expanded future Worker model choices to
   Opus 4.8, Kimi K3, and GLM-5.3. The frozen single-entry SysUISdk architecture, TDD plan, issue,
   and exact brief were committed at `eb81e644`. Isolated worktree `w2C:p1` started with explicit
-  `joycode/GLM-5.3`; live pane model verification passed and CONTRACT is pending.
+  `joycode/GLM-5.3`; live pane model and full CONTRACT were verified, and the Worker started the
+  TDD plan from the 239-test clean baseline.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 045 is dispatched in isolated worktree `/home/conv/myspace/SystemUI-Gradle-wt-045`
-at planning base `eb81e644` with explicit `joycode/GLM-5.3`. The user approved Worker execution;
-the live pane confirms the requested model, and full CONTRACT verification is pending.
+2026-08-21 — Task 045 is active in isolated worktree `/home/conv/myspace/SystemUI-Gradle-wt-045`
+at planning base `eb81e644` with explicit `joycode/GLM-5.3`. The live pane confirms the requested
+model and full CONTRACT; the Worker is executing the TDD plan from a 239/239 clean Python baseline.
