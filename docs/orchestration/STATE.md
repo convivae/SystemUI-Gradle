@@ -9,16 +9,15 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | second revision working after architect gate failure |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | PASS at `60c8fa8d`, but architect found missed blocker |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | PASS at `60c8fa8d`, but architect found missed blocker |
+| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | amended one commit to `229e39fc`; done, clean, unpushed |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | awaiting reset/re-review of `229e39fc` |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | awaiting reset/re-review of `229e39fc` |
 
 ## Queue
 
-1. Worker corrects ledger totals from stale 36/keep-28 to parsed 34/keep-26, strengthens the
-   ledger gate, and fixes the animationlib summary; no Gradle.
-2. Reset both reviewers to the new immutable head and re-run both full axes.
-3. Architect re-runs the complete static acceptance before merge and cleanup.
+1. Reset both isolated reviewers to `229e39fc` and re-run both full axes.
+2. Architect re-runs the complete static acceptance, including parsed ledger counts.
+3. Merge, push, then close and remove all three workspaces/worktrees/branches.
 
 ## Recent Orchestration Transitions
 
@@ -110,10 +109,13 @@
   failed: §9 has 34 rows and keep 26, while report/issue claim 36 and keep 28. Both reviewers
   missed this internal contradiction. Merge stopped; original Worker is correcting counts,
   strengthening the gate, and fixing the remaining animationlib editorial defect.
+- 2026-08-21 — Worker amended the sole commit to `229e39fc`; report and issue now use
+  machine-parsed 34 rows / keep 26, the gate parses recommendations and eight packets, and
+  the animationlib summary accurately distinguishes direct aliases from core transitivity.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Merge stopped despite dual PASS: architect fresh static gate found stale
-`36 rows / keep 28` versus parsed `34 rows / keep 26`. Second Worker revision is active;
-no Gradle, implementation, rollback, history investigation, or push.
+2026-08-21 — Task 043 second revision is one clean unpushed commit `229e39fc`; parsed ledger
+is 34 rows / keep 26 and eight packets. Final dual-axis re-review is next; no Gradle, implementation,
+rollback, history investigation, or push.
