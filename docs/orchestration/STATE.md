@@ -9,8 +9,8 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 046 | `w2T:p1` | `task-046-sysuisdk-workflow-docs` / `SystemUI-Gradle-wt-046` | `joycode/GLM-5.3` | working; CONTRACT verified | factual docs/comments only; no Gradle |
-| 047 | `w2V:p1` | `task-047-sysuisdk-backup-inventory` / `SystemUI-Gradle-wt-047` | `joycode/GLM-5.3` | working; CONTRACT verified | nine external backups read-only; no deletion |
+| 046 | `w2T:p1`; reviewers `w2X:p1`, `w2Y:p1` | `task-046-sysuisdk-workflow-docs` + review worktrees | GLM-5.3 / GLM-5.2 | dual PASS; merged as `138eee81`; main fresh PASS; push/cleanup pending | factual docs/comments only; no Gradle |
+| 047 | `w2V:p1`; reviewers `w2Z:p1`, `w20:p1` | `task-047-sysuisdk-backup-inventory` + review worktrees | GLM-5.3 / GLM-5.2 | worker done at `e939985e`; dual review working | nine external backups read-only; no deletion |
 | 048 | `w2W:p1` | `task-048-emulator-runtime-validation` / `SystemUI-Gradle-wt-048` | `joycode/GLM-5.3` | working; CONTRACT verified | mutation only on proven dedicated disposable emulator |
 
 ## Queue
@@ -195,9 +195,16 @@
   model and complete worker CONTRACT blocks before work began. Task 046 is docs/comments
   only, Task 047 keeps all nine backups read-only, and Task 048 may mutate only a proven
   dedicated `sysui-gradle-task048-*` emulator.
+- 2026-08-21 — Task 046 Worker completed `ca62b2b7`; fixed-range Standards and
+  Spec reviews both passed with no BLOCKER/HIGH/MEDIUM/LOW finding (one TRIVIAL
+  observation each). The commit was cherry-picked as `138eee81`; patch IDs match.
+  Architect main fresh acceptance passed README hygiene, retired-reference and CLI
+  gates, 220/220 Python tests, diff/scope checks, and comment-only Gradle verification.
+  Gradle was not run by design.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Tasks 046–048 are active in isolated worktrees with explicit
-`joycode/GLM-5.3`; live model displays and full CONTRACT blocks were verified.
+2026-08-21 — Task 046 dual-axis review, merge, and main fresh static acceptance
+passed; push and workspace cleanup are pending. Task 047 dual review and Task 048
+runtime execution remain active.
