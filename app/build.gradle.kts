@@ -65,6 +65,9 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard.flags",
+                // Task 044 (option A): narrow Gradle-native adapter closing the sole
+                // R8 missing ref (build/optimizer-only aconfig annotation).
+                "proguard_gradle.flags",
                 rootProject.file("SystemUI-plugin-core/proguard.flags")
             )
         }

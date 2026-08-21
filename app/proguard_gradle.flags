@@ -1,0 +1,17 @@
+# Task 044 (user-approved option A, 2026-08-21): Gradle-native R8 adapter.
+#
+# The suppressed descriptor below is a CLASS-retained annotation referenced by
+# generated aconfig flag JARs (e.g. com.android.wifi.flags.FeatureFlags). It
+# is a build/optimizer-only signature with no APK runtime behavior: it is not
+# instantiated, reflected, or JNI-resolved on any supported runtime path
+# (classified in Task 043).
+#
+# This file deliberately does NOT supply the annotation class (no JAR/AAR,
+# no SysUISdk mutation) and does NOT import any part of AOSP's
+# aconfig_proguard.flags: no keep/assumevalues/assumenosideeffects rules and
+# no aconfig flag folding are introduced, so flag runtime semantics stay
+# unchanged. The single exact-FQN suppression below only tells R8 that the
+# unresolved annotation reference may be ignored.
+#
+# Wired only into the minified `release` build type of app/build.gradle.kts.
+-dontwarn com.android.aconfig.annotations.AssumeTrueForR8
