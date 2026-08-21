@@ -1,16 +1,21 @@
-# Task 048: Device and SystemUI runtime preflight
+# Task 048: Disposable-emulator SystemUI runtime validation
 
 > Orchestrated exact brief. Protocol: `docs/orchestration/CHARTER.md` + worker-contract. Worker commits but never pushes.
 
 ## Authority
 
-`redline-gated`, read-only preflight only. Installation, root/remount, package/system
-partition mutation, emulator start/create/remove, and SystemUI process restart are not
-approved. If a compatible target is found, stop after documenting an unexecuted packet:
+`redline-gated` only for target-identity escape. The user explicitly authorized all SDK,
+AVD, and ADB operations—including download, create/start/stop/remove, root,
+disable-verity, remount, push, chmod/chown/restorecon, kill/restart, reboot, and
+rollback—on one dedicated disposable emulator created by this task.
+
+Stop with:
 
 ```text
-REDLINE: Device runtime execution — <serial, compatibility proof, proposed replacement/restart/rollback commands>
+REDLINE: Emulator-only boundary — target is physical, unknown, pre-existing, or cannot be proven to be the dedicated sysui-gradle-task048-* AVD
 ```
+
+No second approval is needed for authorized operations after the identity gate passes.
 
 ## Reports To
 
@@ -24,70 +29,114 @@ After worker-contract startup, read completely:
 2. `docs/superpowers/plans/2026-08-21-device-systemui-runtime-preflight.md`
 3. `docs/issues/2026-08-20-device-emulator-validation-plan.md`
 4. `docs/CURRENT_STATE.md`
+5. `/home/conv/.pi/agent/skills/android-cli/SKILL.md`
+6. `/home/conv/.pi/agent/skills/android-cli/references/interact.md`
 
-Invoke the `android-cli` skill (including `references/interact.md`) and
-`superpowers:executing-plans`.
+Invoke the `android-cli` skill and `superpowers:executing-plans`.
 
 ## Goal
 
-Discover connected devices and existing AVDs, collect only direct read-only evidence,
-and classify each connected target as `INCOMPATIBLE`, `INSUFFICIENT_EVIDENCE`, or
-`READY_FOR_REPLACEMENT_REVIEW`. Do not install or restart anything.
+Provision one dedicated disposable rootable emulator, replace its exact platform
+SystemUI APK with the frozen accepted Release artifact, collect process/UI/log evidence,
+and restore or remove the AVD. Never mutate a physical device or pre-existing AVD.
 
-## Allowed Paths
+## Allowed Paths and external mutations
 
 - create `docs/architecture/2026-08-21-device-systemui-runtime-preflight.md`
 - modify `docs/issues/2026-08-21-device-systemui-runtime-preflight.md`
 - modify `docs/superpowers/plans/2026-08-21-device-systemui-runtime-preflight.md`
 - modify `docs/orchestration/tasks/048-device-systemui-runtime-preflight.md`
-- execute read-only `android info`, `android emulator list`, `adb devices -l`
-- execute read-only device `getprop`, `getenforce`, `id`, `pm path`, `dumpsys package`
-- `adb pull` installed APK/framework-res into `/tmp/task048-*`
-- read existing project APK, keystore certificate, AOSP framework-res, SDK tools
-- `/tmp/task048-*` evidence only
+- read accepted main APK, project signing metadata, frozen AOSP/SysUISdk inputs
+- `/tmp/task048-*` evidence, pulled originals, screenshots, layouts, logs
+- `android --sdk=/home/conv/Android/Sdk` info/SDK/emulator commands
+- official `sdkmanager`, `avdmanager`, and emulator fallback when CLI lacks required control
+- install needed emulator/system-image SDK packages; do not remove shared packages
+- create/start/mutate/stop/delete only `sysui-gradle-task048-*`
+- all ADB commands against the proven dedicated emulator, including root/remount/push/reboot/process/UI operations
+
+## Frozen APK
+
+```text
+path=/home/conv/myspace/SystemUI-Gradle/app/build/outputs/apk/release/app-release.apk
+size=28600808
+sha256=cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374
+```
+
+Stop if any value differs. Do not build or substitute another APK.
+
+## Mandatory pre-mutation identity gate
+
+Before `root`, `disable-verity`, `remount`, `push`, package/process mutation, reboot, or UI
+input, prove all of:
+
+```text
+serial matches emulator-*
+ro.kernel.qemu == 1
+resolved AVD name starts sysui-gradle-task048-
+```
+
+Print `EMULATOR_ONLY_GATE=PASS`. Repeat after every reconnect/reboot before further
+mutation. Existing devices/AVDs are inventory-only and must not be changed.
 
 ## Forbidden Paths and actions
 
-- every other repository file and all Gradle tasks
-- `adb root`, `adb remount`, `adb install`, `adb push`, package install/uninstall
-- `stop`, `start`, `kill`, `reboot`, process/package mutation
-- emulator create/start/stop/remove
-- device filesystem writes, permission/context/SELinux/verified-boot changes
-- SDK/AOSP mutation or tool/package installation/update
-- claiming root/remount, signature, API/resource, or runtime compatibility without evidence
+- every other repository file; all source/resource/build configuration; all Gradle tasks
+- any mutation of a physical device, unknown serial, or AVD not created by this task
+- overwrite/remove a pre-existing AVD
+- remove shared SDK platforms/system images/emulator packages
+- use an APK with a different frozen size/hash
+- call a mismatch/crash/boot-loop/UI failure `RUNTIME_PASS`
+- leave the dedicated AVD running or present after completion
+- delete `/tmp/task048-*` before architect review
 
 ## Execution
 
 Follow every checkbox in
-`docs/superpowers/plans/2026-08-21-device-systemui-runtime-preflight.md`.
+`docs/superpowers/plans/2026-08-21-device-systemui-runtime-preflight.md`. Android CLI is
+preferred with explicit SDK root; document every official-tool fallback. Use discovered
+`pm path com.android.systemui`, never a guessed path.
 
 ## Acceptance
 
+The report/issue and retained `/tmp/task048-*` evidence must support all of:
+
+```text
+FROZEN_APK=PASS
+EMULATOR_ONLY_GATE=PASS
+PHYSICAL_DEVICE_MUTATIONS=0
+PREEXISTING_AVD_MUTATIONS=0
+DEDICATED_AVD_REMAINS=0
+OUTCOME=RUNTIME_PASS|RUNTIME_FAIL|ENVIRONMENT_BLOCKED
+```
+
+For an executed replacement, evidence must additionally include:
+
+```text
+ADB_ROOT=<actual>
+ADB_REMOUNT=<actual>
+SYSTEMUI_PATH=<discovered path>
+ON_DEVICE_APK_HASH=<actual>
+SIGNATURE_MATCH=<true|false|unknown>
+FRAMEWORK_RES_MATCH=<true|false|unknown>
+PID_STABILITY_60S=<pass|fail>
+BASIC_UI=<pass|fail>
+FATAL_CRASH_LOOP=<true|false>
+```
+
+Run repository gates:
+
 ```bash
-command -v android
-android --version
-android info
-/home/conv/Android/Sdk/platform-tools/adb version
-android emulator list
-/home/conv/Android/Sdk/platform-tools/adb devices -l
 git diff --check
 git status --short
 ```
 
-Expected environmental branch:
-
-- always record all exit codes and `CONNECTED_TARGETS=<n>`;
-- if `n=0`, report AVD inventory and explicit deferment, with no per-device command;
-- if `n>0`, one classification row per `device` serial, direct certificate/resource
-  comparisons where readable, and no query against offline/unauthorized targets;
-- executed-command log contains no forbidden state-changing command;
-- only Allowed repository paths changed; no Gradle task ran.
-
-A `READY_FOR_REPLACEMENT_REVIEW` result must end in REDLINE and an explicitly
-`NOT EXECUTED — REQUIRES USER APPROVAL` packet. It is not permission to proceed.
+Expected: only Allowed repository paths changed; no project implementation or Gradle
+output. The dedicated AVD is absent/stopped at handoff, while evidence remains under
+`/tmp/task048-*`.
 
 ## Completion report
 
-Provide one focused English commit, tool/target/AVD summary, exact classifications,
-forbidden-command scan, whether a REDLINE packet exists, and the required terminal-final
+Provide one focused English commit, exact CLI/tool fallback commands, image/AVD/serial,
+identity-gate outputs, baseline/rollback hashes, root/remount/push/restart results,
+compatibility facts, runtime/UI/log outcome, final AVD cleanup, and terminal-final
 `HANDOFF:` block.

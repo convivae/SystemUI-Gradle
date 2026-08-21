@@ -11,12 +11,11 @@ None.
 
 ## Queue
 
-1. Tasks 046–048 approved at design level; their exact documentation-sync,
-   backup-inventory, and device-preflight briefs are prepared and await dispatch approval.
-2. After Task 047, present the exact candidate backup deletions and reclaimed bytes for
-   a separate irreversible-action decision.
-3. After Task 048, request a second approval only if a target reaches
-   `READY_FOR_REPLACEMENT_REVIEW`; otherwise retain explicit runtime deferment.
+1. Tasks 046–048 exact briefs are approved for parallel dispatch.
+2. Task 048 may fully provision and mutate only its own disposable
+   `sysui-gradle-task048-*` emulator; physical and pre-existing targets remain forbidden.
+3. After Task 047, present exact candidate backup deletions and reclaimed bytes for a
+   separate irreversible repository-external cleanup decision.
 4. Return to the seven remaining `NOT APPROVED` architecture packets after these
    follow-ups close.
 
@@ -182,10 +181,16 @@ None.
   read-only device/runtime preflight. Public READMEs must contain no internal development
   identifiers. Planning issues, checkbox plans, and exact briefs are prepared; dispatch
   awaits exact-brief approval. Backup deletion and device mutation remain separately gated.
+- 2026-08-21 — User approved all three exact briefs and expanded Task 048 from read-only
+  preflight to full disposable-emulator validation. SDK/image download, dedicated AVD
+  lifecycle, root, disable-verity, remount, APK push, restart/reboot, UI interaction, and
+  cleanup are authorized only after proving an `emulator-*` serial, `ro.kernel.qemu=1`,
+  and `sysui-gradle-task048-*` AVD name. Physical/pre-existing targets remain forbidden;
+  no second approval is required inside the proven disposable boundary.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Follow-up design A is approved and decomposed into three isolated exact
-briefs. No Worker is active. Dispatch awaits user approval of Tasks 046–048; all external
-backup deletion and device state changes remain explicitly unapproved.
+2026-08-21 — Tasks 046–048 exact briefs are approved. Task 048 now owns a fully
+mutable but strictly dedicated disposable emulator boundary; no Worker is active while
+the revised planning baseline is being committed before parallel dispatch.
