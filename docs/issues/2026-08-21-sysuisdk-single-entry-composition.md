@@ -109,8 +109,13 @@ resources（8203 entries）与 AIDL 均字节校验通过；无备份文件。
 Gradle 文件）；剩余 `framework-res.apk` 字样均为冻结 AOSP 相对路径映射，非仓库
 payload。外部 legacy live SysUISdk 的 9 个历史备份未触碰（需单独的不可逆删除审批）。
 
-残留文档引用（归 architect/用户处理，本 Worker 无权修改）：
-`AGENTS.md` §7 表格仍列 `tools/install_sdk.py`；`README.md` 未查改。
+残留 stale 引用清单（均在本 Worker Forbidden Paths 内，未经修改，需 architect/用户后续处理；已逐条 grep 验证行号）：
+
+- `AGENTS.md` §1.7（L122）与 §2.4（L209）正文、§7 工具表（L402）：仍指向已删除的 `tools/install_sdk.py`，未提单入口 `build_sysuisdk.py --aosp-root`；
+- `README.md` L33/L100：仍宣传 `tools/build_sysuisdk.py --apply` 声明式生成与 `install_sdk.py`；
+- `README.en.md` L37/L123：同上（英文版）；
+- `SystemUI-core/build.gradle.kts` 注释 L55、L337：两处仍引用 `tools/install_sdk.py`（仅注释，无构建行为影响）；
+- `docs/adr/0006-sysuisdk-r8-library-class-bridge.md` L36–39、L55：仍描述旧 S5 staging/live 与 `--apply` 工作流。
 
 ## 删除后回归（Step 18）
 

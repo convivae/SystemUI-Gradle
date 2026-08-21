@@ -34,7 +34,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | 2026-08-20 | Traceur 双 AAR（Task 038）：640 类 + 105 res；R8 88→81 精确；179/179 | `docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md` |
 | 2026-08-21 | SettingsLib program/resource 闭包（Task 040）：主 AAR 1153 类、Theme 15 类、17 个 per-target 资源 AAR；R8 81→7 精确；195/195 | `docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md` |
 | 2026-08-21 | SysUISdk R8 library bridge（Task 041）：两个 SDK target 各注入 35 个真实 library classes；APK 0 打包；R8 7→1 精确；233/233 | `docs/issues/2026-08-21-r8-platform-build-classpath-closure.md` |
-| 2026-08-21 | **完整 Release closure（Task 044，main fresh）**：单 FQN release-only adapter；R8 1→0；`assembleRelease` + optimized resource shrink + V2 签名成功；APK 28,600,808 B；239/233 | `docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md` |
+| 2026-08-21 | **完整 Release closure（Task 044，main fresh）**：单 FQN release-only adapter；R8 1→0；`assembleRelease` + optimized resource shrink + V2 签名成功；APK 28,600,808 B；239/239 | `docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md` |
 | 2026-08-21 | **SysUISdk 单入口 composition（Task 045，Worker worktree）**：`build_sysuisdk.py` 重写为事务性单命令生成器；两次真实 AOSP 构建逐字节相等；生成 SDK 上 Debug/R8/Release 全绿；七个 superseded 仓库文件已删；220/220 | `docs/issues/2026-08-21-sysuisdk-single-entry-composition.md` |
 
 ## Current build and verification matrix
@@ -115,7 +115,11 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 1. **Task 045 review/merge**：架构师双轴 review Worker worktree（commits `991b6302`/`76ad180f`/docs）并在 main fresh 复验（Python 220、Debug、R8、Release、APK/V2、确定性双构建）；外部 9 个历史 SDK 备份只做独立 inventory，未经不可逆删除审批不动
 2. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查
 3. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
-4. 清理历史文档引用：`AGENTS.md` §7 表格仍列已删除的 `tools/install_sdk.py`（归 architect/用户处理）
+4. 清理 Task 045 残留的 stale 引用（均在本 Worker Forbidden Paths 内，未经修改，需 architect/用户处理）：
+   - `AGENTS.md` §1.7（L122）与 §2.4（L209）正文、§7 工具表（L402）仍指向已删除的 `tools/install_sdk.py`，未提单入口 `build_sysuisdk.py --aosp-root`；
+   - `README.md` L33/L100 与 `README.en.md` L37/L123 仍宣传 `--apply` 声明式生成及 `install_sdk.py`；
+   - `SystemUI-core/build.gradle.kts` 注释 L55、L337 两处仍引用 `tools/install_sdk.py`（仅注释，无构建影响）；
+   - `docs/adr/0006-sysuisdk-r8-library-class-bridge.md` L36–39、L55 仍描述旧 S5 staging/live + `--apply` 工作流。
 
 ## Verification commands and evidence
 
