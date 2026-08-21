@@ -9,7 +9,6 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 047 | `w2V:p1`; reviewers `w2Z:p1`, `w20:p1` | `task-047-sysuisdk-backup-inventory` + review worktrees | GLM-5.3 / GLM-5.2 | dual PASS; merged as `b7ee1475`; main fresh PASS; push/cleanup pending | nine external backups read-only; no deletion |
 | 048 | original `w2W:p1`; replacement `w2W:p2` | `task-048-emulator-runtime-validation` / `SystemUI-Gradle-wt-048` | `joycode/GLM-5.3` | replacement working; original session ended on screenshot-read model 500 after safe baseline only | mutation only on proven dedicated disposable emulator |
 
 ## Queue
@@ -211,6 +210,9 @@
   acceptance confirmed the nine-file set, ZIP integrity, zero duplicate entries,
   unchanged metadata/hashes, exact advisory byte totals, `DELETED=0`, and canonical
   generator success. No Gradle task ran.
+- 2026-08-21 — Task 047 Worker and both reviewer workspaces/worktrees were clean
+  and removed after push; their three local branches were deleted. The nine external
+  backup files remain untouched pending the separately required user deletion decision.
 - 2026-08-21 — Task 048 original Worker session ended on a model-service 500 while
   attempting to render a baseline screenshot. It had created and booted the dedicated
   AVD, passed the three-part identity gate, and captured baseline evidence, but had not
@@ -221,6 +223,6 @@
 
 ## Last Updated
 
-2026-08-21 — Task 046 is pushed and cleaned. Task 047 dual review, merge, and
-architect fresh acceptance passed; push/cleanup and the separate user deletion decision
-remain. Task 048 replacement execution remains active.
+2026-08-21 — Tasks 046 and 047 are pushed and fully cleaned. Task 047 external
+backup deletion remains separately user-gated. Task 048 replacement execution remains
+active.
