@@ -98,6 +98,33 @@ preferred with explicit SDK root; document every official-tool fallback. Use dis
 
 ## Acceptance
 
+**EXECUTED 2026-08-21/22 — OUTCOME=RUNTIME_FAIL.** Full evidence:
+`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md`; day record:
+`docs/issues/2026-08-21-device-systemui-runtime-preflight.md`.
+
+```text
+FROZEN_APK=PASS
+EMULATOR_ONLY_GATE=PASS
+PHYSICAL_DEVICE_MUTATIONS=0
+PREEXISTING_AVD_MUTATIONS=0
+DEDICATED_AVD_REMAINS=0
+OUTCOME=RUNTIME_FAIL
+ADB_ROOT=success
+ADB_REMOUNT=success
+SYSTEMUI_PATH=/system_ext/priv-app/SystemUIGoogle/SystemUIGoogle.apk
+ON_DEVICE_APK_HASH=cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374
+SIGNATURE_MATCH=false
+FRAMEWORK_RES_MATCH=false
+PID_STABILITY_60S=fail
+BASIC_UI=fail
+FATAL_CRASH_LOOP=true
+```
+
+Root cause: R8 obfuscated away the manifest-referenced Application class
+(`com.android.systemui.app.SystemUIApplication` absent from both DEX files) — the frozen
+optimized Release APK is unbootable by construction. Dedicated AVD stopped, deleted,
+and rollback proven via `-wipe-data`; evidence retained under `/tmp/task048-*`.
+
 The report/issue and retained `/tmp/task048-*` evidence must support all of:
 
 ```text
