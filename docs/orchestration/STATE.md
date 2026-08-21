@@ -9,13 +9,15 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| 045 | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | working; model + full CONTRACT verified |
+| 045 Worker | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | done; HANDOFF + commits `991b6302`/`76ad180f`/`379e07d0`, never pushed |
+| 045 Standards review | `w2G:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-standards` | `review-045-standards` at `379e07d0` | `joycode/GLM-5.2` | working; fixed base `eb81e644`, static-only |
+| 045 Spec review | `w2H:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-spec` | `review-045-spec` at `379e07d0` | `joycode/GLM-5.2` | working; fixed base `eb81e644`, static-only |
 
 ## Queue
 
-1. Task 045 Worker implements the approved single-entry SysUISdk composition and performs serialized Debug/Release validation.
-2. After Worker completion: fixed-range dual-axis review, architect main fresh verification, merge/push, then separately inventory external historical SDK backups before irreversible deletion.
-3. Return to the other seven `NOT APPROVED` packets after SysUISdk closure.
+1. Task 045 fixed-range Standards and Spec reviews run in isolated GLM-5.2 worktrees; reviewers are static-only and may not invoke Gradle.
+2. After all BLOCKER/HIGH/MEDIUM findings are fixed: architect main fresh Python/deterministic-SDK/Debug/R8/Release/APK verification, merge, push, and workspace cleanup.
+3. Separately inventory external historical SDK backups before any irreversible deletion; then return to the other seven `NOT APPROVED` packets.
 
 ## Recent Orchestration Transitions
 
@@ -162,6 +164,10 @@
 
 ## Last Updated
 
-2026-08-21 — Task 045 is active in isolated worktree `/home/conv/myspace/SystemUI-Gradle-wt-045`
-at planning base `eb81e644` with explicit `joycode/GLM-5.3`. The live pane confirms the requested
-model and full CONTRACT; the Worker is executing the TDD plan from a 239/239 clean Python baseline.
+2026-08-21 — Task 045 Worker completed the exact brief in isolated worktree
+`/home/conv/myspace/SystemUI-Gradle-wt-045` with commits `991b6302`, `76ad180f`, and
+`379e07d0`, reported all functional gates green, restored the ignored
+`local.properties`, and produced a terminal `HANDOFF:` without pushing. Fixed-base
+`eb81e644` / head `379e07d0` Standards and Spec reviewers are now working in two
+isolated worktrees with explicit `joycode/GLM-5.2`; both are static-only and Gradle
+remains prohibited.
