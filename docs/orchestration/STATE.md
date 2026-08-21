@@ -9,15 +9,16 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | amended one commit to `60c8fa8d`; done, clean, unpushed |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | revised-head static re-review working |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | revised-head static re-review working |
+| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | second revision working after architect gate failure |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | PASS at `60c8fa8d`, but architect found missed blocker |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | PASS at `60c8fa8d`, but architect found missed blocker |
 
 ## Queue
 
-1. Collect both static re-review reports at fixed `67fe3284...60c8fa8d`; no Gradle.
-2. If both axes pass, architect verifies static gates and merges the two documentation paths.
-3. Close all three workspaces/worktrees/branches after push and patch-equivalence checks.
+1. Worker corrects ledger totals from stale 36/keep-28 to parsed 34/keep-26, strengthens the
+   ledger gate, and fixes the animationlib summary; no Gradle.
+2. Reset both reviewers to the new immutable head and re-run both full axes.
+3. Architect re-runs the complete static acceptance before merge and cleanup.
 
 ## Recent Orchestration Transitions
 
@@ -105,10 +106,14 @@
 - 2026-08-21 — Worker amended the sole audit commit to `60c8fa8d`, correcting all review
   facts, expanding all 85 hashes to full SHA-256, and adding provider/registration status.
   Both reviewer worktrees were clean-reset to the revised head and full static re-review began.
+- 2026-08-21 — Both axes passed `60c8fa8d`, but architect fresh verification correctly
+  failed: §9 has 34 rows and keep 26, while report/issue claim 36 and keep 28. Both reviewers
+  missed this internal contradiction. Merge stopped; original Worker is correcting counts,
+  strengthening the gate, and fixing the remaining animationlib editorial defect.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 043 audit revised to one commit `60c8fa8d`; isolated Standards and Spec
-reviewers are re-reviewing fixed `67fe3284...60c8fa8d`. No Gradle, implementation, rollback,
-history investigation, or push.
+2026-08-21 — Merge stopped despite dual PASS: architect fresh static gate found stale
+`36 rows / keep 28` versus parsed `34 rows / keep 26`. Second Worker revision is active;
+no Gradle, implementation, rollback, history investigation, or push.
