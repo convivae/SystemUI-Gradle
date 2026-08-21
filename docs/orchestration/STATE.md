@@ -11,9 +11,10 @@ None.
 
 ## Queue
 
-1. Present the eight `NOT APPROVED` packets to the user for item-by-item decisions.
-2. Create separate bounded tasks only for items the user explicitly approves.
-3. Prioritize the `AssumeTrueForR8` treatment decision to unblock Release R8.
+1. Await explicit approval of the exact Task 044 Worker brief.
+2. After approval, dispatch the isolated Task 044 implementation for the user-approved
+   `AssumeTrueForR8` option A treatment.
+3. Return to the other seven `NOT APPROVED` packets only after Task 044 closure.
 
 ## Recent Orchestration Transitions
 
@@ -121,10 +122,14 @@ None.
   gates. Issue top-level status was synchronized from its pre-dispatch snapshot.
 - 2026-08-21 — Task 043 worker and both reviewer workspaces closed after clean-status and
   patch-equivalence checks; all three worktrees and local branches removed.
+- 2026-08-21 — User explicitly approved `AssumeTrueForR8` option A: one exact single-FQN,
+  release-only AGP/R8 `dontwarn`, with no SysUISdk class, artifact, or assumption rules.
+  Task 044 issue, TDD plan, and redline-gated exact brief were drafted; implementation dispatch
+  awaits separate exact-brief approval.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 043 is merged, pushed, independently verified, and fully cleaned up. No Gradle
-was run by design. The next action is user review of eight `NOT APPROVED` packets; no rollback or
-implementation is authorized.
+2026-08-21 — Task 044 option A is approved at design level. Its bounded issue, TDD plan, and
+redline-gated exact Worker brief are prepared. No implementation, Gradle command, Worker dispatch,
+or build-behavior change has occurred; exact-brief approval is pending.
