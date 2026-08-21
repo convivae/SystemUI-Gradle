@@ -7,16 +7,19 @@
 
 ## Active Workers
 
-None.
+| Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
+|---|---|---|---|---|---|
+| 046 | `w2T:p1` | `task-046-sysuisdk-workflow-docs` / `SystemUI-Gradle-wt-046` | `joycode/GLM-5.3` | working; CONTRACT verified | factual docs/comments only; no Gradle |
+| 047 | `w2V:p1` | `task-047-sysuisdk-backup-inventory` / `SystemUI-Gradle-wt-047` | `joycode/GLM-5.3` | working; CONTRACT verified | nine external backups read-only; no deletion |
+| 048 | `w2W:p1` | `task-048-emulator-runtime-validation` / `SystemUI-Gradle-wt-048` | `joycode/GLM-5.3` | working; CONTRACT verified | mutation only on proven dedicated disposable emulator |
 
 ## Queue
 
-1. Tasks 046–048 exact briefs are approved for parallel dispatch.
-2. Task 048 may fully provision and mutate only its own disposable
-   `sysui-gradle-task048-*` emulator; physical and pre-existing targets remain forbidden.
-3. After Task 047, present exact candidate backup deletions and reclaimed bytes for a
+1. Monitor Tasks 046–048 without interrupting `working`; review each fixed range after
+   terminal-final HANDOFF.
+2. After Task 047, present exact candidate backup deletions and reclaimed bytes for a
    separate irreversible repository-external cleanup decision.
-4. Return to the seven remaining `NOT APPROVED` architecture packets after these
+3. Return to the seven remaining `NOT APPROVED` architecture packets after these
    follow-ups close.
 
 ## Recent Orchestration Transitions
@@ -187,10 +190,14 @@ None.
   cleanup are authorized only after proving an `emulator-*` serial, `ro.kernel.qemu=1`,
   and `sysui-gradle-task048-*` AVD name. Physical/pre-existing targets remain forbidden;
   no second approval is required inside the proven disposable boundary.
+- 2026-08-21 — Tasks 046–048 were dispatched in isolated worktrees from immutable
+  base `3d186075` with explicit `joycode/GLM-5.3`. Live panes confirmed the requested
+  model and complete worker CONTRACT blocks before work began. Task 046 is docs/comments
+  only, Task 047 keeps all nine backups read-only, and Task 048 may mutate only a proven
+  dedicated `sysui-gradle-task048-*` emulator.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Tasks 046–048 exact briefs are approved. Task 048 now owns a fully
-mutable but strictly dedicated disposable emulator boundary; no Worker is active while
-the revised planning baseline is being committed before parallel dispatch.
+2026-08-21 — Tasks 046–048 are active in isolated worktrees with explicit
+`joycode/GLM-5.3`; live model displays and full CONTRACT blocks were verified.
