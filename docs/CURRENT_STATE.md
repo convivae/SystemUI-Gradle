@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-21（Task 044 worker worktree：Release R8/assembleRelease/签名验收首次全部通过；设备验证未运行。主分支 fresh 复验待架构师在 worker 构建结束后执行）
+> **Last verified**: 2026-08-21（Task 044 merged；架构师在 main fresh 验证 239/239、Debug、Release R8 0 refs、完整 optimized-resource Release、APK 内容与 V2 签名；设备验证未运行）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -10,12 +10,12 @@
 
 | 维度 | 状态 |
 |------|------|
-| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 044 worker fresh 2m30s） |
-| Python 工具测试 | **239/239 通过**（Task 044 worker，含 6 个新增 adapter contract 测试） |
-| Release R8 | **SUCCESS（Task 044 worker fresh，exit 0，missing refs 1→0）**：option A 单 FQN release-only adapter（`app/proguard_gradle.flags`） |
-| `:app:assembleRelease` | **SUCCESS（首次）**：minify + resource shrink（AGP 9.3.1 optimized shrinker 实际执行；brief 原字面 `shrinkReleaseRes` 任务名判据未满足，为 AGP 9.x 下不可满足项 — post-review 用户已批准以 AGP-native 证据作为修正后的语义验收）+ V2 签名；APK 28,600,808 B |
+| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 044 main fresh 8s） |
+| Python 工具测试 | **239/239 通过**（Task 044 main fresh，含 6 个 adapter contract 测试） |
+| Release R8 | **SUCCESS（Task 044 main fresh，exit 0，missing refs 1→0）**：option A 单 FQN release-only adapter（`app/proguard_gradle.flags`） |
+| `:app:assembleRelease` | **SUCCESS（main fresh）**：minify + AGP 9.3.1 optimized resource shrink + V2 签名；APK 28,600,808 B，SHA-256 `1f7a7f8f...` |
 | 设备/模拟器运行验证 | **未运行**（构建完成 ≠ 装机验证；另行排期） |
-| 当前唯一工程优先级 | merge Task 044（双轴 review 完成：Standards FAIL + Spec BLOCKER 已向用户披露并获 OK，post-review adjudication 已记录）；随后兼容设备 install/SystemUI restart/runtime smoke test |
+| 当前唯一工程优先级 | 设计并审批单入口、AOSP `out/` 驱动的 SysUISdk composition；先冻结 artifact 映射和 exact Worker brief，再实施与删除已证明被替代的仓库文件 |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
@@ -33,7 +33,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | 2026-08-20 | Traceur 双 AAR（Task 038）：640 类 + 105 res；R8 88→81 精确；179/179 | `docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md` |
 | 2026-08-21 | SettingsLib program/resource 闭包（Task 040）：主 AAR 1153 类、Theme 15 类、17 个 per-target 资源 AAR；R8 81→7 精确；195/195 | `docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md` |
 | 2026-08-21 | SysUISdk R8 library bridge（Task 041）：两个 SDK target 各注入 35 个真实 library classes；APK 0 打包；R8 7→1 精确；233/233 | `docs/issues/2026-08-21-r8-platform-build-classpath-closure.md` |
-| 2026-08-21 | **首次完整 Release（Task 044，worker worktree）**：单 FQN release-only adapter；R8 1→0；`assembleRelease` + optimized resource shrink + V2 签名成功；APK 28,600,808 B；239/239 | `docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md` |
+| 2026-08-21 | **完整 Release closure（Task 044，main fresh）**：单 FQN release-only adapter；R8 1→0；`assembleRelease` + optimized resource shrink + V2 签名成功；APK 28,600,808 B；239/239 | `docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md` |
 
 ## Current build and verification matrix
 
@@ -42,12 +42,12 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 041 main fresh |
 | core Kotlin | ✅ 0 错误 | Task 041 main fresh |
 | core javac | ✅ 0 错误 | Task 041 main fresh |
-| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 044 worker fresh，exit 0 in 2m30s（含 checkDebugDuplicateClasses） |
-| Python 工具测试 | ✅ 239/239（含 Task 044 新增 6 个 adapter contract 测试） | Task 044 worker fresh |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 044 main fresh，exit 0 in 8s（含 checkDebugDuplicateClasses） |
+| Python 工具测试 | ✅ 239/239（含 Task 044 新增 6 个 adapter contract 测试） | Task 044 main fresh |
 | APK 类定义检查 | ✅ SysUISdk bridge 35/35 present；APK 0/35 packaged | Task 041 main fresh |
-| `:app:minifyReleaseWithR8` | ✅ exit 0，missing refs 0；effective config 对 FQN 仅一条 exact `-dontwarn`，无 keep/assume | Task 044 worker fresh（`--rerun-tasks`，3m28s） |
-| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL（首次）：resource shrinking **技术性已验证**（`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 实际执行）；但 brief 原字面任务名判据（`shrinkReleaseRes`）**未满足**（AGP 9.3.1 无此任务，字面不可满足；Worker 未先提 REDLINE 属流程偏差）— **post-review 用户已批准 adjudication**：接受 AGP-native 证据作为修正后的语义验收，非追溯性合规 | Task 044 worker，exit 0（3m49s） |
-| Release APK 检查 | ✅ 非空 28,600,808 B；`unzip -t` 无错；dex 无 `AssumeTrueForR8`（PACKAGED=0）；`apksigner verify` exit 0 且 V2 scheme true（platform 证书） | Task 044 worker |
+| `:app:minifyReleaseWithR8` | ✅ exit 0，missing refs 0；effective config 对 FQN 仅一条 exact `-dontwarn`，无 keep/assume | Task 044 main fresh（`--rerun-tasks`，3m09s） |
+| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL：resource shrinking **技术性已验证**（`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 实际执行）；brief 原字面 `shrinkReleaseRes` 判据不可满足及 Worker 未先 REDLINE 的流程偏差均保留在审查裁定中 | Task 044 main fresh，exit 0（3m47s；首次尝试因 host OOM 被 kernel kill，清理孤立 Kotlin daemon 后无代码变更重试成功） |
+| Release APK 检查 | ✅ 非空 28,600,808 B，SHA-256 `1f7a7f8fdb1fb7948754356f3ef6679e654127078dd7f831c92cce87ca1805ef`；`unzip -t` 无错；dex 无 `AssumeTrueForR8`；V2 scheme true | Task 044 main fresh |
 | 设备/模拟器 install + runtime | ❌ 未运行（构建完成不等于装机验证） | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
 
 ## Toolchain and module topology
@@ -108,9 +108,10 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 
 ## Next ordered work
 
-1. **merge Task 044**（adapter + 测试 + 文档 + review-fix 共四个 commit；双轴 review 的 stale hash / 验收对账 / 未提 REDLINE 偏差已披露并获用户 OK，post-review adjudication 已记录在案；主分支 fresh 复验在全部 worker 构建结束后进行）
-2. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`；Task 044 只完成了构建侧验收，未装机）
-3. Gradle-native 架构 Phase 2：对只读 audit ledger 的非 keep 项逐项向用户解释并决策（Task 043 ledger）
+1. **SysUISdk 单入口 composition 设计与实施**：先冻结从传入 AOSP `out/` 到 `android.jar`、`core-for-system-modules.jar`、framework resources、AIDL 与 39 个 bridge classes 的确定性 artifact 映射；向用户展示并批准 exact Worker brief 后，再以 TDD 实施 `python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp`
+2. 新 SysUISdk 完成 Debug/Release 等价验证后，退役并删除已证明被替代的仓库脚本/文件；外部 9 个历史 SDK 备份只做独立 inventory，未经不可逆删除批准不动
+3. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查
+4. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
 
 ## Verification commands and evidence
 
@@ -128,7 +129,7 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 239/239
 ./gradlew :app:assembleRelease --console=plain
 ```
 
-最新证据：Task 044 worker worktree（2026-08-21）— 239/239 tests（6 个新 adapter contract 测试先 RED 后 GREEN）；pre-change fresh R8 exit 1 且 missing set 恰为 singleton `AssumeTrueForR8`；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（2m30s）；post-change fresh R8 exit 0（3m28s）且 missing refs 0、`configuration.txt` 对 FQN 仅一条 exact `-dontwarn`；`:app:assembleRelease` exit 0（3m49s，首次尝试因 Gradle daemon 崩溃中止后重试成功），资源收缩技术性已验证（AGP 9.3.1 optimized shrinker：`optimizeReleaseResources`/`convertShrunkResourcesToBinaryRelease` 实际执行；brief 原字面 `shrinkReleaseRes` 判据未满足，AGP 9.x 下不可满足，post-review 用户已批准 adjudication）；APK 28,600,808 B（SHA-256 `ea7425d6...`）`unzip -t` 无错；dex 不含 `AssumeTrueForR8`（PACKAGED=0）；`apksigner verify` exit 0 且 V2 scheme true（platform 证书）。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md`。前一证据（Task 041 main fresh）：`docs/issues/2026-08-21-r8-platform-build-classpath-closure.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
+最新证据：Task 044 main fresh（2026-08-21）— 239/239 tests；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（8s）；`:app:minifyReleaseWithR8 --rerun-tasks` exit 0（3m09s）、missing refs 0、effective config 对 FQN 仅一条 exact `-dontwarn`；完整 `assembleRelease --no-daemon` exit 0（3m47s），AGP-native optimized resource tasks 均执行；APK 28,600,808 B，SHA-256 `1f7a7f8fdb1fb7948754356f3ef6679e654127078dd7f831c92cce87ca1805ef`，ZIP/dex/V2 gates 全过。首次 main Release 尝试被 Linux OOM killer 终止（Gradle daemon anon RSS 15,227,120 KiB，另有孤立 Kotlin daemon RSS 8,840,516 KiB）；终止孤立 daemon 后未改代码重试成功。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 

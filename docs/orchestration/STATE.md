@@ -9,15 +9,14 @@
 
 | Task | Workspace / Pane | Branch / Worktree | Model | Stage |
 |---|---|---|---|---|
-| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1` | `task-044-r8-aconfig-narrow-dontwarn` / `/home/conv/myspace/SystemUI-Gradle-wt-044` | `joycode/GLM-5.3` | Worker completed at `4a0a8b08`; dual-axis review found one REDLINE-process BLOCKER plus stale-hash MEDIUM; user accepted the disclosed AGP-native adjudication; docs-only revision in progress |
+| 044 — narrow `AssumeTrueForR8` adapter | `w28:p1`; reviewers `w2A:p1`, `w2B:p1` | task/review worktrees | `joycode/GLM-5.3` / `joycode/GLM-5.2` | Revised range passed both axes; merged to main; architect fresh Debug/R8/Release/APK/V2 verification passed after one documented host-OOM retry; cleanup pending |
 
 ## Queue
 
-1. Finish Task 044 docs-only review revision, static re-review, main fresh verification, merge/push, and full workspace/worktree/branch cleanup.
-2. Design a separate read-only-first SysUISdk composition/script audit; no existing stage is
-   removed or changed until its role and replacement evidence are approved.
+1. Close Task 044 documentation, push, and remove worker/reviewer workspaces, worktrees, branches, and temporary logs.
+2. Freeze the single-entry SysUISdk composition table and present the exact Worker brief for user approval.
 3. After replacement proof, delete repository files proven unused; inventory external historical SDK backups separately before irreversible deletion.
-4. Return to the other seven `NOT APPROVED` packets after Task 044/SysUISdk closure.
+4. Return to the other seven `NOT APPROVED` packets after SysUISdk closure.
 
 ## Recent Orchestration Transitions
 
@@ -145,12 +144,18 @@
   post-review acceptance of `optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` as
   the corrected AGP-native semantic gate. User also requested deletion of proven-unused files after
   completion; destructive external backup cleanup remains inventory-gated.
+- 2026-08-21 — Task 044 revised range `3cc95a49...1c8fa5a3` passed both review axes with no
+  remaining BLOCKER/HIGH/MEDIUM. Worker commits were cherry-picked to main as `cfb6af48`,
+  `f333c80e`, and `aac4a4a6`. Architect fresh verification passed 239 tests, Debug, zero-ref fresh
+  R8, full optimized-resource Release, APK integrity/content, and V2 signing. The first main
+  Release attempt was truthfully recorded as a host OOM kill; terminating an orphaned 8.4 GiB
+  Kotlin daemon and retrying without repository changes succeeded.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 044 implementation/build evidence is complete, but initial dual-axis review failed
-on one REDLINE-process BLOCKER and one stale-hash MEDIUM. After full disclosure the user authorized
-continuing with the AGP-native resource-shrink task adjudication. The original Worker is making a
-no-Gradle docs-only correction before static re-review. Proven-unused repository files must be deleted
-after replacement verification; external historical SDK backups remain separately inventory-gated.
+2026-08-21 — Task 044 is merged and architect main fresh verification is complete. The revised
+fixed range passed both review axes; R8 missing refs are zero and full optimized-resource Release
+plus V2 signing pass on main. Worker/reviewer/worktree/branch/temp-log cleanup remains before final
+closure. The next implementation track is the user-approved single-entry SysUISdk direction, but
+its artifact map and exact Worker brief must be frozen and separately approved first.

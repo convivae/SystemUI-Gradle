@@ -2,12 +2,12 @@
 
 ## Status
 
-Design option **A** explicitly approved by the user on 2026-08-21. **Implemented 2026-08-21
-(Task 044, worker worktree)**: fresh Release R8 now exits 0 with zero missing refs, and the first
-full shrunk+signed Release APK was produced. Implementation evidence below is from the Task 044
-worker worktree (`SystemUI-Gradle-wt-044`, commits `ec98a979` "build: add narrow aconfig R8
-adapter" and `4a0a8b08` "docs: record Release R8 closure"; review range base `3cc95a49` → head
-`4a0a8b08`); device/runtime validation remains deferred.
+Design option **A** explicitly approved by the user on 2026-08-21. **Implemented and merged
+2026-08-21 (Task 044)**: fresh Release R8 now exits 0 with zero missing refs, and full
+shrunk+signed Release APK production is verified on main. The Worker implementation was
+`ec98a979` / `4a0a8b08` / `1c8fa5a3`; it was cherry-picked to main as `cfb6af48` /
+`f333c80e` / `aac4a4a6`. Architect main-branch verification is recorded below. Device/runtime
+validation remains deferred.
 
 **Post-review adjudication (2026-08-21)**: dual-axis review at base `3cc95a49` / head `4a0a8b08`
 returned Standards FAIL (MEDIUM: stale implementation hash `051ed6bd` left in this record — the
@@ -91,10 +91,11 @@ missing reference or requires broader treatment, implementation stops at REDLINE
 Rollback is the deletion of `app/proguard_gradle.flags`, its one release wiring entry, and its
 focused test. No SDK or artifact restoration is involved.
 
-## Pending implementation evidence
+## Implementation and verification evidence
 
-All items below were executed in the Task 044 worker worktree on 2026-08-21 (real outputs, no
-fabrication; logs preserved under `/tmp/task044-*` in that session):
+The Worker evidence below was captured in the Task 044 worktree on 2026-08-21. Temporary `/tmp`
+logs were used during execution; authoritative results are recorded here and the temporary files
+are removed during task cleanup:
 
 - **Pre-change R8 baseline**: `./gradlew :app:minifyReleaseWithR8 --rerun-tasks --console=plain
   -Dorg.gradle.workers.max=4` → real exit **1** (2m43s); failure reached R8 missing-reference
@@ -141,3 +142,26 @@ semantic acceptance for closure — see the adjudication in Status above.
   SHA-256 `c8a2e9bc...`). v1/v3/v4 false (V2-only, as configured).
 - **Device validation**: **NOT run** — no compatible device/emulator was used in this task;
   install/SystemUI-restart/runtime smoke test remains a separately scheduled gate.
+
+## Architect main-branch fresh verification
+
+After the revised fixed range `3cc95a49...1c8fa5a3` passed both review axes with no remaining
+BLOCKER/HIGH/MEDIUM finding, the three Worker commits were cherry-picked to main. Fresh main
+verification produced:
+
+- Python suite: **239/239 OK**;
+- `:app:checkDebugDuplicateClasses :app:assembleDebug`: exit **0**, `BUILD SUCCESSFUL in 8s`;
+- `:app:minifyReleaseWithR8 --rerun-tasks`: exit **0**, `BUILD SUCCESSFUL in 3m09s`, zero missing
+  refs, and exactly one effective exact-FQN `dontwarn`;
+- first `:app:assembleRelease` attempt: exit **1** because Linux OOM killed Gradle daemon PID
+  `726929` (kernel log: anon RSS 15,227,120 KiB) while an orphaned idle Kotlin daemon retained
+  8,840,516 KiB RSS; this was an environment-memory failure after R8, not a code/R8 diagnostic;
+- after terminating that orphaned Kotlin daemon, `:app:assembleRelease --no-daemon`: exit **0**,
+  `BUILD SUCCESSFUL in 3m47s`; both `:app:convertShrunkResourcesToBinaryRelease` and
+  `:app:optimizeReleaseResources` executed;
+- main Release APK: **28,600,808 bytes**, SHA-256
+  `1f7a7f8fdb1fb7948754356f3ef6679e654127078dd7f831c92cce87ca1805ef`; ZIP integrity passes,
+  annotation packaged count is 0, and APK Signature Scheme V2 verification is true.
+
+The failed first Release attempt is retained here because build evidence must be truthful. No
+repository change was made to recover from the host-memory event.
