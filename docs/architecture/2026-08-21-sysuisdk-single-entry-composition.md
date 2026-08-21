@@ -1,7 +1,7 @@
 # SysUISdk Single-Entry AOSP Composition
 
 **Date:** 2026-08-21  
-**Status:** Approved implementation baseline for Task 045
+**Status:** Implemented and verified (Task 045, Worker worktree; commits `991b6302` + `76ad180f` + docs). Debug/Release functional parity proven against a generated SDK; device validation deferred. Full evidence: `docs/issues/2026-08-21-sysuisdk-single-entry-composition.md`.
 
 ## 1. Goal
 
@@ -118,7 +118,8 @@ from packaged DEX.
 as a compile-only dependency. It is not a SysUISdk composition input.
 
 After the new generator and Gradle acceptance pass, Task 045 may delete these proven
-superseded repository inputs/helpers and their dedicated tests:
+superseded repository inputs/helpers and their dedicated tests
+(**deleted 2026-08-21 after all gates passed**, commit `76ad180f`):
 
 - `libs/android-merged.jar`
 - `libs/framework-res.apk`
