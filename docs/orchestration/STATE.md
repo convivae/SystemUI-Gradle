@@ -7,18 +7,13 @@
 
 ## Active Workers
 
-| Task | Workspace / pane | Branch / worktree | Model | Stage |
-|---|---|---|---|---|
-| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | merged as `a5c2c34e`; cleanup pending |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | final PASS; cleanup pending |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | final PASS; cleanup pending |
+None.
 
 ## Queue
 
-1. Push merged audit plus truthful issue status sync.
-2. Verify all three task/review worktrees clean and patches represented on main.
-3. Close/remove all three workspaces, worktrees, and local branches.
-4. Present the eight `NOT APPROVED` packets to the user for item-by-item decisions.
+1. Present the eight `NOT APPROVED` packets to the user for item-by-item decisions.
+2. Create separate bounded tasks only for items the user explicitly approves.
+3. Prioritize the `AssumeTrueForR8` treatment decision to unblock Release R8.
 
 ## Recent Orchestration Transitions
 
@@ -124,10 +119,12 @@
 - 2026-08-21 — Audit cherry-picked as `a5c2c34e`; main fresh static acceptance passed all
   85 artifact/hash/class, 13-module/5-rule, 34/26 ledger, 8-packet, content and patch-equivalence
   gates. Issue top-level status was synchronized from its pre-dispatch snapshot.
+- 2026-08-21 — Task 043 worker and both reviewer workspaces closed after clean-status and
+  patch-equivalence checks; all three worktrees and local branches removed.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 043 audit is merged at `a5c2c34e`; main fresh static acceptance passed and
-Gradle was not run by design. Push and three-workspace cleanup remain, followed by user decisions
-on eight `NOT APPROVED` packets.
+2026-08-21 — Task 043 is merged, pushed, independently verified, and fully cleaned up. No Gradle
+was run by design. The next action is user review of eight `NOT APPROVED` packets; no rollback or
+implementation is authorized.
