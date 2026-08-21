@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 | `w1W:p1` (`task043-audit`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` | working; CONTRACT verified |
+| 043 | `w1W:p2` (`task043-audit-r2`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` | replacement working; CONTRACT verified; predecessor stopped cleanly |
 
 ## Queue
 
@@ -86,9 +86,14 @@
 - 2026-08-21 — User approved the exact Task 043 brief. Isolated worktree/workspace `w1W:p1`
   started with explicit `joycode/GLM-5.3`; session modelId and full CONTRACT were verified.
   Worker is running the current-only static audit with no Gradle/history/implementation/rollback.
+- 2026-08-21 — The first Task 043 session was stopped after repeatedly exhausting context on
+  evidence synthesis without changing repository files. Its `/tmp/task043-inventory/` evidence
+  was retained. A fresh GLM-5.3 replacement in `w1W:p2` has a separately verified modelId and
+  CONTRACT and is producing the same two-document, static-only deliverable.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 043 active in isolated `w1W:p1`; explicit GLM-5.3 model and full CONTRACT
-verified. Static report-only audit is working; no Gradle, Git history, implementation, or rollback.
+2026-08-21 — Task 043 replacement active in isolated `w1W:p2`; explicit GLM-5.3 model and
+full CONTRACT verified. Predecessor stopped cleanly with no repo diff; static report-only audit
+continues with no Gradle, Git history, implementation, or rollback.
