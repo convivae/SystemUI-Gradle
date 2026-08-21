@@ -2,8 +2,11 @@
 
 ## Status
 
-Design option **A** explicitly approved by the user on 2026-08-21. Implementation has not started.
-The exact Worker brief remains subject to separate dispatch approval.
+Design option **A** explicitly approved by the user on 2026-08-21. **Implemented 2026-08-21
+(Task 044, worker worktree)**: fresh Release R8 now exits 0 with zero missing refs, and the first
+full shrunk+signed Release APK was produced. Implementation evidence below is from the Task 044
+worker worktree (`SystemUI-Gradle-wt-044`, commits `051ed6bd` + docs commit); device/runtime
+validation remains deferred.
 
 ## Background
 
@@ -78,9 +81,46 @@ focused test. No SDK or artifact restoration is involved.
 
 ## Pending implementation evidence
 
-- Pre-change R8 command, real exit, and exact missing set: **not run for Task 044 yet**.
-- Focused RED/GREEN test: **not run yet**.
-- Full Python tests: **not run yet**.
-- Debug build: **not run yet**.
-- Fresh Release R8 / full Release / shrink / APK / signing: **not run yet**.
-- Device validation: **deferred; no compatible device gate run**.
+All items below were executed in the Task 044 worker worktree on 2026-08-21 (real outputs, no
+fabrication; logs preserved under `/tmp/task044-*` in that session):
+
+- **Pre-change R8 baseline**: `./gradlew :app:minifyReleaseWithR8 --rerun-tasks --console=plain
+  -Dorg.gradle.workers.max=4` → real exit **1** (2m43s); failure reached R8 missing-reference
+  diagnostics (`Missing class com.android.aconfig.annotations.AssumeTrueForR8 (referenced from:
+  boolean com.android.wifi.flags.FeatureFlags.androidVWifiApi() and 1 other context)`);
+  `missing_rules.txt` parsed to the exact singleton {`com.android.aconfig.annotations.AssumeTrueForR8`}
+  (`TASK044_BASELINE_PASS refs=1`).
+- **TDD RED**: focused `python3 -m unittest tools.tests.test_gradle_r8_adapter_rules -v` → exit **1**,
+  4 failures / 6 tests, each caused by the absent adapter file / absent release wiring.
+- **GREEN**: focused suite 6/6 OK; full `python3 -m unittest discover -s tools/tests -p 'test_*.py' -v`
+  → **239/239 OK** (233 pre-existing + 6 new).
+- **Debug gate**: `:app:checkDebugDuplicateClasses :app:assembleDebug` → exit **0**, `BUILD
+  SUCCESSFUL in 2m30s`.
+- **Post-change fresh R8**: `:app:minifyReleaseWithR8 --rerun-tasks` → exit **0**, `BUILD
+  SUCCESSFUL in 3m28s`; generated missing refs **0** (`TASK044_R8_CLOSURE_PASS refs=0`);
+  `configuration.txt` contains exactly one line mentioning the FQN:
+  `-dontwarn com.android.aconfig.annotations.AssumeTrueForR8` — no keep/assumevalues/
+  assumenosideeffects treatment (`TASK044_EFFECTIVE_RULE_PASS exact_dontwarn=1 assume_rules=0`).
+- **Effective-config note**: the first R8 run failed the configuration check because R8 echoes
+  adapter-file comments into `configuration.txt`, and the original comments contained the literal
+  FQN. Fixed by rewording comments (comment-only change; the single active rule is unchanged) and
+  re-running a fresh R8; the check then passed verbatim. No acceptance was weakened.
+- **Full Release**: `:app:assembleRelease` → first attempt aborted with `Gradle build daemon
+  disappeared unexpectedly` (daemon crash under memory pressure, not an R8/packaging failure);
+  immediate retry → exit **0**, `BUILD SUCCESSFUL in 3m49s`.
+- **Resource shrinking**: executed by AGP 9.3.1's optimized resource shrinker — the log shows
+  `:app:optimizeReleaseResources` and `:app:convertShrunkResourcesToBinaryRelease` (plus
+  `:app:compileReleaseArtProfile`). The legacy `shrinkReleaseRes` task name does not exist under
+  AGP 9.x; the semantic gate (resource shrinking ran on the minified release) is satisfied and
+  evidenced by those task names.
+- **Release APK**: `app/build/outputs/apk/release/app-release.apk`, **28,600,808 bytes**, SHA-256
+  `ea7425d624143ac775914ff04cd8238105eafea7595d27debf0695cf1b0e920b`; `unzip -t` →
+  `No errors detected in compressed data`.
+- **Annotation absence**: `apkanalyzer dex packages` output contains no
+  `com.android.aconfig.annotations.AssumeTrueForR8` (grep count 0, `TASK044_APK_CLASS_PASS
+  packaged=0`).
+- **Signature**: `apksigner verify --verbose --print-certs` → exit **0**; `Verified using v2 scheme
+  (APK Signature Scheme v2): true`; 1 signer, platform certificate (CN=Android,
+  SHA-256 `c8a2e9bc...`). v1/v3/v4 false (V2-only, as configured).
+- **Device validation**: **NOT run** — no compatible device/emulator was used in this task;
+  install/SystemUI-restart/runtime smoke test remains a separately scheduled gate.

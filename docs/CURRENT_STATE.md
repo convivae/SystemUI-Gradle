@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-21（Task 041 main fresh 构建证据仍是最新；随后仅完成 Gradle-native 架构方向确认与书面 spec 起草，未运行新构建）
+> **Last verified**: 2026-08-21（Task 044 worker worktree：Release R8/assembleRelease/签名验收首次全部通过；设备验证未运行。主分支 fresh 复验待架构师在 worker 构建结束后执行）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -10,14 +10,14 @@
 
 | 维度 | 状态 |
 |------|------|
-| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 041 main fresh 1m18s） |
-| Python 工具测试 | **233/233 通过** |
-| Release R8 | **仍失败**：1 个 missing ref（`AssumeTrueForR8`；事实不变，但原 Task 042 精确复刻方案已暂停） |
-| `shrinkResources` | 未完成有效验收 |
-| 设备/模拟器运行验证 | 未开始 |
-| 当前唯一工程优先级 | **用户复核 Task 043 只读审查 exact brief；批准后派一个隔离 Worker** |
+| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 044 worker fresh 2m30s） |
+| Python 工具测试 | **239/239 通过**（Task 044 worker，含 6 个新增 adapter contract 测试） |
+| Release R8 | **SUCCESS（Task 044 worker fresh，exit 0，missing refs 1→0）**：option A 单 FQN release-only adapter（`app/proguard_gradle.flags`） |
+| `:app:assembleRelease` | **SUCCESS（首次）**：minify + AGP 9.3.1 optimized resource shrink + V2 签名；APK 28,600,808 B |
+| 设备/模拟器运行验证 | **未运行**（构建完成 ≠ 装机验证；另行排期） |
+| 当前唯一工程优先级 | 架构师 review/merge Task 044；随后兼容设备 install/SystemUI restart/runtime smoke test |
 
-R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → **1**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
+R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
 ## Verified milestones（已完成里程碑，最新在后）
 
@@ -33,6 +33,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | 2026-08-20 | Traceur 双 AAR（Task 038）：640 类 + 105 res；R8 88→81 精确；179/179 | `docs/issues/2026-08-20-r8-runtime-batch4c-traceur.md` |
 | 2026-08-21 | SettingsLib program/resource 闭包（Task 040）：主 AAR 1153 类、Theme 15 类、17 个 per-target 资源 AAR；R8 81→7 精确；195/195 | `docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md` |
 | 2026-08-21 | SysUISdk R8 library bridge（Task 041）：两个 SDK target 各注入 35 个真实 library classes；APK 0 打包；R8 7→1 精确；233/233 | `docs/issues/2026-08-21-r8-platform-build-classpath-closure.md` |
+| 2026-08-21 | **首次完整 Release（Task 044，worker worktree）**：单 FQN release-only adapter；R8 1→0；`assembleRelease` + optimized resource shrink + V2 签名成功；APK 28,600,808 B；239/239 | `docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md` |
 
 ## Current build and verification matrix
 
@@ -41,12 +42,13 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 041 main fresh |
 | core Kotlin | ✅ 0 错误 | Task 041 main fresh |
 | core javac | ✅ 0 错误 | Task 041 main fresh |
-| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 041 main fresh，exit 0 in 1m18s |
-| Python 工具测试 | ✅ 233/233 | Task 041 main fresh |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 044 worker fresh，exit 0 in 2m30s（含 checkDebugDuplicateClasses） |
+| Python 工具测试 | ✅ 239/239（含 Task 044 新增 6 个 adapter contract 测试） | Task 044 worker fresh |
 | APK 类定义检查 | ✅ SysUISdk bridge 35/35 present；APK 0/35 packaged | Task 041 main fresh |
-| `:app:minifyReleaseWithR8` | ❌ 失败：1 个 missing ref；原 Task 042 S3c/byte-exact rule-import 方案已暂停 | Task 041 main fresh，exit 1，精确 7→1 |
-| `shrinkResources` 有效验收 | ❌ 未完成 | — |
-| 设备/模拟器 install + runtime | ❌ 未开始 | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
+| `:app:minifyReleaseWithR8` | ✅ exit 0，missing refs 0；effective config 对 FQN 仅一条 exact `-dontwarn`，无 keep/assume | Task 044 worker fresh（`--rerun-tasks`，3m28s） |
+| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL（首次）：`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease`（AGP 9.x optimized shrinker；无 legacy `shrinkReleaseRes` 任务） | Task 044 worker，exit 0（3m49s） |
+| Release APK 检查 | ✅ 非空 28,600,808 B；`unzip -t` 无错；dex 无 `AssumeTrueForR8`（PACKAGED=0）；`apksigner verify` exit 0 且 V2 scheme true（platform 证书） | Task 044 worker |
+| 设备/模拟器 install + runtime | ❌ 未运行（构建完成不等于装机验证） | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
 
 ## Toolchain and module topology
 
@@ -88,38 +90,38 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 - aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034，位于 `libs/` 根目录）；notification flags 已从本地 Maven 迁出，现为 `libs/notification-flags.jar`。
 - `libs/prebuilts/` 仅剩 `tracinglib-platform.jar`（历史遗留，逐步清理）。
 
-## Release closure blocker（1 个）
+## Release closure：已关闭（Task 044）
 
-Release R8 在 `:app:minifyReleaseWithR8` 阶段因唯一真实 missing ref 失败（exit 1，这是**预期失败**，不是成功状态）：
-
-| 组 | 数量 | 内容 | 处置路径 |
-|----|------|------|---------|
-| Paused Task 042 | 1 | `com.android.aconfig.annotations.AssumeTrueForR8` | 原 `S3c + byte-exact aconfig_proguard.flags` 方案在实施前否决；按新架构重新分类为 optimizer/build-time 问题，尚未选择处理机制 |
-
-Task 041 已通过声明式 SysUISdk S3b bridge 清零 B1–B4 的 6 个 platform/build refs；两个 SDK target 各有 35 个真实 library classes，且 APK 中 0 个被打包。
+最后一个 missing ref `com.android.aconfig.annotations.AssumeTrueForR8` 已按用户批准的 option A
+关闭：`app/proguard_gradle.flags` 唯一 active rule 为 exact
+`-dontwarn com.android.aconfig.annotations.AssumeTrueForR8`，仅接入 release build type（debug
+与 5 个 AOSP-owned 规则文件未动）。不引入 annotation class/JAR/AAR、SysUISdk 变更或任何
+assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract 测试
+（`tools/tests/test_gradle_r8_adapter_rules.py`）机械钉住该边界。
 
 ## Next ordered work
 
-1. **用户复核 Task 043 exact brief**：`docs/orchestration/tasks/043-gradle-native-current-state-audit.md`
-2. 批准后派发一个隔离的 GLM-5.3 Worker 做**只读当前状态审查**：禁止 Git 历史、Gradle、修改和回退；输出完整 inventory、family/seam 分析和 decision ledger
-3. 通过双轴静态 review 与架构师验收后，对每个非 keep 项逐项向用户解释原因、前因后果、代价与验证，再决定是否实施
-4. 在批准的 Gradle-native 架构下恢复 release R8、`assembleRelease`、资源收缩与签名验收
-5. 兼容模拟器/设备安装与运行验证（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`）
+1. **架构师静态 review 并 merge Task 044**（adapter + 测试 + 文档两个 commit；主分支 fresh 复验在全部 worker 构建结束后进行）
+2. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查（见 `docs/issues/2026-08-20-device-emulator-validation-plan.md`；Task 044 只完成了构建侧验收，未装机）
+3. Gradle-native 架构 Phase 2：对只读 audit ledger 的非 keep 项逐项向用户解释并决策（Task 043 ledger）
 
 ## Verification commands and evidence
 
 ```bash
 # 单元测试（Python 工具测试）
-python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 233/233
+python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 239/239
 
 # Debug APK（每批硬门禁）
 ./gradlew :app:assembleDebug --console=plain
 
-# Release R8（当前仍 exit 1；处理机制待新架构审查，不按原 Task 042 直接实施）
+# Release R8（Task 044 后 exit 0，missing refs 0）
 ./gradlew :app:minifyReleaseWithR8 --rerun-tasks --console=plain
+
+# 完整 Release（minify + optimized resource shrink + V2 签名）
+./gradlew :app:assembleRelease --console=plain
 ```
 
-最新证据：Task 041 main fresh（2026-08-21）— 233/233 tests；两个独立 staging SDK 构建成功，`android.jar` 与 `core-for-system-modules.jar` 各有 35 个 source-identical entries 且 A/B `name→CRC` inventory 一致；guarded `--apply` 后 S5 `ALL PASS`；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（1m18s）；APK `BRIDGED=35 PACKAGED=0`；fresh R8 exit 1（2m09s），精确 7→1（6 removed、0 added），唯一 remaining 为 `com.android.aconfig.annotations.AssumeTrueForR8`。详细证据：`docs/issues/2026-08-21-r8-platform-build-classpath-closure.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
+最新证据：Task 044 worker worktree（2026-08-21）— 239/239 tests（6 个新 adapter contract 测试先 RED 后 GREEN）；pre-change fresh R8 exit 1 且 missing set 恰为 singleton `AssumeTrueForR8`；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（2m30s）；post-change fresh R8 exit 0（3m28s）且 missing refs 0、`configuration.txt` 对 FQN 仅一条 exact `-dontwarn`；`:app:assembleRelease` exit 0（3m49s，首次尝试因 Gradle daemon 崩溃中止后重试成功），资源收缩由 AGP 9.3.1 optimized shrinker（`optimizeReleaseResources`/`convertShrunkResourcesToBinaryRelease`）执行；APK 28,600,808 B（SHA-256 `ea7425d6...`）`unzip -t` 无错；dex 不含 `AssumeTrueForR8`（PACKAGED=0）；`apksigner verify` exit 0 且 V2 scheme true（platform 证书）。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md`。前一证据（Task 041 main fresh）：`docs/issues/2026-08-21-r8-platform-build-classpath-closure.md`、`docs/orchestration/STATE.md`、`docs/orchestration/log.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 
