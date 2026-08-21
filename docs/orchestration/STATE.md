@@ -10,14 +10,14 @@
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
 | 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | final amend `df6e0b31`; done, clean, unpushed |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | awaiting final-head reset/re-review |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | awaiting final-head reset/re-review |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | final PASS, zero findings |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | final PASS, zero findings |
 
 ## Queue
 
-1. Reset both reviewers to final amended head `df6e0b31` and perform focused regression review.
-2. Architect re-runs full static acceptance and patch-equivalence checks.
-3. Merge, push, and clean all three workspaces/worktrees/branches.
+1. Architect re-runs full static acceptance and verifies the one-commit two-path patch.
+2. Cherry-pick `df6e0b31`, re-run main static acceptance, then push.
+3. Close and remove all three workspaces/worktrees/branches after patch-equivalence checks.
 
 ## Recent Orchestration Transitions
 
@@ -118,10 +118,12 @@
 - 2026-08-21 — Final precision amend `df6e0b31` adds all five animation-module consumers and
   states that ledger parsing was a Task 043 revision-time command, not a plan-gate change.
   Worker reported all static inventory/hash/class/ledger/packet/scope gates passing.
+- 2026-08-21 — Final focused re-review at `67fe3284...df6e0b31` passed both axes with
+  zero findings. Architect fresh static acceptance and merge remain; Gradle stays prohibited.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Final one-commit audit head is `df6e0b31`; all known review findings are amended.
-Focused final re-review and architect static verification remain; no Gradle, implementation,
-rollback, history investigation, or push.
+2026-08-21 — Final Task 043 Standards and Spec re-reviews pass `df6e0b31` with zero findings.
+Architect static acceptance, merge, push, and cleanup remain; no Gradle, implementation, rollback,
+or history investigation.
