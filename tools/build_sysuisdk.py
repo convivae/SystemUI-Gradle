@@ -1,643 +1,472 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Reproducible SysUISdk build pipeline (S0–S4 build + S5 verify, staging-only).
+"""SysUISdk single-entry AOSP composition (Task 045).
 
-Rebuilds the SysUISdk platform into a STAGING directory from tracked artifacts
-and verifies inventory-level equivalence with the live SDK. The live SDK at
-``~/Android/Sdk/platforms/android-SysUISdk`` is NEVER written to, renamed, or
-deleted by the build/verify path — this orchestrator hard-fails if ``--target``
-resolves to it. The only sanctioned live mutation is ``--apply`` (user
-pre-approval 2026-08-13), which syncs a staging result onto the live SDK with
-timestamped backups of every overwritten file.
+Composes an independent, generator-owned ``android-SysUISdk`` platform from a
+read-only stock SDK platform (default ``android-37.0``) plus exact already-built
+AOSP ``out/`` artifacts:
 
-Stages (see docs/architecture/2026-08-13-sysuisdk-reproducible-build.md):
-  S0  copy the base platform (android-37.0) to --target, rewrite package.xml
-      for the staging name, copy build.prop / data / optional verbatim.
-  S1  copy libs/android-merged.jar wholesale as android.jar (the 2026-07-22
-      merge product; strict superset of live-minus-4-dalvik; carries the stale
-      May-27 resources.arsc + res/). MANIFEST.MF pinned to audited live bytes.
-  S2  framework.aidl hidden-iface/parcelable patch (reuses tools/install_sdk.py).
-  S3  dalvik.annotation.optimization patch into both jars (reuses
-      tools/patch_sdk_dalvik_annotations.py; source: AOSP core-libart javac jar).
-  S3b R8 library-class bridge (Task 041, user approval 2026-08-21): inject
-      exactly 35 approved source-identical library classes (IoUtils,
-      NativeAllocationRegistry, ddmc, UnsupportedAppUsage, AconfigFlagAccessor,
-      keepanno annotations) into both jars via tools/
-      patch_sdk_r8_library_classes.py, so AGP R8 resolves them as library
-      classes without packaging them into the APK. AssumeTrueForR8 is
-      deliberately excluded (Task 042).
-  S4  overlay the current AOSP framework-res.apk resources.arsc + res/** onto
-      android.jar, replacing S1's stale May-27 snapshot — fixes androidprv:
-      private-resource linking (AGENTS.md §2.4 point 2). Opt-in via --stages;
-      deterministic, idempotent, .bak-preres backup on first mutation.
-  S5  --verify: compare staging vs live (entry inventories names+CRC for the two
-      jars, byte-equality for framework.aidl, presence/shape for package.xml /
-      build.prop / data / optional). Prints a per-file PASS/DIFF report and
-      exits non-zero on any DIFF. ``--expect-s4-delta`` allows an android.jar
-      resource delta after a build with s4 (non-resource entries stay strict);
-      without it the strict 7/7 check (pre-S4 reproduction) is unchanged.
+    python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp
 
-Authority: redline-gated (user pre-approval 2026-08-13); --apply is the only
-live-mutation path.
+Design (docs/architecture/2026-08-21-sysuisdk-single-entry-composition.md):
+
+* One command, one transaction: compose into a sibling temporary staging
+  directory, validate, then publish by rename. Failure cleans staging only.
+* No Soong invocation, no in-place patching of an installed platform, no
+  S0–S5/``--apply``/restore interface, no permanent backups.
+* The frozen artifact map (§2 of the architecture spec) is exact: eight
+  AOSP-relative inputs, no globbing, no newest-file fallback.
+* The aggregate framework turbine JAR is master over duplicate stock SDK class
+  entries; framework resources come byte-exactly from ``framework-res.apk``.
+* The bridge is exactly the unchanged Task 041 35-entry allowlist plus the four
+  dalvik optimization annotations, injected into both target JARs;
+  ``AssumeTrueForR8`` stays out.
+* Deterministic output: stable entry ordering, fixed timestamps/attributes/
+  compression, and a generator marker recording input/output provenance.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import io
+import json
 import os
+import platform
+import re
 import shutil
 import sys
 import tempfile
 import zipfile
-from datetime import datetime
 from pathlib import Path
 
-# Make sibling tool modules importable when run as a script.
-_TOOLS_DIR = Path(__file__).resolve().parent
-if str(_TOOLS_DIR) not in sys.path:
-    sys.path.insert(0, str(_TOOLS_DIR))
-import install_sdk  # noqa: E402
-import patch_sdk_dalvik_annotations as _dalvik  # noqa: E402
-import patch_sdk_r8_library_classes as _r8lib  # noqa: E402
+# --- Constants --------------------------------------------------------------
 
-# --- Configuration ---------------------------------------------------------
+TOOL_VERSION = "045.1"
+DEFAULT_BASE_PLATFORM_NAME = "android-37.0"
+OUTPUT_PLATFORM_NAME = "android-SysUISdk"
+OUTPUT_PKG_PATH = f"platforms;{OUTPUT_PLATFORM_NAME}"
+OUTPUT_API_LEVEL = "37"
+OUTPUT_CODENAME = "SysUISdk"
+OUTPUT_DISPLAY_NAME = "Android SDK Platform SysUISdk 37"
+MARKER_NAME = ".sysuisdk-generated.json"
+MARKER_SCHEMA_VERSION = 1
 
-LIVE_SDK_DIR = Path("/home/conv/Android/Sdk/platforms/android-SysUISdk")
-DEFAULT_BASE_PLATFORM = Path("/home/conv/Android/Sdk/platforms/android-37.0")
-DEFAULT_TARGET = (
-    Path.home() / "Android" / "Sdk" / "platforms" / "android-SysUISdk-staging"
+
+class BuildError(Exception):
+    """Fatal, user-facing composition error (reported without a traceback)."""
+
+
+# --- Frozen AOSP artifact map (architecture spec §2) --------------------------
+# Eight exact AOSP-relative inputs. Missing files are fatal; there is no
+# glob-based or newest-file fallback.
+
+AOSP_INPUT_RELPATHS: dict[str, str] = {
+    "framework_jar":
+        "out/soong/.intermediates/frameworks/base/framework/"
+        "android_common/turbine-combined/framework.jar",
+    "framework_res_apk":
+        "out/soong/.intermediates/frameworks/base/core/res/"
+        "framework-res/android_common/framework-res.apk",
+    "core_libart_jar":
+        "out/soong/.intermediates/libcore/core-libart/"
+        "android_common_apex31/javac/core-libart.jar",
+    "unsupportedappusage_jar":
+        "out/soong/.intermediates/tools/platform-compat/java/android/"
+        "compat/annotation/unsupportedappusage/linux_glibc_common/javac/"
+        "unsupportedappusage.jar",
+    "aconfig_annotations_jar":
+        "out/soong/.intermediates/frameworks/libs/modules-utils/java/"
+        "aconfig-annotations-lib/linux_glibc_common/javac/"
+        "aconfig-annotations-lib.jar",
+    "keepanno_jar":
+        "out/soong/.intermediates/prebuilts/r8/keepanno-annotations/"
+        "android_common/combined/keepanno-annotations.jar",
+    "iremote_callback_aidl":
+        "frameworks/base/core/java/android/os/IRemoteCallback.aidl",
+    "screenshot_request_aidl":
+        "frameworks/base/core/java/com/android/internal/util/"
+        "ScreenshotRequest.aidl",
+}
+
+
+def resolve_inputs(aosp_root: Path) -> dict[str, Path]:
+    """Resolve every frozen input under ``aosp_root`` or fail with its path."""
+    aosp_root = Path(aosp_root)
+    resolved: dict[str, Path] = {}
+    missing: list[Path] = []
+    for key, rel in AOSP_INPUT_RELPATHS.items():
+        path = aosp_root / rel
+        if not path.is_file():
+            missing.append(path)
+        resolved[key] = path
+    if missing:
+        raise BuildError(
+            "missing frozen AOSP input(s): "
+            + "; ".join(str(p) for p in missing))
+    return resolved
+
+
+# --- framework.aidl hidden declaration derivation -----------------------------
+# The two hidden declarations are derived from their primary AOSP sources
+# (package + top-level kind/name are parsed and checked, never hard-coded
+# without checking the source).
+
+HIDDEN_AIDL_SOURCES: tuple[tuple[str, str, str], ...] = (
+    # (input key, expected FQN, expected declaration kind)
+    ("iremote_callback_aidl", "android.os.IRemoteCallback", "interface"),
+    ("screenshot_request_aidl",
+     "com.android.internal.util.ScreenshotRequest", "parcelable"),
 )
-_REPO_ROOT = _TOOLS_DIR.parent
-DEFAULT_MERGED_JAR = _REPO_ROOT / "libs" / "android-merged.jar"
-DEFAULT_CORE_LIBART_JAR = Path(
-    "/home/conv/myspace/aosp/out/soong/.intermediates/libcore/"
-    "core-libart/android_common_apex31/javac/core-libart.jar"
-)
-DEFAULT_UNSUPPORTEDAPPUSAGE_JAR = Path(
-    "/home/conv/myspace/aosp/out/soong/.intermediates/tools/platform-compat/"
-    "java/android/compat/annotation/unsupportedappusage/linux_glibc_common/"
-    "javac/unsupportedappusage.jar"
-)
-DEFAULT_ACONFIG_ANNOTATIONS_JAR = Path(
-    "/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/libs/"
-    "modules-utils/java/aconfig-annotations-lib/linux_glibc_common/javac/"
-    "aconfig-annotations-lib.jar"
-)
-DEFAULT_KEEPANNO_ANNOTATIONS_JAR = _REPO_ROOT / "libs" / "keepanno-annotations.jar"
-DEFAULT_FRAMEWORK_RES_APK = _REPO_ROOT / "libs" / "framework-res.apk"
-
-STAGING_DIR_NAME = "android-SysUISdk-staging"
-STAGING_PKG_PATH = "platforms;android-SysUISdk-staging"
-STAGING_API_LEVEL = "37"
-STAGING_CODENAME = "SysUISdk"
-STAGING_DISPLAY_NAME = "Android SDK Platform SysUISdk 37 (staging)"
-
-# Audited live android.jar MANIFEST.MF bytes (produced by JDK `jar cf` on
-# 2026-07-22; see docs/issues/2026-08-13-sysuisdk-reproducible-build.md §2.5).
-# CRLF line endings, terminated by a blank CRLF line.
-ANDROID_MANIFEST_BYTES = (
-    b"Manifest-Version: 1.0\r\n"
-    b"Created-By: 25.0.2 (Oracle Corporation)\r\n"
-    b"\r\n"
-)
-
-# Files/dirs in the base platform that are pristine backups created by prior
-# tool runs (or leftover scratch). S0 skips them so each stage creates its own
-# backup of the freshly-copied base, matching the live SDK's backup pattern.
-_BASE_SKIP_SUFFIXES = (".orig", ".bak-preaidl")
-
-ALL_STAGES = ("s0", "s1", "s2", "s3", "s3b", "s4")
-
-# Default CLI stages: S3b (R8 library-class bridge) is now part of the
-# default staging build; S4 (framework-res overlay) stays opt-in/explicit.
-DEFAULT_STAGES = "s0,s1,s2,s3,s3b"
 
 
-# --- Helpers ---------------------------------------------------------------
+def derive_aidl_declaration(source_text: str, expected_fqn: str,
+                            expected_kind: str) -> str:
+    """Derive the fully-qualified declaration from a primary AIDL source.
 
-def _resolve(p: Path) -> Path:
-    return Path(p).expanduser().resolve()
-
-
-def _live_guard(target: Path) -> None:
-    """Hard-fail if target is the live SDK or inside it."""
-    tgt = _resolve(target)
-    live = _resolve(LIVE_SDK_DIR)
-    try:
-        tgt.relative_to(live)
-        inside = True
-    except ValueError:
-        inside = tgt == live
-    if inside:
-        sys.exit(
-            f"REFUSING to operate: --target {tgt} is the live SDK "
-            f"({live}). The live SDK must never be written to."
-        )
-
-
-def _jar_inventory(jar_path: Path) -> dict:
-    """Return {entry_name: CRC32} for non-directory entries in the jar."""
-    inv: dict[str, int] = {}
-    with zipfile.ZipFile(jar_path, "r") as zf:
-        for info in zf.infolist():
-            if info.is_dir():
-                continue
-            inv[info.filename] = info.CRC
-    return inv
-
-
-def _ensure_file(path: Path, label: str) -> None:
-    if not path.is_file():
-        sys.exit(f"ERROR: {label} not found: {path}")
-
-
-def _ensure_dir(path: Path, label: str) -> None:
-    if not path.is_dir():
-        sys.exit(f"ERROR: {label} not found: {path}")
-
-
-def _backup_if_needed(target: Path, suffix: str) -> str | None:
-    """Create ``<target><suffix>`` from target if it does not exist; return the
-    backup path, or None if a backup already existed. Never overwrites."""
-    bak = target.with_name(target.name + suffix)
-    if bak.exists():
-        return None
-    shutil.copy2(target, bak)
-    return str(bak)
-
-
-# --- S0: base platform copy + package.xml rewrite ---------------------------
-
-def _rewrite_package_xml(pkg_xml: Path) -> None:
-    """Rewrite the base platform's package.xml for the staging name.
-
-    Mirrors the audited base→live delta (localPackage path, api-level, codename,
-    display-name) but uses the staging name so the staging dir is a valid,
-    self-describing SDK platform. See architecture doc §2.6.
+    Parses the ``package`` statement and the top-level ``interface``/
+    ``parcelable`` declaration, verifies the expected kind and FQN, and
+    returns ``"<kind> <fqn>;"``. Any mismatch is fatal.
     """
-    text = pkg_xml.read_text(encoding="utf-8")
-    repl = [
-        ('path="platforms;android-37.0"', f'path="{STAGING_PKG_PATH}"'),
-        ("<api-level>37.0</api-level>", f"<api-level>{STAGING_API_LEVEL}</api-level>"),
-        ("<codename></codename>", f"<codename>{STAGING_CODENAME}</codename>"),
-        ("<display-name>Android SDK Platform 37.0</display-name>",
-         f"<display-name>{STAGING_DISPLAY_NAME}</display-name>"),
-    ]
-    for old, new in repl:
-        if old not in text:
-            sys.exit(
-                f"ERROR: package.xml rewrite failed — expected substring not "
-                f"found: {old!r}. Base platform layout may have changed."
-            )
-        text = text.replace(old, new, 1)
-    pkg_xml.write_text(text, encoding="utf-8")
+    import re
+    pkg_match = re.search(r"(?m)^\s*package\s+([\w.]+)\s*;", source_text)
+    if not pkg_match:
+        raise BuildError(
+            f"AIDL source for {expected_fqn} has no package declaration")
+    package = pkg_match.group(1)
+    decl_match = re.search(
+        r"(?m)^\s*(?:oneway\s+)?(interface|parcelable)\s+(\w+)", source_text)
+    if not decl_match:
+        raise BuildError(
+            f"AIDL source for {expected_fqn} has no top-level "
+            f"interface/parcelable declaration")
+    kind, name = decl_match.group(1), decl_match.group(2)
+    fqn = f"{package}.{name}"
+    if fqn != expected_fqn:
+        raise BuildError(
+            f"AIDL source declares {fqn}, expected {expected_fqn}")
+    if kind != expected_kind:
+        raise BuildError(
+            f"AIDL source for {fqn} declares kind {kind!r}, "
+            f"expected {expected_kind!r}")
+    return f"{kind} {fqn};"
 
 
-def stage_s0(base: Path, target: Path, clean: bool) -> None:
-    _ensure_dir(base, "base platform")
-    if target.exists():
-        if not clean:
-            print(f"S0: --clean not given; keeping existing staging dir {target}")
-            return
-        print(f"S0: --clean; removing existing {target}")
-        shutil.rmtree(target)
-
-    print(f"S0: copying base platform {base} -> {target}")
-    skipped: list[str] = []
-    for entry in os.listdir(base):
-        if any(entry.endswith(s) for s in _BASE_SKIP_SUFFIXES):
-            skipped.append(entry)
-            continue
-        src = base / entry
-        dst = target / entry
-        if src.is_dir():
-            # data/, optional/, templates/, skins/ — full recursive copy.
-            shutil.copytree(src, dst, copy_function=shutil.copy2, dirs_exist_ok=True)
-        else:
-            shutil.copy2(src, dst)
-    if skipped:
-        print(f"S0: skipped base backups ({', '.join(sorted(skipped))}); "
-              f"each stage creates its own on first mutation")
-
-    pkg_xml = target / "package.xml"
-    if not pkg_xml.is_file():
-        sys.exit(f"ERROR: copied platform missing package.xml: {pkg_xml}")
-    _rewrite_package_xml(pkg_xml)
-    print(f"S0: rewrote {pkg_xml.name} -> path={STAGING_PKG_PATH}, "
-          f"api-level={STAGING_API_LEVEL}, codename={STAGING_CODENAME}")
+def derive_hidden_aidl_declarations(aosp_root: Path) -> list[str]:
+    """Derive both hidden declarations from the frozen primary sources."""
+    inputs = resolve_inputs(aosp_root)
+    decls: list[str] = []
+    for key, fqn, kind in HIDDEN_AIDL_SOURCES:
+        text = inputs[key].read_text(encoding="utf-8")
+        decls.append(derive_aidl_declaration(text, fqn, kind))
+    return decls
 
 
-# --- S1: deterministic framework.jar merge ---------------------------------
+# --- CLI ---------------------------------------------------------------------
 
-def _copy_merged_master(
-    android_jar: Path, merged_jar: Path, manifest_bytes: bytes
-) -> dict:
-    """Copy ``android-merged.jar`` wholesale as ``android.jar``, pinning
-    MANIFEST.MF.
+def build_arg_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(
+        prog="build_sysuisdk.py",
+        description="Compose android-SysUISdk from a stock SDK platform "
+                    "plus exact already-built AOSP out/ artifacts.")
+    ap.add_argument("--aosp-root", required=True,
+                    help="path to the AOSP tree (read-only; consumes out/ "
+                         "intermediates and two primary AIDL sources)")
+    ap.add_argument("--sdk-root",
+                    help="SDK root (default: --sdk-root > ANDROID_SDK_ROOT > "
+                         "ANDROID_HOME > OS-specific default)")
+    ap.add_argument("--base-platform",
+                    default=DEFAULT_BASE_PLATFORM_NAME,
+                    help=f"stock base platform name under <sdk-root>/platforms "
+                         f"or an explicit platform directory path "
+                         f"(default {DEFAULT_BASE_PLATFORM_NAME})")
+    ap.add_argument("--output",
+                    help=f"output platform directory (default "
+                         f"<sdk-root>/platforms/{OUTPUT_PLATFORM_NAME})")
+    ap.add_argument("--replace", action="store_true",
+                    help="replace an existing generator-owned output "
+                         "(refused for unmarked outputs and for the base "
+                         "platform)")
+    return ap
 
-    Semantics (audited 2026-08-13, see architecture doc §2.4): ``android-merged.jar``
-    is the complete 2026-07-22 merge product (``framework.jar`` ∪ base
-    ``android.jar`` ∪ 1266 device-framework inner classes) and is a strict
-    superset of the live ``android.jar`` minus the 4 S3 dalvik classes (0 CRC
-    diffs on the 38892-entry intersection; ``merged - live = 0``; ``live -
-    merged = 4`` = exactly the S3 dalvik set). It already carries
-    ``resources.arsc`` + ``res/`` (8451 entries, matching live), so the base jar
-    is not consulted for gaps. S1 therefore = copy merged verbatim (MANIFEST.MF
-    pinned for JDK-determinism); S3 then adds the 4 dalvik classes → live.
 
-    Implemented with stdlib ``zipfile`` so per-entry CRCs match the source
-    exactly (CRC is over uncompressed bytes), independent of jar-level
-    compression/ordering. Directory entries are dropped (consistent with
-    ``_jar_inventory`` / ``_rewrite_manifest_entry``; the live SDK's
-    inventory-level verify also ignores directories).
+# --- SDK-root discovery -------------------------------------------------------
 
-    Returns a dict: {merged, manifest}.
+def default_sdk_root(platform_system: str, environ: dict, home: Path) -> Path:
+    """OS-specific default SDK root (spec §2 discovery order, step 4–6)."""
+    if platform_system == "Windows":
+        local = environ.get("LOCALAPPDATA")
+        if local:
+            return Path(local) / "Android" / "Sdk"
+        return home / "AppData" / "Local" / "Android" / "Sdk"
+    if platform_system == "Darwin":
+        return home / "Library" / "Android" / "sdk"
+    return home / "Android" / "Sdk"
+
+
+def resolve_sdk_root(cli_value: str | None, environ: dict,
+                     platform_system: str, home: Path) -> Path:
+    """Resolve the SDK root: CLI > ANDROID_SDK_ROOT > ANDROID_HOME > default."""
+    if cli_value:
+        return Path(cli_value).expanduser()
+    if environ.get("ANDROID_SDK_ROOT"):
+        return Path(environ["ANDROID_SDK_ROOT"]).expanduser()
+    if environ.get("ANDROID_HOME"):
+        return Path(environ["ANDROID_HOME"]).expanduser()
+    return default_sdk_root(platform_system, environ,
+                            Path(home).expanduser())
+
+
+# --- Path resolution ----------------------------------------------------------
+
+def resolve_base_platform(spec: str, sdk_root: Path) -> Path:
+    """Resolve --base-platform: an existing directory path wins; otherwise a
+    platform name under ``<sdk-root>/platforms``."""
+    if Path(spec).exists():
+        return Path(spec).resolve()
+    if Path(spec).is_absolute() or (len(Path(spec).parts) > 1
+                                    and Path(spec) != Path(".")):
+        return Path(spec)
+    return (Path(sdk_root) / "platforms" / spec).resolve()
+
+
+def resolve_output(cli_value: str | None, sdk_root: Path) -> Path:
+    if cli_value:
+        return Path(cli_value)
+    return Path(sdk_root) / "platforms" / OUTPUT_PLATFORM_NAME
+
+
+# --- Frozen bridge allowlist (39 entries) ------------------------------------
+# The bridge is exactly the unchanged Task 041 35-entry allowlist plus the
+# four existing dalvik optimization annotations. ``AssumeTrueForR8`` stays
+# out (release-only adapter in app/proguard_gradle.flags owns it).
+
+_DALVIK_OPTIMIZATION_ENTRIES = (
+    "dalvik/annotation/optimization/DeadReferenceSafe.class",
+    "dalvik/annotation/optimization/NeverCompile.class",
+    "dalvik/annotation/optimization/NeverInline.class",
+    "dalvik/annotation/optimization/ReachabilitySensitive.class",
+)
+_IO_UTILS_ENTRIES = (
+    "libcore/io/IoUtils.class",
+    "libcore/io/IoUtils$FileReader.class",
+)
+_NATIVE_ALLOCATION_REGISTRY_ENTRIES = (
+    "libcore/util/NativeAllocationRegistry.class",
+    "libcore/util/NativeAllocationRegistry$CleanerRunner.class",
+    "libcore/util/NativeAllocationRegistry$CleanerThunk.class",
+    "libcore/util/NativeAllocationRegistry$Metrics.class",
+)
+_DDMC_ENTRIES = (
+    "org/apache/harmony/dalvik/ddmc/Chunk.class",
+    "org/apache/harmony/dalvik/ddmc/ChunkHandler.class",
+    "org/apache/harmony/dalvik/ddmc/DdmServer.class",
+    "org/apache/harmony/dalvik/ddmc/DdmVmInternal.class",
+)
+_UNSUPPORTED_APP_USAGE_ENTRIES = (
+    "android/compat/annotation/UnsupportedAppUsage.class",
+    "android/compat/annotation/UnsupportedAppUsage$Container.class",
+)
+_ACONFIG_FLAG_ACCESSOR_ENTRIES = (
+    "com/android/aconfig/annotations/AconfigFlagAccessor.class",
+)
+_KEEPANNO_ANNOTATION_ENTRIES = tuple(
+    f"com/android/tools/r8/keepanno/annotations/{name}.class" for name in (
+        "AnnotationPattern", "CheckOptimizedOut", "CheckRemoved",
+        "ClassAccessFlags", "ClassNamePattern", "FieldAccessFlags",
+        "InstanceOfPattern", "KeepBinding", "KeepCondition", "KeepConstraint",
+        "KeepEdge", "KeepForApi", "KeepItemKind", "KeepOption", "KeepTarget",
+        "MemberAccessFlags", "MethodAccessFlags", "StringPattern",
+        "TypePattern", "UsedByNative", "UsedByReflection", "UsesReflection",
+    ))
+
+# (source input key, exact entry tuple) slices — declarative, never expanded
+# at runtime by package prefix.
+_BRIDGE_SLICES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("core_libart_jar", _DALVIK_OPTIMIZATION_ENTRIES),
+    ("core_libart_jar", _IO_UTILS_ENTRIES),
+    ("core_libart_jar", _NATIVE_ALLOCATION_REGISTRY_ENTRIES),
+    ("core_libart_jar", _DDMC_ENTRIES),
+    ("unsupportedappusage_jar", _UNSUPPORTED_APP_USAGE_ENTRIES),
+    ("aconfig_annotations_jar", _ACONFIG_FLAG_ACCESSOR_ENTRIES),
+    ("keepanno_jar", _KEEPANNO_ANNOTATION_ENTRIES),
+)
+
+BRIDGE_ENTRIES: tuple[str, ...] = tuple(sorted(
+    entry for _, entries in _BRIDGE_SLICES for entry in entries))
+assert len(BRIDGE_ENTRIES) == 39, len(BRIDGE_ENTRIES)
+assert "com/android/aconfig/annotations/AssumeTrueForR8.class" \
+    not in BRIDGE_ENTRIES
+
+
+def load_bridge(inputs: dict[str, Path]) -> dict[str, bytes]:
+    """Load every allowlisted bridge entry, byte-exact from its source jar.
+
+    A declared entry missing from its assigned source jar, or declared by
+    more than one slice, is fatal before any composition happens.
     """
-    with zipfile.ZipFile(merged_jar, "r") as mz:
-        m_infos = [i for i in mz.infolist() if not i.is_dir()]
-    tmp = android_jar.with_suffix(".jar.tmp")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out, \
-            zipfile.ZipFile(merged_jar, "r") as mz:
-        for info in m_infos:
-            data = manifest_bytes if info.filename == "META-INF/MANIFEST.MF" \
-                else mz.read(info.filename)
-            new_info = zipfile.ZipInfo(info.filename, info.date_time)
-            new_info.compress_type = info.compress_type
-            new_info.external_attr = info.external_attr
-            new_info.create_system = info.create_system
-            out.writestr(new_info, data)
-    os.replace(tmp, android_jar)
-    return {"merged": len(m_infos), "manifest": "META-INF/MANIFEST.MF"}
+    bridge: dict[str, bytes] = {}
+    owners: dict[str, str] = {}
+    for source_key, entries in _BRIDGE_SLICES:
+        source = inputs[source_key]
+        with zipfile.ZipFile(source, "r") as zf:
+            names = set(zf.namelist())
+            for entry in entries:
+                if entry in owners:
+                    raise BuildError(
+                        f"bridge entry declared by two slices: {entry}")
+                if entry not in names:
+                    raise BuildError(
+                        f"declared bridge entry missing from {source}: "
+                        f"{entry}")
+                owners[entry] = source_key
+                bridge[entry] = zf.read(entry)
+    assert len(bridge) == 39
+    return bridge
 
 
-def stage_s1(target: Path, merged_jar: Path) -> None:
-    _ensure_file(merged_jar, "android-merged.jar (S1 source)")
-    android = target / "android.jar"
-    _ensure_file(android, "staging android.jar")
-    backup = _backup_if_needed(android, ".orig")
-    if backup:
-        print(f"S1: backup {backup}")
-    res = _copy_merged_master(android, merged_jar, ANDROID_MANIFEST_BYTES)
-    print(f"S1: copied android-merged.jar wholesale ({res['merged']} entries) "
-          f"as android.jar; MANIFEST.MF pinned to audited live bytes")
+# --- Deterministic ZIP composition -------------------------------------------
+
+FIXED_TIMESTAMP = (1980, 1, 1, 0, 0, 0)   # ZIP epoch — constant for determinism
+FIXED_FILE_ATTR = 0o644 << 16            # regular file, rw-r--r--
+FIXED_CREATE_SYSTEM = 3                  # Unix (constant, not platform-derived)
 
 
-# --- S2: framework.aidl patch ---------------------------------------------
-
-def stage_s2(target: Path) -> None:
-    aidl = target / "framework.aidl"
-    _ensure_file(aidl, "staging framework.aidl")
-    backup = _backup_if_needed(aidl, ".bak-preaidl")
-    if backup:
-        print(f"S2: backup {backup}")
-    res = install_sdk.patch_framework_aidl(aidl)
-    for decl in res["already"]:
-        print(f"S2:   already present: {decl}")
-    for decl in res["appended"]:
-        print(f"S2:   appended:       {decl}")
-    print(f"S2: framework.aidl patched ({len(res['appended'])} appended, "
-          f"{len(res['already'])} already present)")
-
-
-# --- S3: dalvik annotation patch ------------------------------------------
-
-def _rewrite_manifest_entry(jar: Path, manifest_bytes: bytes) -> None:
-    """Re-zip the jar with every entry unchanged except META-INF/MANIFEST.MF,
-    which is set to ``manifest_bytes``. Guarantees the manifest CRC matches the
-    audited live value regardless of the ``jar uf`` tool version used by S3.
-    Per-entry CRCs of all other entries are preserved (CRC is over uncompressed
-    bytes). Idempotent.
-    """
-    tmp = jar.with_suffix(".jar.tmp")
-    with zipfile.ZipFile(jar, "r") as src, \
-            zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out:
-        for info in src.infolist():
-            if info.is_dir():
-                continue
-            data = manifest_bytes if info.filename == "META-INF/MANIFEST.MF" \
-                else src.read(info.filename)
-            new_info = zipfile.ZipInfo(info.filename, info.date_time)
-            new_info.compress_type = info.compress_type
-            new_info.external_attr = info.external_attr
-            new_info.create_system = info.create_system
-            out.writestr(new_info, data)
-    os.replace(tmp, jar)
-
-
-def stage_s3(target: Path, core_libart_jar: Path) -> None:
-    _ensure_file(core_libart_jar, "core-libart javac jar (S3 source)")
-    for name in _dalvik.TARGET_JARS:
-        jar = target / name
-        _ensure_file(jar, f"staging {name}")
-        res = _dalvik.patch_target(jar, core_libart_jar, create_backup=True)
-        if res["backup"]:
-            print(f"S3: {name}: backup {res['backup']}")
-        if res["injected"]:
-            print(f"S3: {name}: injected {len(res['injected'])} classes")
-            for cls in res["injected"]:
-                print(f"S3:    + {cls}")
-        else:
-            print(f"S3: {name}: already patched (no-op)")
-    # Defensive: pin android.jar manifest to the audited live bytes after the
-    # `jar uf` invocation (core-for-system-modules.jar keeps its soong_zip
-    # manifest, which S3 preserves; only android.jar was repackaged by S1).
-    _rewrite_manifest_entry(target / "android.jar", ANDROID_MANIFEST_BYTES)
-    print("S3: normalized android.jar MANIFEST.MF to audited live bytes")
-
-
-# --- S3b: R8 library-class bridge (Task 041) ------------------------------
-
-def stage_s3b(target: Path, core_libart_jar: Path, unsupported_jar: Path,
-              aconfig_jar: Path, keepanno_jar: Path) -> None:
-    """Inject the 35 user-approved R8 library classes into both target JARs.
-
-    Stage S3b closes the six B1–B4 platform/build refs that AOSP Soong exposes
-    to R8 via bootclasspath (Ch2) or transitive header jars (Ch4) but AGP
-    9.3.1 only exposes via the compileSdk platform jars (see
-    docs/architecture/2026-08-20-r8-platform-classpath-bridge.md and
-    docs/issues/2026-08-21-r8-platform-build-classpath-closure.md). Exactly
-    35 allowlisted, source-byte-identical entries are injected into both
-    android.jar and core-for-system-modules.jar; ``AssumeTrueForR8`` stays
-    out (Task 042). Both targets are validated read-only BEFORE either is
-    mutated, so a source/collision failure cannot leave one target patched
-    and the other untouched.
-    """
-    _ensure_file(core_libart_jar, "core-libart javac jar (S3b source)")
-    _ensure_file(unsupported_jar, "unsupportedappusage javac jar (S3b source)")
-    _ensure_file(aconfig_jar, "aconfig-annotations-lib javac jar (S3b source)")
-    _ensure_file(keepanno_jar, "keepanno-annotations jar (S3b source)")
-    slices = _r8lib.task041_slices(core_libart_jar, unsupported_jar,
-                                   aconfig_jar, keepanno_jar)
-    # Read-only validation of BOTH targets before mutating either.
-    for name in _dalvik.TARGET_JARS:
-        jar = target / name
-        _ensure_file(jar, f"staging {name}")
-        _r8lib.validate_target(jar, slices)
-    for name in _dalvik.TARGET_JARS:
-        jar = target / name
-        res = _r8lib.patch_target(jar, slices)
-        if res["backup"]:
-            print(f"S3b: {name}: backup {res['backup']}")
-        if res["injected"]:
-            print(f"S3b: {name}: injected {len(res['injected'])} library "
-                  f"classes")
-            for cls in res["injected"]:
-                print(f"S3b:    + {cls}")
-        else:
-            print(f"S3b: {name}: already patched (no-op)")
-    # Defensive: keep android.jar manifest pinned to the audited live bytes
-    # after the S3b rewrite (same normalization S3 applies).
-    _rewrite_manifest_entry(target / "android.jar", ANDROID_MANIFEST_BYTES)
-    print("S3b: normalized android.jar MANIFEST.MF to audited live bytes")
-
-
-# --- S4: framework-res resource overlay ------------------------------------
-
-RESOURCE_ENTRY_NAME = "resources.arsc"
+def _read_unique_entries(path: Path) -> dict[str, bytes]:
+    """Read every non-directory entry of a ZIP; duplicate names are fatal."""
+    with zipfile.ZipFile(path, "r") as zf:
+        names = [i.filename for i in zf.infolist() if not i.is_dir()]
+        if len(names) != len(set(names)):
+            dupes = sorted({n for n in names if names.count(n) > 1})
+            raise BuildError(
+                f"duplicate entry names in {path}: {dupes[:3]}...")
+        return {n: zf.read(n) for n in names}
 
 
 def _is_resource_entry(name: str) -> bool:
-    """An entry S4 owns: the flattened resource table or any res/ file."""
-    return name == RESOURCE_ENTRY_NAME or name.startswith("res/")
+    """An entry owned by the framework resource set."""
+    return name == "resources.arsc" or name.startswith("res/")
 
 
-def _copy_zipinfo(out: zipfile.ZipFile, info: zipfile.ZipInfo, data: bytes) -> None:
-    """Write ``data`` under a fresh ZipInfo cloned from ``info`` so the entry's
-    stored CRC (computed over uncompressed bytes) matches the source exactly,
-    independent of jar-level compression/ordering. Same pattern as S1/S3."""
-    new_info = zipfile.ZipInfo(info.filename, info.date_time)
-    new_info.compress_type = info.compress_type
-    new_info.external_attr = info.external_attr
-    new_info.create_system = info.create_system
-    out.writestr(new_info, data)
+def _apply_bridge(entries: dict[str, bytes], bridge: dict[str, bytes]) -> None:
+    """Inject bridge entries: equal bytes are idempotent, unequal are fatal."""
+    for name, data in sorted(bridge.items()):
+        existing = entries.get(name)
+        if existing is None:
+            entries[name] = data
+        elif existing != data:
+            raise BuildError(
+                f"bridge collision: target entry {name} differs from the "
+                f"approved source bytes")
 
 
-def _overlay_framework_res(android_jar: Path, framework_res_apk: Path) -> dict:
-    """Strip ``resources.arsc`` + ``res/**`` from ``android_jar`` then add the
-    same entries from ``framework_res_apk``.
+def _write_deterministic_zip(entries: dict[str, bytes]) -> bytes:
+    """Serialize entries into a deterministic ZIP: sorted names, fixed
+    timestamps/attributes/compression."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name in sorted(entries):
+            info = zipfile.ZipInfo(name, FIXED_TIMESTAMP)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = FIXED_FILE_ATTR
+            info.create_system = FIXED_CREATE_SYSTEM
+            zf.writestr(info, entries[name])
+    return buf.getvalue()
 
-    Non-resource entries (classes, ``META-INF/MANIFEST.MF``, …) are preserved
-    from ``android_jar`` with their original CRCs. The apk's non-resource
-    entries (``AndroidManifest.xml``, ``META-INF/*``, ``assets/``) are NOT
-    carried over — only resources are overlaid. Idempotent: a second run strips
-    the just-overlaid resources and re-adds them, yielding the same bytes.
-    Returns counts: {stripped_res, stripped_arsc, added_res, added_arsc, kept}.
+
+def compose_android_jar(base_jar: Path, framework_jar: Path,
+                        framework_res_apk: Path,
+                        bridge: dict[str, bytes]) -> bytes:
+    """Compose android.jar (architecture spec §3.1).
+
+    1. Start from the stock base jar (non-resource entries).
+    2. Overlay every non-resource entry from the framework aggregate — a
+       duplicate framework entry intentionally wins.
+    3. Take the complete resource set (``resources.arsc`` + ``res/**``)
+       byte-exactly from the framework-res APK; all other APK entries
+       (manifest, META-INF signing, assets) are excluded.
+    4. Inject the bridge under the idempotent/fatal collision rule.
     """
-    with zipfile.ZipFile(android_jar, "r") as az:
-        all_infos = [i for i in az.infolist() if not i.is_dir()]
-        kept_infos = [i for i in all_infos if not _is_resource_entry(i.filename)]
-        kept_data = {i.filename: az.read(i.filename) for i in kept_infos}
-        stripped_res = sum(1 for i in all_infos if i.filename.startswith("res/"))
-        stripped_arsc = sum(
-            1 for i in all_infos if i.filename == RESOURCE_ENTRY_NAME)
-    with zipfile.ZipFile(framework_res_apk, "r") as fz:
-        res_infos = [i for i in fz.infolist()
-                     if not i.is_dir() and _is_resource_entry(i.filename)]
-        res_data = {i.filename: fz.read(i.filename) for i in res_infos}
-    added_res = sum(1 for i in res_infos if i.filename.startswith("res/"))
-    added_arsc = sum(1 for i in res_infos if i.filename == RESOURCE_ENTRY_NAME)
-
-    tmp = android_jar.with_suffix(".jar.tmp")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as out:
-        for info in kept_infos:
-            _copy_zipinfo(out, info, kept_data[info.filename])
-        for info in res_infos:
-            _copy_zipinfo(out, info, res_data[info.filename])
-    os.replace(tmp, android_jar)
-    return {
-        "stripped_res": stripped_res,
-        "stripped_arsc": stripped_arsc,
-        "added_res": added_res,
-        "added_arsc": added_arsc,
-        "kept": len(kept_infos),
-    }
+    base = _read_unique_entries(base_jar)
+    framework = _read_unique_entries(framework_jar)
+    apk = _read_unique_entries(framework_res_apk)
+    entries: dict[str, bytes] = {}
+    for name, data in base.items():
+        if not _is_resource_entry(name):
+            entries[name] = data
+    for name, data in framework.items():
+        if not _is_resource_entry(name):
+            entries[name] = data
+    for name, data in apk.items():
+        if _is_resource_entry(name):
+            entries[name] = data
+    _apply_bridge(entries, bridge)
+    return _write_deterministic_zip(entries)
 
 
-def stage_s4(target: Path, framework_res_apk: Path) -> None:
-    """Overlay AOSP ``framework-res.apk`` resources onto staging ``android.jar``.
-
-    Replaces the stale May-27 ``resources.arsc`` + ``res/**`` snapshot carried
-    by ``libs/android-merged.jar`` (S1) with the current AOSP
-    ``framework-res.apk`` resources — resolving the ``androidprv:`` private-
-    resource linking errors (AGENTS.md §2.4 point 2). Preserves all non-resource
-    entries (incl. the pinned ``META-INF/MANIFEST.MF``). Creates
-    ``android.jar.bak-preres`` on first mutation.
-    """
-    _ensure_file(framework_res_apk, "framework-res.apk (S4 source)")
-    android = target / "android.jar"
-    _ensure_file(android, "staging android.jar")
-    backup = _backup_if_needed(android, ".bak-preres")
-    if backup:
-        print(f"S4: backup {backup}")
-    res = _overlay_framework_res(android, framework_res_apk)
-    print(f"S4: stripped {res['stripped_res']} res/ + {res['stripped_arsc']} "
-          f"resources.arsc from android.jar; added {res['added_res']} res/ + "
-          f"{res['added_arsc']} resources.arsc from framework-res.apk; kept "
-          f"{res['kept']} non-resource entries")
+def compose_core_modules_jar(base_jar: Path,
+                             bridge: dict[str, bytes]) -> bytes:
+    """Compose core-for-system-modules.jar (spec §3.2): stock base + bridge."""
+    entries = _read_unique_entries(base_jar)
+    _apply_bridge(entries, bridge)
+    return _write_deterministic_zip(entries)
 
 
-# --- S5: verify ------------------------------------------------------------
+# --- Platform composition (transaction) ---------------------------------------
 
-def _cmp_jar_inventory(label: str, staging_jar: Path, live_jar: Path) -> tuple:
-    s = _jar_inventory(staging_jar)
-    l = _jar_inventory(live_jar)
-    missing = sorted(set(l) - set(s))           # in live, not in staging
-    extra = sorted(set(s) - set(l))             # in staging, not in live
-    common = set(s) & set(l)
-    crc_diff = sorted(n for n in common if s[n] != l[n])
-    ok = not (missing or extra or crc_diff)
-    status = "PASS" if ok else "DIFF"
-    print(f"S5: {label}: {status}  "
-          f"(staging={len(s)} live={len(l)} missing={len(missing)} "
-          f"extra={len(extra)} crc_diff={len(crc_diff)})")
-    if missing:
-        print(f"     missing-in-staging sample: {missing[:6]}")
-    if extra:
-        print(f"     extra-in-staging sample: {extra[:6]}")
-    if crc_diff:
-        print(f"     crc-diff sample: {crc_diff[:6]}")
-    return status, {"missing": len(missing), "extra": len(extra),
-                    "crc_diff": len(crc_diff)}
+# Base-platform files replaced by composed bytes (never copied verbatim).
+_COMPOSED_BASE_NAMES = ("android.jar", "core-for-system-modules.jar",
+                        "framework.aidl")
 
 
-def _cmp_jar_split_resource(label: str, staging_jar: Path, live_jar: Path) -> tuple:
-    """Compare android.jar with the expected S4 resource delta.
-
-    Non-resource entries (everything except ``resources.arsc`` and ``res/**``)
-    must match the live SDK strictly (names + CRC). Resource entries are
-    reported as a delta and do NOT gate the result — S4 intentionally replaces
-    the stale merged-jar resources with the current AOSP framework-res.
-    Returns (status, detail) where status is PASS only if non-resource matches.
-    """
-    s = _jar_inventory(staging_jar)
-    l = _jar_inventory(live_jar)
-    s_nr = {k: v for k, v in s.items() if not _is_resource_entry(k)}
-    l_nr = {k: v for k, v in l.items() if not _is_resource_entry(k)}
-    missing = sorted(set(l_nr) - set(s_nr))
-    extra = sorted(set(s_nr) - set(l_nr))
-    crc_diff = sorted(n for n in (set(s_nr) & set(l_nr)) if s_nr[n] != l_nr[n])
-    ok = not (missing or extra or crc_diff)
-    status = "PASS" if ok else "DIFF"
-    print(f"S5: {label}: {status} (non-resource strict; S4 resource delta allowed)  "
-          f"(staging_nr={len(s_nr)} live_nr={len(l_nr)} missing={len(missing)} "
-          f"extra={len(extra)} crc_diff={len(crc_diff)})")
-    s_r = {k: v for k, v in s.items() if _is_resource_entry(k)}
-    l_r = {k: v for k, v in l.items() if _is_resource_entry(k)}
-    r_missing = len(set(l_r) - set(s_r))
-    r_extra = len(set(s_r) - set(l_r))
-    r_crc = sum(1 for n in (set(s_r) & set(l_r)) if s_r[n] != l_r[n])
-    print(f"     resource delta (resources.arsc + res/**): "
-          f"staging={len(s_r)} live={len(l_r)} missing={r_missing} "
-          f"extra={r_extra} crc_diff={r_crc})")
-    if missing:
-        print(f"     missing-in-staging (non-res) sample: {missing[:6]}")
-    if extra:
-        print(f"     extra-in-staging (non-res) sample: {extra[:6]}")
-    if crc_diff:
-        print(f"     crc-diff (non-res) sample: {crc_diff[:6]}")
-    return status, {"non_resource_ok": ok, "missing": len(missing),
-                    "extra": len(extra), "crc_diff": len(crc_diff)}
+def _is_backup_name(name: str) -> bool:
+    return name.endswith(".orig") or ".bak-" in name
 
 
-def _cmp_bytes(label: str, staging: Path, live: Path) -> tuple:
-    sb = staging.read_bytes()
-    lb = live.read_bytes()
-    ok = sb == lb
-    status = "PASS" if ok else "DIFF"
-    print(f"S5: {label}: {status}  (staging={len(sb)}B live={len(lb)}B)")
-    return status, {"staging_bytes": len(sb), "live_bytes": len(lb)}
-
-
-def _cmp_tree_names(label: str, staging: Path, live: Path) -> tuple:
-    def rel_files(root: Path) -> set:
-        return {str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()}
-    s = rel_files(staging)
-    l = rel_files(live)
-    missing = sorted(set(l) - set(s))
-    extra = sorted(set(s) - set(l))
-    ok = not (missing or extra)
-    status = "PASS" if ok else "DIFF"
-    print(f"S5: {label}/: {status}  (staging={len(s)} live={len(l)} "
-          f"missing={len(missing)} extra={len(extra)})")
-    if missing:
-        print(f"     missing sample: {missing[:6]}")
-    if extra:
-        print(f"     extra sample: {extra[:6]}")
-    return status, {"missing": len(missing), "extra": len(extra)}
-
-
-def _check_package_xml_shape(label: str, pkg_xml: Path) -> tuple:
-    ok = pkg_xml.is_file()
-    detail = {"present": ok}
-    if ok:
-        text = pkg_xml.read_text(encoding="utf-8")
-        import re
-        m = re.search(r'localPackage path="([^"]+)"', text)
-        api = re.search(r"<api-level>([^<]*)</api-level>", text)
-        code = re.search(r"<codename>([^<]*)</codename>", text)
-        detail.update(path=m.group(1) if m else None,
-                      api_level=api.group(1) if api else None,
-                      codename=code.group(1) if code else None)
-        ok = bool(m and api and code)
-    status = "PASS" if ok else "DIFF"
-    print(f"S5: {label}: {status}  (path={detail.get('path')} "
-          f"api-level={detail.get('api_level')} codename={detail.get('codename')})")
-    return status, detail
-
-
-def stage_verify(target: Path, live: Path, expect_s4_delta: bool = False) -> int:
-    _ensure_dir(target, "staging target")
-    _ensure_dir(live, "live SDK")
-    mode = (" (--expect-s4-delta: android.jar resource delta allowed)"
-            if expect_s4_delta else "")
-    print(f"S5: verifying staging {target} vs live {live}{mode}")
-    results = []
-    if expect_s4_delta:
-        results.append(_cmp_jar_split_resource("android.jar",
-                                               target / "android.jar",
-                                               live / "android.jar"))
-    else:
-        results.append(_cmp_jar_inventory("android.jar",
-                                          target / "android.jar", live / "android.jar"))
-    results.append(_cmp_jar_inventory("core-for-system-modules.jar",
-                                       target / "core-for-system-modules.jar",
-                                       live / "core-for-system-modules.jar"))
-    results.append(_cmp_bytes("framework.aidl",
-                               target / "framework.aidl", live / "framework.aidl"))
-    results.append(_cmp_bytes("build.prop",
-                               target / "build.prop", live / "build.prop"))
-    results.append(_check_package_xml_shape("package.xml",
-                                             target / "package.xml"))
-    results.append(_cmp_tree_names("data", target / "data", live / "data"))
-    results.append(_cmp_tree_names("optional", target / "optional",
-                                    live / "optional"))
-    statuses = [s for s, _ in results]
-    print("")
-    if all(s == "PASS" for s in statuses):
-        if expect_s4_delta:
-            print("S5: ALL PASS (non-resource strict) — android.jar resource "
-                  "delta is the expected S4 overlay; staging is otherwise "
-                  "equivalent to live.")
+def _copy_base_platform(base: Path, staging: Path) -> None:
+    """Copy the stock base platform into staging, skipping backup artifacts
+    and the files this generator composes."""
+    for entry in sorted(os.listdir(base)):
+        if entry in _COMPOSED_BASE_NAMES or entry == MARKER_NAME \
+                or _is_backup_name(entry):
+            continue
+        src = base / entry
+        dst = staging / entry
+        if src.is_dir():
+            shutil.copytree(src, dst,
+                            ignore=shutil.ignore_patterns("*.orig", "*.bak-*"))
         else:
-            print("S5: ALL PASS — staging is inventory-equivalent to the live SDK.")
-        return 0
-    failed = [name for name, (s, _) in zip(
-        ["android.jar", "core-for-system-modules.jar", "framework.aidl",
-         "build.prop", "package.xml", "data/", "optional/"], results) if s != "PASS"]
-    print(f"S5: DIFF in {len(failed)} file(s): {', '.join(failed)}")
-    return 1
+            shutil.copy2(src, dst)
 
 
-# --- apply: sync staging onto the live SDK (pre-approved) ------------------
+def compose_framework_aidl(base_text: str, decls: list[str]) -> str:
+    """Append each absent declaration exactly once to the stock framework.aidl."""
+    text = base_text
+    if text and not text.endswith("\n"):
+        text += "\n"
+    for decl in decls:
+        if decl not in text:
+            text += decl + "\n"
+    return text
 
-# The artifact files the pipeline patches and that --apply syncs onto live.
-# Identity-bearing files (package.xml, source.properties, sdk.properties) are
-# NOT touched — staging carries the staging name, the live SDK carries the real
-# SysUISdk identity.
-APPLY_FILES = ("android.jar", "core-for-system-modules.jar", "framework.aidl")
+
+def rewrite_package_xml(text: str) -> str:
+    """Rewrite the base package.xml for the generated platform identity."""
+    def sub(pattern: str, replacement: str) -> None:
+        nonlocal text
+        text = re.sub(pattern, lambda m: m.group(1) + replacement + m.group(2),
+                      text, count=1)
+    sub(r'(localPackage path=")[^"]*(")', OUTPUT_PKG_PATH)
+    sub(r"(<api-level>)[^<]*(</api-level>)", OUTPUT_API_LEVEL)
+    sub(r"(<codename>)[^<]*(</codename>)", OUTPUT_CODENAME)
+    sub(r"(<display-name>)[^<]*(</display-name>)", OUTPUT_DISPLAY_NAME)
+    return text
 
 
-def _sha256(path: Path) -> str:
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -645,133 +474,235 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def apply_to_live(source: Path) -> int:
-    """Sync staging artifacts onto the live SDK (user pre-approval 2026-08-13).
+def _dir_inventory(root: Path) -> dict[str, str]:
+    """{relative posix path: sha256} for every file under root."""
+    return {p.relative_to(root).as_posix(): _sha256_file(p)
+            for p in sorted(root.rglob("*")) if p.is_file()}
 
-    Copies each of ``APPLY_FILES`` from the staging ``source`` to the live SDK,
-    creating a timestamped backup (``<name>.bak-<ts>``) of every live file that
-    actually differs. Identical files are skipped (no backup, no overwrite).
-    This is the ONLY sanctioned live-SDK mutation path; it is deliberately
-    separate from the staging build/verify path (which hard-fails on the live
-    SDK via ``_live_guard``).
-    """
-    _ensure_dir(source, "staging source")
-    live = _resolve(LIVE_SDK_DIR)
-    _ensure_dir(live, "live SDK")
-    _live_guard(source)  # refuse if --source is/inside the live SDK
-    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    print(f"apply: source={source} live={live} ts={ts}")
-    applied: list[str] = []
-    skipped: list[str] = []
-    for name in APPLY_FILES:
-        s = source / name
-        l = live / name
-        _ensure_file(s, f"staging {name}")
-        _ensure_file(l, f"live {name}")
-        if _sha256(s) == _sha256(l):
-            skipped.append(name)
-            print(f"apply: {name}: identical (skip)")
-            continue
-        bak = l.with_name(f"{name}.bak-{ts}")
-        shutil.copy2(l, bak)
-        print(f"apply: {name}: backup {bak}")
-        shutil.copy2(s, l)
-        applied.append(name)
-        print(f"apply: {name}: synced")
-    print(f"apply: done — synced {len(applied)} "
-          f"({', '.join(applied) or 'none'}), skipped {len(skipped)} identical")
+
+def _validate_platform(staging: Path, inputs: dict[str, Path],
+                       bridge: dict[str, bytes], decls: list[str],
+                       base_platform: Path) -> None:
+    """Full pre-publication validation (architecture spec §5)."""
+    staging = Path(staging)
+    # 1. input ZIPs contain unique names.
+    for key in ("framework_jar", "framework_res_apk", "core_libart_jar",
+                "unsupportedappusage_jar", "aconfig_annotations_jar",
+                "keepanno_jar"):
+        with zipfile.ZipFile(inputs[key], "r") as zf:
+            names = [i.filename for i in zf.infolist() if not i.is_dir()]
+        if len(names) != len(set(names)):
+            raise BuildError(f"duplicate entry names in input {key}: "
+                             f"{inputs[key]}")
+    # 2. generated jars are readable and carry the complete bridge.
+    android_jar = staging / "android.jar"
+    core_jar = staging / "core-for-system-modules.jar"
+    for path in (android_jar, core_jar):
+        with zipfile.ZipFile(path, "r") as zf:
+            bad = zf.testzip()
+            if bad is not None:
+                raise BuildError(f"generated jar failed CRC check at {bad}: "
+                                 f"{path}")
+            names = set(zf.namelist())
+            for entry, data in sorted(bridge.items()):
+                if entry not in names:
+                    raise BuildError(f"bridge entry missing from {path.name}: "
+                                     f"{entry}")
+                if zf.read(entry) != data:
+                    raise BuildError(f"bridge entry bytes differ from source "
+                                     f"in {path.name}: {entry}")
+    # 3. android.jar resource set is byte-exact vs framework-res.apk.
+    with zipfile.ZipFile(android_jar, "r") as az, \
+            zipfile.ZipFile(inputs["framework_res_apk"], "r") as pz:
+        a_res = {i.filename: az.read(i.filename)
+                 for i in az.infolist()
+                 if not i.is_dir() and _is_resource_entry(i.filename)}
+        p_res = {i.filename: pz.read(i.filename)
+                 for i in pz.infolist()
+                 if not i.is_dir() and _is_resource_entry(i.filename)}
+    if a_res != p_res:
+        raise BuildError("android.jar resource set differs from "
+                         "framework-res.apk")
+    # 4. the two hidden AIDL declarations are present and source-derived.
+    aidl_text = (staging / "framework.aidl").read_text(encoding="utf-8")
+    derived = []
+    for key, fqn, kind in HIDDEN_AIDL_SOURCES:
+        decl = derive_aidl_declaration(
+            inputs[key].read_text(encoding="utf-8"), fqn, kind)
+        derived.append(decl)
+        if decl not in aidl_text:
+            raise BuildError(f"framework.aidl is missing derived hidden "
+                             f"declaration: {decl}")
+    if derived != decls:
+        raise BuildError("framework.aidl declarations do not match the "
+                         "derived set")
+    # 5. package.xml metadata.
+    pkg_text = (staging / "package.xml").read_text(encoding="utf-8")
+    for needle in (f'path="{OUTPUT_PKG_PATH}"',
+                   f"<api-level>{OUTPUT_API_LEVEL}</api-level>",
+                   f"<codename>{OUTPUT_CODENAME}</codename>"):
+        if needle not in pkg_text:
+            raise BuildError(f"package.xml metadata check failed: "
+                             f"{needle!r} not found")
+    # 6. no backup artifacts in the generated platform.
+    for p in staging.rglob("*"):
+        if _is_backup_name(p.name):
+            raise BuildError(f"backup artifact in generated platform: {p}")
+    # 7. composition is deterministic (re-compose and compare).
+    android_again = compose_android_jar(
+        base_platform / "android.jar", inputs["framework_jar"],
+        inputs["framework_res_apk"], bridge)
+    if _sha256_bytes(android_again) != _sha256_file(android_jar):
+        raise BuildError("android.jar composition is not deterministic")
+    core_again = compose_core_modules_jar(
+        base_platform / "core-for-system-modules.jar", bridge)
+    if _sha256_bytes(core_again) != _sha256_file(core_jar):
+        raise BuildError("core-for-system-modules.jar composition is not "
+                         "deterministic")
+
+
+def _build_marker(base_platform: Path, inputs: dict[str, Path],
+                  staging: Path) -> dict:
+    """Ownership + provenance marker (deterministic, no absolute paths)."""
+    return {
+        "schema_version": MARKER_SCHEMA_VERSION,
+        "tool_version": TOOL_VERSION,
+        "base_platform": {
+            "name": base_platform.name,
+            "inventory": _dir_inventory(base_platform),
+        },
+        "inputs": {key: {"path": rel, "sha256": _sha256_file(inputs[key])}
+                   for key, rel in AOSP_INPUT_RELPATHS.items()},
+        "generated": {"inventory": _dir_inventory(staging)},
+    }
+
+
+def _is_generator_owned(path: Path) -> bool:
+    marker = path / MARKER_NAME
+    if not marker.is_file():
+        return False
+    try:
+        data = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return (isinstance(data, dict)
+            and data.get("schema_version") == MARKER_SCHEMA_VERSION
+            and "tool_version" in data
+            and "generated" in data)
+
+
+def _refuse_alias(output: Path, base: Path) -> None:
+    if output == base or base in output.parents or output in base.parents:
+        raise BuildError(
+            f"refusing: output {output} aliases or overlaps the stock base "
+            f"platform {base}")
+
+
+def _publish(staging: Path, output: Path) -> None:
+    """Publish staging as output by rename; replace a marked output
+    transactionally (the old owned output is removed within the transaction)."""
+    if not output.exists():
+        os.rename(staging, output)
+        return
+    old = Path(tempfile.mkdtemp(prefix=f".{output.name}.old-",
+                                dir=output.parent))
+    old.rmdir()  # reserve a unique sibling name, then use it for the rename
+    os.rename(output, old)
+    try:
+        os.rename(staging, output)
+    except BaseException:
+        os.rename(old, output)  # roll back to the previous owned output
+        raise
+    shutil.rmtree(old)
+
+
+def build_platform(aosp_root: Path, base_platform: Path, output: Path,
+                   replace: bool = False) -> dict:
+    """Compose, validate, and atomically publish android-SysUISdk."""
+    aosp_root = Path(aosp_root).resolve()
+    base_platform = Path(base_platform).resolve()
+    output = Path(output).resolve()
+    if not base_platform.is_dir():
+        raise BuildError(f"base platform not found: {base_platform}")
+    for name in _COMPOSED_BASE_NAMES:
+        if not (base_platform / name).is_file():
+            raise BuildError(f"base platform missing {name}: {base_platform}")
+    _refuse_alias(output, base_platform)
+    if output.exists():
+        if not replace:
+            raise BuildError(
+                f"output already exists: {output} (pass --replace to replace "
+                f"a generator-owned output)")
+        if not _is_generator_owned(output):
+            raise BuildError(
+                f"refusing --replace: {output} is not generator-owned "
+                f"(no valid {MARKER_NAME} marker)")
+    inputs = resolve_inputs(aosp_root)
+    bridge = load_bridge(inputs)
+    decls = derive_hidden_aidl_declarations(aosp_root)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{output.name}.staging-",
+                                    dir=output.parent))
+    try:
+        _copy_base_platform(base_platform, staging)
+        android_bytes = compose_android_jar(
+            base_platform / "android.jar", inputs["framework_jar"],
+            inputs["framework_res_apk"], bridge)
+        core_bytes = compose_core_modules_jar(
+            base_platform / "core-for-system-modules.jar", bridge)
+        aidl_text = compose_framework_aidl(
+            (base_platform / "framework.aidl").read_text(encoding="utf-8"),
+            decls)
+        (staging / "android.jar").write_bytes(android_bytes)
+        (staging / "core-for-system-modules.jar").write_bytes(core_bytes)
+        (staging / "framework.aidl").write_text(aidl_text, encoding="utf-8",
+                                                 newline="\n")
+        pkg = staging / "package.xml"
+        if not pkg.is_file():
+            raise BuildError(f"base platform missing package.xml: "
+                             f"{base_platform}")
+        pkg.write_text(rewrite_package_xml(
+            pkg.read_text(encoding="utf-8")), encoding="utf-8", newline="\n")
+        _validate_platform(staging, inputs, bridge, decls, base_platform)
+        marker = _build_marker(base_platform, inputs, staging)
+        (staging / MARKER_NAME).write_text(
+            json.dumps(marker, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8", newline="\n")
+        _publish(staging, output)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    return {"output": str(output), "marker": marker}
+
+
+# --- main ---------------------------------------------------------------------
+
+def run(argv: list[str] | None = None) -> int:
+    """CLI entry: parse, resolve, compose, publish. Returns an exit code."""
+    args = build_arg_parser().parse_args(argv)
+    try:
+        sdk_root = resolve_sdk_root(args.sdk_root, dict(os.environ),
+                                    platform.system(), Path.home())
+        base = resolve_base_platform(args.base_platform, sdk_root)
+        output = resolve_output(args.output, sdk_root)
+        report = build_platform(aosp_root=args.aosp_root,
+                                base_platform=base, output=output,
+                                replace=args.replace)
+    except BuildError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    marker = report["marker"]
+    print(f"SysUISdk composed: {report['output']}")
+    print(f"  base platform : {marker['base_platform']['name']} "
+          f"({len(marker['base_platform']['inventory'])} files)")
+    print(f"  AOSP inputs   : {len(marker['inputs'])} (exact frozen map)")
+    print(f"  bridge entries: {len(BRIDGE_ENTRIES)} in both target jars")
+    print(f"  generated     : {len(marker['generated']['inventory'])} files")
     return 0
 
 
-# --- main ------------------------------------------------------------------
-
-def _run_stages(stages: list[str], base: Path, target: Path,
-                merged_jar: Path, core_libart_jar: Path,
-                framework_res_apk: Path, clean: bool,
-                unsupported_jar: Path = DEFAULT_UNSUPPORTEDAPPUSAGE_JAR,
-                aconfig_jar: Path = DEFAULT_ACONFIG_ANNOTATIONS_JAR,
-                keepanno_jar: Path = DEFAULT_KEEPANNO_ANNOTATIONS_JAR) -> None:
-    if "s0" in stages:
-        stage_s0(base, target, clean)
-    if "s1" in stages:
-        stage_s1(target, merged_jar)
-    if "s2" in stages:
-        stage_s2(target)
-    if "s3" in stages:
-        stage_s3(target, core_libart_jar)
-    if "s3b" in stages:
-        stage_s3b(target, core_libart_jar, unsupported_jar, aconfig_jar,
-                  keepanno_jar)
-    if "s4" in stages:
-        stage_s4(target, framework_res_apk)
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--target", default=str(DEFAULT_TARGET),
-                    help=f"staging platform dir (default {DEFAULT_TARGET})")
-    ap.add_argument("--base", default=str(DEFAULT_BASE_PLATFORM),
-                    help="base stock platform to copy in S0")
-    ap.add_argument("--merged-jar", default=str(DEFAULT_MERGED_JAR),
-                    help="S1 android-merged.jar source (default libs/android-merged.jar)")
-    ap.add_argument("--core-libart-jar", default=str(DEFAULT_CORE_LIBART_JAR),
-                    help="S3/S3b core-libart javac jar source")
-    ap.add_argument("--unsupportedappusage-jar",
-                    default=str(DEFAULT_UNSUPPORTEDAPPUSAGE_JAR),
-                    help="S3b unsupportedappusage javac jar source")
-    ap.add_argument("--aconfig-annotations-jar",
-                    default=str(DEFAULT_ACONFIG_ANNOTATIONS_JAR),
-                    help="S3b aconfig-annotations-lib javac jar source")
-    ap.add_argument("--keepanno-annotations-jar",
-                    default=str(DEFAULT_KEEPANNO_ANNOTATIONS_JAR),
-                    help="S3b keepanno-annotations jar source "
-                         "(default libs/keepanno-annotations.jar)")
-    ap.add_argument("--framework-res-apk", default=str(DEFAULT_FRAMEWORK_RES_APK),
-                    help="S4 framework-res.apk source (default libs/framework-res.apk)")
-    ap.add_argument("--clean", action="store_true",
-                    help="remove the staging target before S0 (S0 only)")
-    ap.add_argument("--stages", default=DEFAULT_STAGES,
-                    help="comma-separated stages to run (default "
-                         f"{DEFAULT_STAGES}; append s4 explicitly for the "
-                         "framework-res overlay)")
-    ap.add_argument("--verify", action="store_true",
-                    help="run S5 verify against the live SDK and exit")
-    ap.add_argument("--expect-s4-delta", action="store_true",
-                    help="with --verify: allow android.jar resource delta from S4 "
-                         "(non-resource entries stay strict); use after a build with s4")
-    ap.add_argument("--apply", action="store_true",
-                    help="sync staging artifacts onto the live SDK (pre-approved "
-                         "2026-08-13); --source selects the staging dir")
-    ap.add_argument("--source", default=str(DEFAULT_TARGET),
-                    help=f"staging source dir for --apply (default {DEFAULT_TARGET})")
-    args = ap.parse_args()
-
-    target = Path(args.target)
-
-    if args.apply:
-        _live_guard(_resolve(Path(args.source)))
-        return apply_to_live(_resolve(Path(args.source)))
-
-    _live_guard(target)
-
-    if args.verify:
-        return stage_verify(_resolve(target), _resolve(LIVE_SDK_DIR),
-                            expect_s4_delta=args.expect_s4_delta)
-
-    stages = [s.strip().lower() for s in args.stages.split(",") if s.strip()]
-    for s in stages:
-        if s not in ALL_STAGES:
-            sys.exit(f"ERROR: unknown stage {s!r}; choose from {ALL_STAGES}")
-    _run_stages(stages, _resolve(Path(args.base)), _resolve(target),
-                _resolve(Path(args.merged_jar)),
-                _resolve(Path(args.core_libart_jar)),
-                _resolve(Path(args.framework_res_apk)), args.clean,
-                unsupported_jar=_resolve(Path(args.unsupportedappusage_jar)),
-                aconfig_jar=_resolve(Path(args.aconfig_annotations_jar)),
-                keepanno_jar=_resolve(Path(args.keepanno_annotations_jar)))
-    print("")
-    print("Done. Run with --verify to compare staging against the live SDK.")
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    return run(argv)
 
 
 if __name__ == "__main__":
