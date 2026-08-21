@@ -9,15 +9,16 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | final amend `df6e0b31`; done, clean, unpushed |
-| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | final PASS, zero findings |
-| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | final PASS, zero findings |
+| 043 worker | `w1W:p3` (`task043-audit-r3`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` (`low`) | merged as `a5c2c34e`; cleanup pending |
+| 043 Standards review | `w1Y:p1` | `review-043-standards` / `/home/conv/myspace/SystemUI-Gradle-wt-043-standards` | `joycode/GLM-5.2` | final PASS; cleanup pending |
+| 043 Spec review | `w1Z:p1` | `review-043-spec` / `/home/conv/myspace/SystemUI-Gradle-wt-043-spec` | `joycode/GLM-5.2` | final PASS; cleanup pending |
 
 ## Queue
 
-1. Architect re-runs full static acceptance and verifies the one-commit two-path patch.
-2. Cherry-pick `df6e0b31`, re-run main static acceptance, then push.
-3. Close and remove all three workspaces/worktrees/branches after patch-equivalence checks.
+1. Push merged audit plus truthful issue status sync.
+2. Verify all three task/review worktrees clean and patches represented on main.
+3. Close/remove all three workspaces, worktrees, and local branches.
+4. Present the eight `NOT APPROVED` packets to the user for item-by-item decisions.
 
 ## Recent Orchestration Transitions
 
@@ -120,10 +121,13 @@
   Worker reported all static inventory/hash/class/ledger/packet/scope gates passing.
 - 2026-08-21 — Final focused re-review at `67fe3284...df6e0b31` passed both axes with
   zero findings. Architect fresh static acceptance and merge remain; Gradle stays prohibited.
+- 2026-08-21 — Audit cherry-picked as `a5c2c34e`; main fresh static acceptance passed all
+  85 artifact/hash/class, 13-module/5-rule, 34/26 ledger, 8-packet, content and patch-equivalence
+  gates. Issue top-level status was synchronized from its pre-dispatch snapshot.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Final Task 043 Standards and Spec re-reviews pass `df6e0b31` with zero findings.
-Architect static acceptance, merge, push, and cleanup remain; no Gradle, implementation, rollback,
-or history investigation.
+2026-08-21 — Task 043 audit is merged at `a5c2c34e`; main fresh static acceptance passed and
+Gradle was not run by design. Push and three-workspace cleanup remain, followed by user decisions
+on eight `NOT APPROVED` packets.

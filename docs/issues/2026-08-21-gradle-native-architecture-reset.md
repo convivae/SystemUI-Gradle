@@ -3,8 +3,10 @@
 ## Status
 
 Written architecture specification explicitly approved by the user on 2026-08-21.
-Task 043 read-only audit plan and exact Worker brief are drafted for separate dispatch approval.
-No worker has been dispatched, no build code has changed, and no rollback has started.
+Task 043's read-only current-state audit is complete and passed final fixed-range Standards and
+Spec reviews with zero findings. The audit changed no build code or artifacts, ran no Gradle
+command, consulted no Git history, and authorized no rollback. Its eight non-`keep` approval
+packets remain `NOT APPROVED` pending item-by-item user decisions.
 
 ## Background
 
@@ -83,12 +85,10 @@ missing reference. Error/ref counts are diagnostic only and no longer define art
 
 ## Pending
 
-- User review of the exact Task 043 brief:
-  `docs/orchestration/tasks/043-gradle-native-current-state-audit.md`.
-- After explicit brief approval, dispatch one isolated read-only GLM-5.3 Worker; no Gradle,
-  history-first investigation, implementation, or rollback.
-- No rollback until the audit is reviewed and each later item is separately discussed and
-  approved.
+- Present the eight `NOT APPROVED` packets from report §10 for item-by-item user decisions.
+- Convert only explicitly approved packets into separate implementation or targeted-history tasks.
+- Keep the truthful release baseline at one remaining R8 missing reference until the user chooses
+  the `AssumeTrueForR8` treatment experiment; no audit recommendation is self-authorizing.
 
 ## Audit execution record (Task 043, 2026-08-21)
 
