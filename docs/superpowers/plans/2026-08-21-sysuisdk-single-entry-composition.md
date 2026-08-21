@@ -238,3 +238,13 @@ Expected: no whitespace errors; only Task 045 Allowed Paths changed; ignored
 Create meaningful commits (tests/design, implementation, cleanup/docs may be separate).
 The final Worker report must include commit hashes, actual gates, remaining work, and a
 `HANDOFF:` block.
+
+## Post-plan architect closure record
+
+This is not a retroactive Worker requirement or an expansion of Steps 1–20. After the
+Worker completed that approved plan, the architect ran fixed-base/head isolated
+Standards + Spec review, cherry-picked the approved commits to main, and independently
+repeated Python, deterministic double-generation, refusal/replace, Debug, fresh R8,
+actual optimized-resource Release, ZIP/V2, and DEX-absence gates. The issue and live
+state record the real outputs and the one failed extra all-task rerun; `local.properties`
+was restored byte-for-byte and device/runtime validation remains deferred.

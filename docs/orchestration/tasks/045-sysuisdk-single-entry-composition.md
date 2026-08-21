@@ -2,7 +2,14 @@
 
 > Orchestrated exact brief. Protocol: `docs/orchestration/CHARTER.md` + worker-contract skill. Worker commits but never pushes.
 >
-> **Worker completion (2026-08-21)**: all gates passed in the isolated worktree — commits `991b6302` (generator + tests), `76ad180f` (seven-path deletion), plus docs; 220/220 Python, deterministic double build, Debug/R8/Release/APK gates green. Evidence: `docs/issues/2026-08-21-sysuisdk-single-entry-composition.md`. No REDLINE was triggered; device validation deferred.
+> **Closed on main (2026-08-21)**: Worker range `eb81e644...ee6448be` passed final
+> Standards + Spec review with no BLOCKER/HIGH/MEDIUM/LOW findings. Four Worker commits
+> were cherry-picked as `fc1d2489`, `8cb7279b`, `2e504633`, `ccdbbbbb`. Architect main
+> fresh acceptance passed 220/220 Python, two deterministic 11,382-file SDK generations,
+> refusal/replace, Debug, fresh R8, actual optimized-resource tasks, ZIP/V2, and DEX
+> absence (0/39 bridge; no `AssumeTrueForR8`). Final APK: 28,600,808 B, SHA-256
+> `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`.
+> Device/runtime validation remains deferred; detailed evidence is in the issue record.
 
 ## Authority
 

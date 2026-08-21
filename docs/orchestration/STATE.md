@@ -7,17 +7,16 @@
 
 ## Active Workers
 
-| Task | Workspace / Pane | Branch / Worktree | Model | Stage |
-|---|---|---|---|---|
-| 045 Worker | `w2C:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045` | `task-045-sysuisdk-single-entry-composition` | `joycode/GLM-5.3` | docs-only precision revision requested after dual-axis PASS; no Gradle |
-| 045 Standards review | `w2G:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-standards` | `review-045-standards` at `379e07d0` | `joycode/GLM-5.2` | done; PASS, 0 BLOCKER/HIGH/MEDIUM, 2 LOW + 1 TRIVIAL |
-| 045 Spec review | `w2H:p1` / `/home/conv/myspace/SystemUI-Gradle-wt-045-spec` | `review-045-spec` at `379e07d0` | `joycode/GLM-5.2` | done; PASS, zero findings |
+None.
 
 ## Queue
 
-1. Task 045 fixed-range Standards and Spec reviews run in isolated GLM-5.2 worktrees; reviewers are static-only and may not invoke Gradle.
-2. After all BLOCKER/HIGH/MEDIUM findings are fixed: architect main fresh Python/deterministic-SDK/Debug/R8/Release/APK verification, merge, push, and workspace cleanup.
-3. Separately inventory external historical SDK backups before any irreversible deletion; then return to the other seven `NOT APPROVED` packets.
+1. Obtain H.6 authorization before correcting stale old SysUISdk workflow text in
+   `AGENTS.md`, both READMEs, two Gradle comments, and ADR 0006.
+2. Separately inventory the legacy live SysUISdk's nine historical backups; request
+   explicit approval before any irreversible deletion.
+3. Run installation/SystemUI restart/runtime validation on a compatible root/remount
+   device or system image; then return to the seven remaining `NOT APPROVED` packets.
 
 ## Recent Orchestration Transitions
 
@@ -162,15 +161,24 @@
   TDD plan from the 239-test clean baseline.
 - 2026-08-21 — Task 045 fixed-base/head review at `eb81e644...379e07d0` completed:
   Standards PASS with no BLOCKER/HIGH/MEDIUM (two LOW and one TRIVIAL), and Spec
-  PASS with zero findings. A docs-only precision revision is fixing one unrelated
-  `239/233` typo and fully inventorying stale old-workflow references in forbidden
-  rule/README/Gradle-comment/ADR paths; implementation and prior gates remain unchanged.
+  PASS with zero findings. A docs-only precision revision fixed one unrelated
+  `239/233` typo and fully inventoried stale old-workflow references in forbidden
+  rule/README/Gradle-comment/ADR paths; implementation and prior gates remained unchanged.
+- 2026-08-21 — Final Task 045 re-review at `eb81e644...ee6448be` passed both axes
+  with no BLOCKER/HIGH/MEDIUM/LOW findings. Four Worker commits were cherry-picked
+  to main as `fc1d2489`, `8cb7279b`, `2e504633`, and `ccdbbbbb`.
+- 2026-08-21 — Architect main fresh acceptance passed 220 tests, two deterministic
+  11,382-file SDK generations, guarded refusal/replace, Debug, fresh zero-ref R8,
+  actual optimized-resource Release tasks, ZIP/V2, and DEX absence. Final APK is
+  28,600,808 B with SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`.
+  One extra all-task rerun failed at R8 with a disappeared daemon and an 8.9 GiB
+  leftover Kotlin daemon; it was truthfully isolated as an environment/memory-pressure
+  event, then recovered by serialized R8 and optimized/package runs without code changes.
+  Device/runtime validation remains deferred.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — Task 045 fixed-base `eb81e644` / head `379e07d0` dual-axis
-review completed: Standards PASS with 0 BLOCKER/HIGH/MEDIUM and two LOW plus one
-TRIVIAL; Spec PASS with zero findings. The original Worker is making a docs-only
-precision revision for a `239/233` typo and complete stale-reference inventory;
-no implementation or Gradle rerun is involved.
+2026-08-21 — Task 045 final review, main merge, and architect fresh acceptance are
+complete. No SystemUI worker remains active. Closure push/workspace cleanup is the only
+remaining Task 045 orchestration action; device/runtime validation is explicitly deferred.

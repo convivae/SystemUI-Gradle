@@ -142,6 +142,52 @@ payload。外部 legacy live SysUISdk 的 9 个历史备份未触碰（需单独
 - 无 OOM 或其他环境事件；所有 heavy 命令均带
   `-Dorg.gradle.workers.max=4`、`set -o pipefail`、`tee`。
 
+## 架构师 main fresh acceptance
+
+固定审查范围 `eb81e644...ee6448be` 已完成双轴复审：Standards 与 Spec 均
+**PASS**，无 BLOCKER/HIGH/MEDIUM/LOW finding。四个 Worker commits 已以
+`fc1d2489`、`8cb7279b`、`2e504633`、`ccdbbbbb` cherry-pick 到 main；实现 patch
+未在合入时重写。
+
+Main fresh 验收使用私有 SDK roots `/tmp/task045-main-sdk-a` 与
+`/tmp/task045-main-sdk-b`，未触碰官方 base、legacy live SysUISdk 或其历史备份：
+
+- Python：`python3 -m unittest discover -s tools/tests -p 'test_*.py'` →
+  **220/220 OK**。
+- 两次生成：均 exit 0；完整 **11,382-file** 相对 inventory + SHA-256 相等；
+  marker 为 8 inputs、portable、最终输出 backup count 0。生成产物 hash 与上表一致。
+- ownership：marked output 无 `--replace` 拒绝（exit 1）；unmarked output 即使带
+  `--replace` 仍拒绝（exit 1）；generator-owned output 显式 `--replace` 成功，替换后
+  11,382-file inventory 仍与第二份输出相等。
+- static composition：39/39 bridge 同时存在于两个 SDK JAR；
+  `AssumeTrueForR8` 不存在；framework resource 8,203 entries byte-exact；stock base
+  manifest 保留；AIDL 声明存在。
+- Debug：`:app:checkDebugDuplicateClasses :app:assembleDebug` → exit 0，
+  **BUILD SUCCESSFUL in 1m 10s**（216 actionable tasks）。
+- Fresh R8：`:app:minifyReleaseWithR8 --rerun-tasks` → exit 0，
+  **BUILD SUCCESSFUL in 3m 41s**（206 actionable tasks），missing-class grep 0。
+- Final optimized Release：为避免把 `UP-TO-DATE` 冒充实际执行，先通过 Gradle task
+  introspection 精确识别并仅使 `optimizeReleaseResources` 的声明输出失效；随后
+  `:app:assembleRelease --no-daemon` → exit 0，**BUILD SUCCESSFUL in 1m 09s**，
+  `convertShrunkResourcesToBinaryRelease`、`optimizeReleaseResources`、`packageRelease`
+  和 `assembleRelease` 均实际执行。
+- Final APK：28,600,808 B，SHA-256
+  `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`；
+  `unzip -t` 无错；V2 true；2 个 DEX、15,683 defined classes；0/39 bridge 和
+  0 `AssumeTrueForR8` packaged。
+- `local.properties` 每个 main build 后均与原文件 byte-for-byte 一致；最终无
+  Gradle/Kotlin daemon 残留。
+
+一次额外的全量 `assembleRelease --rerun-tasks` 在 R8 阶段报告 Gradle daemon
+消失并 exit 1。失败后同轮 Kotlin daemon 残留约 8.9 GiB RSS；释放后按 R8 与
+optimized/package 两阶段串行重跑成功。当前权限下 `dmesg` 未提供内核 OOM 记录，
+因此本记录只将其归为与内存压力高度一致的环境失败，不声称内核 OOM 已被证明。
+失败未导致仓库改动；`local.properties` 仍由 trap 恢复。
+
+七项精确删除与 `libs/keepanno-annotations.jar`、`libs/framework.jar` 保留在 main
+再次确认。设备/模拟器 install、SystemUI restart 与 runtime logcat 验证仍
+**未运行 / deferred**。
+
 ## Commits
 
 - `991b6302` tools: rewrite build_sysuisdk.py as single-entry AOSP composition

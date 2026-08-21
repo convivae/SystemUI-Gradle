@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-21（Task 045 Worker worktree：单入口 SysUISdk 生成器实现并通过全部功能门禁 — 220/220 Python、两次确定性真实 AOSP 构建、Debug、fresh R8 0 refs、完整 optimized Release + V2 签名 + 0/39 bridge 打包；七个已替代仓库文件已删；设备验证未运行。待架构师 main fresh 复验）
+> **Last verified**: 2026-08-21（Task 045 已合入 main 并由架构师 fresh 验收：220/220 Python、两次 11,382-file 确定性真实 AOSP 生成、refusal/replace、Debug、fresh R8 0 refs、完整 optimized Release、ZIP/V2、DEX 0/39 bridge + 0 `AssumeTrueForR8`；七个已替代仓库文件已删；设备验证未运行）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -10,13 +10,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 045 Worker worktree 对**生成 SDK** 验证 2m57s） |
-| Python 工具测试 | **220/220 通过**（Task 045 Worker worktree；删 36 个 legacy patch 测试 + 新 70 个单入口生成器测试） |
-| Release R8 | **SUCCESS（Task 045 Worker worktree，exit 0，missing refs 0）**：对生成 SDK fresh `--rerun-tasks` 3m14s |
-| `:app:assembleRelease` | **SUCCESS（Task 045 Worker worktree）**：minify + AGP 9.3.1 optimized resource shrink + V2 签名；APK 28,600,808 B，SHA-256 `d53f815c...`（生成 SDK 构建） |
-| SysUISdk 生成器 | **单入口落地（Task 045）**：`python3 tools/build_sysuisdk.py --aosp-root <aosp>`；确定性、事务性、39-entry bridge；两次独立构建逐字节相等 |
+| Debug APK | **`:app:assembleDebug` SUCCESS**（每批硬门禁；Task 045 main fresh 对生成 SDK 验证 1m10s） |
+| Python 工具测试 | **220/220 通过**（Task 045 main fresh） |
+| Release R8 | **SUCCESS（Task 045 main fresh，exit 0，missing refs 0）**：对生成 SDK fresh `--rerun-tasks` 3m41s |
+| `:app:assembleRelease` | **SUCCESS（Task 045 main fresh）**：两个 AGP 9.3.1 optimized-resource tasks 实际执行 + V2 签名；APK 28,600,808 B，SHA-256 `cd4b885e...` |
+| SysUISdk 生成器 | **单入口落地并 main fresh 验收（Task 045）**：`python3 tools/build_sysuisdk.py --aosp-root <aosp>`；确定性、事务性、39-entry bridge；两次 11,382-file 输出逐字节相等 |
 | 设备/模拟器运行验证 | **未运行**（构建完成 ≠ 装机验证；另行排期） |
-| 当前唯一工程优先级 | 架构师 review/merge Task 045 并在 main fresh 复验；随后兼容模拟器/设备安装与运行验证 |
+| 当前唯一工程优先级 | Task 045 已关闭；下一步处理已披露的旧 SysUISdk workflow 文本与外部历史备份独立审批，然后在兼容设备/镜像上运行验证 |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
@@ -35,7 +35,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | 2026-08-21 | SettingsLib program/resource 闭包（Task 040）：主 AAR 1153 类、Theme 15 类、17 个 per-target 资源 AAR；R8 81→7 精确；195/195 | `docs/issues/2026-08-20-r8-runtime-batch4d-settingslib.md` |
 | 2026-08-21 | SysUISdk R8 library bridge（Task 041）：两个 SDK target 各注入 35 个真实 library classes；APK 0 打包；R8 7→1 精确；233/233 | `docs/issues/2026-08-21-r8-platform-build-classpath-closure.md` |
 | 2026-08-21 | **完整 Release closure（Task 044，main fresh）**：单 FQN release-only adapter；R8 1→0；`assembleRelease` + optimized resource shrink + V2 签名成功；APK 28,600,808 B；239/239 | `docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md` |
-| 2026-08-21 | **SysUISdk 单入口 composition（Task 045，Worker worktree）**：`build_sysuisdk.py` 重写为事务性单命令生成器；两次真实 AOSP 构建逐字节相等；生成 SDK 上 Debug/R8/Release 全绿；七个 superseded 仓库文件已删；220/220 | `docs/issues/2026-08-21-sysuisdk-single-entry-composition.md` |
+| 2026-08-21 | **SysUISdk 单入口 composition（Task 045，main fresh）**：`build_sysuisdk.py` 重写为事务性单命令生成器；两次 11,382-file 真实 AOSP 生成逐字节相等；main 上 Debug/R8/Release/ZIP/V2/DEX 全绿；七个 superseded 仓库文件已删；220/220 | `docs/issues/2026-08-21-sysuisdk-single-entry-composition.md` |
 
 ## Current build and verification matrix
 
@@ -44,13 +44,13 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | KSP（debug/release） | ✅ 0 错误（2933 文件生成） | Task 041 main fresh |
 | core Kotlin | ✅ 0 错误 | Task 041 main fresh |
 | core javac | ✅ 0 错误 | Task 041 main fresh |
-| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 045 Worker worktree（对生成 SDK，exit 0 in 2m57s，含 checkDebugDuplicateClasses；删除后回归 14s） |
-| Python 工具测试 | ✅ 220/220（Task 045：70 个新单入口生成器测试；36 个 legacy patch 测试随被删模块退役） | Task 045 Worker worktree |
-| APK 类定义检查 | ✅ SysUISdk bridge 39/39 present in SDK；APK 0/39 packaged；无 `AssumeTrueForR8` | Task 045 Worker worktree（dexdump 15,683 defined classes 全量检查） |
-| `:app:minifyReleaseWithR8` | ✅ exit 0，missing refs 0；effective config 对 FQN 仅一条 exact `-dontwarn`，无 keep/assume | Task 045 Worker worktree（对生成 SDK，`--rerun-tasks`，3m14s） |
-| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL：resource shrinking（`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 实际执行） | Task 045 Worker worktree，exit 0（3m55s） |
-| Release APK 检查 | ✅ 非空 28,600,808 B，SHA-256 `d53f815ca9a72570f3be55e3f9bd25f1ac64c9c166adca6c2adf886fb7f9a14f`（生成 SDK 构建）；`unzip -t` 无错；V2 scheme true | Task 045 Worker worktree |
-| SysUISdk 单入口生成器 | ✅ 两次独立真实 AOSP 构建输出逐字节相等（11382 文件）；refusal/replace 语义实测；marker 纯 provenance | Task 045 Worker worktree（`/tmp/task045-sdk-{a,b}`） |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（硬门禁，每批必过） | Task 045 main fresh（对生成 SDK，exit 0 in 1m10s，含 checkDebugDuplicateClasses；216 tasks） |
+| Python 工具测试 | ✅ 220/220（Task 045：70 个新单入口生成器测试；36 个 legacy patch 测试随被删模块退役） | Task 045 main fresh |
+| APK 类定义检查 | ✅ SysUISdk bridge 39/39 present in SDK；APK 0/39 packaged；无 `AssumeTrueForR8` | Task 045 main fresh（dexdump 15,683 defined classes 全量检查） |
+| `:app:minifyReleaseWithR8` | ✅ exit 0，missing refs 0；effective config 对 FQN 仅一条 exact `-dontwarn`，无 keep/assume | Task 045 main fresh（对生成 SDK，`--rerun-tasks`，3m41s） |
+| `:app:assembleRelease` | ✅ BUILD SUCCESSFUL：resource shrinking（`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 实际执行） | Task 045 main fresh，exit 0（最终 optimized/package run 1m09s） |
+| Release APK 检查 | ✅ 非空 28,600,808 B，SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`；`unzip -t` 无错；V2 scheme true | Task 045 main fresh |
+| SysUISdk 单入口生成器 | ✅ 两次独立真实 AOSP 构建输出逐字节相等（11,382 文件）；refusal/replace 语义实测；marker 纯 provenance | Task 045 main fresh（`/tmp/task045-main-sdk-{a,b}`） |
 | 设备/模拟器 install + runtime | ❌ 未运行（构建完成不等于装机验证） | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
 
 ## Toolchain and module topology
@@ -112,14 +112,14 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 
 ## Next ordered work
 
-1. **Task 045 review/merge**：架构师双轴 review Worker worktree（commits `991b6302`/`76ad180f`/docs）并在 main fresh 复验（Python 220、Debug、R8、Release、APK/V2、确定性双构建）；外部 9 个历史 SDK 备份只做独立 inventory，未经不可逆删除审批不动
-2. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查
-3. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
-4. 清理 Task 045 残留的 stale 引用（均在本 Worker Forbidden Paths 内，未经修改，需 architect/用户处理）：
+1. 清理 Task 045 已披露的 stale workflow 文本（涉及 `AGENTS.md`/ADR 等规则文件，按 H.6 先取得用户授权）：
    - `AGENTS.md` §1.7（L122）与 §2.4（L209）正文、§7 工具表（L402）仍指向已删除的 `tools/install_sdk.py`，未提单入口 `build_sysuisdk.py --aosp-root`；
    - `README.md` L33/L100 与 `README.en.md` L37/L123 仍宣传 `--apply` 声明式生成及 `install_sdk.py`；
    - `SystemUI-core/build.gradle.kts` 注释 L55、L337 两处仍引用 `tools/install_sdk.py`（仅注释，无构建影响）；
    - `docs/adr/0006-sysuisdk-r8-library-class-bridge.md` L36–39、L55 仍描述旧 S5 staging/live + `--apply` 工作流。
+2. 对 legacy live SysUISdk 的 9 个历史备份做独立只读 inventory；任何不可逆删除须另行取得用户批准
+3. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查
+4. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
 
 ## Verification commands and evidence
 
@@ -140,7 +140,7 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 220/220
 ./gradlew :app:assembleRelease --console=plain
 ```
 
-最新证据：Task 045 Worker worktree（2026-08-21，生成 SDK 位于 `/tmp/task045-sdk-a`，私有 root 经 symlink 暴露官方 build-tools 等；`local.properties` 事后已恢复原状）— 220/220 tests；两次真实 AOSP 构建输出逐字节相等（11382 文件，各自 ~7s）；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（2m57s）；`:app:minifyReleaseWithR8 --rerun-tasks` exit 0（3m14s）、missing refs 0；`assembleRelease --no-daemon` exit 0（3m55s），`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 均执行；APK 28,600,808 B，SHA-256 `d53f815ca9a72570f3be55e3f9bd25f1ac64c9c166adca6c2adf886fb7f9a14f`，`unzip -t` 无错，V2 scheme true，dexdump 全量 15,683 defined classes 中 0/39 bridge、无 `AssumeTrueForR8`。无 OOM/环境事件。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-sysuisdk-single-entry-composition.md`。（前一基线：Task 044 main fresh，APK SHA-256 `1f7a7f8f...`，详见其 issue。）
+最新证据：Task 045 architect main fresh（2026-08-21，生成 SDK 位于 `/tmp/task045-main-sdk-a`，私有 root 暴露官方 SDK tools；`local.properties` 每次均 byte-for-byte 恢复）— 220/220 tests；两次真实 AOSP 构建输出逐字节相等（11,382 文件），marker 8 inputs/portable/no backups，refusal + owned replace 实测；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（1m10s）；fresh `:app:minifyReleaseWithR8 --rerun-tasks` exit 0（3m41s）、missing refs 0；最终 `assembleRelease --no-daemon` exit 0（1m09s），`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 均实际执行；APK 28,600,808 B，SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`，`unzip -t` 无错，V2 scheme true，dexdump 全量 15,683 defined classes 中 0/39 bridge、无 `AssumeTrueForR8`。一次额外的全量 `assembleRelease --rerun-tasks` 在 R8 阶段 daemon disappeared；失败后发现同轮残留 Kotlin daemon 约 8.9 GiB RSS，释放后按 R8 与 optimized/package 两阶段串行恢复成功；当前权限下无内核 OOM 记录，因此不把该失败断言为已证实 OOM。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-sysuisdk-single-entry-composition.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 
