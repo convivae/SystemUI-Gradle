@@ -9,14 +9,14 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage |
 |---|---|---|---|---|
-| — | — | — | — | No active SystemUI task workers |
+| 043 | `w1W:p1` (`task043-audit`) | `task-043-gradle-native-audit` / `/home/conv/myspace/SystemUI-Gradle-wt-043` | `joycode/GLM-5.3` | working; CONTRACT verified |
 
 ## Queue
 
-1. User review of Task 043 exact brief:
-   `docs/orchestration/tasks/043-gradle-native-current-state-audit.md`.
-2. Only after explicit brief approval: dispatch one isolated GLM-5.3 Worker for the read-only
-   present-state audit; no Git history, Gradle, implementation, or rollback.
+1. Task 043 Worker produces the static current-state architecture audit and one unpushed
+   documentation commit.
+2. After Worker HANDOFF: dual-axis static review at a fixed base/head, then architect static
+   verification. No Gradle is permitted for this audit or its review.
 
 ## Recent Orchestration Transitions
 
@@ -83,9 +83,12 @@
 - 2026-08-21 — User explicitly approved the written Gradle-native architecture spec. Task 043
   documentation-only plan and exact read-only Worker brief were drafted with complete current
   AAR/JAR/module/rule/SysUISdk inventory gates; dispatch awaits separate exact-brief approval.
+- 2026-08-21 — User approved the exact Task 043 brief. Isolated worktree/workspace `w1W:p1`
+  started with explicit `joycode/GLM-5.3`; session modelId and full CONTRACT were verified.
+  Worker is running the current-only static audit with no Gradle/history/implementation/rollback.
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
 
-2026-08-21 — No active SystemUI workers. Written architecture spec is approved; Task 043
-exact read-only audit brief awaits separate user approval before dispatch.
+2026-08-21 — Task 043 active in isolated `w1W:p1`; explicit GLM-5.3 model and full CONTRACT
+verified. Static report-only audit is working; no Gradle, Git history, implementation, or rollback.
