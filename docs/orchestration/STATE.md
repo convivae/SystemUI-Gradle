@@ -9,17 +9,22 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| — | — | — | — | No active Worker; Task 048 merged and architect fresh acceptance passed | — |
+| 049 | pending dispatch | `task-049-debug-runtime-stabilization` / planned isolated worktree | `joycode/GLM-5.3` | plan prepared; dispatch next | Debug build/push/fix loop only; Release forbidden |
 
 ## Queue
 
-1. Present the Task 048 entry-point findings and obtain approval for an exact manifest
-   namespace/R8 keep/static-APK-gate fix plan before changing manifest or build behavior.
-2. After the entry-point fix and compatible runtime rerun, return to the seven remaining
-   `NOT APPROVED` architecture packets.
+1. Dispatch Task 049: build/push/fix the Debug APK on one dedicated disposable AVD
+   until real UI interaction remains stable, then review/merge/push that Debug-proven version.
+2. Only after Task 049 is pushed, prepare a separate Release runtime-validation task.
+3. Return to the seven remaining `NOT APPROVED` architecture packets after runtime closure.
 
 ## Recent Orchestration Transitions
 
+- 2026-08-22 — User replaced the earlier two-clean-AVD proposal with a direct Debug
+  stabilization loop: fresh Debug build, ADB push, diagnose actual crashes, apply one
+  evidenced fix at a time, rebuild/push until stable through UI interaction, then review
+  and push the repository version. Release is explicitly deferred until Debug is proven.
+  Task 049 issue, executable plan, and exact redline-gated brief were prepared.
 - 2026-08-20 — Task 038 (Traceur dual AARs) merged after dual-axis PASS
   (`dee92a90` + `8b3bb275`) and main fresh verification completed.
 - 2026-08-20 — Task 039 design approved; governance spec + plan + brief committed
@@ -247,6 +252,6 @@
 
 ## Last Updated
 
-2026-08-22 — Tasks 046–048 are closed, pushed, and workspace/tmp cleanup is complete.
-Task 048 verdict is `RUNTIME_FAIL`; rollback and dedicated-AVD deletion are proven. The
-next action is a user-approved Application entry-point fix plan.
+2026-08-22 — Task 049 Debug-only stabilization is planned under the user's simplified
+build → ADB push → diagnose/fix → rebuild/push → UI-stability flow. Release remains
+forbidden until the Debug-proven repository version is reviewed and pushed.
