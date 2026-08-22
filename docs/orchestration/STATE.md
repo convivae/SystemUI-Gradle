@@ -12,7 +12,7 @@
 | 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | stopped by user; over-constrained approach superseded by Task 050 | Worktree retained temporarily for evidence recovery only |
 | 049A | `w2G:p1` | `task-049a-manifest-entry-research` / `SystemUI-Gradle-wt-049a` | `joycode/GLM-5.3` | research complete; commit `96498d7c` not selected for implementation | Docs-only result retained pending cleanup |
 | 049B | `w2H:p1` | `task-049b-large-debug-deployment-research` / `SystemUI-Gradle-wt-049b` | `joycode/GLM-5.3` | stopped by user before changes | Superseded by destructive disposable-AVD authority |
-| 050 | pending dispatch | `task-050-direct-debug-runtime-closure` | `joycode/GLM-5.3` | planned | Direct namespace/manifest + root/remount/push/reboot/fix loop |
+| 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | dispatched; contract verified | Direct namespace/manifest + root/remount/push/reboot/fix loop |
 
 ## Queue
 
@@ -23,6 +23,11 @@
 
 ## Recent Orchestration Transitions
 
+- 2026-08-22 — Task 050 started in isolated `w2J:p1` from planning base
+  `6cf2cf16` with explicit `joycode/GLM-5.3`. The live pane printed the complete
+  contract and acknowledged the user's pre-approval for manifest/namespace edits and
+  destructive mutation or recreation of the dedicated emulator/system image. The existing
+  `sysui-gradle-task049-debug-*` AVD is online and identified as API 37.
 - 2026-08-22 — The user stopped Tasks 049/049B and explicitly removed the
   over-conservative runtime restrictions. Manifest and `:app` namespace edits are
   authorized. The dedicated emulator and installed emulator system image may be rooted,
