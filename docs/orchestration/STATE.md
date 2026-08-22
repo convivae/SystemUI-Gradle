@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 049 | pending dispatch | `task-049-debug-runtime-stabilization` / planned isolated worktree | `joycode/GLM-5.3` | plan prepared; dispatch next | Debug build/push/fix loop only; Release forbidden |
+| 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | dispatched; CONTRACT verified; fresh Debug build running | Debug build/push/fix loop only; Release forbidden |
 
 ## Queue
 
@@ -20,6 +20,10 @@
 
 ## Recent Orchestration Transitions
 
+- 2026-08-22 — Task 049 isolated worktree/workspace `w2F:p1` started from planning
+  commit `0e7e3ff1` with explicit `joycode/GLM-5.3`; live session model and complete
+  worker CONTRACT were verified. Initial inventory found zero devices, zero AVDs, no
+  emulator, and the installed API 37 image; the serialized fresh Debug build started.
 - 2026-08-22 — User replaced the earlier two-clean-AVD proposal with a direct Debug
   stabilization loop: fresh Debug build, ADB push, diagnose actual crashes, apply one
   evidenced fix at a time, rebuild/push until stable through UI interaction, then review
