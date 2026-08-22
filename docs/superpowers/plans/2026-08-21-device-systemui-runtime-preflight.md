@@ -83,7 +83,7 @@ capability gap. Do not overwrite an existing AVD.
 If Android CLI start cannot carry `-writable-system -no-snapshot`, use the official
 emulator binary. Wait for device and `sys.boot_completed=1`; capture startup logs.
 
-- [x] **Step 3: Freeze the mutation target** (replacement session re-ran the full gate independently and after every reconnect/reboot — five PASS runs, zero failures: `SERIAL_EMULATOR=true RO_KERNEL_QEMU=1 DEDICATED_AVD=true EMULATOR_ONLY_GATE=PASS`)
+- [x] **Step 3: Freeze the mutation target** (replacement session re-ran the full gate independently and after every reconnect/reboot — six EMULATOR_ONLY_GATE=PASS token outputs plus one initial pre-mutation raw-property verification, zero failures (corrected 2026-08-22; all six verbatim in `logs/replacement-session-verification.txt`): `SERIAL_EMULATOR=true RO_KERNEL_QEMU=1 DEDICATED_AVD=true EMULATOR_ONLY_GATE=PASS`)
 
 Record serial, `ro.kernel.qemu`, `ro.boot.qemu.avd_name`/`emu avd name`, and AVD path.
 Run a machine-checkable gate that prints:
@@ -139,13 +139,13 @@ requires it. Every reconnect repeats the identity gate.
 
 ## Task 5: Functional runtime acceptance
 
-- [x] **Step 1: Prove package/process stability** (rescan succeeded but SystemUI crash-looped: PID churn 896→7977→3184→...→19542→22338→(dead)→28161→31051→(dead); formal 70 s observation recorded; PID_STABILITY_60S=fail; FATAL_CRASH_LOOP=true; root cause isolated statically on host — R8 obfuscated away the manifest-referenced `SystemUIApplication`, absent from both DEX files)
+- [x] **Step 1: Prove package/process stability** (rescan succeeded but SystemUI crash-looped: PID churn 896→7977→3184→...→19542→22338→(dead)→28161→31051→(dead); formal 70 s observation recorded; PID_STABILITY_60S=fail; FATAL_CRASH_LOOP=true; root cause isolated statically on host — packaged manifest references nonexistent FQN `com.android.systemui.app.SystemUIApplication` (AGP expanded `.SystemUIApplication` under the `com.android.systemui.app` namespace; real class is `com.android.systemui.SystemUIApplication`), and R8 separately renamed the real class to `kvc` per mapping.txt; corrected 2026-08-22)
 
 Record package scan state, PID before/after, and repeated PID checks over at least 60
 seconds. Capture crash/fatal/watchdog/PackageManager/SystemUI logs. Detect repeated PID
 turnover or boot animation loops explicitly.
 
-- [x] **Step 2: Exercise basic UI** (BASIC_UI=fail: post-replacement UI dump had 1 node with zero SystemUI windows vs 93 baseline; statusbar mDisableRecords 2→0; screenshots preserved as evidence and intentionally not model-read per replacement-session instructions — all conclusions from UI XML/dumpsys/file facts)
+- [x] **Step 2: Exercise basic UI** (BASIC_UI=fail, corrected 2026-08-22: baseline, post-replacement, and rollback UI dumps each contain 93 node elements; baseline vs post are not byte-identical (geometry differs) but share the same package distribution; the UI XML is non-discriminating — no com.android.systemui package element in the baseline dump either; the earlier "1 node" claim was a `grep -c` line-count artifact on single-line XML. BASIC_UI=fail is supported by the fatal crash loop, PID churn, and dumpsys statusbar mDisableRecords 2→0. Screenshots preserved as file evidence and intentionally not model-read per the architect's replacement-session instruction after the first session's model-service 500 — UI verdict uses XML/dumpsys/logcat/file evidence)
 
 Use `android layout` as primary inspection and screenshots as visual evidence. Check:
 
@@ -192,7 +192,7 @@ Downloaded SDK packages may remain and must be listed with approximate disk use.
 
 ## Task 7: Documentation and repository checks
 
-- [x] **Step 1: Publish exact evidence** (`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` — environment, exact commands, session lineage, compatibility, runtime data, rollback, cleanup, evidence index; `/tmp/task048-*` retained)
+- [x] **Step 1: Publish exact evidence** (`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` — environment, exact commands, session lineage, compatibility, runtime data, rollback, cleanup, evidence index, corrective-pass verification; verbatim session transcript retained at `logs/replacement-session-verification.txt` — six EMULATOR_ONLY_GATE=PASS outputs, the initial pre-mutation raw-property verification, the on-device cd4b... hash output, and cleanup proofs, all extracted programmatically from the GLM-5.3 session JSONL with line/timestamp provenance; `/tmp/task048-*` retained)
 
 Separate commands actually executed from rejected/unused alternatives. Include exit
 codes, timestamps, serial/AVD identity, hashes, certs, log paths, screenshots, result,

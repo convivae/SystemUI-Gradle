@@ -120,9 +120,16 @@ BASIC_UI=fail
 FATAL_CRASH_LOOP=true
 ```
 
-Root cause: R8 obfuscated away the manifest-referenced Application class
-(`com.android.systemui.app.SystemUIApplication` absent from both DEX files) — the frozen
-optimized Release APK is unbootable by construction. Dedicated AVD stopped, deleted,
+Root cause (corrected 2026-08-22): two independent defects of the Application entry
+point — (1) the packaged manifest references the nonexistent FQN
+`com.android.systemui.app.SystemUIApplication` (AGP expanded the source manifest's
+`.SystemUIApplication` against the `:app` namespace `com.android.systemui.app`; the
+real class is `com.android.systemui.SystemUIApplication`), which is the immediate
+launch failure; (2) R8 separately renamed the real class to `kvc` (mapping.txt), so
+manifest-entry keep semantics also require fixing. A verbatim
+`EMULATOR_ONLY_GATE=PASS`/on-device-hash transcript extracted from the worker session
+JSONL is retained at `/tmp/task048-task048-37-20260822-005602/logs/replacement-session-verification.txt`.
+Dedicated AVD stopped, deleted,
 and rollback proven via `-wipe-data`; evidence retained under `/tmp/task048-*`.
 
 The report/issue and retained `/tmp/task048-*` evidence must support all of:

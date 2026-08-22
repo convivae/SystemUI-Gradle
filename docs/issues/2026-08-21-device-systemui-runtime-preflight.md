@@ -22,14 +22,23 @@ SIGNATURE_MATCH=false  FRAMEWORK_RES_MATCH=false
 PID_STABILITY_60S=fail  BASIC_UI=fail  FATAL_CRASH_LOOP=true
 ```
 
-Root cause (host-side static, reproducible without a device): the frozen optimized
-Release APK's manifest declares `com.android.systemui.app.SystemUIApplication`, but R8
-obfuscation renamed that class away — it exists in neither `classes.dex` nor
-`classes2.dex` (14,238 classes enumerated; only 20 `Lcom/android/systemui/*` descriptors
-survive). The APK can never instantiate its Application on any device. Follow-up work
-(outside Task 048): keep manifest-referenced entry classes through R8 and add a static
-APK acceptance check asserting every manifest-referenced class exists in the shipped
-DEX.
+Root cause (host-side static, reproducible without a device; corrected 2026-08-22): two
+independent defects of the same entry point. (1) **Manifest namespace/class mismatch**
+— the source manifest's `android:name=".SystemUIApplication"` was expanded by AGP
+against the `:app` namespace `com.android.systemui.app`, producing the packaged FQN
+`com.android.systemui.app.SystemUIApplication`, which never existed as a source class
+(the real class is `com.android.systemui.SystemUIApplication`, matching AOSP); this is
+the immediate `ClassNotFoundException` launch failure. (2) **R8 obfuscates the real
+Application class** — `mapping.txt` maps `com.android.systemui.SystemUIApplication ->
+kvc` (`Lkvc;` present in DEX), so even a namespace-aligned manifest would fail unless
+the manifest were rewritten to the obfuscated name or the class kept. The shipped DEX
+contains 602 `Lcom/android/systemui/*` descriptors (600+2, not the "20" an earlier
+draft claimed — that was a `strings` sampling artifact). Follow-up work (outside Task
+048): fix manifest alignment AND manifest-entry keep semantics, and add a static APK
+acceptance check asserting every manifest-referenced class exists in the shipped DEX.
+A verbatim gate/hash/cleanup transcript extracted from the worker session JSONL is
+retained at `logs/replacement-session-verification.txt` (six `EMULATOR_ONLY_GATE=PASS`
+outputs plus the initial pre-mutation raw-property verification).
 
 Rollback findings: (1) the overlayfs scratch (79 MB) is smaller than the original APK,
 so direct file restore hits ENOSPC — the working overlay-native rollback is deleting
@@ -38,7 +47,8 @@ base-image bytes exactly; (2) after a system-package signature flip-flop, in-pla
 rollback does not undo poisoned PackageManager retained state
 (`versionCode=0`/`versionName=null`/className still ours) — full recovery required a
 `-wipe-data` restart, after which the original SystemUI was proven stable (PID stable
-60 s, clean logs, UI dump identical to baseline).
+60 s, zero SystemUI Application CNF — 2 unrelated non-SystemUI CNF entries remain —
+and a UI dump byte-identical to baseline).
 
 Dedicated AVD `sysui-gradle-task048-37-20260822-005602` was stopped and deleted;
 evidence retained under `/tmp/task048-*`.
@@ -114,9 +124,12 @@ accepted artifact requires separate approval.
 New follow-ups surfaced by execution (require architect/user direction, not Task 048
 scope):
 
-1. R8 release pipeline loses manifest-referenced entry classes (`SystemUIApplication`
-   obfuscated away) — the optimized Release APK is unbootable by construction; static
-   APK acceptance should assert manifest-referenced classes exist in shipped DEX.
+1. Release APK manifest/application entry point is doubly broken: the packaged manifest
+   references a nonexistent FQN (`com.android.systemui.app.SystemUIApplication` — a
+   namespace-expansion artifact), and R8 renames the real
+   `com.android.systemui.SystemUIApplication` to `kvc`; both manifest alignment and
+   manifest-entry keep semantics require fixing, and static APK acceptance should
+   assert manifest-referenced classes exist in shipped DEX.
 2. Frozen APK carries `android:testOnly=true`, empty `versionCode`/`versionName`, and
    `targetSdk=35` on an API 37 image — decide which of these (if any) should be
    adjusted for future runtime validation rounds.
