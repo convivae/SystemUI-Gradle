@@ -12,16 +12,25 @@
 | 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | stopped by user; over-constrained approach superseded by Task 050 | Worktree retained temporarily for evidence recovery only |
 | 049A | `w2G:p1` | `task-049a-manifest-entry-research` / `SystemUI-Gradle-wt-049a` | `joycode/GLM-5.3` | research complete; commit `96498d7c` not selected for implementation | Docs-only result retained pending cleanup |
 | 049B | `w2H:p1` | `task-049b-large-debug-deployment-research` / `SystemUI-Gradle-wt-049b` | `joycode/GLM-5.3` | stopped by user before changes | Superseded by destructive disposable-AVD authority |
-| 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | dispatched; contract verified | Direct namespace/manifest + root/remount/push/reboot/fix loop |
+| 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | paused after evidence capture; user rejected call-site try/catch direction | Manifest/DEX and image deployment evidence retained; no further runtime fix until Task 051 root-cause audit |
+| 051 | pending | `task-051-systemui-runtime-size-audit` / `SystemUI-Gradle-wt-051` | `joycode/GLM-5.3` | approved; dispatch pending | Read-only AOSP→Gradle→APK→runtime and Debug-size audit; docs only |
 
 ## Queue
 
-1. Dispatch Task 050: use the simplest namespace/manifest correction, then directly
-   root/remount/push/reboot the Debug APK on a disposable emulator and fix real crashes.
-2. Only after Task 050 is pushed, prepare a separate Release runtime-validation task.
-3. Return to the seven remaining `NOT APPROVED` architecture packets after runtime closure.
+1. Dispatch Task 051 read-only root-cause audit: prove the complete `SystemUIApplication`
+   assembly/runtime chain, classify hidden-API/platform divergence, and quantify Debug APK size.
+2. Discuss Task 051's solution families with the user before resuming Task 050 implementation.
+3. Only after Debug runtime closure is pushed, prepare a separate Release runtime-validation task.
+4. Return to the seven remaining `NOT APPROVED` architecture packets after runtime closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-08-22 — The user rejected the proposed `NoSuchMethodError` call-site catch and required
+  root-cause analysis of the complete AOSP `SystemUI` app-to-core packaging/runtime contract plus
+  the 163.6 MB Debug APK size. Task 050 implementation is paused with evidence retained. Task 051
+  is approved as an independent read-only, docs-only Worker audit; no source/build/device mutation
+  or Gradle task is allowed, and at least three coherent solution families must be presented before
+  implementation resumes.
 
 - 2026-08-22 — Task 050 started in isolated `w2J:p1` from planning base
   `6cf2cf16` with explicit `joycode/GLM-5.3`. The live pane printed the complete
