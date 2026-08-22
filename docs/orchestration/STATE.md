@@ -9,14 +9,14 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 048 | original `w2W:p1`; replacement `w2W:p2` | `task-048-emulator-runtime-validation` / `SystemUI-Gradle-wt-048` | `joycode/GLM-5.3` | replacement working; original session ended on screenshot-read model 500 after safe baseline only | mutation only on proven dedicated disposable emulator |
+| — | — | — | — | No active Worker; Task 048 merged and architect fresh acceptance passed | — |
 
 ## Queue
 
-1. Monitor Task 048 replacement without interrupting `working`; review its fixed range
-   after terminal-final HANDOFF.
-2. Return to the seven remaining `NOT APPROVED` architecture packets after Task 048
-   closes.
+1. Present the Task 048 entry-point findings and obtain approval for an exact manifest
+   namespace/R8 keep/static-APK-gate fix plan before changing manifest or build behavior.
+2. After the entry-point fix and compatible runtime rerun, return to the seven remaining
+   `NOT APPROVED` architecture packets.
 
 ## Recent Orchestration Transitions
 
@@ -217,6 +217,21 @@
   verified all eight absent. The unique `android.jar.bak-20260813-210816` snapshot and
   all three live primary files retain their audited hashes. No other SDK file was
   deleted.
+- 2026-08-22 — Task 048 Worker committed `dde8e809` with final `RUNTIME_FAIL` and
+  completed rollback/AVD cleanup. Fixed-range Standards and Spec reviews both failed
+  on one MEDIUM each: mandatory identity/hash outputs were not retained under `/tmp`,
+  and the reported one-node UI dump contradicted the retained 93-node XML. Additional
+  factual corrections are required for DEX descriptor count and launch root cause
+  (AGP namespace expansion plus R8 renaming). The original Worker is performing a
+  docs/evidence-only correction with Gradle, ADB, emulator, and AVD operations forbidden.
+- 2026-08-22 — Task 048 corrective commit `e49e93ff` retained six gate outputs and
+  on-device hash evidence from the original session and corrected UI counts, DEX counts,
+  crash counts, rollback wording, and the two-part Application root cause. Fixed range
+  `3d186075...e49e93ff` passed GLM-5.2 Standards and Spec re-review with zero
+  BLOCKER/HIGH/MEDIUM/LOW. Commits were cherry-picked as `cf368eac` and `ee492c6d`
+  with matching patch IDs. Architect main fresh acceptance passed frozen APK, manifest,
+  mapping, 15,683-class DEX, 602 SystemUI descriptors, UI/log/transcript/hash/scope,
+  zero-device/zero-AVD, and cleanup checks. No Gradle task ran.
 - 2026-08-21 — Task 048 original Worker session ended on a model-service 500 while
   attempting to render a baseline screenshot. It had created and booted the dedicated
   AVD, passed the three-part identity gate, and captured baseline evidence, but had not
@@ -227,5 +242,6 @@
 
 ## Last Updated
 
-2026-08-22 — Tasks 046 and 047 are fully closed, including the separately approved
-Task 047 eight-file external cleanup. Task 048 replacement execution remains active.
+2026-08-22 — Tasks 046–048 are closed in main. Task 048 verdict is `RUNTIME_FAIL`;
+rollback and dedicated-AVD deletion are proven, corrected dual review and architect fresh
+acceptance pass, and the next action is a user-approved Application entry-point fix plan.

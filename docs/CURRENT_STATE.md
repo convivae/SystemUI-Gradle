@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-22（Task 045 构建闭环保持有效；Task 046 单入口文档同步完成；Task 047 九项历史备份只读审计完成，用户批准后精确删除八项冗余文件并保留唯一历史快照；Task 048 专用模拟器运行验证执行中）
+> **Last verified**: 2026-08-22（Tasks 045–047 闭环保持有效；Task 048 专用模拟器真实替换结论为 `RUNTIME_FAIL`，原 APK 经 wipe-data 恢复稳定，AVD 已删除；修正文档后双轴复审 PASS，main fresh 静态/证据验收 PASS）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -15,8 +15,8 @@
 | Release R8 | **SUCCESS（Task 045 main fresh，exit 0，missing refs 0）**：对生成 SDK fresh `--rerun-tasks` 3m41s |
 | `:app:assembleRelease` | **SUCCESS（Task 045 main fresh）**：两个 AGP 9.3.1 optimized-resource tasks 实际执行 + V2 签名；APK 28,600,808 B，SHA-256 `cd4b885e...` |
 | SysUISdk 生成器 | **单入口落地并 main fresh 验收（Task 045）**：`python3 tools/build_sysuisdk.py --aosp-root <aosp>`；确定性、事务性、39-entry bridge；两次 11,382-file 输出逐字节相等 |
-| 设备/模拟器运行验证 | **Task 048 执行中**：仅在三重身份门通过的专用 `sysui-gradle-task048-*` AVD 上操作；最终结论待 Worker 完成取证与清理 |
-| 当前唯一工程优先级 | 完成 Task 048 runtime verdict、双轴审查、main fresh 验收与专用 AVD 清理 |
+| 设备/模拟器运行验证 | **`RUNTIME_FAIL`（Task 048）**：APK 成功替换并触发真实启动；manifest namespace 展开到不存在的 `com.android.systemui.app.SystemUIApplication`，真实 `com.android.systemui.SystemUIApplication` 又被 R8 重命名为 `kvc`，导致持续 `ClassNotFoundException`、PID churn、基础 UI 失败；原 APK 已恢复稳定，专用 AVD 已删除 |
+| 当前唯一工程优先级 | 在用户批准后修复 Application manifest namespace/class 对齐及 R8 manifest-entry keep 语义，并加入 APK DEX 静态入口检查；之后重跑兼容 runtime 验证 |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
@@ -36,6 +36,8 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | 2026-08-21 | SysUISdk R8 library bridge（Task 041）：两个 SDK target 各注入 35 个真实 library classes；APK 0 打包；R8 7→1 精确；233/233 | `docs/issues/2026-08-21-r8-platform-build-classpath-closure.md` |
 | 2026-08-21 | **完整 Release closure（Task 044，main fresh）**：单 FQN release-only adapter；R8 1→0；`assembleRelease` + optimized resource shrink + V2 签名成功；APK 28,600,808 B；239/239 | `docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md` |
 | 2026-08-21 | **SysUISdk 单入口 composition（Task 045，main fresh）**：`build_sysuisdk.py` 重写为事务性单命令生成器；两次 11,382-file 真实 AOSP 生成逐字节相等；main 上 Debug/R8/Release/ZIP/V2/DEX 全绿；七个 superseded 仓库文件已删；220/220 | `docs/issues/2026-08-21-sysuisdk-single-entry-composition.md` |
+| 2026-08-22 | 单入口文档同步与 legacy live SysUISdk 清理（Tasks 046–047）：用户批准后精确删除 8 个冗余备份（163,149,374 bytes），保留唯一历史快照，live primary hashes 不变 | `docs/architecture/2026-08-21-legacy-sysuisdk-backup-inventory.md` |
+| 2026-08-22 | **首个真实专用模拟器替换实验（Task 048）— `RUNTIME_FAIL`**：root/remount/push/hash/rescan 成功；Application 入口 namespace/R8 双重缺陷导致 crash loop；原 APK + userdata 恢复验证通过，AVD 删除；修正后双轴审查与 main fresh 静态验收 PASS | `docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` |
 
 ## Current build and verification matrix
 
@@ -51,7 +53,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | `:app:assembleRelease` | ✅ BUILD SUCCESSFUL：resource shrinking（`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 实际执行） | Task 045 main fresh，exit 0（最终 optimized/package run 1m09s） |
 | Release APK 检查 | ✅ 非空 28,600,808 B，SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`；`unzip -t` 无错；V2 scheme true | Task 045 main fresh |
 | SysUISdk 单入口生成器 | ✅ 两次独立真实 AOSP 构建输出逐字节相等（11,382 文件）；refusal/replace 语义实测；marker 纯 provenance | Task 045 main fresh（`/tmp/task045-main-sdk-{a,b}`） |
-| 设备/模拟器 install + runtime | ❌ 未运行（构建完成不等于装机验证） | `docs/issues/2026-08-20-device-emulator-validation-plan.md` |
+| 设备/模拟器 install + runtime | ❌ **`RUNTIME_FAIL`**：替换 APK 后 5,434 条目标 Application CNF、PID 70s 不稳定、statusbar binder records 2→0；namespace 展开错误 + real class R8 rename 已静态复现；rollback/wipe 后原 SystemUI PID 稳定 60s，专用 AVD 已删除 | Task 048；`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` |
 
 ## Toolchain and module topology
 
@@ -114,8 +116,9 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 
 1. ✅ Task 046：stale SysUISdk workflow 文本已同步为单入口生成器，公开 README hygiene、220/220 Python 与 scope gate 均通过
 2. ✅ Task 047：九项 legacy live SysUISdk 历史备份完成只读审计；用户批准 option 1 后精确删除八项冗余文件（163,149,374 bytes），保留唯一快照 `android.jar.bak-20260813-210816`；live primary hashes 未改变
-3. Task 048：完成专用模拟器 runtime verdict、UI/logcat 证据、AVD 删除、双轴审查和 main fresh 验收
-4. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
+3. ✅ Task 048：专用模拟器真实替换结论 `RUNTIME_FAIL`；证据、rollback、AVD 删除、修正后双轴审查和 main fresh 静态验收均完成
+4. **待用户批准的首要修复**：对齐 manifest Application FQN 与真实 `com.android.systemui.SystemUIApplication`，恢复/验证 AGP manifest-entry keep 语义，并增加 APK DEX 入口类静态验收；完成后重跑兼容 runtime 验证
+5. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
 
 ## Verification commands and evidence
 
@@ -136,7 +139,9 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 220/220
 ./gradlew :app:assembleRelease --console=plain
 ```
 
-最新证据：Task 045 architect main fresh（2026-08-21，生成 SDK 位于 `/tmp/task045-main-sdk-a`，私有 root 暴露官方 SDK tools；`local.properties` 每次均 byte-for-byte 恢复）— 220/220 tests；两次真实 AOSP 构建输出逐字节相等（11,382 文件），marker 8 inputs/portable/no backups，refusal + owned replace 实测；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（1m10s）；fresh `:app:minifyReleaseWithR8 --rerun-tasks` exit 0（3m41s）、missing refs 0；最终 `assembleRelease --no-daemon` exit 0（1m09s），`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 均实际执行；APK 28,600,808 B，SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`，`unzip -t` 无错，V2 scheme true，dexdump 全量 15,683 defined classes 中 0/39 bridge、无 `AssumeTrueForR8`。一次额外的全量 `assembleRelease --rerun-tasks` 在 R8 阶段 daemon disappeared；失败后发现同轮残留 Kotlin daemon 约 8.9 GiB RSS，释放后按 R8 与 optimized/package 两阶段串行恢复成功；当前权限下无内核 OOM 记录，因此不把该失败断言为已证实 OOM。**设备/模拟器验证未运行。** 详细证据：`docs/issues/2026-08-21-sysuisdk-single-entry-composition.md`。
+最新证据：Task 045 architect main fresh（2026-08-21，生成 SDK 位于 `/tmp/task045-main-sdk-a`，私有 root 暴露官方 SDK tools；`local.properties` 每次均 byte-for-byte 恢复）— 220/220 tests；两次真实 AOSP 构建输出逐字节相等（11,382 文件），marker 8 inputs/portable/no backups，refusal + owned replace 实测；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（1m10s）；fresh `:app:minifyReleaseWithR8 --rerun-tasks` exit 0（3m41s）、missing refs 0；最终 `assembleRelease --no-daemon` exit 0（1m09s），`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 均实际执行；APK 28,600,808 B，SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`，`unzip -t` 无错，V2 scheme true，dexdump 全量 15,683 defined classes 中 0/39 bridge、无 `AssumeTrueForR8`。一次额外的全量 `assembleRelease --rerun-tasks` 在 R8 阶段 daemon disappeared；失败后发现同轮残留 Kotlin daemon 约 8.9 GiB RSS，释放后按 R8 与 optimized/package 两阶段串行恢复成功；当前权限下无内核 OOM 记录，因此不把该失败断言为已证实 OOM。该段是 Task 045 构建证据；当时设备/模拟器验证尚未运行。详细证据：`docs/issues/2026-08-21-sysuisdk-single-entry-composition.md`。
+
+最新 runtime 证据：Task 048（2026-08-22）在专用 disposable API 37 AVD 上通过 identity gate、root/remount、动态 `pm path`、push 后 hash 对账和 PackageManager rescan，真实触发 APK 启动。结果为 `RUNTIME_FAIL`：packaged manifest 将 `.SystemUIApplication` 按 `:app` namespace 展开为不存在的 `com.android.systemui.app.SystemUIApplication`；真实类 `com.android.systemui.SystemUIApplication` 同时被 R8 映射为 `kvc`。运行时记录 5,434 条目标 Application `ClassNotFoundException`、70 秒 PID 不稳定和 statusbar binder records 2→0。原 APK bytes 恢复后经 `-wipe-data` 验证 PID 稳定 60 秒，专用 AVD 已停止并删除。修正后的固定范围 Standards/Spec 双轴复审 PASS；main fresh 静态验收核对 frozen APK、15,683 DEX classes、602 个 SystemUI descriptors、`Lkvc;`、四份 UI XML、精确日志计数、六次 gate transcript、原 APK/framework-res hashes 和最终零设备/零 AVD，全部 PASS。Task 048 未运行 Gradle。详细证据：`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 

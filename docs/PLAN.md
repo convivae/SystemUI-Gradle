@@ -8,26 +8,23 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
-### 1. SysUISdk 单入口 composition（当前唯一优先级）
+### 1. 修复 Application 入口并建立 runtime-ready 静态门禁（待用户批准）
 
-- **目标入口**: `python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp`。
-- **范围**: 官方 SDK 只读；直接消费传入 AOSP 已编译的 `out/`；用 Python 标准库事务性生成独立 `android-SysUISdk`，不调用 Soong、不原地 patch、不生成永久备份。
-- **先决条件**: 冻结 framework/APEX/module/libcore artifact family 到 `android.jar`、`core-for-system-modules.jar`、framework resources、AIDL 与 39 个 bridge classes 的确定性映射；缺失或多候选必须失败，禁止猜测。
-- **流程**: 先向用户展示并取得 exact Worker brief 批准，再在隔离 worktree 以 TDD 实施；当前四脚本在替代方案通过完整验证前不得删除。
-- **完成条件**: Python、fresh Debug、fresh Release R8、完整 Release、optimized resource shrinking、APK 内容和 V2 签名全部通过；bridge classes 不进入 APK。
+- **已验证阻塞**: Task 048 的 frozen Release APK 在专用 API 37 模拟器上真实启动失败：
+  - AOSP manifest 的 `.SystemUIApplication` 被 AGP `:app` namespace 展开为不存在的
+    `com.android.systemui.app.SystemUIApplication`；真实源码类是
+    `com.android.systemui.SystemUIApplication`；
+  - R8 另将真实类重命名为 `kvc`，说明 manifest 入口 keep 语义也未生效。
+- **拟议范围**: 在不擅改 AOSP mirror 的前提下设计 Gradle manifest overlay/merge 或等效合规方案，
+  保证 packaged manifest 指向真实入口，并证明 R8 保留所有 manifest-referenced classes。
+- **静态完成条件**: Debug/Release packaged manifest FQN 正确；每个 manifest-referenced class 均存在于
+  APK DEX；mapping/usage/seed 证据解释 keep 来源；原有 Python、Debug、fresh R8、optimized Release、
+  ZIP/V2/DEX gates 全部保持通过。
+- **运行完成条件**: 在签名与 framework-res 兼容的 AOSP-built/identically-keyed image 上重跑专用
+  模拟器验证，SystemUI PID 稳定、无 fatal crash loop，状态栏/快捷设置/锁屏可用。
+- **审批边界**: manifest/source/res、build rule 或 R8 rule 的任何修改必须先提交精确方案并取得用户批准。
 
-### 2. 删除已证明被替代的文件
-
-- 新 SysUISdk 验证等价后，退役并删除被单入口替代的仓库脚本与其他已证明无引用文件。
-- 外部 live SysUISdk 的 9 个历史备份已完成固定清单/hash/内容审计；用户单独批准 option 1 后已精确删除 8 个冗余文件（163,149,374 bytes），保留唯一历史快照 `android.jar.bak-20260813-210816`。
-
-### 3. 兼容模拟器/设备安装与运行验证
-
-- **范围**: AVD 签名/root/framework 兼容性预审后替换预装 SystemUI 并运行验证。
-- **计划**: `docs/issues/2026-08-20-device-emulator-validation-plan.md`。
-- **完成条件**: APK 在目标设备/模拟器安装并运行，SystemUI 无 crash loop，核心流程可用。
-
-### 4. 逐项讨论其余 Gradle-native 简化候选
+### 2. 逐项讨论其余 Gradle-native 简化候选
 
 - Task 043 剩余 7 个 `NOT APPROVED` packet 逐项说明存在原因、维护成本、替代损失和验证方法。
 - 只有用户明确批准的项目才进入独立实施任务。
