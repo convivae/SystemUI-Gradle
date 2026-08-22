@@ -13,7 +13,7 @@
 | 049A | `w2G:p1` | `task-049a-manifest-entry-research` / `SystemUI-Gradle-wt-049a` | `joycode/GLM-5.3` | research complete; commit `96498d7c` not selected for implementation | Docs-only result retained pending cleanup |
 | 049B | `w2H:p1` | `task-049b-large-debug-deployment-research` / `SystemUI-Gradle-wt-049b` | `joycode/GLM-5.3` | stopped by user before changes | Superseded by destructive disposable-AVD authority |
 | 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | paused after evidence capture; user rejected call-site try/catch direction | Manifest/DEX and image deployment evidence retained; no further runtime fix until Task 051 root-cause audit |
-| 051 | pending | `task-051-systemui-runtime-size-audit` / `SystemUI-Gradle-wt-051` | `joycode/GLM-5.3` | approved; dispatch pending | Read-only AOSP→Gradle→APK→runtime and Debug-size audit; docs only |
+| 051 | `w2S:p1` | `task-051-systemui-runtime-size-audit` / `SystemUI-Gradle-wt-051` | `joycode/GLM-5.3` | dispatched; model and contract verified | Read-only AOSP→Gradle→APK→runtime and Debug-size audit; docs only |
 
 ## Queue
 
