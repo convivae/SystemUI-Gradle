@@ -4,7 +4,9 @@
 > for the first privileged on-device execution of the frozen Release APK.
 > Spec: `docs/issues/2026-08-21-device-systemui-runtime-preflight.md`.
 > Brief: `docs/orchestration/tasks/048-device-systemui-runtime-preflight.md`.
-> Evidence root (retained for architect review): `/tmp/task048-task048-37-20260822-005602`.
+> Evidence root used for Worker/reviewer/architect acceptance: `/tmp/task048-task048-37-20260822-005602`.
+> It was retained intact through final acceptance, then removed with the other `/tmp/task048-*`
+> artifacts during post-push cleanup on 2026-08-22; the evidence index below is historical.
 
 ## 1. Top-level result
 
@@ -322,8 +324,9 @@ DEDICATED_AVD_REMAINS=0        (deleted; emulator stopped; 0 AVDs remain)
 ```
 
 Downloaded SDK package retained (allowed, listed): `system-images;android-37.0;
-google_apis;x86_64` ≈ 4.4 GB. Evidence retained under `/tmp/task048-*` (152 MB) for
-architect review.
+google_apis;x86_64` ≈ 4.4 GB. The `/tmp/task048-*` evidence set (152 MB) remained intact
+through corrected dual review and architect fresh acceptance, then was removed during
+post-push cleanup. The installed system-image package was not removed.
 
 ## 12. Evidence index
 

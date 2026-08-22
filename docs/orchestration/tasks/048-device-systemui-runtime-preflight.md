@@ -128,9 +128,10 @@ real class is `com.android.systemui.SystemUIApplication`), which is the immediat
 launch failure; (2) R8 separately renamed the real class to `kvc` (mapping.txt), so
 manifest-entry keep semantics also require fixing. A verbatim
 `EMULATOR_ONLY_GATE=PASS`/on-device-hash transcript extracted from the worker session
-JSONL is retained at `/tmp/task048-task048-37-20260822-005602/logs/replacement-session-verification.txt`.
-Dedicated AVD stopped, deleted,
-and rollback proven via `-wipe-data`; evidence retained under `/tmp/task048-*`.
+JSONL remained at `/tmp/task048-task048-37-20260822-005602/logs/replacement-session-verification.txt`
+through corrected dual review and architect fresh acceptance. The dedicated AVD was
+stopped/deleted and rollback proven via `-wipe-data`; all `/tmp/task048-*` evidence was
+then removed during post-push cleanup.
 
 The report/issue and retained `/tmp/task048-*` evidence must support all of:
 

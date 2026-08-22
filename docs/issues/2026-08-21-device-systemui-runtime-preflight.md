@@ -50,8 +50,10 @@ rollback does not undo poisoned PackageManager retained state
 60 s, zero SystemUI Application CNF — 2 unrelated non-SystemUI CNF entries remain —
 and a UI dump byte-identical to baseline).
 
-Dedicated AVD `sysui-gradle-task048-37-20260822-005602` was stopped and deleted;
-evidence retained under `/tmp/task048-*`.
+Dedicated AVD `sysui-gradle-task048-37-20260822-005602` was stopped and deleted. The
+`/tmp/task048-*` evidence remained intact through corrected dual review and architect
+fresh acceptance, then was removed during post-push cleanup; the downloaded API 37
+system-image package remains installed.
 
 ## Background
 

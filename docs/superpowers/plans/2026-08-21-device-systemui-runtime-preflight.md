@@ -192,7 +192,7 @@ Downloaded SDK packages may remain and must be listed with approximate disk use.
 
 ## Task 7: Documentation and repository checks
 
-- [x] **Step 1: Publish exact evidence** (`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` — environment, exact commands, session lineage, compatibility, runtime data, rollback, cleanup, evidence index, corrective-pass verification; verbatim session transcript retained at `logs/replacement-session-verification.txt` — six EMULATOR_ONLY_GATE=PASS outputs, the initial pre-mutation raw-property verification, the on-device cd4b... hash output, and cleanup proofs, all extracted programmatically from the GLM-5.3 session JSONL with line/timestamp provenance; `/tmp/task048-*` retained)
+- [x] **Step 1: Publish exact evidence** (`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` — environment, exact commands, session lineage, compatibility, runtime data, rollback, cleanup, evidence index, corrective-pass verification; verbatim session transcript retained through corrected dual review and architect fresh acceptance at `logs/replacement-session-verification.txt` — six EMULATOR_ONLY_GATE=PASS outputs, the initial pre-mutation raw-property verification, the on-device cd4b... hash output, and cleanup proofs, all extracted programmatically from the GLM-5.3 session JSONL with line/timestamp provenance; `/tmp/task048-*` removed only after final acceptance)
 
 Separate commands actually executed from rejected/unused alternatives. Include exit
 codes, timestamps, serial/AVD identity, hashes, certs, log paths, screenshots, result,
