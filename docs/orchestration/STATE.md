@@ -9,7 +9,8 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | dispatched; CONTRACT verified; fresh Debug build running | Debug build/push/fix loop only; Release forbidden |
+| 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | Debug built/static mismatch proven; dedicated AVD booting via software fallback after KVM ACL loss | Debug build/push/fix loop only; Release forbidden |
+| 049A | `w2G:p1` | `task-049a-manifest-entry-research` / `SystemUI-Gradle-wt-049a` | `joycode/GLM-5.3` | independent static AGP manifest-resolution research | Docs-only; no Gradle, ADB, emulator, or product edits |
 
 ## Queue
 
@@ -20,6 +21,12 @@
 
 ## Recent Orchestration Transitions
 
+- 2026-08-22 — Task 049A was dispatched independently in `w2G:p1` with explicit
+  `joycode/GLM-5.3` to research the narrowest supported AGP manifest-entry solution;
+  it is docs-only and forbidden from Gradle/device operations. Task 049 was steered to
+  reproduce on the unchanged Debug APK before implementation. Its first hardware-accelerated
+  launch found host `/dev/kvm` access had changed since Task 048, so it is trying the same
+  dedicated AVD with non-mutating `-accel off`; all subsequent polls are capped at 30 seconds.
 - 2026-08-22 — Task 049 isolated worktree/workspace `w2F:p1` started from planning
   commit `0e7e3ff1` with explicit `joycode/GLM-5.3`; live session model and complete
   worker CONTRACT were verified. Initial inventory found zero devices, zero AVDs, no
