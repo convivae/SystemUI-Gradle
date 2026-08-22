@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-21（Task 045 已合入 main 并由架构师 fresh 验收：220/220 Python、两次 11,382-file 确定性真实 AOSP 生成、refusal/replace、Debug、fresh R8 0 refs、完整 optimized Release、ZIP/V2、DEX 0/39 bridge + 0 `AssumeTrueForR8`；七个已替代仓库文件已删；设备验证未运行）
+> **Last verified**: 2026-08-22（Task 045 构建闭环保持有效；Task 046 单入口文档同步完成；Task 047 九项历史备份只读审计完成，用户批准后精确删除八项冗余文件并保留唯一历史快照；Task 048 专用模拟器运行验证执行中）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -15,8 +15,8 @@
 | Release R8 | **SUCCESS（Task 045 main fresh，exit 0，missing refs 0）**：对生成 SDK fresh `--rerun-tasks` 3m41s |
 | `:app:assembleRelease` | **SUCCESS（Task 045 main fresh）**：两个 AGP 9.3.1 optimized-resource tasks 实际执行 + V2 签名；APK 28,600,808 B，SHA-256 `cd4b885e...` |
 | SysUISdk 生成器 | **单入口落地并 main fresh 验收（Task 045）**：`python3 tools/build_sysuisdk.py --aosp-root <aosp>`；确定性、事务性、39-entry bridge；两次 11,382-file 输出逐字节相等 |
-| 设备/模拟器运行验证 | **未运行**（构建完成 ≠ 装机验证；另行排期） |
-| 当前唯一工程优先级 | Task 045 已关闭；下一步处理已披露的旧 SysUISdk workflow 文本与外部历史备份独立审批，然后在兼容设备/镜像上运行验证 |
+| 设备/模拟器运行验证 | **Task 048 执行中**：仅在三重身份门通过的专用 `sysui-gradle-task048-*` AVD 上操作；最终结论待 Worker 完成取证与清理 |
+| 当前唯一工程优先级 | 完成 Task 048 runtime verdict、双轴审查、main fresh 验收与专用 AVD 清理 |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
@@ -112,13 +112,9 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 
 ## Next ordered work
 
-1. 清理 Task 045 已披露的 stale workflow 文本（涉及 `AGENTS.md`/ADR 等规则文件，按 H.6 先取得用户授权）：
-   - `AGENTS.md` §1.7（L122）与 §2.4（L209）正文、§7 工具表（L402）仍指向已删除的 `tools/install_sdk.py`，未提单入口 `build_sysuisdk.py --aosp-root`；
-   - `README.md` L33/L100 与 `README.en.md` L37/L123 仍宣传 `--apply` 声明式生成及 `install_sdk.py`；
-   - `SystemUI-core/build.gradle.kts` 注释 L55、L337 两处仍引用 `tools/install_sdk.py`（仅注释，无构建影响）；
-   - `docs/adr/0006-sysuisdk-r8-library-class-bridge.md` L36–39、L55 仍描述旧 S5 staging/live + `--apply` 工作流。
-2. 对 legacy live SysUISdk 的 9 个历史备份做独立只读 inventory；任何不可逆删除须另行取得用户批准
-3. 兼容模拟器/设备安装与运行验证：platform-signed Release APK install → SystemUI restart → 无启动崩溃/logcat 检查
+1. ✅ Task 046：stale SysUISdk workflow 文本已同步为单入口生成器，公开 README hygiene、220/220 Python 与 scope gate 均通过
+2. ✅ Task 047：九项 legacy live SysUISdk 历史备份完成只读审计；用户批准 option 1 后精确删除八项冗余文件（163,149,374 bytes），保留唯一快照 `android.jar.bak-20260813-210816`；live primary hashes 未改变
+3. Task 048：完成专用模拟器 runtime verdict、UI/logcat 证据、AVD 删除、双轴审查和 main fresh 验收
 4. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
 
 ## Verification commands and evidence

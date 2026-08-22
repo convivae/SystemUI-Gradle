@@ -1,7 +1,9 @@
 # Legacy Live SysUISdk Backup Inventory (Task 047)
 
 **Date:** 2026-08-21
-**Status:** Completed (read-only audit; recommendations advisory; `DELETED=0`)
+**Status:** Completed. The inventory itself was read-only (`DELETED=0` at audit time).
+After review and explicit user approval of option 1, the architect deleted the eight
+exact redundant candidates and retained the unique historical snapshot; see §10.
 **Spec:** `docs/issues/2026-08-21-legacy-sysuisdk-backup-inventory.md`
 **Plan:** `docs/superpowers/plans/2026-08-21-legacy-sysuisdk-backup-inventory.md`
 
@@ -256,3 +258,37 @@ $ python3 (normalized comparison of before/after manifests)
 BACKUP_SET_UNCHANGED=true
 BACKUPS=9
 ```
+
+## 10. Post-audit user-approved cleanup
+
+After the read-only audit, dual review, main fresh verification, merge, and push, the
+user explicitly selected deletion option 1 on 2026-08-22. The architect then used an
+exact fixed-name Python operation with a two-phase guard:
+
+1. Verify all eight absolute paths, sizes, and SHA-256 values, plus the retained
+   snapshot, before unlinking any file.
+2. Unlink only the eight verified paths—no glob—and verify all eight absent afterward.
+
+Actual result:
+
+```text
+PREDELETE_EXACT_PATHS=8
+PREDELETE_HASH_SIZE_MATCH=8/8
+RETAIN_HASH_SIZE_MATCH=true
+AUTHORIZED_BYTES=163149374
+DELETED_COUNT=8
+RECLAIMED_LOGICAL_BYTES=163149374
+RETAINED_UNIQUE_SNAPSHOT=PASS
+LIVE_PRIMARIES_PRESENT=PASS
+POSTDELETE_ABSENT=8/8
+LIVE_PRIMARY_HASHES_UNCHANGED=3/3
+```
+
+Retained file: `android.jar.bak-20260813-210816`, 44,848,587 bytes, SHA-256
+`9c4deb7814d73935cbf1c54736dc2692a77fadda4dd352af403ee5edafadb09f`.
+The live `android.jar`, `core-for-system-modules.jar`, and `framework.aidl` hashes remain
+identical to the audit values in §4. Machine-readable execution evidence is retained at
+`/tmp/task047-approved-delete.json` (SHA-256
+`5f4d0d9a0e8e3d56df3bac6215a56e3d081cda0ded07d96eae2b77682bf7e56f`).
+
+No other SDK file was authorized or deleted.

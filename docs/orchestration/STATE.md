@@ -15,10 +15,8 @@
 
 1. Monitor Task 048 replacement without interrupting `working`; review its fixed range
    after terminal-final HANDOFF.
-2. After Task 047 push/cleanup, present exact candidate backup deletions and reclaimed
-   bytes for a separate irreversible repository-external cleanup decision.
-3. Return to the seven remaining `NOT APPROVED` architecture packets after these
-   follow-ups close.
+2. Return to the seven remaining `NOT APPROVED` architecture packets after Task 048
+   closes.
 
 ## Recent Orchestration Transitions
 
@@ -213,6 +211,12 @@
 - 2026-08-21 — Task 047 Worker and both reviewer workspaces/worktrees were clean
   and removed after push; their three local branches were deleted. The nine external
   backup files remain untouched pending the separately required user deletion decision.
+- 2026-08-22 — The user selected Task 047 cleanup option 1. After all eight fixed
+  candidate paths matched their recorded sizes and SHA-256 values, the architect deleted
+  exactly those eight files without globbing, reclaimed 163,149,374 logical bytes, and
+  verified all eight absent. The unique `android.jar.bak-20260813-210816` snapshot and
+  all three live primary files retain their audited hashes. No other SDK file was
+  deleted.
 - 2026-08-21 — Task 048 original Worker session ended on a model-service 500 while
   attempting to render a baseline screenshot. It had created and booted the dedicated
   AVD, passed the three-part identity gate, and captured baseline evidence, but had not
@@ -223,6 +227,5 @@
 
 ## Last Updated
 
-2026-08-21 — Tasks 046 and 047 are pushed and fully cleaned. Task 047 external
-backup deletion remains separately user-gated. Task 048 replacement execution remains
-active.
+2026-08-22 — Tasks 046 and 047 are fully closed, including the separately approved
+Task 047 eight-file external cleanup. Task 048 replacement execution remains active.

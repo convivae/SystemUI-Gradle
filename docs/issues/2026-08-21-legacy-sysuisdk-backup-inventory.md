@@ -3,7 +3,9 @@
 ## Status
 
 Executed 2026-08-22 by Worker (Task 047, worktree `SystemUI-Gradle-wt-047`).
-Read-only audit completed; nothing deleted (`DELETED=0`). Full report:
+Read-only audit completed; the user subsequently approved exact option 1 deletion of
+the eight recommended redundant files while retaining the unique historical snapshot.
+Deletion execution is recorded below. Full report:
 `docs/architecture/2026-08-21-legacy-sysuisdk-backup-inventory.md`.
 
 ## Background
@@ -63,22 +65,41 @@ retention recommendation.
 
 ## Prohibition
 
-遵守：未删除、未重命名、未 chmod/touch/replace/写入任何 SDK/AOSP 文件；临时产物
-仅在 `/tmp/task047-*`；未运行任何 Gradle 任务。
+遵守（审计阶段）：未删除、未重命名、未 chmod/touch/replace/写入任何 SDK/AOSP
+文件；临时产物仅在 `/tmp/task047-*`；未运行任何 Gradle 任务。审计关闭并取得用户
+对精确八文件清单的单独批准后，架构师只删除了获批八项；live primary 与唯一保留
+快照均未改变。
 
 ## Error-count evolution
 
 Not applicable. No build or source change was allowed, and no Gradle task was run
 (实际未运行任何 Gradle 任务).
 
+## User-approved cleanup execution
+
+On 2026-08-22 the user explicitly selected option 1: delete all eight exact candidate
+files and retain `android.jar.bak-20260813-210816`. Before unlinking, the architect must
+verify each absolute path, byte size, and SHA-256 against report §3; any mismatch stops
+the whole operation. No glob or broader SDK cleanup is authorized.
+
+Execution result: **completed exactly as approved**.
+
+```text
+PREDELETE_HASH_SIZE_MATCH=8/8
+DELETED_COUNT=8
+RECLAIMED_LOGICAL_BYTES=163149374
+POSTDELETE_ABSENT=8/8
+RETAINED_UNIQUE_SNAPSHOT=PASS
+LIVE_PRIMARY_HASHES_UNCHANGED=3/3
+```
+
+Retained: `android.jar.bak-20260813-210816`, 44,848,587 bytes, SHA-256
+`9c4deb7814d73935cbf1c54736dc2692a77fadda4dd352af403ee5edafadb09f`.
+Machine-readable evidence: `/tmp/task047-approved-delete.json`, SHA-256
+`5f4d0d9a0e8e3d56df3bac6215a56e3d081cda0ded07d96eae2b77682bf7e56f`.
+No other SDK file was deleted.
+
 ## Open questions
 
-Deletion remains unapproved. Candidate list for the separate irreversible decision
-(8 files, 163,149,374 bytes): `android.jar.orig`, `android.jar.bak-20260821-011116`,
-`android.jar.bak-20260821-013303`, `core-for-system-modules.jar.orig`,
-`core-for-system-modules.jar.bak-20260813-210816`,
-`core-for-system-modules.jar.bak-20260821-011116`,
-`core-for-system-modules.jar.bak-20260821-013303`, `framework.aidl.bak-preaidl`.
-Retain recommendation: `android.jar.bak-20260813-210816` (unique historical snapshot,
-44,848,587 bytes). Caveat A (rows 3–4 redundancy depends on the live primary remaining
-in place) must be presented to the user together with the candidate list.
+None for the frozen eight-file cleanup decision; execution evidence above must be
+completed before closure.
