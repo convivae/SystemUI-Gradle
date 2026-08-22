@@ -36,3 +36,34 @@ The user rejected a call-site `try/catch` because it treats the observed excepti
 ## Status
 
 Research Worker dispatch approved directly by the user on 2026-08-22. No implementation is approved.
+
+**Result (2026-08-22, Task 051 worker)**: investigation complete, report at
+`docs/architecture/2026-08-22-systemui-application-runtime-and-debug-size-root-cause.md`.
+
+Evidence summary:
+
+- Assembly chain proven faithful end-to-end: `SystemUIApplication.java:87` (identical in AOSP and
+  project) → compiled through `:SystemUI-core` → packaged in the frozen Debug APK
+  (`classes7.dex` descriptor `Lcom/android/systemui/SystemUIApplication;`, constructor bytecode
+  `invoke-static Landroid/os/Trace;.registerWithPerfetto:()V`) → packaged manifest FQN correct →
+  post-wipe PackageManager scan selected it → constructor entered and failed at line 87.
+- Post-wipe root cause **proven**: hidden-API denial. The Gradle build reproduces neither Soong
+  `platform_apis: true` (→ `android:usesNonSdkApi="true"` injected by `manifest_fixer.py`) nor
+  `certificate: "platform"` in the "target build's platform key" sense; on the Google image
+  `isAllowedToUseHiddenApis()` fails all branches → `hiddenApiEnforcementPolicy=2` → first
+  constructor call (`Trace.registerWithPerfetto`, @hide, domain=platform, api=blocked) denied →
+  `NoSuchMethodError` crash loop (1,578 paired occurrences in retained logs). The runtime member
+  is present-but-blocked (exists in runtime `framework.jar` and SysUISdk), not absent.
+- The earlier `SystemUIApplicationImpl` CNF (18:33) was stale-PackageManager-metadata only: the
+  original Google image's manifest declares that refactored class name; cleared by wipe-data.
+- Debug APK 163,561,195 B = expected debug composition: 82.1% uncompressed un-minified DEX
+  (24 files, 77,342 class defs vs Release 15,683 / original 38,372) + 25.3 MB unshrunk
+  `resources.arsc`. No duplicate packaging; ZIP integrity verified. Not a correctness blocker.
+- Four solution families documented (manifest hidden-API contract / platform signing domain /
+  revision metadata parity / optimized debug variant), all explicitly NOT APPROVED; call-site
+  `try/catch` explicitly rejected.
+- `Gradle: NOT RUN`, `Mutations: NONE`. One flagged uncertainty: post-wipe dumpsys `signatures:`
+  hashCode display anomaly vs apksigner cert ground truth (does not affect the classification).
+
+Open decision for the user: choose among the NOT APPROVED solution families (recommended order:
+Family A manifest contract first).
