@@ -9,18 +9,34 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | Debug built/static mismatch proven; dedicated AVD booting via software fallback after KVM ACL loss | Debug build/push/fix loop only; Release forbidden |
-| 049A | `w2G:p1` | `task-049a-manifest-entry-research` / `SystemUI-Gradle-wt-049a` | `joycode/GLM-5.3` | independent static AGP manifest-resolution research | Docs-only; no Gradle, ADB, emulator, or product edits |
+| 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | stopped by user; over-constrained approach superseded by Task 050 | Worktree retained temporarily for evidence recovery only |
+| 049A | `w2G:p1` | `task-049a-manifest-entry-research` / `SystemUI-Gradle-wt-049a` | `joycode/GLM-5.3` | research complete; commit `96498d7c` not selected for implementation | Docs-only result retained pending cleanup |
+| 049B | `w2H:p1` | `task-049b-large-debug-deployment-research` / `SystemUI-Gradle-wt-049b` | `joycode/GLM-5.3` | stopped by user before changes | Superseded by destructive disposable-AVD authority |
+| 050 | pending dispatch | `task-050-direct-debug-runtime-closure` | `joycode/GLM-5.3` | planned | Direct namespace/manifest + root/remount/push/reboot/fix loop |
 
 ## Queue
 
-1. Dispatch Task 049: build/push/fix the Debug APK on one dedicated disposable AVD
-   until real UI interaction remains stable, then review/merge/push that Debug-proven version.
-2. Only after Task 049 is pushed, prepare a separate Release runtime-validation task.
+1. Dispatch Task 050: use the simplest namespace/manifest correction, then directly
+   root/remount/push/reboot the Debug APK on a disposable emulator and fix real crashes.
+2. Only after Task 050 is pushed, prepare a separate Release runtime-validation task.
 3. Return to the seven remaining `NOT APPROVED` architecture packets after runtime closure.
 
 ## Recent Orchestration Transitions
 
+- 2026-08-22 — The user stopped Tasks 049/049B and explicitly removed the
+  over-conservative runtime restrictions. Manifest and `:app` namespace edits are
+  authorized. The dedicated emulator and installed emulator system image may be rooted,
+  remounted, modified, damaged, deleted, and recreated after first pulling a local backup
+  of the original SystemUI APK. Task 050 replaces the transform/safe-deployment research
+  with a direct build → push → reboot → real-crash → fix loop.
+- 2026-08-22 — Task 049B was dispatched independently in `w2H:p1` with explicit
+  `joycode/GLM-5.3` to research a safe, private-AVD deployment path for the
+  163,546,744-byte Debug APK. It is docs-only and forbidden from Gradle/device
+  mutations. Task 049 restored the dedicated AVD byte-exact after three controlled
+  deployment findings: overlay replacement exhausted scratch, bind plus userspace
+  restart retained baseline PackageManager metadata, and a direct upperdir symlink
+  failed the pre-reboot merged-view gate. Product implementation is proceeding from
+  Task 048 runtime evidence plus Task 049 Debug manifest-to-DEX static closure.
 - 2026-08-22 — Task 049A was dispatched independently in `w2G:p1` with explicit
   `joycode/GLM-5.3` to research the narrowest supported AGP manifest-entry solution;
   it is docs-only and forbidden from Gradle/device operations. Task 049 was steered to
