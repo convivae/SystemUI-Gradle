@@ -62,8 +62,32 @@ Evidence summary:
 - Four solution families documented (manifest hidden-API contract / platform signing domain /
   revision metadata parity / optimized debug variant), all explicitly NOT APPROVED; call-site
   `try/catch` explicitly rejected.
-- `Gradle: NOT RUN`, `Mutations: NONE`. One flagged uncertainty: post-wipe dumpsys `signatures:`
-  hashCode display anomaly vs apksigner cert ground truth (does not affect the classification).
+- `Gradle: NOT RUN`, `Mutations: NONE`.
+
+**Architect review amendment (2026-08-22, second commit)** — two material corrections,
+applied to the report and this journal:
+
+1. **Platform-signing claim corrected**. Fresh apksigner ground truth: original
+   SystemUIGoogle cert SHA-256
+   `301aa3cb081134501c45f1422abc66c24224fd5ded5fdc8f17e697176fd866aa` **equals**
+   `/system/framework/framework-res.apk`'s cert → the original **is** platform-signed on
+   this image (it has BOTH platform signature and `usesNonSdkApi=true`). The prior claim
+   that the original was not platform-signed (derived from dumpsys hashCode display
+   values) is **retracted**; dumpsys `Signature.hashCode()` short hashes are
+   non-authoritative/ambiguous display values, not certificate identity. Family A
+   (manifest `usesNonSdkApi` contract) remains supported by
+   `ApplicationInfo.isAllowedToUseHiddenApis()` for a system app, but NOT by the
+   original-APK comparison (which cannot isolate the attribute, since the original is
+   also platform-signed). Our APK remains not platform-signed (cert `c8a2e9bc…`, V2-only).
+2. **Factory closure scope corrected**. The Task 050 closure tool checks component
+   `android:name`, application name/`backupAgent`, and `targetActivity` — it does **NOT**
+   check `android:appComponentFactory`. Separate facts (this audit): the packaged
+   manifest retains the relative name `.PhoneSystemUIAppComponentFactory`; the frozen
+   APK's `classes7.dex` contains descriptor `Lcom/android/systemui/PhoneSystemUIAppComponentFactory;`;
+   the post-wipe captured fatal entered the `SystemUIApplication` constructor and no
+   post-wipe factory CNF was observed in retained logs. A dedicated factory closure gate
+   remains required before claiming full factory coverage.
 
 Open decision for the user: choose among the NOT APPROVED solution families (recommended order:
-Family A manifest contract first).
+Family A manifest contract first — supported by the `isAllowedToUseHiddenApis()` system-app
+branch; note the original APK comparison is no longer evidence for it).

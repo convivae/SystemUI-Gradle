@@ -111,7 +111,8 @@ Runtime check chain (AOSP primary sources):
 | DEX packaging | Frozen Debug APK contains 24 DEX files, **77,342 class defs**; `classes7.dex` contains descriptor `Lcom/android/systemui/SystemUIApplication;` (dexdump: `source_file_idx: 11836 (SystemUIApplication.java)`, superclass `Landroid/app/Application;`) |
 | Constructor bytecode | `classes7.dex` dexdump: `invoke-static {}, Landroid/os/Trace;.registerWithPerfetto:()V // method@02b1` guarded by the `isSubprocess()` check — emitted exactly as in source |
 | Packaged manifest | `frozen-debug-manifest.xml:689` `android:name="com.android.systemui.SystemUIApplication"`; `:702` `android:appComponentFactory=".PhoneSystemUIAppComponentFactory"`; binary `packaged-manifest.txt:464` confirms the FQN |
-| Manifest→DEX closure | Task 050 static closure gate: pre-fix `95 entry classes (present=16 missing=79)` — all missing were namespace-expanded `com.android.systemui.app.*` FQNs; post-fix `present=93 alias=2 missing=0 RESULT=PASS` (exact application/factory/entry FQNs, not a looser criterion) |
+| Manifest→DEX closure (application name) | Task 050 static closure gate — checks the **application name** (and component `android:name` / `backupAgent` / `targetActivity`), but **NOT `android:appComponentFactory`** (verified: zero `appComponentFactory`/factory-class mentions in the gate output `postfix-closure.txt`): pre-fix `95 entry classes (present=16 missing=79)` — all missing were namespace-expanded `com.android.systemui.app.*` FQNs; post-fix `present=93 alias=2 missing=0 RESULT=PASS` |
+| AppComponentFactory (separate, not gate-covered) | Packaged manifest retains the relative name `.PhoneSystemUIAppComponentFactory` (manifest line 702); the frozen APK's `classes7.dex` contains descriptor `Lcom/android/systemui/PhoneSystemUIAppComponentFactory;` (bytes-level check, this audit); the post-wipe captured fatal entered the `SystemUIApplication` constructor and **no post-wipe factory CNF was observed** in the retained logs — but a dedicated factory closure gate remains required (see §6 Family A gate and HANDOFF) |
 | PackageManager | Post-wipe fresh scan (lastUpdateTime 2026-08-22 18:37:13) selected the packaged application name; process `com.android.systemui` started as persistent shared-user `android.uid.systemui` (uid 10201) |
 | Constructor entry | Crash stack: `at com.android.systemui.SystemUIApplication.<init>(SystemUIApplication.java:87)` — instantiation began and failed **inside** the constructor |
 
@@ -149,7 +150,7 @@ original's application class, which is absent from our DEX → CNF.
 | Stale PackageManager metadata | **PROVEN for fatal #1 only**; cleared by the wipe | 18:33 CNF names the *original image's* application class (`SystemUIApplicationImpl`, proven from original APK manifest) while our DEX was installed; after wipe the class name switched to our real `SystemUIApplication` |
 | Runtime member absence (`registerWithPerfetto` not in framework) | **DISPROVEN** | Runtime log itself states the declaration site: `declaration of 'android.os.Trace' appears in /system/framework/framework.jar!classes3.dex`; compile-time `javap` on SysUISdk `android.jar` shows `public static void registerWithPerfetto();`. `NoSuchMethodError` is the VM's *linking-time manifestation of denial*, not physical absence |
 | **Hidden-API denial** | **PROVEN — the post-wipe root cause** | Log line: `hiddenapi: Accessing hidden method Landroid/os/Trace;->registerWithPerfetto()V (runtime_flags=0, domain=platform, api=blocked) from /system_ext/priv-app/SystemUIGoogle/SystemUIGoogle.apk!classes7.dex (domain=app, TargetSdkVersion=35) using linking: denied`, immediately preceding each `NoSuchMethodError` (1,578 paired occurrences) |
-| Signing/domain mismatch | **PROVEN as the enabling condition** | `dumpsys` post-wipe: `hiddenApiEnforcementPolicy=2`, `usesNonSdkApi=false`; by `ApplicationInfo.isAllowedToUseHiddenApis()` this is only reachable when not platform-signed, not usesNonSdkApi, and not allowlisted. apksigner ground truth: our APK cert SHA-256 `c8a2e9bc…` (AOSP platform testkey) vs original image cert `301aa3cb…` (Google platform key) — different keys |
+| Signing/domain mismatch | **PROVEN as the enabling condition** | `dumpsys` post-wipe: `hiddenApiEnforcementPolicy=2`, `usesNonSdkApi=false`; by `ApplicationInfo.isAllowedToUseHiddenApis()` this is only reachable when not platform-signed, not usesNonSdkApi, and not allowlisted. apksigner ground truth (fresh, this audit): our APK cert SHA-256 `c8a2e9bc…` (repo AOSP platform testkey, V2-only); original SystemUIGoogle cert `301aa3cb…` **equals** `/system/framework/framework-res.apk`'s cert (`301aa3cb…`) — i.e. the original **is** platform-signed on this image; ours is not |
 | Source/runtime revision mismatch | **PROVEN as a separate, non-causal divergence** | Google image (fingerprint `emu64xa:17/CE2A.260420.019/15611780`) uses the `SystemUIApplicationImpl` refactor absent from our AOSP checkout; metadata divergence `versionCode=0/min=35/target=35` (ours) vs `37/37/37` (Soong-injected). Neither causes the current crash: the crash is the denied hidden-API call, and hidden-API enforcement applies to targetSdk ≥ 28 regardless of 35 vs 37 |
 
 ### 4.3 First-divergence / root-cause statement (direct evidence vs uncertainty)
@@ -163,18 +164,20 @@ image the app is privileged/system_ext but fails `isAllowedToUseHiddenApis()` on
 branch, so hidden-API enforcement is ENABLED (policy=2), and the *first statement of the
 application constructor* — `Trace.registerWithPerfetto()`, a `@hide` blocked-list,
 domain=platform API called from domain=app — is denied at linking, producing the
-`NoSuchMethodError` crash loop. The original image's SystemUI proves the contract works
-when either Soong property is present: the original is *not* signed with this image's
-platform key either (its dumpsys signature hashCode `b4addb29` differs from the platform
-package `android`'s `d5d02e`), yet it runs with `policy=0` because Soong injected
-`usesNonSdkApi=true`.
+`NoSuchMethodError` crash loop. The original SystemUIGoogle satisfies the contract on
+**both** levers: fresh apksigner digests show its certificate (`301aa3cb…`) is identical
+to the platform package `android` (framework-res.apk, `301aa3cb…`) — it **is**
+platform-signed on this image — and Soong injected `usesNonSdkApi=true`; it therefore
+runs with `policy=0`. Our APK satisfies neither lever.
 
-**Unresolved uncertainty (explicit)**: the post-wipe dumpsys `signatures:` line displays
-the *same* hashCode (`b4addb29`) as the pre-wipe original despite apksigner proving the
-APK bytes on disk are ours with a different certificate. This display-level anomaly could
-not be resolved without parsing the APK Signing Block (V2/V3-only signatures are invisible
-to `keytool`). It does not affect the classification: policy=2, `usesNonSdkApi=false`, and
-the explicit denial log line are direct, independent evidence of the enforcement path.
+**Display-value caveat (explicit)**: dumpsys `signatures:` short hashes (e.g. `b4addb29`)
+are **non-authoritative/ambiguous display values** (`Signature.hashCode()` of opaque
+bytes) and must not be used as certificate identity; apksigner certificate SHA-256
+digests are ground truth. The post-wipe dumpsys displayed the same hashCode as the
+pre-wipe original despite the on-disk APK certificates differing (ours `c8a2e9bc…`,
+original `301aa3cb…`) — a display artifact, now moot given the apksigner comparison
+above. An earlier draft inferred "original is not platform-signed" from dumpsys
+hashCode values; that inference is **retracted** (architect review, 2026-08-22).
 
 ---
 
@@ -240,9 +243,13 @@ verify aapt2 link accepts the attribute in our pipeline.
 push to the dedicated AVD → `dumpsys package com.android.systemui` shows
 `usesNonSdkApi=true`, `hiddenApiEnforcementPolicy=0` → reboot → no `hiddenapi … denied`
 line → `SystemUIApplication` constructs past line 87.
-**Evidence it works on this image**: the original SystemUIGoogle is *not* signed with the
-image's platform key (different signature hashCode from the `android` platform package)
-yet runs with policy=0 purely via Soong's injected `usesNonSdkApi=true`.
+**Supporting mechanism (not an on-device proof)**: `ApplicationInfo.isAllowedToUseHiddenApis()`
+(ApplicationInfo.java:2512-2534) allows hidden API for a **system app with
+`usesNonSdkApi=true`** even without a platform signature — that is the branch Family A
+targets. The original-APK comparison provides **no** additional support: the original is
+**both** platform-signed and `usesNonSdkApi=true` on this image (fresh apksigner:
+original cert `301aa3cb…` == framework-res cert `301aa3cb…`), so its `policy=0` cannot
+isolate the manifest attribute alone.
 **Risks**: none to AOSP source (build-time injection); must not be used to mask other
 divergences.
 **Does not solve**: versionCode/targetSdk metadata parity; platform-signature domain;
@@ -307,7 +314,9 @@ suppression, not a root-cause fix.
 
 ### Recommended order of investigation (no approval implied)
 
-1. Family A (smallest, directly evidenced by the original's policy=0 on this image);
+1. Family A (smallest, supported by the `ApplicationInfo.isAllowedToUseHiddenApis()`
+   system-app + `usesNonSdkApi` branch — ApplicationInfo.java:2512-2534; the original's
+   policy=0 is NOT isolation evidence since it is also platform-signed);
 2. Family C metadata parity in the same discussion;
 3. Family B and Family D as separate user decisions (infra cost vs debug ergonomics).
 
@@ -324,7 +333,12 @@ suppression, not a root-cause fix.
 - Evidence greps (counts): post-wipe full log contains 1,578 `SystemUIApplication`
   instantiate failures and 1,578 matching hidden-API denial lines; 0 occurrences of the
   `SystemUIApplicationImpl` CNF in the post-wipe log (it belongs to the pre-wipe snapshot).
-- `apksigner verify --print-certs` (three APKs): digests recorded in §4.2/§5.1.
+- `apksigner verify --print-certs` (fresh, this audit): original SystemUIGoogle cert
+  SHA-256 `301aa3cb081134501c45f1422abc66c24224fd5ded5fdc8f17e697176fd866aa`;
+  `/system/framework/framework-res.apk` (pulled read-only to
+  `/tmp/task051-evidence/framework-res.apk`) cert SHA-256 — **identical**
+  `301aa3cb…` (original is platform-signed on this image); our Debug cert
+  `c8a2e9bc…` (V2-only). Dumpsys signature short hashes are non-authoritative.
 - Size audit: `/tmp/task051-evidence/size-audit.txt` (script inline, output retained).
 - `unzip -t` frozen Debug APK → "No errors detected in compressed data".
 
