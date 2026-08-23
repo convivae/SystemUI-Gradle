@@ -51,13 +51,24 @@ The first-party local launch/packaging sources were read from the AOSP checkout 
 
 ### Retained runtime evidence
 
-No run was performed for this report. The immutable-at-analysis retained files were:
+No run was performed for this report. The first two retained logs are closed
+files, so their SHA-256 values cover the complete files. The third log belongs
+to an append-only live diagnostic run; its whole-file length and hash can
+continue changing. To make the cited startup evidence reproducible without
+mutating or stopping that run, this report hashes only the raw byte stream
+produced by `head -n 782 emulator-sdk36-virt.log`, ending at the last cited
+startup line:
 
-| Evidence | SHA-256 | Relevant lines |
+| Evidence | SHA-256 scope | Relevant lines |
 |---|---|---|
-| `.../logs/emulator-isolated-avd.log` | `21302020ec98b68742963342e6ae4dbbca60c97010c2d4d8444344933fd676c1` | 273-390 argv; 391 version; 393 KVM; 430 failure |
-| `.../logs/emulator-sdk36.log` | `52a8503d53cfcf415e279149d7e786fe1455d05a6e62035f8b88f452f36fd27c` | 576-693 argv; 694 version; 696 KVM; 734 failure |
-| `.../logs/emulator-sdk36-virt.log` | `23337c35bc149c8c7675c4d63b375d4e97a140bd28079080e5f6f5705c337003` | 575-694 argv; 695 version; 697 KVM; 777-782 kernel/machine |
+| `.../logs/emulator-isolated-avd.log` | complete file: `21302020ec98b68742963342e6ae4dbbca60c97010c2d4d8444344933fd676c1` | 273-390 argv; 391 version; 393 KVM; 430 failure |
+| `.../logs/emulator-sdk36.log` | complete file: `52a8503d53cfcf415e279149d7e786fe1455d05a6e62035f8b88f452f36fd27c` | 576-693 argv; 694 version; 696 KVM; 734 failure |
+| `.../logs/emulator-sdk36-virt.log` | bounded prefix, lines 1-782: `f14e4f87b6980f3432c93dc11fa7090f2e0960596c0d87d171b6075c643a6926` | 575-694 argv; 695 version; 697 KVM; 777-782 kernel/machine |
+
+The bounded prefix hash was computed twice while the file contained 26,951
+lines; both reads produced the same value. Content after line 782 is excluded
+from this report's evidence identity. No whole-file hash is asserted for the
+live log.
 
 All paths above are under `/home/conv/myspace/task052-aosp-arm64-runtime/`.
 The retained AVD says `abi.type=arm64-v8a` and `hw.cpu.arch=arm64`
@@ -298,11 +309,12 @@ machine type. It does not erase the earlier token from the printed argv; both
 values are retained in the merged option structure, but reverse lookup makes
 the last `type` win for machine selection.
 
-The retained run corroborates this source path rather than merely suppressing
-an error: it gets past the prior `virtio-snd-pci` PCI-bus failure and starts the
-ARM64 kernel (`emulator-sdk36-virt.log:688-697,777-782`). This does not prove a
-healthy Android userspace; that run later has unrelated userspace instability,
-which is outside this mechanism report.
+The live diagnostic run's bounded startup prefix corroborates this source path
+rather than merely suppressing an error: it gets past the prior
+`virtio-snd-pci` PCI-bus failure and starts the ARM64 kernel
+(`emulator-sdk36-virt.log:688-697,777-782`). This does not prove a healthy
+Android userspace; later output from that append-only run is outside the bounded
+evidence used here and outside this mechanism report.
 
 ### Why the kernel still prints `Machine model: linux,ranchu`
 
@@ -375,9 +387,9 @@ changing only the host/package side of the machine-selection decision.
    virtio-snd transition is not assigned here.
 3. The source documents the intended AArch64-host branch, but no Linux AArch64
    emulator package or AArch64 host was inspected or run in this task.
-4. The `type=virt` retained run demonstrates machine/device compatibility and
-   kernel entry, not Android boot health; its later zygote/userspace failures
-   require a separate investigation.
+4. The bounded `type=virt` startup prefix demonstrates machine/device
+   compatibility and kernel entry, not Android boot health; later output from
+   the still-live append-only run requires a separate investigation.
 5. Direct backend help returned `unknown option: -machine`; the Android backend
    has a launcher/glue option layer rather than stock-QEMU help behavior. This
    does not override the retained final argv or the parser source above.
