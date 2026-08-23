@@ -193,17 +193,78 @@ emulator -list-avds
 then install with `adb` (the doc treats the emulator as a device for `adb`).
 Uninstall as on a physical device; `-wipe-data` resets to factory defaults.
 
-**Locally built images.** For a platform/ROM developer who has run
-`emu_img_zip`, the produced `sdk-repo-linux-system-images.zip` is the standard
-SDK system-image distribution shape (per `emu_img_zip.mk`, §2). The documented
-way to consume such a system image is to install it into the SDK
-`system-images/.../<arch>/` tree and create an AVD that references it, then
-launch with `emulator -avd <name>`. The Task 052 issue shows this host's only
-installed system-image tree is `android-37.0`; no `arm64` arch tree is
-installed, consistent with the launcher rejecting an ARM64 guest here.
+**Locally built images — SDK AVD installation (unknown).** The command-line
+guide documents the `emulator -avd <name>` launch surface and the SDK
+system-image directory layout (`~/Library/Android/sdk/system-images/android-apiLevel/variant/arch/`,
+above), but it does **not** document a canonical manual installation command for
+the locally generated `sdk-repo-linux-system-images.zip` produced by `emu_img_zip`
+(§2). This research did **not** find an official, first-party manual installation
+procedure for that locally generated ZIP; the generic directory layout above is
+therefore **not** presented as a proven installation procedure. This is recorded
+as an explicit unknown (§7). The Task 052 issue shows this host's only installed
+system-image tree is `android-37.0`; no `arm64` arch tree is installed, consistent
+with the launcher rejecting an ARM64 guest here.
 
-> Scope note: this report cites the *documented* AVD/launch surface only. It
-> does not create, delete, or start any AVD (forbidden by the brief).
+**Locally built images — AOSP source-controlled Goldfish local-image runner.**
+AOSP ships a source-controlled runner for a locally built image on a local
+instance: `acloud`. Local path: `/home/conv/myspace/aosp/tools/acloud/README.md`
+(§"create", lines ~45-73) documents the four `acloud create` use cases and
+states: "Create is the main entry point in creating an AVD, supporting both
+remote instance (running on a virtual machine in the cloud) and local instance
+(running on your local host) use cases. You also have the option to use a
+locally built image or an image from the Android Build servers." The
+local-instance + locally-built-image case is documented as:
+
+> `$ acloud create --local-instance --local-image`
+
+The AVD type is selectable. Local path:
+`/home/conv/myspace/aosp/tools/acloud/create/create_args.py` (lines ~580-588)
+defines the `--avd-type` argument with `choices=[constants.TYPE_GCE,
+constants.TYPE_CF, constants.TYPE_GF, constants.TYPE_CHEEPS, constants.TYPE_FVP,
+constants.TYPE_TRUSTY]`; `constants.TYPE_GF = "goldfish"` is defined in
+`/home/conv/myspace/aosp/tools/acloud/internal/constants.py` (line 44). So the
+exact official same-checkout local Goldfish entry, after `lunch`/build
+environment setup, is:
+
+> `acloud create --local-instance --local-image --avd-type goldfish`
+
+(This report does **not** run it — forbidden by the brief.) When the
+`--local-image` path is omitted, acloud resolves it from the build environment.
+Local path: `/home/conv/myspace/aosp/tools/acloud/create/avd_spec.py`,
+`_GetLocalImagePath` (lines ~532-555): "If the value is empty, this method
+returns ANDROID_PRODUCT_OUT in build environment" — i.e. an omitted
+`--local-image` resolves to `$ANDROID_PRODUCT_OUT`.
+
+The launch still goes through the **top-level `emulator` launcher**. Local
+path: `/home/conv/myspace/aosp/tools/acloud/create/goldfish_local_image_local_instance.py`,
+`_StartEmulatorProcess` (lines ~499-544). It copies the host environment, sets
+`ANDROID_PRODUCT_OUT` to the image dir, `ANDROID_TMP` to the working dir, and
+`ANDROID_BUILD_TOP` (if unset) to the image dir, then builds the command:
+
+```
+[<emulator_path>, "-verbose", "-show-kernel", "-read-only",
+ "-ports", "<console_port>,<adb_port>",
+ "-logcat-output", <logcat_path>, "-stdouterr-file", <stdouterr_path>]
+```
+
+and runs `subprocess.Popen(emulator_cmd, ..., env=emulator_env, ...)`. The
+binary name is `_EMULATOR_BIN_NAME = "emulator"` (line 59), i.e. the same
+top-level `emulator` launcher the AOSP prebuilt/SDK ship (§2). The class
+docstring (lines 19-21) confirms it "runs the emulator in build environment"
+using "the prebuilt emulator in ANDROID_EMULATOR_PREBUILTS."
+
+**Reconciliation with 052B.** Because `acloud ... --avd-type goldfish` invokes
+the **same top-level `emulator` launcher** (not a separate ARM64-guest engine),
+it does **not** bypass the x86_64-host→ARM64 target mapping rejection that 052B
+traces. On this x86_64 host, the launcher still PANICs on an ARM64 guest (§4.3);
+acloud is the official local-image *entry*, but the underlying launch is subject
+to the same host/guest-architecture and acceleration constraints documented in
+§4. In other words: acloud makes the local Goldfish image *launchable by the
+official runner*; it does not make an ARM64 guest *supported on an x86_64 host*.
+
+> Scope note: this report cites the *documented* AVD/launch surface and the
+> AOSP source-controlled runner only. It does not create, delete, or start any
+> AVD or run `acloud` (forbidden by the brief).
 
 ---
 
@@ -231,10 +292,10 @@ Three points are explicit in this primary source:
 1. It is a **cross-compilation of the emulator binary** ("from x86_64 to arm64
    hosts") — i.e. produce an emulator that *runs on an ARM64 host*. It is not a
    statement about running an ARM64 guest on an x86_64 host.
-2. The supported execution mode is **"running arm64 system images with KVM
-   virtualization"** on that ARM64 host. KVM on an AArch64 host requires an
-   AArch64 host CPU; it is not available on this x86_64 host for an ARM64
-   guest.
+2. The release-note text describes the supported execution mode as **"running
+   arm64 system images with KVM virtualization"** on that ARM64 host. (Inference,
+   not stated by the release note: KVM virtualization of an ARM64 guest requires
+   an AArch64 host CPU, so this x86_64 host is not covered by that statement.)
 3. It mentions only `-gpu swiftshader_indirect` and `-no-snapshot`; it does
    **not** mention TCG, cross-architecture ARM64-guest-on-x86_64, or any
    `-machine`/`-accel` flag enabling that combination.
@@ -326,7 +387,8 @@ to Emulator **35.3.8** and **36.6.6**.
 - The **36.6.x** line (up to **36.6.11 Stable, Jun 2, 2026**) likewise contains
   no ARM64-guest-on-x86_64 entry. 36.2.11 (Oct 9, 2025) removed HAXM and points
   to AEHD; 36.4.9 (Feb 10, 2026) added `-gpu software`; 36.5.10 (Apr 2, 2026)
-  added multi-AVD networking; 36.6.11 raised API-37 minimum RAM to 4 GB and
+  added multi-device networking (the release-note heading is "Test Multi-Device
+  Interactions with Android Emulator"); 36.6.11 raised API-37 minimum RAM to 4 GB and
   added the "environment" camera mode. None reintroduces ARM64-guest-on-x86_64
   launcher support, TCG-based ARM64 guest, or an ARM-ranchu PCI/virtio fix.
 - Older cross-arch context: 30.0.0 (Feb 19, 2020) "Android 11 system images" —
@@ -353,12 +415,13 @@ per §4. "Owning source" is the primary document/path that defines the command.
 | Command | Owning source (URL/path) | Prerequisites | Expected artifact/device | x86_64-host/ARM64-guest supported? |
 |---|---|---|---|---|
 | `lunch sdk_phone64_arm64 trunk_staging userdebug` | AOSP build system; product def `/home/conv/myspace/aosp/device/generic/goldfish/64bitonly/product/sdk_phone64_arm64.mk` and `/home/conv/myspace/aosp/device/generic/goldfish/AndroidProducts.mk` | AOSP checkout, `build/envsetup.sh` sourced | Selects ARM64 goldfish phone product `sdk_phone64_arm64` (device `emu64a`), build type `userdebug` | N/A (build-time; produces an ARM64 guest image set, not a launch) |
-| `m emu_img_zip` | `/home/conv/myspace/aosp/device/generic/goldfish/tasks/emu_img_zip.mk` (`.PHONY: emu_img_zip`) | `sdk_%`/`gcar_%` TARGET_PRODUCT; goldfish product built | `sdk-repo-linux-system-images.zip` containing `kernel-ranchu`, `system-qemu.img`, `ramdisk-qemu.img`, `vendor-qemu.img`, `userdata.img` under `<TARGET_CPU_ABI>/` | N/A (packaging; produces the ARM64 guest image ZIP) |
+| `m -j4 emu_img_zip` | `/home/conv/myspace/aosp/device/generic/goldfish/tasks/emu_img_zip.mk` (`.PHONY: emu_img_zip`; the `-j4` is this project's host safety limit per Task 052, not part of the upstream make target) | `sdk_%`/`gcar_%` TARGET_PRODUCT; goldfish product built | `sdk-repo-linux-system-images.zip` containing `kernel-ranchu`, `system-qemu.img`, `ramdisk-qemu.img`, `vendor-qemu.img`, `userdata.img` under `<TARGET_CPU_ABI>/` | N/A (packaging; produces the ARM64 guest image ZIP) |
 | `emulator -avd <name>` | https://developer.android.com/studio/run/emulator-commandline ("Start the emulator") | An AVD whose system-image `arch` matches a supported guest; a host-supported accelerator for x86/x86_64 | A booted AVD | **No** for ARM64 guest on this x86_64 host — launcher PANICs `QEMU2 emulator does not support arm64 CPU architecture` (Task 052 issue) |
 | `emulator -avd <name> -accel auto\|on\|off` | https://developer.android.com/studio/run/emulator-commandline (`-accel`) | "x86 and x86_64 system images only"; Linux KVM / Intel HAXM (HAXM removed in 36.2.11 → AEHD) | Accelerated x86/x86_64 AVD | **No** for ARM64 guest — `-accel` "is ignored if you're not emulating an x86 or x86_64 device" |
 | `emulator -avd <name> -no-accel` | https://developer.android.com/studio/run/emulator-commandline (`-no-accel`) | x86/x86_64 system image; debugging only | x86/x86_64 AVD without acceleration | **No** for ARM64 guest — scoped to x86/x86_64 images |
 | `emulator -avd <name> -engine auto\|classic\|qemu2` | https://developer.android.com/studio/run/emulator-commandline (`-engine`) | A supported AVD | Selects QEMU1 (deprecated)/QEMU2 engine | **No** for ARM64 guest on x86_64 (engine choice does not lift the arch rejection) |
 | `emulator -accel-check` | https://developer.android.com/studio/run/emulator-commandline (`-accel-check`) | Host hypervisor present | Reports HAXM/KVM availability | **No** for ARM64 guest (it checks x86/x86_64 acceleration prerequisites) |
+| `acloud create --local-instance --local-image --avd-type goldfish` | `/home/conv/myspace/aosp/tools/acloud/README.md` (§"create"); `create_args.py` `--avd-type`; `avd_spec.py` `_GetLocalImagePath`; `goldfish_local_image_local_instance.py` `_StartEmulatorProcess` | AOSP build env (`lunch` done, `$ANDROID_PRODUCT_OUT` set); locally built goldfish image set | A local Goldfish instance launched via the top-level `emulator` launcher (`-verbose -show-kernel -read-only -ports ...`) | **No** for ARM64 guest on this x86_64 host — acloud invokes the same top-level `emulator` launcher (§3), so the §4.3 PANIC still applies; it does not bypass 052B's x86_64-host→ARM64 target mapping rejection |
 | Direct `qemu-system-aarch64-headless ...` (SDK 36.6.6) | QEMU; binary at `/home/conv/Android/Sdk/emulator/qemu/linux-x86_64/qemu-system-aarch64-headless`; not a documented `emulator` launcher option | `kernel-ranchu` + goldfish image set | (diagnostic) kernel reaches `/init`, ADB online | **Not an official Android Emulator launch path** — diagnostic only; exited `1` on GSI for missing `kernel-ranchu` (Task 052 issue) |
 | Trailing `-machine type=virt` override | Not documented as a launch solution in https://developer.android.com/studio/run/emulator-commandline (`-qemu` flagged "quite advanced") | A bootable ARM64 kernel + image set | (diagnostic) kernel reaches `/init`, ADB online but boot incomplete | **Not an official launch solution** — diagnostic only; `sys.boot_completed` empty, zygote SIGABRT loop (Task 052 issue) |
 
@@ -392,7 +455,8 @@ and Task 052C.
 - **High** that the `emulator` launcher does not officially support an ARM64
   guest on an x86_64 host: two independent primary sources (release notes 30.0.26;
   command-line docs `-accel`/`-no-accel`) plus the local PANIC all agree.
-- **High** that `lunch sdk_phone64_arm64 trunk_staging userdebug` + `m emu_img_zip`
+- **High** that `lunch sdk_phone64_arm64 trunk_staging userdebug` + `m -j4 emu_img_zip`
+  (upstream make target `emu_img_zip`; `-j4` is this project's host safety limit)
   is the officially-defined ARM64 goldfish phone build/package path, from the
   AOSP source `AndroidProducts.mk`, `sdk_phone64_arm64.mk`, and
   `emu_img_zip.mk`.
@@ -414,6 +478,15 @@ and Task 052C.
 - Which launchable virtual-device products does this checkout expose, and is an
   x86_64 goldfish build, Cuttlefish, or another product the lowest-risk
   same-tree runtime target on this host? (052C)
+- This research found the AOSP source-controlled `acloud` local-image runner
+  (`acloud create --local-instance --local-image --avd-type goldfish`, §3) as
+  the official same-checkout launch entry, but confirmed it invokes the
+  top-level `emulator` launcher and so does not bypass the §4.3 rejection. It
+  did **not** find a canonical official manual installation command for the
+  locally generated `sdk-repo-linux-system-images.zip` into the SDK
+  `system-images/` tree; that SDK-side installation procedure remains an open
+  question (not needed if `acloud` is used, since `acloud` consumes
+  `$ANDROID_PRODUCT_OUT` directly).
 
 ---
 
@@ -455,6 +528,18 @@ Local AOSP source (read-only primary sources for build/package):
 - `/home/conv/Android/Sdk/emulator/qemu/linux-x86_64/qemu-system-aarch64-headless`
   — the ARM64-guest QEMU engine invoked directly in the Task 052 diagnostic
   (§2, §4.4).
+- `/home/conv/myspace/aosp/tools/acloud/README.md` — `acloud create` use cases,
+  incl. `acloud create --local-instance --local-image` (§3).
+- `/home/conv/myspace/aosp/tools/acloud/create/create_args.py` — `--avd-type`
+  argument with `goldfish` (`constants.TYPE_GF`) choice (§3).
+- `/home/conv/myspace/aosp/tools/acloud/internal/constants.py` —
+  `TYPE_GF = "goldfish"` (§3).
+- `/home/conv/myspace/aosp/tools/acloud/create/avd_spec.py` — `_GetLocalImagePath`
+  resolves an omitted `--local-image` to `$ANDROID_PRODUCT_OUT` (§3).
+- `/home/conv/myspace/aosp/tools/acloud/create/goldfish_local_image_local_instance.py`
+  — `_StartEmulatorProcess` sets `ANDROID_PRODUCT_OUT`/`ANDROID_TMP`/
+  `ANDROID_BUILD_TOP` and invokes the top-level `emulator` launcher with
+  `-verbose -show-kernel -read-only -ports ...` (§3).
 
 Project issue/plan (Task 052 context, the brief's referenced documents):
 
