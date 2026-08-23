@@ -10,12 +10,14 @@
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
 | 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | paused after hidden-API fatal capture; user rejected call-site try/catch | Evidence/frozen Debug APK retained; no further implementation until approved same-tree baseline |
-| 051 | Worker `w2S:p1`; reviewers `w3E:p1` + `w3F:p1` | `task-051-systemui-runtime-size-audit` plus two detached review worktrees | Worker `GLM-5.3`; reviewers verified `GLM-5.3` + `GLM-5.2` | four docs-only commits merged to main through `548a3fab`; final dual-axis PASS; cleanup pending | Static audit only; no Gradle/device mutation occurred |
-| 052A/B/C | completed research worktrees retained pending closure cleanup | merged to main as `0ceb2bfe`–`b4f7ec1c` | approved GLM reviewers | all three reports accepted and merged; static main acceptance PASS | Research was read-only; active ARM64 QEMU is architect-owned diagnostic state, not a Worker |
+
+Tasks 051 and 052A/B/C have no active Worker/reviewer workspace: all reviewed commits are on main,
+patch-equivalence was proven, and their ten clean worktrees plus four local task branches were removed.
+The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a Worker.
 
 ## Queue
 
-1. Commit the Task 051/052 live-state synthesis, run fresh static acceptance, then push and clean completed 051/052 research workspaces after patch-equivalence proof.
+1. Push the reviewed Task 051/052 reports, live-state synthesis, and cleanup record.
 2. Present the bounded `sdk_phone64_x86_64 trunk_staging userdebug` build/launch design to the user; no build, QEMU stop, emulator launch, or ADB mutation before approval.
 3. After approval, stop PID 1727011 cleanly and prove zero QEMU/Emulator/ADB targets; build at strict `-j4` with 10 GiB disk stop threshold and no concurrent Gradle/Soong.
 4. Prove same-tree stock baseline (`sys.boot_completed=1`, stable `system_server` and stock SystemUI) before deploying the frozen Debug APK; then run 60-second PID and full UI/fatal/ANR/watchdog gates.
@@ -25,6 +27,7 @@
 
 - 2026-08-23 — Task 051 fixed range `1bfe57f8...75c96f13` completed four docs-only commits. Initial Standards/Spec reviews passed with no BLOCKER/HIGH/MEDIUM; two precision amendments removed a dangling factory-gate reference, made all four solution-family rule impacts explicit, removed an unsupported signature-display mechanism, corrected the outline, and unified all `ApplicationInfo` citations. Final Standards PASS had zero findings; final Spec PASS had only two TRIVIAL evidence/detail notes. Worker commits were cherry-picked as `39b6c308`, `873ce4f5`, `44d3ba64`, and `548a3fab`; patch IDs and main fresh report/hash/scope gates passed. Gradle and device mutation were not run.
 - 2026-08-23 — Tasks 052A/B/C read-only research converged on host-native same-tree runtime: x86_64 Emulator launcher deliberately rejects ARM64 guest, acloud Goldfish still invokes that launcher, direct AArch64 QEMU/TCG capability is not official product support, and `sdk_phone64_x86_64` is the primary next candidate. Seven reviewed commits were merged to main through `b4f7ec1c`; main fresh `TASK052A/B/C_REPORT=PASS` and exact three-report scope passed. No build/emulator/ADB mutation occurred in those research tasks.
+- 2026-08-23 — Tasks 051 and 052A/B/C closure cleanup completed after fresh main static acceptance. Ten Worker/reviewer worktrees were clean and removed; four task branches were deleted only after all eleven source→main commit pairs were patch-equivalent. Nine matching herdr workspaces were closed. Task 050 evidence worktree and the architect-owned ARM64 diagnostic guest remain intentionally untouched.
 - 2026-08-23 — Brainstorming approval gate applies to the next behavior-changing phase. Before any new build or runtime mutation, the user must approve a bounded design covering cleanup of the still-running ARM64 diagnostic guest, strict `-j4`, disk stop threshold, effective KVM access in the launcher process, stock baseline acceptance, and delayed Gradle APK deployment.
 
 - 2026-08-22 — The user rejected the proposed `NoSuchMethodError` call-site catch and required
