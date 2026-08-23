@@ -88,7 +88,7 @@ own** — all program code arrives through `static_libs: ["SystemUI-core"]`.
 
 Runtime check chain (AOSP primary sources):
 
-- `frameworks/base/core/java/android/content/pm/ApplicationInfo.java:2507-2534`:
+- `frameworks/base/core/java/android/content/pm/ApplicationInfo.java:2513-2534`:
   `isAllowedToUseHiddenApis()` = platform-signed **OR** (system/updated-system **AND**
   (`usesNonSdkApi()` **OR** hidden-API allowlisted)); `getHiddenApiEnforcementPolicy()`
   returns `DISABLED(0)` if allowed, else `ENABLED(2)` by default.
@@ -319,7 +319,7 @@ suppression, not a root-cause fix.
 ### Recommended order of investigation (no approval implied)
 
 1. Family A (smallest, supported by the `ApplicationInfo.isAllowedToUseHiddenApis()`
-   system-app + `usesNonSdkApi` branch — ApplicationInfo.java:2512-2534; the original's
+   system-app + `usesNonSdkApi` branch — ApplicationInfo.java:2513-2534; the original's
    policy=0 is NOT isolation evidence since it is also platform-signed);
 2. Family C metadata parity in the same discussion;
 3. Family B and Family D as separate user decisions (infra cost vs debug ergonomics).
