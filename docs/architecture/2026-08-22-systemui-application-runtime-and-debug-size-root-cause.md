@@ -112,7 +112,7 @@ Runtime check chain (AOSP primary sources):
 | Constructor bytecode | `classes7.dex` dexdump: `invoke-static {}, Landroid/os/Trace;.registerWithPerfetto:()V // method@02b1` guarded by the `isSubprocess()` check — emitted exactly as in source |
 | Packaged manifest | `frozen-debug-manifest.xml:689` `android:name="com.android.systemui.SystemUIApplication"`; `:702` `android:appComponentFactory=".PhoneSystemUIAppComponentFactory"`; binary `packaged-manifest.txt:464` confirms the FQN |
 | Manifest→DEX closure (application name) | Task 050 static closure gate — checks the **application name** (and component `android:name` / `backupAgent` / `targetActivity`), but **NOT `android:appComponentFactory`** (verified: zero `appComponentFactory`/factory-class mentions in the gate output `postfix-closure.txt`): pre-fix `95 entry classes (present=16 missing=79)` — all missing were namespace-expanded `com.android.systemui.app.*` FQNs; post-fix `present=93 alias=2 missing=0 RESULT=PASS` |
-| AppComponentFactory (separate, not gate-covered) | Packaged manifest retains the relative name `.PhoneSystemUIAppComponentFactory` (manifest line 702); the frozen APK's `classes7.dex` contains descriptor `Lcom/android/systemui/PhoneSystemUIAppComponentFactory;` (bytes-level check, this audit); the post-wipe captured fatal entered the `SystemUIApplication` constructor and **no post-wipe factory CNF was observed** in the retained logs — but a dedicated factory closure gate remains required (see §6 Family A gate and HANDOFF) |
+| AppComponentFactory (separate, not gate-covered) | Packaged manifest retains the relative name `.PhoneSystemUIAppComponentFactory` (manifest line 702); the frozen APK's `classes7.dex` contains descriptor `Lcom/android/systemui/PhoneSystemUIAppComponentFactory;` (bytes-level check, this audit); the post-wipe captured fatal entered the `SystemUIApplication` constructor and **no post-wipe factory CNF was observed** in the retained logs — but a dedicated factory closure gate remains a follow-up implementation requirement and is not covered by the current Task 050 gate |
 | PackageManager | Post-wipe fresh scan (lastUpdateTime 2026-08-22 18:37:13) selected the packaged application name; process `com.android.systemui` started as persistent shared-user `android.uid.systemui` (uid 10201) |
 | Constructor entry | Crash stack: `at com.android.systemui.SystemUIApplication.<init>(SystemUIApplication.java:87)` — instantiation began and failed **inside** the constructor |
 
@@ -175,8 +175,8 @@ are **non-authoritative/ambiguous display values** (`Signature.hashCode()` of op
 bytes) and must not be used as certificate identity; apksigner certificate SHA-256
 digests are ground truth. The post-wipe dumpsys displayed the same hashCode as the
 pre-wipe original despite the on-disk APK certificates differing (ours `c8a2e9bc…`,
-original `301aa3cb…`) — a display artifact, now moot given the apksigner comparison
-above. An earlier draft inferred "original is not platform-signed" from dumpsys
+original `301aa3cb…`) — the display value cannot establish certificate identity and is
+moot given the apksigner comparison above. An earlier draft inferred "original is not platform-signed" from dumpsys
 hashCode values; that inference is **retracted** (architect review, 2026-08-22).
 
 ---
@@ -238,13 +238,14 @@ detected in compressed data" (installability/ZIP integrity).
 link-time injection.
 **Prerequisites**: user authorization (manifest-level change is red-line adjacent);
 verify aapt2 link accepts the attribute in our pipeline.
+**Rule impact**: manifest/build-pipeline behavior requires explicit approval; no mirrored AOSP source or resource may be edited.
 **Expected first change**: packaged debug/release manifest gains the attribute.
 **Validation gate**: rebuild Debug → `aapt2 dump xmltree` shows `usesNonSdkApi=true` →
 push to the dedicated AVD → `dumpsys package com.android.systemui` shows
 `usesNonSdkApi=true`, `hiddenApiEnforcementPolicy=0` → reboot → no `hiddenapi … denied`
 line → `SystemUIApplication` constructs past line 87.
 **Supporting mechanism (not an on-device proof)**: `ApplicationInfo.isAllowedToUseHiddenApis()`
-(ApplicationInfo.java:2512-2534) allows hidden API for a **system app with
+(ApplicationInfo.java:2513-2534) allows hidden API for a **system app with
 `usesNonSdkApi=true`** even without a platform signature — that is the branch Family A
 targets. The original-APK comparison provides **no** additional support: the original is
 **both** platform-signed and `usesNonSdkApi=true` on this image (fresh apksigner:
@@ -264,6 +265,7 @@ the platform key; `isSignedWithPlatformKey()` then holds and policy=0 regardless
 manifest attribute.
 **Prerequisites**: building an AOSP emulator system image (heavy; hours/days of build);
 the disposable-AVD authority model of Task 050 extends naturally.
+**Rule impact**: environment-only; no repository source/resource/build-rule change is implied.
 **Expected first change**: no product change; a deployment/environment change.
 **Validation gate**: on the self-built image, `dumpsys` shows policy=0 without
 `usesNonSdkApi`; SystemUI boots and passes the Task 050 UI-stability gates.
@@ -279,6 +281,7 @@ not Google's key there — on such images Family A is the only lever).
 `minSdk=37`, `targetSdk=37` — and record the Google-image `SystemUIApplicationImpl`
 refactor as a known upstream divergence of our AOSP checkout revision.
 **Prerequisites**: user authorization for `defaultConfig` changes (rule B adjacency).
+**Rule impact**: `defaultConfig`/platform metadata is rule-B-adjacent and requires explicit approval.
 **Expected first change**: `app/build.gradle.kts` defaultConfig parity.
 **Validation gate**: packaged manifest shows 37/37/37; `dumpsys` post-deploy matches the
 original's metadata fields.
@@ -295,6 +298,7 @@ resource shrinking), moving the deployable APK from 163.6 MB toward the original
 ~49.8 MB class of size.
 **Prerequisites**: user decision (affects debug-loop ergonomics: slower builds, obfuscated
 stack traces — though `proguard.flags`/mapping retention applies); rule I judgment.
+**Rule impact**: build-variant behavior changes require explicit approval and rule-I validation against runtime outcomes.
 **Expected first change**: new variant config only; no AOSP source change.
 **Validation gate**: `:app:assemble<Variant>` size table reproduced below 60 MB;
 Task 050 static closure gate still PASS on the optimized artifact.
@@ -302,7 +306,7 @@ Task 050 static closure gate still PASS on the optimized artifact.
 **Does not solve**: the crash; only the deployment footprint.
 **Status: NOT APPROVED.**
 
-### 7.5 Rejected: source-level call-site `try/catch`
+### Rejected: source-level call-site `try/catch`
 
 Wrapping `Trace.registerWithPerfetto()` in `try/catch (NoSuchMethodError)` is **rejected**.
 It would (1) treat the VM's denial signal as the defect instead of the platform-contract
