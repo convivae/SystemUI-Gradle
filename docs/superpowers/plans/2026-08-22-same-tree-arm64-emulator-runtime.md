@@ -20,10 +20,24 @@ ARM64 QEMU reaches image validation but exits because the GSI has no
 - [x] Identify this branch's exact ARM64 goldfish phone product and release-config syntax.
 - [x] Select `userdebug`, as explicitly requested by the user.
 - [x] Compare required output set against the existing `aosp_arm64-eng` GSI output.
-- [ ] Obtain explicit approval at the heavy-build boundary.
-- [ ] Build `emu_img_zip` for `sdk_phone64_arm64 trunk_staging userdebug`, monitoring
-      the currently available ~73 GiB free space; do not erase existing
-      `generic_arm64` output.
+- [x] Obtain explicit approval at the heavy-build boundary. The user imposed a hard
+      maximum of four jobs on this 32 GiB host.
+- [x] Build `emu_img_zip` for `sdk_phone64_arm64 trunk_staging userdebug` with exactly
+      `m -j4 emu_img_zip`, without erasing `generic_arm64` or running another build.
+      Attempt 1 was a kernel-confirmed OOM under unrelated tmpfs pressure; after
+      bounded removal of two byte-proven duplicate temporary images, attempt 2
+      succeeded in `01:29:20` with exit `0` and produced the complete image set.
+
+## Phase 2.5 — Official launch research
+
+- [ ] Task 052A: cite official documentation for build, package, AVD and launch commands,
+      including the documented host/guest architecture and acceleration constraints.
+- [ ] Task 052B: trace the emulator launcher and QEMU source from architecture rejection
+      through machine and virtio device selection; explain the observed ranchu/PCI mismatch.
+- [ ] Task 052C: enumerate this checkout's launchable virtual-device products and rank
+      same-tree runtime options using official source plus independently corroborating evidence.
+- [ ] Architect cross-check all three reports against the installed binaries and local source,
+      then select one official or source-proven launch path before changing runtime flags again.
 
 ## Phase 3 — Baseline emulator gate
 

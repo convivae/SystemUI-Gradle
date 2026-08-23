@@ -1,7 +1,7 @@
 # Same-tree AOSP ARM64 emulator runtime validation
 
 > Date: 2026-08-22
-> Status: approved direction; environment inventory and launch attempt in progress
+> Status: local ARM64 userdebug `emu_img_zip` build succeeded; direct-QEMU baseline reaches ADB but is not boot-complete, so official launch research is in progress
 
 ## Background
 
@@ -23,8 +23,10 @@ framework artifacts and SysUISdk inputs. x86_64 is not required.
 - Reuse existing AOSP outputs first. Do not start a full rebuild until inventory
   proves that the prior output is not a bootable emulator product and the required
   target is identified.
-- AOSP build/output mutations, if required after that proof, are confined to
-  `/home/conv/myspace/aosp/out/` and use the existing checkout.
+- AOSP build/output mutations are confined to `/home/conv/myspace/aosp/out/`
+  and use the existing checkout. The user explicitly approved compiling the selected
+  device product and imposed a hard maximum of `-j4`; no build command may exceed four
+  jobs.
 - Repository product source, resources, Gradle configuration, SDK and frozen APK
   are unchanged in the environment bring-up phase.
 - All waits/polls are bounded to at most 90 seconds.
@@ -43,6 +45,40 @@ The frozen Gradle Debug APK certificate SHA-256 is
 `c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8`, exactly
 matching this AOSP checkout's default `platform.x509.pem`. A same-tree emulator
 therefore removes the Google platform-signature mismatch.
+
+## Local ARM64 product build result
+
+The approved command was run exactly as bounded:
+
+```bash
+lunch sdk_phone64_arm64 trunk_staging userdebug
+m -j4 emu_img_zip
+```
+
+The first attempt was killed by a kernel-confirmed `soong_build` OOM while a
+separate 9 GiB `/tmp` image workspace consumed tmpfs and nearly all swap. After
+proving its two largest files byte-identical to persistent Task 050 images and
+deleting only those duplicates, the same `-j4` command succeeded without a new
+OOM in `01:29:20` (exit `0`). It produced and hashed the complete `emu64a`
+kernel/system/vendor/ramdisk/userdata set and a ZIP that passes `unzip -t`.
+
+## Current direct-QEMU probe
+
+The standard launcher and direct AOSP-prebuilt Emulator 35.3.8 both generated
+PCI audio devices for ARM `ranchu`, which has no PCI bus in that execution
+path. A manually isolated AVD fixed the earlier false SD-card inference but did
+not remove the PCI mismatch. Directly invoking SDK Emulator 36.6.6's ARM64
+QEMU binary showed the same mismatch. Adding only a trailing
+`-machine type=virt` override allowed the locally built ARM64 kernel to reach
+`/init` and ADB; the target reports `ro.kernel.qemu=1`, `arm64-v8a`,
+`userdebug`, and the expected local `sdk_phone64_arm64/emu64a` fingerprint.
+
+That override is only a diagnostic probe, not an accepted launch solution.
+`sys.boot_completed` remains empty, `system_server` is absent, and zygote is
+in a SIGABRT restart loop. The Gradle APK has not been deployed. Before another
+runtime hypothesis, three parallel read-only investigations will establish the
+official command, launcher source mechanism, and actually supported product /
+host matrix.
 
 ## Existing-output launch result
 
@@ -115,18 +151,23 @@ Environment acceptance requires all of:
 - Direct QEMU result: exit `1`, missing `kernel-ranchu` in the GSI output.
 - Exact target selection: `lunch sdk_phone64_arm64 trunk_staging userdebug`
   succeeds; `out/target/product/emu64a` images have not been built.
-- AOSP rebuild: NOT RUN; stopped at the documented heavy-build approval boundary.
+- AOSP rebuild: second attempt using exactly `m -j4 emu_img_zip` succeeded in
+  `01:29:20` with exit `0`; all required `emu64a` artifacts and the system-image
+  ZIP were generated and hashed. The first attempt's kernel-confirmed OOM and
+  bounded duplicate-file cleanup are retained in Task 052 evidence.
+- Direct runtime probe: local kernel reaches `/init`, ADB is online with the
+  expected ARM64 userdebug identity, but `sys.boot_completed` is empty and
+  zygote/system_server are not stable. No Gradle APK deployment has occurred.
 
 ## Open questions
 
-- Whether this branch accepts `sdk_phone64_arm64-<release>-userdebug` or another exact
-  goldfish ARM64 lunch syntax.
-- Whether switching from the already-built GSI product can reuse enough Soong outputs
-  to avoid a large rebuild.
-- ARM64-on-x86_64 cannot use the standard launcher or KVM. The bundled direct
-  ARM64 QEMU binary can enter its image-validation path, but a complete
-  `sdk_phone64_arm64` output must first be built; subsequent TCG boot speed and
-  compatibility remain to be demonstrated.
-- The filesystem currently has about 73 GiB free while `aosp/out` is already
-  about 95 GiB. A second product/variant may consume substantial additional
-  space, so the build must monitor free space and stop before exhaustion.
+- Which official AOSP documentation and source-controlled scripts define the
+  supported host/guest combinations for ARM64 goldfish images.
+- Whether the standard launcher's x86_64-host/ARM64-guest rejection is a product
+  policy, an acceleration limitation, or bypassable through a documented software
+  emulation path.
+- Why both Emulator 35.3.8 and 36.6.6 generated PCI virtio devices for the ARM
+  `ranchu` machine, and which official machine/device configuration is expected.
+- Which same-tree product is the lowest-risk runtime target on this x86_64 host:
+  ARM64 goldfish under TCG, an x86_64 goldfish build, Cuttlefish, or another
+  officially supported virtual-device product.
