@@ -17,11 +17,10 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 
 ## Queue
 
-1. Push the reviewed Task 051/052 reports, live-state synthesis, and cleanup record.
-2. Present the bounded `sdk_phone64_x86_64 trunk_staging userdebug` build/launch design to the user; no build, QEMU stop, emulator launch, or ADB mutation before approval.
-3. After approval, stop PID 1727011 cleanly and prove zero QEMU/Emulator/ADB targets; build at strict `-j4` with 10 GiB disk stop threshold and no concurrent Gradle/Soong.
-4. Prove same-tree stock baseline (`sys.boot_completed=1`, stable `system_server` and stock SystemUI) before deploying the frozen Debug APK; then run 60-second PID and full UI/fatal/ANR/watchdog gates.
-5. Validate Release runtime only after Debug closure; keep the seven remaining Task 043 `NOT APPROVED` packets paused.
+1. Present the bounded `sdk_phone64_x86_64 trunk_staging userdebug` build/launch design to the user; no build, QEMU stop, emulator launch, or ADB mutation before approval.
+2. After approval, stop PID 1727011 cleanly and prove zero QEMU/Emulator/ADB targets; build at strict `-j4` with 10 GiB disk stop threshold and no concurrent Gradle/Soong.
+3. Prove same-tree stock baseline (`sys.boot_completed=1`, stable `system_server` and stock SystemUI) before deploying the frozen Debug APK; then run 60-second PID and full UI/fatal/ANR/watchdog gates.
+4. Validate Release runtime only after Debug closure; keep the seven remaining Task 043 `NOT APPROVED` packets paused.
 
 ## Recent Orchestration Transitions
 
