@@ -1,7 +1,7 @@
 # Same-tree AOSP ARM64 emulator runtime validation
 
 > Date: 2026-08-22
-> Status: local ARM64 userdebug `emu_img_zip` build succeeded; direct-QEMU baseline reaches ADB but is not boot-complete, so official launch research is in progress
+> Status: Task 052 ARM64 build/probe and Tasks 052A/B/C research complete; ARM64 direct-QEMU `virt` remains diagnostic-only, and the selected next runtime candidate is host-native `sdk_phone64_x86_64` (not yet built)
 
 ## Background
 
@@ -11,9 +11,11 @@ Task 051 proved that the frozen Gradle Debug APK reaches
 platform key nor packaged with Soong's `usesNonSdkApi` manifest contract. The
 Google image also uses a different SystemUI source/runtime revision.
 
-The user selected solution family B: validate against an ARM64 userdebug Android
-Emulator image built from the same AOSP checkout that supplies this project's
-framework artifacts and SysUISdk inputs. x86_64 is not required.
+The user selected solution family B: validate against a userdebug virtual-device image
+built from the same AOSP checkout that supplies this project's framework artifacts and
+SysUISdk inputs. The initial ARM64 Goldfish product was built to test that path, but the
+same-tree requirement does not require a particular guest ISA; framework revision and
+platform-key identity are independent of guest architecture.
 
 ## Safety and authority
 
@@ -75,10 +77,9 @@ QEMU binary showed the same mismatch. Adding only a trailing
 
 That override is only a diagnostic probe, not an accepted launch solution.
 `sys.boot_completed` remains empty, `system_server` is absent, and zygote is
-in a SIGABRT restart loop. The Gradle APK has not been deployed. Before another
-runtime hypothesis, three parallel read-only investigations will establish the
-official command, launcher source mechanism, and actually supported product /
-host matrix.
+in a SIGABRT restart loop. The Gradle APK has not been deployed. Tasks 052A/B/C
+have now established the official command, launcher source mechanism, and supported
+product/host matrix; their synthesis is recorded below.
 
 ## Existing-output launch result
 
@@ -107,38 +108,92 @@ The goldfish product's `emu_img_zip` target explicitly requires
 `kernel-ranchu`, `system-qemu.img`, `ramdisk-qemu.img`, `vendor-qemu.img`, and
 `userdata.img`.
 
-The checkout has the required ARM64 6.6 kernel prebuilt. A real product build is
-therefore the next technical step, followed by direct ARM64 QEMU/TCG because the
-standard x86_64-host launcher will still reject the guest architecture. This is
-a heavy build boundary, not an already-built emulator launch.
+The checkout has the required ARM64 6.6 kernel prebuilt, and the complete ARM64 product
+was built successfully as recorded above. The later source review supersedes the earlier
+idea of continuing with direct ARM64 QEMU/TCG: on this x86_64 host, the top-level
+Android Emulator launcher deliberately rejects the ARM64 guest, while direct
+`qemu-system-aarch64-headless -machine type=virt` does not reproduce the Goldfish board
+contract and cannot produce a healthy Android baseline. No further direct-QEMU flag
+experiments are planned.
 
-## Steps
+## Official-launch and product-matrix synthesis (Tasks 052A/B/C)
 
-1. Record current Google AVD identity, stop it cleanly, and verify no emulator remains.
-2. Attempt the existing `aosp_arm64-eng` output through the AOSP emulator entrypoint
-   only far enough to obtain an authoritative success/failure classification.
-3. If it cannot launch, identify the exact goldfish ARM64 phone userdebug lunch target
-   and missing artifacts. Do not misclassify the GSI as a bootable emulator image.
-4. If an existing bootable product is found, launch it with software ARM64 emulation,
-   wait in <=90-second intervals, and capture boot identity.
-5. Once booted, verify AOSP fingerprint, `arm64-v8a`, userdebug/eng build type,
-   `ro.kernel.qemu=1`, platform certificate, original SystemUI health, and root/remount
-   capability.
-6. Only after a healthy baseline, deploy the frozen Gradle Debug APK and verify APK
-   SHA-256, certificate, PackageManager metadata, hidden-API policy, first fatal, PID
-   stability and UI interaction.
+The three independent, read-only reports converge on one bounded conclusion:
+
+1. **ARM64 build/package is supported.** The branch exposes
+   `sdk_phone64_arm64 trunk_staging userdebug`; `m -j4 emu_img_zip` produced a valid
+   system-image ZIP and complete `emu64a` artifacts.
+2. **Official ARM64 runtime is not supported on this x86_64 host.** The x86_64-built
+   top-level launcher has no ARM64 result in `getQemuArch()` and terminates with
+   `QEMU2 emulator does not support arm64 CPU architecture`. AOSP's source-controlled
+   `acloud create --local-instance --local-image --avd-type goldfish` path still invokes
+   that same top-level launcher, so it does not bypass the gate.
+3. **Backend capability is not product support.** The bundled AArch64 QEMU binary can
+   translate the guest under TCG, but the ARM ranchu path uses virtio-MMIO while generated
+   devices still include PCI-dependent sound/input/serial/Wi-Fi/vsock. Replacing ranchu
+   with generic `virt` only proves kernel/init reachability; the unstable zygote and absent
+   boot completion show it is not a valid Goldfish runtime.
+4. **Same-tree identity is ISA-independent.** A host-native x86_64 image built from this
+   checkout still uses the same framework revision and platform certificate. The primary
+   next candidate is therefore `sdk_phone64_x86_64 trunk_staging userdebug` through the
+   standard Goldfish path. `aosp_cf_x86_64_phone` is a fallback only after all Cuttlefish
+   package/group/KVM prerequisites are satisfied.
+5. **The GSI remains rejected.** Existing `aosp_arm64-eng` output lacks the complete
+   kernel/vendor/userdata Goldfish set and is not a standalone emulator product.
+
+Evidence:
+
+- `docs/issues/2026-08-23-official-aosp-arm64-emulator-launch-research.md`
+- `docs/issues/2026-08-23-android-emulator-launch-source-mechanism.md`
+- `docs/issues/2026-08-23-same-tree-virtual-device-product-matrix.md`
+
+Fixed-base Standards/Spec review is complete for all three reports. Task 052B passed both
+axes before merge. Revised 052A passed both axes; revised 052C cleared all
+BLOCKER/HIGH/MEDIUM findings, leaving only non-causal LOW wording notes. Main fresh static
+acceptance reports `TASK052A_REPORT=PASS`, `TASK052B_REPORT=PASS`, and
+`TASK052C_REPORT=PASS`. No Gradle, Soong, Ninja, `m`, `lunch`, emulator launch/stop, or
+device mutation was performed by Tasks 052A/B/C.
+
+## Next runtime phase
+
+1. Cleanly stop the still-running diagnostic `task052-arm64` QEMU guest and prove no
+   Emulator/QEMU process or ADB target remains; this recovers about 3.4 GiB RSS and ports
+   5556/5557.
+2. Recheck memory and disk before the build. The latest read-only check showed 29 GiB free
+   on `/`; the expected additional x86_64 output is about 15–17 GiB, leaving a narrow
+   12–14 GiB margin. Stop if free space falls below 10 GiB; do not delete existing AOSP
+   outputs without a separate evidence-backed decision. Keep the hard build limit at `-j4`
+   and do not run Gradle or another Soong/Ninja build concurrently.
+3. Build the primary host-native candidate with exactly:
+   `lunch sdk_phone64_x86_64 trunk_staging userdebug` followed by
+   `m -j4 emu_img_zip`.
+4. Before launch, prove effective KVM access in the exact launcher process/session. The
+   group database already contains `conv` in `kvm`, but the current long-lived shell does
+   not; a fresh session or the separately proven bounded
+   `sudo -n -u conv -g kvm ...` execution may be used only with an explicit access check.
+5. Launch only through a first-party standard Goldfish path. Establish
+   `sys.boot_completed=1`, stable `system_server`, and stable stock SystemUI before any
+   frozen Gradle APK deployment.
+6. Only after that baseline, deploy the frozen Debug APK and run certificate/hash,
+   PackageManager hidden-API policy, fatal/ANR/watchdog, 60-second PID stability, status
+   bar, Quick Settings, lock/wake/unlock, and launcher interaction gates.
 
 ## Acceptance
 
 Environment acceptance requires all of:
 
-- no Google API emulator process remains while the AOSP target runs;
-- target reports `ro.kernel.qemu=1`, ARM64 ABI, and an AOSP same-tree fingerprint;
-- target build is userdebug (preferred) or explicitly documented eng fallback;
+- no unrelated emulator/QEMU process or ADB target exists during the selected runtime;
+- target reports `ro.kernel.qemu=1`, the selected x86_64 ABI, and an AOSP same-tree
+  fingerprint;
+- target build is `sdk_phone64_x86_64` userdebug;
 - target `framework-res.apk` certificate matches the frozen Gradle Debug APK;
-- baseline SystemUI is stable before replacement;
+- baseline `sys.boot_completed=1`, `system_server`, and stock SystemUI remain stable before
+  replacement;
 - after replacement, the installed APK hash equals the frozen artifact and runtime
-  evidence distinguishes APK defects from image/environment defects.
+  evidence distinguishes APK defects from image/environment defects;
+- the final Debug gate requires a stable SystemUI PID for at least 60 seconds plus status
+  bar, Quick Settings, lock/wake/unlock, and launcher interaction without fatal, ANR,
+  watchdog, or crash loop.
 
 ## Build/error evolution
 
@@ -158,16 +213,30 @@ Environment acceptance requires all of:
 - Direct runtime probe: local kernel reaches `/init`, ADB is online with the
   expected ARM64 userdebug identity, but `sys.boot_completed` is empty and
   zygote/system_server are not stable. No Gradle APK deployment has occurred.
+- Tasks 052A/B/C: read-only first-party documentation/source/product review complete;
+  ARM64-on-x86_64 top-level launcher rejection is deliberate, acloud local Goldfish still
+  uses that launcher, and the direct `virt` probe is not a supported runtime.
+- Selected next candidate: `sdk_phone64_x86_64 trunk_staging userdebug`; not yet built or
+  launched. Cuttlefish x86_64 remains a prerequisite-gated fallback.
+- Latest host check before closure: ARM64 diagnostic guest still running at PID 1727011
+  (~3.4 GiB RSS, ports 5556/5557, ADB `emulator-5556`); `/` has 29 GiB free. It must be
+  stopped and quiescence proven before another build/launch.
 
-## Open questions
+## Resolved research questions and remaining execution question
 
-- Which official AOSP documentation and source-controlled scripts define the
-  supported host/guest combinations for ARM64 goldfish images.
-- Whether the standard launcher's x86_64-host/ARM64-guest rejection is a product
-  policy, an acceleration limitation, or bypassable through a documented software
-  emulation path.
-- Why both Emulator 35.3.8 and 36.6.6 generated PCI virtio devices for the ARM
-  `ranchu` machine, and which official machine/device configuration is expected.
-- Which same-tree product is the lowest-risk runtime target on this x86_64 host:
-  ARM64 goldfish under TCG, an x86_64 goldfish build, Cuttlefish, or another
-  officially supported virtual-device product.
+Resolved:
+
+- The branch's official ARM64 Goldfish build/package path is proven, but its official
+  runtime requires a compatible ARM64 host/acceleration environment; the x86_64 launcher
+  rejects this host/guest pair before backend launch.
+- The rejection is launcher architecture policy, not proof that the AArch64 QEMU backend
+  lacks TCG translation capability.
+- The PCI/MMIO mismatch explains why direct backend invocation failed, and generic
+  `-machine type=virt` is not a supported Goldfish substitute.
+- `sdk_phone64_x86_64` is the lowest-risk same-tree runtime on this host; Cuttlefish
+  x86_64 is the fallback after host prerequisites are satisfied.
+
+Remaining execution question: whether the host-native Goldfish product reaches a stable
+same-tree baseline and, after that baseline is proven, whether the frozen Gradle Debug APK
+passes the full runtime acceptance gates. No conclusion is recorded until those two phases
+are actually run.

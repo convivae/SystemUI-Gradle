@@ -9,21 +9,23 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 049 | `w2F:p1` | `task-049-debug-runtime-stabilization` / `SystemUI-Gradle-wt-049` | `joycode/GLM-5.3` | stopped by user; over-constrained approach superseded by Task 050 | Worktree retained temporarily for evidence recovery only |
-| 049A | `w2G:p1` | `task-049a-manifest-entry-research` / `SystemUI-Gradle-wt-049a` | `joycode/GLM-5.3` | research complete; commit `96498d7c` not selected for implementation | Docs-only result retained pending cleanup |
-| 049B | `w2H:p1` | `task-049b-large-debug-deployment-research` / `SystemUI-Gradle-wt-049b` | `joycode/GLM-5.3` | stopped by user before changes | Superseded by destructive disposable-AVD authority |
-| 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | paused after evidence capture; user rejected call-site try/catch direction | Manifest/DEX and image deployment evidence retained; no further runtime fix until Task 051 root-cause audit |
-| 051 | `w2S:p1` | `task-051-systemui-runtime-size-audit` / `SystemUI-Gradle-wt-051` | `joycode/GLM-5.3` | dispatched; model and contract verified | Read-only AOSP→Gradle→APK→runtime and Debug-size audit; docs only |
+| 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | paused after hidden-API fatal capture; user rejected call-site try/catch | Evidence/frozen Debug APK retained; no further implementation until approved same-tree baseline |
+| 051 | Worker `w2S:p1`; reviewers `w3E:p1` + `w3F:p1` | `task-051-systemui-runtime-size-audit` plus two detached review worktrees | Worker `GLM-5.3`; reviewers verified `GLM-5.3` + `GLM-5.2` | four docs-only commits merged to main through `548a3fab`; final dual-axis PASS; cleanup pending | Static audit only; no Gradle/device mutation occurred |
+| 052A/B/C | completed research worktrees retained pending closure cleanup | merged to main as `0ceb2bfe`–`b4f7ec1c` | approved GLM reviewers | all three reports accepted and merged; static main acceptance PASS | Research was read-only; active ARM64 QEMU is architect-owned diagnostic state, not a Worker |
 
 ## Queue
 
-1. Dispatch Task 051 read-only root-cause audit: prove the complete `SystemUIApplication`
-   assembly/runtime chain, classify hidden-API/platform divergence, and quantify Debug APK size.
-2. Discuss Task 051's solution families with the user before resuming Task 050 implementation.
-3. Only after Debug runtime closure is pushed, prepare a separate Release runtime-validation task.
-4. Return to the seven remaining `NOT APPROVED` architecture packets after runtime closure.
+1. Commit the Task 051/052 live-state synthesis, run fresh static acceptance, then push and clean completed 051/052 research workspaces after patch-equivalence proof.
+2. Present the bounded `sdk_phone64_x86_64 trunk_staging userdebug` build/launch design to the user; no build, QEMU stop, emulator launch, or ADB mutation before approval.
+3. After approval, stop PID 1727011 cleanly and prove zero QEMU/Emulator/ADB targets; build at strict `-j4` with 10 GiB disk stop threshold and no concurrent Gradle/Soong.
+4. Prove same-tree stock baseline (`sys.boot_completed=1`, stable `system_server` and stock SystemUI) before deploying the frozen Debug APK; then run 60-second PID and full UI/fatal/ANR/watchdog gates.
+5. Validate Release runtime only after Debug closure; keep the seven remaining Task 043 `NOT APPROVED` packets paused.
 
 ## Recent Orchestration Transitions
+
+- 2026-08-23 — Task 051 fixed range `1bfe57f8...75c96f13` completed four docs-only commits. Initial Standards/Spec reviews passed with no BLOCKER/HIGH/MEDIUM; two precision amendments removed a dangling factory-gate reference, made all four solution-family rule impacts explicit, removed an unsupported signature-display mechanism, corrected the outline, and unified all `ApplicationInfo` citations. Final Standards PASS had zero findings; final Spec PASS had only two TRIVIAL evidence/detail notes. Worker commits were cherry-picked as `39b6c308`, `873ce4f5`, `44d3ba64`, and `548a3fab`; patch IDs and main fresh report/hash/scope gates passed. Gradle and device mutation were not run.
+- 2026-08-23 — Tasks 052A/B/C read-only research converged on host-native same-tree runtime: x86_64 Emulator launcher deliberately rejects ARM64 guest, acloud Goldfish still invokes that launcher, direct AArch64 QEMU/TCG capability is not official product support, and `sdk_phone64_x86_64` is the primary next candidate. Seven reviewed commits were merged to main through `b4f7ec1c`; main fresh `TASK052A/B/C_REPORT=PASS` and exact three-report scope passed. No build/emulator/ADB mutation occurred in those research tasks.
+- 2026-08-23 — Brainstorming approval gate applies to the next behavior-changing phase. Before any new build or runtime mutation, the user must approve a bounded design covering cleanup of the still-running ARM64 diagnostic guest, strict `-j4`, disk stop threshold, effective KVM access in the launcher process, stock baseline acceptance, and delayed Gradle APK deployment.
 
 - 2026-08-22 — The user rejected the proposed `NoSuchMethodError` call-site catch and required
   root-cause analysis of the complete AOSP `SystemUI` app-to-core packaging/runtime contract plus

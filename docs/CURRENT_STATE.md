@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-22（Tasks 045–047 闭环保持有效；Task 048 专用模拟器真实替换结论为 `RUNTIME_FAIL`，原 APK 经 wipe-data 恢复稳定，AVD 已删除；修正文档后双轴复审 PASS，main fresh 静态/证据验收 PASS）
+> **Last verified**: 2026-08-23（Task 051 app/DEX/hidden-API/size 根因审计完成并经双轴 PASS；Tasks 052A/B/C 官方启动与产品矩阵研究已 main fresh 验收；same-tree ARM64 direct-QEMU 仅达 kernel/init/ADB、未 boot-complete，下一候选为尚未构建的 `sdk_phone64_x86_64`）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -15,8 +15,8 @@
 | Release R8 | **SUCCESS（Task 045 main fresh，exit 0，missing refs 0）**：对生成 SDK fresh `--rerun-tasks` 3m41s |
 | `:app:assembleRelease` | **SUCCESS（Task 045 main fresh）**：两个 AGP 9.3.1 optimized-resource tasks 实际执行 + V2 签名；APK 28,600,808 B，SHA-256 `cd4b885e...` |
 | SysUISdk 生成器 | **单入口落地并 main fresh 验收（Task 045）**：`python3 tools/build_sysuisdk.py --aosp-root <aosp>`；确定性、事务性、39-entry bridge；两次 11,382-file 输出逐字节相等 |
-| 设备/模拟器运行验证 | **`RUNTIME_FAIL`（Task 048）**：APK 成功替换并触发真实启动；manifest namespace 展开到不存在的 `com.android.systemui.app.SystemUIApplication`，真实 `com.android.systemui.SystemUIApplication` 又被 R8 重命名为 `kvc`，导致持续 `ClassNotFoundException`、PID churn、基础 UI 失败；原 APK 已恢复稳定，专用 AVD 已删除 |
-| 当前唯一工程优先级 | 在用户批准后修复 Application manifest namespace/class 对齐及 R8 manifest-entry keep 语义，并加入 APK DEX 静态入口检查；之后重跑兼容 runtime 验证 |
+| 设备/模拟器运行验证 | **`RUNTIME_FAIL`，根因边界已前移（Tasks 048–052）**：Task 050 的 FQCN Debug APK 经 fresh PackageManager scan 后进入真实 `SystemUIApplication`，首个 fatal 为 hidden-API linking denial（`Trace.registerWithPerfetto()`）；Task 051 证明 assembly 正确、Google image 缺少 Soong `platform_apis:true` 的 runtime contract 且证书域不同；用户选择 same-tree Family B。ARM64 same-tree 镜像构建成功，但 x86_64 host 的官方 launcher 拒绝 ARM64 guest，direct-QEMU `virt` baseline 未 boot-complete且不属正式支持路径；Gradle APK 未部署到该 baseline。 |
+| 当前唯一工程优先级 | **等待用户批准 bounded host-native design**：停止仍运行的 ARM64 诊断 guest、在 29 GiB 可用磁盘/预计新增 15–17 GiB/10 GiB stop threshold/严格 `-j4` 下构建 `sdk_phone64_x86_64 trunk_staging userdebug`，先证明 same-tree stock baseline boot-complete 与稳定，再部署 frozen Debug APK；Release runtime 后置。 |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
@@ -38,6 +38,9 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | 2026-08-21 | **SysUISdk 单入口 composition（Task 045，main fresh）**：`build_sysuisdk.py` 重写为事务性单命令生成器；两次 11,382-file 真实 AOSP 生成逐字节相等；main 上 Debug/R8/Release/ZIP/V2/DEX 全绿；七个 superseded 仓库文件已删；220/220 | `docs/issues/2026-08-21-sysuisdk-single-entry-composition.md` |
 | 2026-08-22 | 单入口文档同步与 legacy live SysUISdk 清理（Tasks 046–047）：用户批准后精确删除 8 个冗余备份（163,149,374 bytes），保留唯一历史快照，live primary hashes 不变 | `docs/architecture/2026-08-21-legacy-sysuisdk-backup-inventory.md` |
 | 2026-08-22 | **首个真实专用模拟器替换实验（Task 048）— `RUNTIME_FAIL`**：root/remount/push/hash/rescan 成功；Application 入口 namespace/R8 双重缺陷导致 crash loop；原 APK + userdata 恢复验证通过，AVD 删除；修正后双轴审查与 main fresh 静态验收 PASS | `docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` |
+| 2026-08-22 | **Debug 入口与真实首 fatal（Task 050）**：manifest 79 个组件入口改为 FQCN；fresh Debug APK 163,561,195 B / `4d8240fd…`，manifest→DEX 93 present + 2 aliases + 0 missing；扩容并重组 full super 后 byte-identical 部署，`-wipe-data` 触发 fresh PackageManager scan；真实 `SystemUIApplication` 启动后首 fatal 为 `Trace.registerWithPerfetto()` hidden-API denial | `docs/issues/2026-08-22-direct-debug-apk-runtime-closure.md` |
+| 2026-08-23 | **Task 051 根因审计闭环**：证明 `SystemUIApplication` 的 AOSP `static_libs`→Gradle project dependency→APK DEX assembly 正确；Soong `platform_apis:true` 注入 `usesNonSdkApi=true`，Google image 上 Gradle APK 为 policy 2 / `usesNonSdkApi=false` 且不在该 image 平台签名域；Debug 24 DEX / 77,342 classes，Release 2 DEX / 15,683 classes；四类方案均 `NOT APPROVED`，用户选择 same-tree Family B；双轴 PASS + main fresh static PASS | `docs/architecture/2026-08-22-systemui-application-runtime-and-debug-size-root-cause.md` |
+| 2026-08-23 | **Task 052 ARM64 构建/probe + 052A/B/C 研究闭环**：`sdk_phone64_arm64` `emu_img_zip` 在第二次严格 `-j4` 构建成功；direct SDK AArch64 QEMU/TCG 仅达 kernel/init/ADB、zygote 不稳且未 boot-complete；官方 source 证明 x86_64 launcher 拒绝 ARM64 guest、acloud 仍走该 launcher、`virt` 探针不是 Goldfish 支持路径；host-native `sdk_phone64_x86_64` 被选为下一候选；三个报告 main fresh acceptance PASS | `docs/issues/2026-08-22-same-tree-arm64-emulator-runtime.md` |
 
 ## Current build and verification matrix
 
@@ -53,7 +56,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | `:app:assembleRelease` | ✅ BUILD SUCCESSFUL：resource shrinking（`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 实际执行） | Task 045 main fresh，exit 0（最终 optimized/package run 1m09s） |
 | Release APK 检查 | ✅ 非空 28,600,808 B，SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`；`unzip -t` 无错；V2 scheme true | Task 045 main fresh |
 | SysUISdk 单入口生成器 | ✅ 两次独立真实 AOSP 构建输出逐字节相等（11,382 文件）；refusal/replace 语义实测；marker 纯 provenance | Task 045 main fresh（`/tmp/task045-main-sdk-{a,b}`） |
-| 设备/模拟器 install + runtime | ❌ **`RUNTIME_FAIL`**：替换 APK 后 5,434 条目标 Application CNF、PID 70s 不稳定、statusbar binder records 2→0；namespace 展开错误 + real class R8 rename 已静态复现；rollback/wipe 后原 SystemUI PID 稳定 60s，专用 AVD 已删除 | Task 048；`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md` |
+| 设备/模拟器 install + runtime | ❌ **`RUNTIME_FAIL`；same-tree baseline 尚未成立**：Task 050 FQCN Debug APK 在 fresh scan 后进入 `SystemUIApplication`，首 fatal 为 Google image 上 hidden-API `using linking: denied`；Task 051 证明 assembly 正确并锁定 `usesNonSdkApi`/platform-signature runtime contract divergence。Task 052 same-tree ARM64 product已构建，但官方 x86_64-host launcher 拒绝 ARM64 guest；direct `virt` 探针仅达 ADB且 zygote/system_server 不稳，`sys.boot_completed` 为空，未部署 Gradle APK。下一候选 `sdk_phone64_x86_64` 尚未构建。 | Tasks 050–052；`docs/issues/2026-08-22-same-tree-arm64-emulator-runtime.md` |
 
 ## Toolchain and module topology
 
@@ -114,11 +117,13 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 
 ## Next ordered work
 
-1. ✅ Task 046：stale SysUISdk workflow 文本已同步为单入口生成器，公开 README hygiene、220/220 Python 与 scope gate 均通过
-2. ✅ Task 047：九项 legacy live SysUISdk 历史备份完成只读审计；用户批准 option 1 后精确删除八项冗余文件（163,149,374 bytes），保留唯一快照 `android.jar.bak-20260813-210816`；live primary hashes 未改变
-3. ✅ Task 048：专用模拟器真实替换结论 `RUNTIME_FAIL`；证据、rollback、AVD 删除、修正后双轴审查和 main fresh 静态验收均完成
-4. **待用户批准的首要修复**：对齐 manifest Application FQN 与真实 `com.android.systemui.SystemUIApplication`，恢复/验证 AGP manifest-entry keep 语义，并增加 APK DEX 入口类静态验收；完成后重跑兼容 runtime 验证
-5. Gradle-native 架构 Phase 2：逐项讨论 Task 043 ledger 的其余 7 个 `NOT APPROVED` packet
+1. ✅ Tasks 046–048：SysUISdk 文档/备份闭环与首个 disposable Google AVD runtime `RUNTIME_FAIL` 已完成。
+2. ✅ Task 050：FQCN Debug APK 构建、镜像扩容/full-super 重组、fresh PackageManager scan 与首个真实 hidden-API fatal 已完成；调用点 `try/catch NoSuchMethodError` 被用户否决。
+3. ✅ Task 051：app→core→DEX assembly、hidden-API/platform-signature 分歧和 Debug size 根因审计完成；双轴 review 与 main fresh static acceptance 通过。四类修复 family 保持 `NOT APPROVED`；用户只批准了 Family B 方向。
+4. ✅ Tasks 052/052A/B/C：same-tree ARM64 `emu_img_zip` 构建与诊断 probe 完成；官方 launcher/source/product matrix 研究确定 ARM64-on-x86_64 非正式支持路径，`sdk_phone64_x86_64` 为主候选，Cuttlefish x86_64 为 prerequisite-gated 备选。
+5. **等待聊天内 bounded-design 批准**：先停止 PID 1727011 的 `task052-arm64`，证明无 QEMU/Emulator/ADB target；在严格 `m -j4 emu_img_zip`、29 GiB 当前可用空间、预计新增 15–17 GiB、10 GiB stop threshold、无并行 Gradle/Soong 下构建 `sdk_phone64_x86_64 trunk_staging userdebug`，并在实际 launcher context 证明 effective KVM access。未经独立证据与决策不删除既有 AOSP output。
+6. same-tree stock baseline 只有在 `sys.boot_completed=1`、`system_server` 与原厂 SystemUI 稳定后才允许部署 frozen Debug APK；最终 Debug gate 为 PID 稳定至少 60 秒，以及状态栏、Quick Settings、锁屏/唤醒/解锁、launcher 交互均无 fatal/ANR/watchdog/crash loop。
+7. Debug runtime closure 后再单独验证 Release；Task 043 其余 7 个 `NOT APPROVED` packets 继续暂停。
 
 ## Verification commands and evidence
 
@@ -141,7 +146,11 @@ python3 -m unittest discover -s tools/tests -p 'test_*.py'   # 当前 220/220
 
 最新证据：Task 045 architect main fresh（2026-08-21，生成 SDK 位于 `/tmp/task045-main-sdk-a`，私有 root 暴露官方 SDK tools；`local.properties` 每次均 byte-for-byte 恢复）— 220/220 tests；两次真实 AOSP 构建输出逐字节相等（11,382 文件），marker 8 inputs/portable/no backups，refusal + owned replace 实测；`:app:checkDebugDuplicateClasses :app:assembleDebug` exit 0（1m10s）；fresh `:app:minifyReleaseWithR8 --rerun-tasks` exit 0（3m41s）、missing refs 0；最终 `assembleRelease --no-daemon` exit 0（1m09s），`optimizeReleaseResources` + `convertShrunkResourcesToBinaryRelease` 均实际执行；APK 28,600,808 B，SHA-256 `cd4b885e283361e3b29ada68c288ca120514e98c276b8925ad7e4606d23ba374`，`unzip -t` 无错，V2 scheme true，dexdump 全量 15,683 defined classes 中 0/39 bridge、无 `AssumeTrueForR8`。一次额外的全量 `assembleRelease --rerun-tasks` 在 R8 阶段 daemon disappeared；失败后发现同轮残留 Kotlin daemon 约 8.9 GiB RSS，释放后按 R8 与 optimized/package 两阶段串行恢复成功；当前权限下无内核 OOM 记录，因此不把该失败断言为已证实 OOM。该段是 Task 045 构建证据；当时设备/模拟器验证尚未运行。详细证据：`docs/issues/2026-08-21-sysuisdk-single-entry-composition.md`。
 
-最新 runtime 证据：Task 048（2026-08-22）在专用 disposable API 37 AVD 上通过 identity gate、root/remount、动态 `pm path`、push 后 hash 对账和 PackageManager rescan，真实触发 APK 启动。结果为 `RUNTIME_FAIL`：packaged manifest 将 `.SystemUIApplication` 按 `:app` namespace 展开为不存在的 `com.android.systemui.app.SystemUIApplication`；真实类 `com.android.systemui.SystemUIApplication` 同时被 R8 映射为 `kvc`。运行时记录 5,434 条目标 Application `ClassNotFoundException`、70 秒 PID 不稳定和 statusbar binder records 2→0。原 APK bytes 恢复后经 `-wipe-data` 验证 PID 稳定 60 秒，专用 AVD 已停止并删除。修正后的固定范围 Standards/Spec 双轴复审 PASS；main fresh 静态验收核对 frozen APK、15,683 DEX classes、602 个 SystemUI descriptors、`Lkvc;`、四份 UI XML、精确日志计数、六次 gate transcript、原 APK/framework-res hashes 和最终零设备/零 AVD，全部 PASS。Task 048 未运行 Gradle。详细证据：`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md`。
+最新 runtime 证据分三层。Task 048（2026-08-22）在 disposable Google API 37 AVD 上证明了 root/remount、动态 `pm path`、push、hash 与 PackageManager rescan 路径，但 frozen Release 因 manifest namespace/R8 双重入口缺陷进入 crash loop；原 APK 恢复并经 wipe-data 验证稳定，AVD 删除。详细证据：`docs/architecture/2026-08-21-device-systemui-runtime-preflight.md`。
+
+Task 050 的 frozen Debug APK 为 163,561,195 B、SHA-256 `4d8240fdbbc144dfeb69b43dc3e5ad3911762afc90a8f83e07434d0669f78997`。79 个 manifest component 改为 FQCN 后，静态 gate 为 95 references（93 present + 2 aliases + 0 missing；`appComponentFactory` 尚需独立 gate）。在扩容 `system_ext`、生成 `--force-full-image` full super、重组 GPT 并 `-wipe-data` 后，设备 APK 与 frozen artifact byte-identical，PackageManager 正确实例化 `com.android.systemui.SystemUIApplication`。首个真实 fatal 为 line 87 `Trace.registerWithPerfetto()` 的 hidden-API `using linking: denied`，不是物理缺少方法。Task 051 进一步证明 app/core assembly 正确；Google image 上原厂包 `usesNonSdkApi=true` / policy 0，而 Gradle 包 `usesNonSdkApi=false` / policy 2，且双方 apksigner SHA-256 分别为 `301aa3cb…` 与 `c8a2e9bc…`。Debug 体积主因是未 shrink 的 24 个 DEX（134,153,384 uncompressed bytes，77,342 classes），不是单一资源。Task 051 固定范围最终 Standards PASS 零 finding；Spec PASS 无 BLOCKER/HIGH/MEDIUM（仅两个不影响结论的 TRIVIAL）；main fresh scope/hash/report gates PASS。未运行 Gradle或设备 mutation。详细证据：`docs/architecture/2026-08-22-systemui-application-runtime-and-debug-size-root-cause.md`。
+
+Task 052 在同一 checkout 完成 `sdk_phone64_arm64 trunk_staging userdebug` 的 `m -j4 emu_img_zip`；第二次构建 exit 0，产物 ZIP 完整。SDK Emulator 36.6.6 的 AArch64 backend 在 TCG + 诊断性 `-machine type=virt` 下可达 kernel/init/ADB，但 `sys.boot_completed` 为空、zygote/system_server/SystemUI 不稳，Gradle APK 未部署。Tasks 052A/B/C 的 first-party docs/source/product research证明：x86_64 top-level launcher 有意拒绝 ARM64 guest；acloud local Goldfish 仍调用该 launcher；QEMU backend 能翻译不等于受支持的 Android product；ranchu PCI/MMIO mismatch 与 generic `virt` 均不能构成正式 Goldfish baseline。三个报告双轴阻断项清零并经 main fresh `TASK052A/B/C_REPORT=PASS`。当前 ARM64 诊断 guest PID 1727011 仍占约 3.4 GiB RSS 与 ports 5556/5557；在任何新 mutation 前必须干净停止。主候选为尚未构建的 `sdk_phone64_x86_64`；最新磁盘可用约 29 GiB，stop threshold 10 GiB；AOSP build 严格最多 `-j4`。详细证据：`docs/issues/2026-08-22-same-tree-arm64-emulator-runtime.md`。
 
 构建纪律：全系统同一时刻**只允许一个 Gradle build**（CHARTER Part 4）；每批必须保持 `:app:assembleDebug` 成功（硬门禁）。
 
