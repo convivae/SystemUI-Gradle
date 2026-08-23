@@ -12,7 +12,7 @@ from retained Task 052 evidence (`docs/issues/2026-08-22-same-tree-arm64-emulato
 | Fact | Value | Evidence |
 |---|---|---|
 | Host CPU / ISA | AMD Ryzen 5 7500F, x86_64, 12 threads, `svm` virtualization flags present | `lscpu`, `grep -cE "(vmx|svm)" /proc/cpuinfo` → 12 |
-| KVM | kernel-side present: `kvm_amd` module loaded, `/dev/kvm` exists — **but owned `root:kvm` mode 0660, and the current shell's user (`conv`, uid 1000) is NOT in the `kvm` group** (`id` lists no kvm). **Not usable as-is**: requires `sudo usermod -aG kvm conv` + full re-login, and usable access must be proven in the launching shell before any launch | `lsmod`, `ls -la /dev/kvm`, `id` |
+| KVM | kernel-side present: `kvm_amd` module loaded, `/dev/kvm` exists (`root:kvm` 0660). Persistent membership is **already** in the group database: `getent group kvm` → `kvm:x:991:conv`. Only this existing shell lacks the supplementary group (`id` here shows no kvm). **Not usable from this shell as-is**: a fresh login/session is required to activate the existing membership, or the already-proven bounded `sudo -n -u conv -g kvm ...` execution may be used if explicitly chosen; in all cases effective id/access must be proven in the actual launching process | `lsmod`, `ls -la /dev/kvm`, `id`, `getent group kvm` |
 | vhost-vsock | node `/dev/vhost-vsock` exists; same group-permission caveat applies for Cuttlefish use | `ls /dev/vhost-vsock` |
 | Live ARM64 guest (**revision-corrected**) | **Task 052 ARM64 QEMU still running**: PID 1727011 `qemu-system-aarch64-headless -avd task052-arm64 -wipe-data -no-snapshot -no-window -accel off -gpu swiftshader_indirect -memory 4096 -cores 4 -ports 5556,5557 ... -qemu -machine type=virt`; ADB shows `emulator-5556 device`; ~3.4 GiB RSS (4 GiB guest RAM), 4 vCPUs, ~230% CPU under TCG; console ports 5556/5557 bound on localhost. **Must be cleanly stopped before any x86_64 build/launch** (RAM and port contention). Not stopped by this task | `ps aux`, `adb devices`, `ss -tlnp`, `/proc/1727011/environ` |
 | RAM | 30 GiB total, ~21 GiB available (live ARM64 guest holds ~3.4 GiB RSS) | `free -h` |
@@ -104,7 +104,9 @@ module (present here), user in `kvm,cvdnetwork,render` groups, and a reboot.
 Launch is via `launch_cvd` from a `cvd-host_package` matched to the image build.
 Current host status (**revision-corrected**): **no cvd binary, no cuttlefish debian packages installed**
 (`which cvd` empty), and the Cuttlefish user-side prerequisites are **NOT currently satisfied**:
-`id` shows `conv` is in none of `kvm`, `cvdnetwork`, or `render`. Kernel-side `/dev/kvm`
+`id` in the current shell lists no `kvm` (persistent `kvm` membership **does exist** — see Host
+facts; a fresh session activates it), and `conv` is in neither `cvdnetwork` nor `render`.
+Kernel-side `/dev/kvm`
 and `/dev/vhost-vsock` nodes exist, but that alone does not make them usable by this user
 (see Host facts). Same-tree Cuttlefish additionally requires building `aosp_cf_x86_64_phone`
 plus the host package — both absent today.
@@ -124,8 +126,8 @@ zygote/system_server were unstable — a diagnostic probe, not a working runtime
 
 | Option | Guest ISA | Build feasibility (this checkout) | Official launch path | Acceleration needed | Disk estimate | Current-host suitability |
 |---|---|---|---|---|---|---|
-| `sdk_phone64_x86_64` (emu64x) | x86_64 (host-native) | High — product + board config + 6.6 x86_64 kernel prebuilt all present; `emu_img_zip` target applies | SDK system-image ZIP → AVD → installed Emulator 36.6.6 | KVM (**kernel-side present; NOT usable by current shell — kvm group activation + re-login required and must be proven in the launching shell before launch**) | ~15–17 GiB (emu64a analog: 17 GiB incl. 3 GiB obj + 0.8 GiB ZIP); fits in 35 GiB free | **Best** — no cross-arch issue, official launcher, same-tree identity retained |
-| `aosp_cf_x86_64_phone` Cuttlefish | x86_64 (host-native) | High — source + lunch choice present | `launch_cvd` (host package + debian install + group setup) | KVM + vhost-vsock (**kernel-side present only; user-side prerequisites `kvm`/`cvdnetwork`/`render` groups NOT satisfied, debian packages absent**) | guest build ~15 GiB+ plus host package; fits but tighter | Good secondary — but all host-side prerequisites currently unmet |
+| `sdk_phone64_x86_64` (emu64x) | x86_64 (host-native) | High — product + board config + 6.6 x86_64 kernel prebuilt all present; `emu_img_zip` target applies | SDK system-image ZIP → AVD → installed Emulator 36.6.6 | KVM (**persistent kvm membership exists (`kvm:x:991:conv`) but is not active in the current shell — fresh login or proven `sudo -n -g kvm` execution required; effective access must be proven in the launching process before launch**) | ~15–17 GiB (emu64a analog: 17 GiB incl. 3 GiB obj + 0.8 GiB ZIP); fits in 35 GiB free | **Best** — no cross-arch issue, official launcher, same-tree identity retained |
+| `aosp_cf_x86_64_phone` Cuttlefish | x86_64 (host-native) | High — source + lunch choice present | `launch_cvd` (host package + debian install + group setup) | KVM + vhost-vsock (**`cvdnetwork`/`render` groups NOT held and debian packages absent — prerequisites unmet; kvm itself persists in the group database but is inactive in this shell**) | guest build ~15 GiB+ plus host package; fits but tighter | Good secondary — but host-side prerequisites currently unmet |
 | `sdk_phone64_arm64` (emu64a) | arm64 (cross-arch on x86_64 host) | **Already built** (17 GiB, complete set, ZIP passes `unzip -t`) | Standard launcher **rejects arm64 guest on x86_64 host**; no official software-emulation launch path proven | TCG-only (slow; currently exercised by the live diagnostic guest, which has not reached boot completion) | 0 additional (built) | **Not suitable now** — runtime not proven; live TCG guest stuck pre-boot-complete |
 | `aosp_arm64` (generic_arm64) | arm64 | Built, but GSI-only | None — no kernel-ranchu/-qemu images; both launch attempts failed authoritatively | n/a | 0 additional (built, 14 GiB) | **Rejected** — not a full device image; could only serve via GSI-on-other-device flows outside this task |
 | `sdk_phone64_arm64` minigbm / 16k / riscv64 / tablet / slim / fvp | various | listed; not built | varies | varies | unknown (not estimated) | Out of scope — no advantage over ranked options |
@@ -189,7 +191,9 @@ path fully exists locally: `emu_img_zip` produces the SDK system-image ZIP;
 Emulator 36.6.6 installed. First-party README states emu64x "will work with
 the IA version of the emulator". Kernel prebuilt present. **KVM caveat
 (revision-corrected): kernel-side KVM exists but the current user is not in
-the `kvm` group — group activation plus re-login and a proven access check in
+the `kvm` group in this shell — a fresh login (activating the existing persistent
+membership) or the already-proven bounded `sudo -n -u conv -g kvm ...` execution, plus a
+proven access check in
 the launching shell are mandatory pre-launch steps, not optional.** Cost: one
 `-j4` incremental build (~1.5 h per emu64a precedent) and ~15–17 GiB disk,
 leaving ~18–20 GiB free of the current 35 GiB — acceptable. Same-tree identity
@@ -198,8 +202,9 @@ fully retained.
 **Rank 2 — FALLBACK: `aosp_cf_x86_64_phone` Cuttlefish (vsoc_x86_64).**
 Also host-native x86_64, and Cuttlefish is an officially supported virtual device
 with a source-controlled host runner in this checkout. Falls behind Goldfish
-because, in current host state, **none** of its prerequisites are met: `conv` is
-in none of the `kvm`/`cvdnetwork`/`render` groups, no cuttlefish debian packages
+because, in current host state, its distinct prerequisites are **unmet**: `conv` holds
+neither `cvdnetwork` nor `render` (`kvm` persists in the group database but is inactive in
+this shell), no cuttlefish debian packages
 are installed (privileged setup + reboot required), no cvd host package exists,
 and the disk cost is guest build + host package on top of the existing 31 GiB of
 outputs.
@@ -236,9 +241,12 @@ before any launch; none executed by this task):**
 2. **Prove quiescence**: no `emulator`/`qemu` process remains (`ps aux | grep -E
    'qemu|emulator'`) and `adb devices` lists no targets — freeing the 4 GiB RAM, 4 vCPUs
    (TCG load was ~230% CPU), and ports 5556/5557.
-3. **Activate and prove kvm group access in the launching shell**: `sudo usermod -aG kvm
-   conv`, full re-login, then verify with `id` (kvm listed) and a read/write open of
-   `/dev/kvm` (or `emulator -accel-check`) **in the exact shell that will launch**.
+3. **Prove kvm access in the actual launching process**: persistent membership already
+   exists (`getent group kvm` → `kvm:x:991:conv`); this shell simply predates it. Either
+   use a fresh login/session (membership activates automatically), or — only if explicitly
+   chosen — the already-proven bounded `sudo -n -u conv -g kvm ...` execution. Then verify
+   effective id (`id` shows kvm) and a read/write open of `/dev/kvm` (or
+   `emulator -accel-check`) **in the exact process/shell that will launch**.
 4. **Monitor disk** throughout: 35 GiB free now; keep ≥ ~10 GiB free at all times.
 5. **Retain `-j4` maximum** (user mandate; the first emu64a attempt OOMed before tmpfs
    cleanup).
@@ -265,15 +273,16 @@ evidence yet for these steps on this host):
    SDK system-image install or AVD creation (both are mutations forbidden to
    this task and requiring fresh authorization).
 3. The emulator 36.6.6 accepts the locally built x86_64 image via the standard
-   launcher with KVM **after kvm group access has been activated and proven in the
-   launching shell** (precondition 3 above; `/dev/kvm` is root:kvm 0660 and the
+   launcher with KVM **after effective kvm access has been proven in the launching
+   process** (precondition 3 above; `/dev/kvm` is root:kvm 0660 and the
 current shell cannot open it). First launch identity check: `ro.kernel.qemu=1`,
    x86_64 ABI, userdebug, `sdk_phone64_x86_64/emu64x` fingerprint, platform
    certificate matching the frozen APK SHA-256 above.
 
 Stop conditions: kernel-confirmed OOM (precedent: first emu64a attempt), free
 disk < 10 GiB, `emu_img_zip` failing on missing inputs, the launcher rejecting
-the image, or `/dev/kvm` remaining inaccessible after group activation — in each
+the image, or `/dev/kvm` remaining inaccessible from the launching process after a fresh
+login or `sudo -n -g kvm` — in each
 case halt and report rather than improvise overrides (the `-machine type=virt`
 lesson: diagnostic probes are not launch solutions).
 
@@ -290,7 +299,7 @@ First-party (local, read this task unless noted):
 - `device/generic/goldfish/tasks/emu_img_zip.mk` — official artifact/ZIP definition
 - `device/google/cuttlefish/AndroidProducts.mk` (COMMON_LUNCH_CHOICES lines 57–68 — includes `aosp_cf_arm64_phone`, line 59), `vsoc_x86_64/phone/aosp_cf.mk`, `README.md`
 - `out/target/product/emu64a/` and `out/target/product/generic_arm64/` inventories (`ls`, `du`, file sizes)
-- Host probes: `lscpu`, `lsmod`, `ls -la /dev/kvm`, `id` (group audit), `/dev/vhost-vsock`, `df -h`, `free -h`, `emulator -version`, `~/.android/avd/`, `ps aux`, `adb devices`, `ss -tlnp`, `/proc/1727011/environ` (live-guest facts, revision pass)
+- Host probes: `lscpu`, `lsmod`, `ls -la /dev/kvm`, `id` (group audit), `getent group kvm` (→ `kvm:x:991:conv`), `/dev/vhost-vsock`, `df -h`, `free -h`, `emulator -version`, `~/.android/avd/`, `ps aux`, `adb devices`, `ss -tlnp`, `/proc/1727011/environ` (live-guest facts, revision pass)
 - `device/generic/goldfish/board/emu64x/BoardConfig.mk` lines 17–19 (`TARGET_CPU_ABI`/`TARGET_ARCH` x86_64) and `board/emu64a/BoardConfig.mk` lines 17–20 (arm64) — re-verified at revision
 - `docs/issues/2026-08-22-same-tree-arm64-emulator-runtime.md` — Task 052 retained evidence (launcher PANIC, direct-QEMU probe, emu64a build result, platform cert match)
 
