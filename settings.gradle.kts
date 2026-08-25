@@ -5,8 +5,6 @@ pluginManagement {
         maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://artifactory.jd.com/libs-releases-local/") }
-        maven { url = uri("https://artifactory.jd.com/libs-snapshots-local/") }
 
         google()
         mavenCentral()
@@ -26,8 +24,6 @@ dependencyResolutionManagement {
         maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://artifactory.jd.com/libs-releases-local/") }
-        maven { url = uri("https://artifactory.jd.com/libs-snapshots-local/") }
 
         google()
         mavenCentral()
