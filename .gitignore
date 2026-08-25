@@ -86,3 +86,8 @@ res-gradle/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Python tooling (uv) 运行产物；uv.lock 需提交以保证可复现，不忽略
+.venv/
+.pytest_cache/
+*.egg-info/

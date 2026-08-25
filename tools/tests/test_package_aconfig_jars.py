@@ -1,10 +1,20 @@
 import importlib.util
+import os
+import sys
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
-_SCRIPT = Path(__file__).resolve().parents[1] / "package_aconfig_jars.py"
+# The script under test imports aosp_paths; make tools/ importable no matter
+# where the test runner is invoked from.
+_TOOLS_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_TOOLS_DIR))
+
+import aosp_paths
+
+_SCRIPT = _TOOLS_DIR / "package_aconfig_jars.py"
 _spec = importlib.util.spec_from_file_location("package_aconfig_jars", _SCRIPT)
 module = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(module)
@@ -85,6 +95,48 @@ class TestAconfigJarPackaging(unittest.TestCase):
         self.assertEqual(destination, Path("libs/wm-shell-flags.jar"))
         self.assertEqual(package, "com.android.wm.shell")
 
+    def test_window_flags_config_uses_framework_owned_javac_runtime(self):
+        source, destination, package = module.CONFIGS["window-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base"
+            / "com.android.window.flags.window-aconfig-java"
+            / "android_common/javac"
+            / "com.android.window.flags.window-aconfig-java.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertEqual(destination, Path("libs/window-flags.jar"))
+        self.assertEqual(package, "com.android.window.flags")
+
+    def test_device_state_feature_flags_config_uses_framework_owned_javac_runtime(self):
+        source, destination, package = module.CONFIGS["device-state-feature-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base"
+            / "android.hardware.devicestate.feature.flags-aconfig-java"
+            / "android_common/javac"
+            / "android.hardware.devicestate.feature.flags-aconfig-java.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertEqual(destination, Path("libs/device-state-feature-flags.jar"))
+        self.assertEqual(package, "android.hardware.devicestate.feature.flags")
+
+    def test_android_os_flags_config_uses_framework_owned_javac_runtime(self):
+        source, destination, package = module.CONFIGS["android-os-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base"
+            / "android.os.flags-aconfig-java"
+            / "android_common/javac"
+            / "android.os.flags-aconfig-java.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertEqual(destination, Path("libs/android-os-flags.jar"))
+        self.assertEqual(package, "android.os")
+
     def test_batch2_config_matrix(self):
         # The five Batch-2 artifacts must map exact owning Soong javac sources
         # to their destinations and runtime packages.
@@ -92,10 +144,7 @@ class TestAconfigJarPackaging(unittest.TestCase):
             with self.subTest(config=name):
                 self.assertIn(name, module.CONFIGS)
                 source = module.CONFIGS[name][0]
-                self.assertEqual(
-                    str(source),
-                    "/home/conv/myspace/aosp/out/soong/.intermediates/" + suffix,
-                )
+                self.assertEqual(source, module.AOSP_INTERMEDIATES / suffix)
                 self.assertIn("/javac/", str(source))
                 self.assertNotIn("turbine", str(source))
                 self.assertEqual(module.CONFIGS[name][1], destination)
@@ -147,6 +196,34 @@ class TestAconfigJarPackaging(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 module.copy_jar(source, root / "out.jar", "com.example.flags")
+
+class TestAospPaths(unittest.TestCase):
+    """The unified AOSP root source: one default, env and explicit overrides."""
+
+    def test_default_root_is_the_build_machine_checkout(self):
+        # Pinning the default is intentional: it is the single place to change.
+        self.assertEqual(
+            aosp_paths.DEFAULT_AOSP_ROOT, Path("/home/conv/myspace/aosp")
+        )
+
+    def test_env_override_wins_over_default(self):
+        with mock.patch.dict(os.environ, {"AOSP_ROOT": "/opt/custom-aosp"}):
+            self.assertEqual(aosp_paths.aosp_root(), Path("/opt/custom-aosp"))
+
+    def test_explicit_override_wins_over_env(self):
+        with mock.patch.dict(os.environ, {"AOSP_ROOT": "/opt/custom-aosp"}):
+            self.assertEqual(aosp_paths.aosp_root("/cli/aosp"), Path("/cli/aosp"))
+
+    def test_soong_intermediates_joins_under_root(self):
+        self.assertEqual(
+            aosp_paths.soong_intermediates("/any/root"),
+            Path("/any/root/out/soong/.intermediates"),
+        )
+
+    def test_module_constant_matches_shared_source(self):
+        # package_aconfig_jars must not keep its own hardcoded root.
+        self.assertEqual(module.AOSP_INTERMEDIATES, aosp_paths.soong_intermediates())
+
 
 if __name__ == "__main__":
     unittest.main()

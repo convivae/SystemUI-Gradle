@@ -12,9 +12,9 @@ import argparse
 import shutil
 import zipfile
 
-AOSP_INTERMEDIATES = Path(
-    "/home/conv/myspace/aosp/out/soong/.intermediates"
-)
+from aosp_paths import soong_intermediates
+
+AOSP_INTERMEDIATES = soong_intermediates()
 
 RUNTIME_CLASS_NAMES = frozenset(
     (
@@ -58,6 +58,33 @@ CONFIGS = {
         ),
         Path("libs/wm-shell-flags.jar"),
         "com.android.wm.shell",
+    ),
+    "window-flags": (
+        _soong(
+            "frameworks/base/com.android.window.flags.window-aconfig-java/"
+            "android_common/javac/"
+            "com.android.window.flags.window-aconfig-java.jar"
+        ),
+        Path("libs/window-flags.jar"),
+        "com.android.window.flags",
+    ),
+    "device-state-feature-flags": (
+        _soong(
+            "frameworks/base/android.hardware.devicestate.feature.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.hardware.devicestate.feature.flags-aconfig-java.jar"
+        ),
+        Path("libs/device-state-feature-flags.jar"),
+        "android.hardware.devicestate.feature.flags",
+    ),
+    "android-os-flags": (
+        _soong(
+            "frameworks/base/android.os.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.os.flags-aconfig-java.jar"
+        ),
+        Path("libs/android-os-flags.jar"),
+        "android.os",
     ),
     "systemui-flags": (
         _soong(

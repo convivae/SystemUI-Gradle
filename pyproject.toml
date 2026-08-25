@@ -1,0 +1,10 @@
+[project]
+name = "systemui-gradle-tools"
+version = "0.1.0"
+description = "Python tooling under tools/ for the SystemUI Gradle port"
+requires-python = ">=3.11"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
