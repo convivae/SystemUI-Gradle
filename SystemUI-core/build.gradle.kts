@@ -239,42 +239,15 @@ dependencies {
     // WM-Shell aconfig flags（com.android.wm.shell.Flags；WindowManager-Shell static_libs
     // 进入 APK 打包闭包——AOSP static_libs runtime/program 输入，故 implementation）
     implementation(files("${rootProject.projectDir}/libs/wm-shell-flags.jar"))
-    // Framework window flags（com.android.window.flags.Flags）。Soong 通过 exportable
-    // aconfig 的 JarJarProvider 将调用重写到 framework-minus-apex 的
-    // com.android.internal.hidden_from_bootclasspath.* 实现；AGP 不传播该 Soong JarJar 规则，
-    // 因此打包同一 owning java_aconfig_library 的真实 javac runtime JAR。
-    implementation(files("${rootProject.projectDir}/libs/window-flags.jar"))
-    // Framework device-state flags（android.hardware.devicestate.feature.flags.Flags）。
-    // 与 window-flags 相同：该 exportable aconfig 在 Soong 中被 JarJar 迁移至
-    // framework-minus-apex 的 com.android.internal.hidden_from_bootclasspath.*；
-    // AGP 不继承该重写，因此打包 owning java_aconfig_library 的真实 javac runtime JAR。
-    implementation(files("${rootProject.projectDir}/libs/device-state-feature-flags.jar"))
-    // Framework android.os flags（android.os.Flags；NLSUMI privateSpaceFlagsEnabled 等引用）。
-    // 与 window-flags 相同：该 exportable aconfig 在 Soong 中被 JarJarProvider 迁移至
-    // framework-minus-apex 的 com.android.internal.hidden_from_bootclasspath.*，设备
-    // bootclasspath 上不存在公开名 Landroid/os/Flags;；AGP 不继承该重写，因此打包
-    // owning java_aconfig_library（android.os.flags-aconfig-java，base 变体）的真实
-    // javac runtime JAR。base 变体的 backing API
-    // android.os.flagging.PlatformAconfigPackageInternal 已验证存在于设备 framework.jar。
-    implementation(files("${rootProject.projectDir}/libs/android-os-flags.jar"))
-    // Task 055 批量：task 054 预扫描出的 11 个同族残留 hazard。每个 owning
-    // java_aconfig_library 均定义于 frameworks/base/AconfigFlags.bp（framework-minus-apex-
-    // aconfig-java-defaults，设备 bootclasspath 上仅有 JarJar 重写后的
-    // com.android.internal.hidden_from_bootclasspath.* 双生类，公开名不存在）；AGP 不继承
-    // 该重写，因此打包 base 变体的真实 javac runtime JAR（backing API
-    // android.os.flagging.PlatformAconfigPackageInternal 已验证在设备 BCP，字节级与
-    // Soong 产物一致，validator 核查五类集合）。
-    implementation(files("${rootProject.projectDir}/libs/smartspace-flags.jar"))          // android.app.smartspace.flags.*
-    implementation(files("${rootProject.projectDir}/libs/content-pm-flags.jar"))          // android.content.pm.*
-    implementation(files("${rootProject.projectDir}/libs/biometrics-flags.jar"))          // android.hardware.biometrics.*
-    implementation(files("${rootProject.projectDir}/libs/usb-flags.jar"))                 // android.hardware.usb.flags.*
-    implementation(files("${rootProject.projectDir}/libs/net-platform-flags.jar"))        // android.net.platform.flags.*
-    implementation(files("${rootProject.projectDir}/libs/permission-flags.jar"))          // android.permission.flags.*
-    implementation(files("${rootProject.projectDir}/libs/provider-flags.jar"))            // android.provider.*
-    implementation(files("${rootProject.projectDir}/libs/security-flags.jar"))            // android.security.*
-    implementation(files("${rootProject.projectDir}/libs/service-controls-flags.jar"))    // android.service.controls.flags.*
-    implementation(files("${rootProject.projectDir}/libs/service-notification-flags.jar")) // android.service.notification.*（boot 关键首因）
-    implementation(files("${rootProject.projectDir}/libs/quickaccesswallet-flags.jar"))   // android.service.quickaccesswallet.*
+    // Framework exportable-aconfig hidden-twin 族（task 057，用户方案 M）：
+    // 14 个 owning java_aconfig_library（window / device-state-feature / android-os /
+    // smartspace / content-pm / biometrics / usb / net-platform / permission / provider /
+    // security / service-controls / service-notification / quickaccesswallet）在 Soong 中被
+    // JarJarProvider 重写至 com.android.internal.hidden_from_bootclasspath.*，AGP 不继承该
+    // 重写；现统一打包为单个确定性合并 JAR（自 AOSP javac 源合并，字典序 + 固定时间戳
+    // + 固定压缩，连跑两次 sha256 相同；每源过五类 validator，类/.uau 逐字节等于源）。
+    // 生成：`uv run python tools/package_aconfig_jars.py --merge-framework`
+    implementation(files("${rootProject.projectDir}/libs/systemui-aconfig-flags.jar"))
     // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖；tier③ 官方坐标，task 027。
     // AOSP 私有 com.google.protobuf.nano.android.* 3 类全仓零引用，由 framework.jar/platform 兑底）
     implementation(libs.protobuf.javanano)

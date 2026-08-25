@@ -16,6 +16,37 @@ from aosp_paths import soong_intermediates
 
 AOSP_INTERMEDIATES = soong_intermediates()
 
+# Destination of the deterministic union merge of the framework exportable-aconfig
+# hidden-twin family (user decision 2026-08-25, option M, task 057).
+MERGED_FRAMEWORK_JAR = Path("libs/systemui-aconfig-flags.jar")
+
+# The Soong javac outputs already use this fixed timestamp; keep it for the merge.
+_MERGE_FIXED_DATETIME = (2008, 1, 1, 0, 0, 0)
+
+#: Config names that make up the framework exportable-aconfig hidden-twin family
+#: (tasks 053/054/055). Their Soong javac sources merge deterministically into
+#: MERGED_FRAMEWORK_JAR; the per-jar five-class validator still runs per source.
+FRAMEWORK_FAMILY = frozenset(
+    (
+        # tasks 053/054
+        "window-flags",
+        "device-state-feature-flags",
+        "android-os-flags",
+        # task 055 batch
+        "smartspace-flags",
+        "content-pm-flags",
+        "biometrics-flags",
+        "usb-flags",
+        "net-platform-flags",
+        "permission-flags",
+        "provider-flags",
+        "security-flags",
+        "service-controls-flags",
+        "service-notification-flags",
+        "quickaccesswallet-flags",
+    )
+)
+
 RUNTIME_CLASS_NAMES = frozenset(
     (
         "CustomFeatureFlags",
@@ -276,6 +307,84 @@ def copy_jar(source: Path, destination: Path, runtime_package: str) -> None:
     temporary.replace(destination)
 
 
+def merge_sources(items: list[tuple[str, Path, str]], destination: Path) -> None:
+    """Deterministically merge aconfig runtime JARs into one union JAR.
+
+    ``items`` is a list of ``(name, source, runtime_package)`` triples. Each source
+    is validated with the five-class runtime rule, then merged under these rules:
+
+    * ``.class`` / ``.uau`` (any payload) pathnames must be unique across sources;
+      ANY overlap fails loudly, even if the bytes would be identical, because a
+      duplicated class path means a wrong owning module.
+    * ``META-INF/MANIFEST.MF`` is structural: it is carried once and must be
+      byte-identical across sources (diverging manifests fail loudly).
+    * Directory entries are unioned (no semantic payload).
+    * Output entries (dirs and files) are written in lexicographic order with a
+      fixed timestamp, fixed compression level and explicit attributes, so two
+      runs over the same inputs produce identical bytes.
+    """
+    destination = Path(destination)
+    payload: dict[str, bytes] = {}
+    directories: set[str] = set()
+    manifest: bytes | None = None
+    for name, source, runtime_package in items:
+        source = Path(source)
+        if "turbine" in source.parts:
+            raise ValueError(f"runtime JAR must not come from turbine: {source}")
+        if not source.is_file() or not zipfile.is_zipfile(source):
+            raise FileNotFoundError(f"missing or invalid AOSP JAR: {source}")
+        validate_runtime_jar(source, runtime_package)
+        with zipfile.ZipFile(source) as archive:
+            for info in archive.infolist():
+                if info.is_dir():
+                    directories.add(info.filename)
+                    continue
+                data = archive.read(info.filename)
+                if info.filename == "META-INF/MANIFEST.MF":
+                    if manifest is None:
+                        manifest = data
+                    elif manifest != data:
+                        raise ValueError(
+                            f"diverging META-INF/MANIFEST.MF while merging {name}"
+                        )
+                    continue
+                if info.filename in payload:
+                    raise ValueError(
+                        f"colliding entry {info.filename} across merge sources "
+                        f"(second sighting from {name})"
+                    )
+                payload[info.filename] = data
+    if manifest is None:
+        manifest = b"Manifest-Version: 1.0\r\n\r\n"
+    payload["META-INF/MANIFEST.MF"] = manifest
+    directories.add("META-INF/")
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    with zipfile.ZipFile(
+        temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as archive:
+        for entry in sorted(directories | set(payload)):
+            info = zipfile.ZipInfo(entry, _MERGE_FIXED_DATETIME)
+            if entry.endswith("/"):
+                info.external_attr = (0o755 << 16) | 0x10
+                archive.writestr(info, b"")
+            else:
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.external_attr = 0o644 << 16
+                archive.writestr(info, payload[entry])
+    temporary.replace(destination)
+
+
+def merge_framework_family(destination: Path = MERGED_FRAMEWORK_JAR) -> None:
+    """Merge the 14 framework-family Soong javac sources into one JAR."""
+    items = [
+        (name, CONFIGS[name][0], CONFIGS[name][2])
+        for name in sorted(FRAMEWORK_FAMILY)
+    ]
+    merge_sources(items, destination)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Package concrete AOSP aconfig JARs")
     parser.add_argument(
@@ -287,14 +396,30 @@ def main() -> int:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="package every configured artifact in sorted order",
+        help="package every configured artifact: one merged framework-family jar "
+        "plus each non-family jar, in sorted order",
+    )
+    parser.add_argument(
+        "--merge-framework",
+        action="store_true",
+        help="deterministically merge the framework-family sources into "
+        f"{MERGED_FRAMEWORK_JAR}",
     )
     args = parser.parse_args()
-    if args.all and args.artifact:
-        parser.error("pass either a single artifact or --all, not both")
-    if not args.all and not args.artifact:
-        parser.error("pass a single artifact or --all")
-    names = sorted(CONFIGS) if args.all else [args.artifact]
+    selected = int(bool(args.all)) + int(bool(args.merge_framework)) + int(
+        bool(args.artifact)
+    )
+    if selected != 1:
+        parser.error("pass exactly one of: a single artifact, --all, --merge-framework")
+    if args.merge_framework or args.all:
+        merge_framework_family()
+        print(f"framework-family merge: {len(FRAMEWORK_FAMILY)} sources -> "
+              f"{MERGED_FRAMEWORK_JAR}")
+    names = (
+        sorted(name for name in CONFIGS if name not in FRAMEWORK_FAMILY)
+        if args.all
+        else ([args.artifact] if args.artifact else [])
+    )
     for name in names:
         source, destination, runtime_package = CONFIGS[name]
         copy_jar(source, destination, runtime_package)

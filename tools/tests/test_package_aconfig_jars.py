@@ -131,8 +131,11 @@ def write_runtime_jar(path, package="com.example.flags", classes=RUNTIME_CLASSES
     """Write a synthetic aconfig runtime JAR with the given class names."""
     prefix = package.replace(".", "/")
     with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\r\n\r\n")
         for name in classes:
             archive.writestr(f"{prefix}/{name}.class", b"class-bytes")
+            if name != "FakeFeatureFlagsImpl":
+                archive.writestr(f"{prefix}/{name}.uau", b"uau-bytes")
 
 
 class TestAconfigJarPackaging(unittest.TestCase):
@@ -231,6 +234,25 @@ class TestAconfigJarPackaging(unittest.TestCase):
                 self.assertEqual(module.CONFIGS[name][1], destination)
                 self.assertEqual(module.CONFIGS[name][2], package)
 
+    def test_framework_family_membership_and_shape(self):
+        # The 14 framework hidden-twin family configs (3 from tasks 053/054 plus
+        # the 11 from task 055) are exactly FRAMEWORK_FAMILY, all pointing at
+        # frameworks/base base-variant javac outputs.
+        self.assertEqual(len(module.FRAMEWORK_FAMILY), 14)
+        self.assertEqual(module.FRAMEWORK_FAMILY, frozenset(BATCH3_CONFIGS) | {
+            "window-flags",
+            "device-state-feature-flags",
+            "android-os-flags",
+        })
+        self.assertEqual(
+            module.MERGED_FRAMEWORK_JAR, Path("libs/systemui-aconfig-flags.jar")
+        )
+        for name in module.FRAMEWORK_FAMILY:
+            with self.subTest(config=name):
+                source = module.CONFIGS[name][0]
+                self.assertIn("/javac/", str(source))
+                self.assertIn("frameworks/base/", str(source))
+
     def test_copy_preserves_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -278,6 +300,101 @@ class TestAconfigJarPackaging(unittest.TestCase):
             with self.assertRaises(ValueError):
                 module.copy_jar(source, root / "out.jar", "com.example.flags")
 
+class TestMergeSources(unittest.TestCase):
+    """Deterministic union merge used by --merge-framework (task 057)."""
+
+    def _sources(self, root, specs):
+        items = []
+        for name, package, extras in specs:
+            src = root / name / "javac" / f"{name}.jar"
+            src.parent.mkdir(parents=True)
+            write_runtime_jar(src, package=package)
+            if extras:
+                with zipfile.ZipFile(src, "a") as archive:
+                    for path, data in extras.items():
+                        archive.writestr(path, data)
+            items.append((name, src, package))
+        return items
+
+    def test_merged_jar_is_deterministic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            items = self._sources(
+                root,
+                [("a", "a.one.flags", None), ("b", "b.two.flags", None)],
+            )
+            out1 = root / "m1.jar"
+            out2 = root / "m2.jar"
+            module.merge_sources(items, out1)
+            module.merge_sources(items, out2)
+            self.assertEqual(out1.read_bytes(), out2.read_bytes())
+
+    def test_class_set_is_union_and_entries_byte_identical(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            items = self._sources(
+                root,
+                [
+                    ("a", "a.one.flags", None),
+                    ("b", "b.two.flags", {"b/two/flags/Extra.uau": b"extra"}),
+                ],
+            )
+            out = root / "merged.jar"
+            module.merge_sources(items, out)
+            with zipfile.ZipFile(out) as merged:
+                merged_entries = set(merged.namelist())
+                for _name, src, _pkg in items:
+                    with zipfile.ZipFile(src) as source:
+                        for entry in source.namelist():
+                            if entry.endswith("/"):
+                                continue
+                            self.assertIn(entry, merged_entries)
+                            self.assertEqual(
+                                merged.read(entry), source.read(entry), entry
+                            )
+            self.assertIn("b/two/flags/Extra.uau", merged_entries)
+
+    def test_collision_fails_even_when_bytes_match(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            items = self._sources(
+                root,
+                [("a", "same.flags", None), ("b", "same.flags", None)],
+            )
+            with self.assertRaises(ValueError):
+                module.merge_sources(items, root / "merged.jar")
+
+    def test_diverging_manifest_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            items = self._sources(
+                root,
+                [
+                    ("a", "a.flags", None),
+                    (
+                        "b",
+                        "b.flags",
+                        {"META-INF/MANIFEST.MF": b"Manifest-Version: 2.0\r\n\r\n"},
+                    ),
+                ],
+            )
+            with self.assertRaises(ValueError):
+                module.merge_sources(items, root / "merged.jar")
+
+    def test_manifest_deduped_when_identical(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            items = self._sources(
+                root, [("a", "a.flags", None), ("b", "b.flags", None)]
+            )
+            out = root / "merged.jar"
+            module.merge_sources(items, out)
+            with zipfile.ZipFile(out) as merged:
+                self.assertEqual(
+                    merged.namelist().count("META-INF/MANIFEST.MF"), 1
+                )
+
+
 class TestBatchAllFlag(unittest.TestCase):
     """The optional --all batch mode keeps the single-artifact path intact."""
 
@@ -291,14 +408,50 @@ class TestBatchAllFlag(unittest.TestCase):
             "a-first": (Path("/b.jar"), Path("libs/a.jar"), "a.b"),
         }
         calls = []
+        merges = []
         with mock.patch.object(module, "CONFIGS", fake_configs), mock.patch.object(
+            module, "FRAMEWORK_FAMILY", frozenset()
+        ), mock.patch.object(
             module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
+        ), mock.patch.object(
+            module,
+            "merge_framework_family",
+            side_effect=lambda: merges.append("merged"),
         ):
             self.assertEqual(self._run_main(["--all"]), 0)
+        self.assertEqual(merges, ["merged"])
         self.assertEqual(
             calls,
             [fake_configs["a-first"], fake_configs["z-last"]],
         )
+
+    def test_all_excludes_family_members_from_individual_copies(self):
+        fake_configs = {
+            "solo": (Path("/a.jar"), Path("libs/a.jar"), "a.b"),
+            "fam": (Path("/f.jar"), Path("libs/f.jar"), "f.g"),
+        }
+        calls = []
+        with mock.patch.object(module, "CONFIGS", fake_configs), mock.patch.object(
+            module, "FRAMEWORK_FAMILY", frozenset({"fam"})
+        ), mock.patch.object(
+            module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
+        ), mock.patch.object(module, "merge_framework_family", return_value=None):
+            self.assertEqual(self._run_main(["--all"]), 0)
+        self.assertEqual(calls, [fake_configs["solo"]])
+
+    def test_merge_framework_mode_merges_without_copying_individuals(self):
+        calls = []
+        merges = []
+        with mock.patch.object(
+            module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
+        ), mock.patch.object(
+            module,
+            "merge_framework_family",
+            side_effect=lambda: merges.append("merged"),
+        ):
+            self.assertEqual(self._run_main(["--merge-framework"]), 0)
+        self.assertEqual(merges, ["merged"])
+        self.assertEqual(calls, [])
 
     def test_single_artifact_still_works(self):
         fake_configs = {"only": (Path("/a.jar"), Path("libs/a.jar"), "a.b")}
@@ -316,6 +469,14 @@ class TestBatchAllFlag(unittest.TestCase):
     def test_artifact_and_all_is_an_error(self):
         with self.assertRaises(SystemExit):
             self._run_main(["systemui-flags", "--all"])
+
+    def test_artifact_and_merge_framework_is_an_error(self):
+        with self.assertRaises(SystemExit):
+            self._run_main(["systemui-flags", "--merge-framework"])
+
+    def test_all_and_merge_framework_is_an_error(self):
+        with self.assertRaises(SystemExit):
+            self._run_main(["--all", "--merge-framework"])
 
 
 class TestAospPaths(unittest.TestCase):
