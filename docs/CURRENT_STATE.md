@@ -96,6 +96,7 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 - Traceur：双直接 AAR（TraceurCommon 640 类 + Traceur-res 105 res，Task 038）；占位 jar 已退役。
 - 官方 Maven 坐标优先（Task 026 审计后）：zxing、protobuf-javalite、coroutines 1.10.2、errorprone 等走公网；AOSP prebuilts 版本多数不在公网，逐个查 `maven-metadata.xml`。
 - aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034，位于 `libs/` 根目录）；notification flags 已从本地 Maven 迁出，现为 `libs/notification-flags.jar`。
+- aconfig 运行时闭包族（2026-08-24 起）：`libs/window-flags.jar`、`libs/device-state-feature-flags.jar`、`libs/android-os-flags.jar` 均为 owning `java_aconfig_library` javac JAR 的 byte-identical 副本（sha256 对源一致），修复设备 bootclasspath 只有 `hidden_from_bootclasspath` 重写名、缺公开名的 `NoClassDefFoundError`。Task 054 预扫描发现 11 个同族残留 hazard（详见 `docs/issues/2026-08-25-android-os-flags-runtime-closure.md`），当前 boot 首因为 `android/service/notification/Flags`（其 Soong javac 产物在 AOSP 树尚未构建，需先 `m android.service.notification.flags-aconfig-java`）。
 - **Task 045 后**：`libs/android-merged.jar` 与 `libs/framework-res.apk` 已删除（被单入口生成器的 AOSP 输入取代）；`libs/keepanno-annotations.jar` 保留（`:SystemUI-core` 独立 compile-only 依赖）。
 - `libs/prebuilts/` 仅剩 `tracinglib-platform.jar`（历史遗留，逐步清理）。
 
@@ -122,8 +123,11 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 3. ✅ Task 051：app→core→DEX assembly、hidden-API/platform-signature 分歧和 Debug size 根因审计完成；双轴 review 与 main fresh static acceptance 通过。四类修复 family 保持 `NOT APPROVED`；用户只批准了 Family B 方向。
 4. ✅ Tasks 052/052A/B/C：same-tree ARM64 `emu_img_zip` 构建与诊断 probe 完成；官方 launcher/source/product matrix 研究确定 ARM64-on-x86_64 非正式支持路径，`sdk_phone64_x86_64` 为主候选，Cuttlefish x86_64 为 prerequisite-gated 备选。
 5. **等待聊天内 bounded-design 批准**：先停止 PID 1727011 的 `task052-arm64`，证明无 QEMU/Emulator/ADB target；在严格 `m -j4 emu_img_zip`、29 GiB 当前可用空间、预计新增 15–17 GiB、10 GiB stop threshold、无并行 Gradle/Soong 下构建 `sdk_phone64_x86_64 trunk_staging userdebug`，并在实际 launcher context 证明 effective KVM access。未经独立证据与决策不删除既有 AOSP output。
-6. same-tree stock baseline 只有在 `sys.boot_completed=1`、`system_server` 与原厂 SystemUI 稳定后才允许部署 frozen Debug APK；最终 Debug gate 为 PID 稳定至少 60 秒，以及状态栏、Quick Settings、锁屏/唤醒/解锁、launcher 交互均无 fatal/ANR/watchdog/crash loop。
-7. Debug runtime closure 后再单独验证 Release；Task 043 其余 7 个 `NOT APPROVED` packets 继续暂停。
+
+6. ✅ Task 053：DEX 字节码取证完成（`docs/issues/2026-08-25-dex-bytecode-forensics.md`），NLSUMI 重复注册根因锁定为构造首次拋出（`alreadyRegistered` 循环）。
+7. ✅ Task 054：`libs/android-os-flags.jar`（base 变体，byte-identical）已打包并接入 `:SystemUI-core`；task053 三处 TEMP-DEBUG 已移除且源对齐 MISSING/MISPLACED/EXTRA=0。设备验收：`android/os/Flags` NCDF 归零、重复注册 crash 归零、SysUIDup 静默；**PID 稳定被下一族 hazard `android/service/notification/Flags` 阻塞**（预扫描共 11 个，均有 hidden twin），建议 Task 055 同法修复。
+8. same-tree stock baseline 只有在 `sys.boot_completed=1`、`system_server` 与原厂 SystemUI 稳定后才允许部署 frozen Debug APK；最终 Debug gate 为 PID 稳定至少 60 秒，以及状态栏、Quick Settings、锁屏/唤醒/解锁、launcher 交互均无 fatal/ANR/watchdog/crash loop。
+9. Debug runtime closure 后再单独验证 Release；Task 043 其余 7 个 `NOT APPROVED` packets 继续暂停。
 
 ## Verification commands and evidence
 

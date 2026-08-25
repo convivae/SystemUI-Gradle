@@ -249,6 +249,14 @@ dependencies {
     // framework-minus-apex 的 com.android.internal.hidden_from_bootclasspath.*；
     // AGP 不继承该重写，因此打包 owning java_aconfig_library 的真实 javac runtime JAR。
     implementation(files("${rootProject.projectDir}/libs/device-state-feature-flags.jar"))
+    // Framework android.os flags（android.os.Flags；NLSUMI privateSpaceFlagsEnabled 等引用）。
+    // 与 window-flags 相同：该 exportable aconfig 在 Soong 中被 JarJarProvider 迁移至
+    // framework-minus-apex 的 com.android.internal.hidden_from_bootclasspath.*，设备
+    // bootclasspath 上不存在公开名 Landroid/os/Flags;；AGP 不继承该重写，因此打包
+    // owning java_aconfig_library（android.os.flags-aconfig-java，base 变体）的真实
+    // javac runtime JAR。base 变体的 backing API
+    // android.os.flagging.PlatformAconfigPackageInternal 已验证存在于设备 framework.jar。
+    implementation(files("${rootProject.projectDir}/libs/android-os-flags.jar"))
     // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖；tier③ 官方坐标，task 027。
     // AOSP 私有 com.google.protobuf.nano.android.* 3 类全仓零引用，由 framework.jar/platform 兑底）
     implementation(libs.protobuf.javanano)
