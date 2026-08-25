@@ -1,5 +1,13 @@
 pluginManagement {
     repositories {
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://artifactory.jd.com/libs-releases-local/") }
+        maven { url = uri("https://artifactory.jd.com/libs-snapshots-local/") }
+
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -15,6 +23,12 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://artifactory.jd.com/libs-releases-local/") }
+        maven { url = uri("https://artifactory.jd.com/libs-snapshots-local/") }
+
         google()
         mavenCentral()
         maven { url = uri("${rootProject.projectDir}/libs/maven") }
