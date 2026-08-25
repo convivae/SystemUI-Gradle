@@ -217,17 +217,18 @@ dependencies {
     implementation(libs.systemui.settingslib)
     // setupcompat：AOSP SettingsLib 经 setupdesign→setupcompat 传递获得 compile classpath
     // （com.google.android.setupcompat.util.WizardManagerHelper.SETTINGS_SECURE_USER_SETUP_COMPLETE 等）；
-    // external/setupcompat android_library（含 res），tier② AAR 经本地 Maven 交付。
-    implementation(libs.systemui.setupcompat)
-    implementation(libs.systemui.iconloader)
+    // external/setupcompat android_library（含 res），tier② 直接 AAR（libs/aars/，单 consumer 族，task 059）。
+    implementation(files("${rootProject.projectDir}/libs/aars/setupcompat.aar"))
+    // iconloader：直接 AAR（libs/aars/，单 consumer 族，task 059）
+    implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
     implementation(libs.systemui.wmshell)
     // WindowManager-Shell-shared：WM-Shell 的 static_libs 子模块（ShellTransitions/TransitionUtil 等），
     // Soong javac JAR 不含 static_libs 代码，需单独引入。纯代码无 R 类。
     // WM-Shell-shared 合并 javac+kotlin JAR（含 PhysicsAnimator），改为直接 AAR
     implementation(libs.systemui.wmshell.shared)
     // LowLightDreamLib: com.android.dream.lowlight.util.TruncatedInterpolator 等
-    // (frameworks/base/libs/dream/lowlight，AOSP core static_libs)
-    implementation(libs.systemui.lowlight.dream.lib)
+    // (frameworks/base/libs/dream/lowlight，AOSP core static_libs)；直接 AAR（libs/aars/，单 consumer 族，task 059）
+    implementation(files("${rootProject.projectDir}/libs/aars/LowLightDreamLib.aar"))
     // com.android.systemui.shared.Flags（KeyboardTouchpadTutorialCoreStartable 等使用）
     implementation(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // zxing-core: SettingsLib 的 Soong static_libs（com.google.zxing.WriterException 等），
@@ -253,7 +254,8 @@ dependencies {
     implementation(libs.protobuf.javanano)
     // com.android.server.policy.feature.flags.Flags（ConnectingDisplayViewModel 等使用）
     implementation(files("${rootProject.projectDir}/libs/device-state-flags.jar"))
-    implementation(libs.systemui.wifitrackerlib)
+    // WifiTrackerLib：直接 AAR（libs/aars/，单 consumer 族，task 059）
+    implementation(files("${rootProject.projectDir}/libs/aars/WifiTrackerLib.aar"))
     // SettingsLibColor：com.android.settingslib.color.R（settingslib_color_blue400 等）
     // 独立 android_library（res-only，无 srcs），被 SettingsLibIllustrationPreference 依赖。
     // SystemUI 源码 SideFpsOverlayViewModel.kt 直接引用 com.android.settingslib.color.R。

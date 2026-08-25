@@ -474,6 +474,8 @@ command machine-parses §9 row-by-row and asserts these counts; see §13).
 ## 10. User approval packets
 
 ### SettingsLib family delivery — NOT APPROVED
+> RESOLVED 2026-08-25 (task 059, user decision): PERMANENTLY CLOSED — the 17 per-target AARs stay;
+> the umbrella AAR experiment will not be run.
 - Why it exists now: umbrella code AAR (1153 classes) + 17 per-target res-only AARs + SettingsTheme + color,
  delivered via local Maven with 17 mechanical POM edges (ADR 0005), produced by Task 040 to close R8 refs 81→7.
 - Current primary-source evidence: §3.1/§3.2 inventories; `SettingsLib-1.0.1.pom` (17 dependencies);
@@ -492,6 +494,8 @@ command machine-parses §9 row-by-row and asserts these counts; see §13).
   the per-target split (Task 040 era), to bound the experiment.
 
 ### WifiTrackerLib local-Maven delivery — NOT APPROVED
+> RESOLVED 2026-08-25 (task 059, user decision): migrated to direct AAR consumption from `libs/aars/WifiTrackerLib.aar`
+> (`:SystemUI-core` wiring switched to `files(...)`; catalog alias and `libs/maven/.../WifiTrackerLib/` tree retired).
 - Why it exists now: single-family AAR installed to `com.android.systemui:WifiTrackerLib:1.0.0`.
 - Current primary-source evidence: §3.2 row (skeleton POM, 0 deps); sole consumer
   `SystemUI-core/build.gradle.kts:247`; byte-identical to `libs/aars/WifiTrackerLib.aar`.
@@ -505,21 +509,29 @@ command machine-parses §9 row-by-row and asserts these counts; see §13).
 - History needed later: none.
 
 ### iconloader local-Maven delivery — NOT APPROVED
+> RESOLVED 2026-08-25 (task 059, user decision): migrated to direct AAR consumption from `libs/aars/iconloader.aar`
+> (1.0.1 bytes unchanged; catalog alias and `libs/maven/.../iconloader/` tree retired).
 - Same structure as WifiTrackerLib (sole consumer `SystemUI-core/build.gradle.kts:222`; skeleton POM;
   byte-identical 1.0.1 AAR). Same experiment, same losses (none known beyond uniformity), same validation.
 - History needed later: why 1.0.0→1.0.1 was bumped (content change) — only if the seam is actually migrated.
 
 ### setupcompat local-Maven delivery — NOT APPROVED
+> RESOLVED 2026-08-25 (task 059, user decision): migrated to direct AAR consumption from `libs/aars/setupcompat.aar`
+> (catalog alias and `libs/maven/.../setupcompat/` tree retired).
 - Sole consumer `SystemUI-core/build.gradle.kts:221`; skeleton POM; single upstream owner
   `external/setupcompat`. Same experiment/validation as WifiTrackerLib.
 - History needed later: none.
 
 ### LowLightDreamLib local-Maven delivery — NOT APPROVED
+> RESOLVED 2026-08-25 (task 059, user decision): migrated to direct AAR consumption from `libs/aars/LowLightDreamLib.aar`
+> (catalog alias and `libs/maven/.../LowLightDreamLib/` tree retired).
 - Sole consumer `SystemUI-core/build.gradle.kts:230`; skeleton POM; owner `frameworks/base/libs/dream/lowlight`.
   Same experiment/validation.
 - History needed later: none.
 
 ### animationlib local-Maven delivery — NOT APPROVED
+> RESOLVED 2026-08-25 (task 059, user decision): KEPT local Maven by design — multi-module sharing across 3 modules;
+> catalog alias is the standard Gradle mechanism. Packet closed as "kept by design".
 - Why it exists now: single-family AAR consumed via direct catalog aliases in 3 modules
   (`:SystemUI-customization:63`, `:SystemUI-animation:54`, `:SystemUI-compose:60`) and transitively by
   `:SystemUI-core` through `project(":SystemUI-animation")` (`SystemUI-core/build.gradle.kts:122`).
@@ -551,6 +563,7 @@ command machine-parses §9 row-by-row and asserts these counts; see §13).
   — only to inform, not to revive, the rejected proposal.
 
 ### libs/prebuilts/tracinglib-platform.jar — NOT APPROVED
+> DEFERRED to Release phase (user decision 2026-08-25, task 059)
 - Why it exists now: unknown on current evidence; CURRENT_STATE calls it historical legacy for gradual cleanup.
 - Current primary-source evidence: `implementation` in `:SystemUI-compose:61`, compileOnly in `:SystemUI-common:38`
   and `:SystemUI-shared:68`; 64 classes; sole `libs/prebuilts/` resident; no producing tool (§4.5).

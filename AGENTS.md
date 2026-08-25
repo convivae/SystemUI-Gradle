@@ -280,6 +280,11 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
    唯一例外见 ADR 0005：SettingsLib 资源闭包的 `SettingsLib` POM 携带 17 条机械镜像
    `Android.bp static_libs` 的 per-target 依赖边），在 `libs.versions.toml` 声明 catalog alias
    （如 `libs.systemui.settingslib`）统一引用；build.gradle.kts 中不得直接 `files("libs/aars/xxx.aar")`。
+   **例外（用户 2026-08-25 批准，Task 059，关闭 Task 043 八个 packet 中的四个）**：单 artifact、单 consumer
+   （仅 `:SystemUI-core`）、骨架 POM 且 Maven 副本与 `libs/aars/` 字节相同的族，可直接经
+   `files("libs/aars/xxx.aar")` 消费而不走本地 Maven；当前直接消费集为 WifiTrackerLib、iconloader、
+   setupcompat、LowLightDreamLib 四族。本地 Maven 路径保留给多 consumer 族（如 animationlib、
+   SettingsLib 族、WindowManager-Shell）及任何已证实资源/依赖冲突的族。
 3. **本地 Maven 仓（`libs/maven/`）只交付 AAR**；JAR（framework.jar、android.car.jar、aconfig flags jar 等）
    位于 `libs/` 根目录直接引用。
 4. **内容变化必须升坐标**：本地 Maven AAR 的类集/资源变化时必须升 version 并退役旧版

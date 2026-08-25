@@ -150,13 +150,12 @@ androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", 
 
 # Local Maven AARs (libs/maven/)：由 tools/package_aosp_aar.py 生成到 libs/aars/，
 # 再由 tools/install_aar_to_maven.py 安装到 libs/maven/ 并生成 POM 骨架
+# Task 059（用户 2026-08-25 批准）：WifiTrackerLib / iconloader / setupcompat / LowLightDreamLib
+# 四个单 artifact、单 consumer 族已从本地 Maven 退役，改为直接消费 libs/aars/*.aar（见 AGENTS.md §3.2 例外）。
 systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "1.0.1" }
-systemui-wifitrackerlib = { group = "com.android.systemui", name = "WifiTrackerLib", version = "1.0.0" }
 systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "1.0.1" }
 systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "1.0.0" }
 systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "1.0.0" }
-systemui-iconloader = { group = "com.android.systemui", name = "iconloader", version = "1.0.1" }
-systemui-lowlight-dream-lib = { group = "com.android.systemui", name = "LowLightDreamLib", version = "1.0.0" }
 systemui-settingslib-color = { group = "com.android.settingslib", name = "color", version = "1.0.0" }
 systemui-settingslib-theme = { group = "com.android.systemui", name = "SettingsLibSettingsTheme", version = "1.0.1" }
 # Task 015（B2 可达性最小集，ADR 0005）：SettingsLib per-target res-only AAR，
@@ -180,5 +179,4 @@ systemui-settingslib-illustration-preference = { group = "com.android.systemui",
 systemui-settingslib-slider-preference = { group = "com.android.systemui", name = "SettingsLibSliderPreference", version = "1.0.0" }
 systemui-settingslib-usage-progress-bar-preference = { group = "com.android.systemui", name = "SettingsLibUsageProgressBarPreference", version = "1.0.0" }
 systemui-settingslib-settings-spinner = { group = "com.android.systemui", name = "SettingsLibSettingsSpinner", version = "1.0.0" }
-systemui-setupcompat = { group = "com.android.systemui", name = "setupcompat", version = "1.0.0" }
 
