@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Gradle-native 架构 spec 已获用户批准；Task 043 只读现状审查 plan/brief 已起草，等待 exact brief 单独批准后派发；release R8 事实仍为 1 个 missing ref）。
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：**DEBUG_RUNTIME_PASS 已达成（2026-08-25）**——Debug 构建全门绿、emulator-5554 零 crash 运行最终树 APK；下一阶段为 Release runtime closure 与两个挂起包。）
 
 ---
 
@@ -17,7 +17,19 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：用户复核 `docs/orchestration/tasks/043-gradle-native-current-state-audit.md`；批准后才派隔离只读 Worker，禁止直接实施、回退或重启原 Task 042。
+5. **当前唯一工程优先级**：Release 阶段——Release runtime closure 上设备验证打头；遗留 2 包（AssumeTrueForR8 blocker、tracinglib-platform.jar 溯源）均在 Release 阶段处理。
+
+## 1.1 Debug 闭环回顾（2026-08-24→25，一晚完成）
+
+| Task | 内容 | 报告 |
+|------|------|------|
+| 053 | dex 字节码 forensics：设备 framework hidden twin vs SysUISdk 公开名的结构性根因 | `docs/issues/2026-08-25-dex-bytecode-forensics.md` |
+| 054/055 | 12 个 aconfig flags 同族缺类批量修复（权威 Soong JAR byte-identical 拷贝） | `docs/issues/2026-08-25-aconfig-flags-batch-closure.md` |
+| 057 | 方案 M：14 源 JAR 确定性合并为单一 `libs/systemui-aconfig-flags.jar`，APK 逐字节不变 | `docs/issues/2026-08-25-aconfig-flags-single-jar-merge.md` |
+| 059 | 4 个单 consumer AAR 族改为 `files("libs/aars/…")` 直接消费（用户逐族授权，字节中性已证） | `docs/issues/2026-08-25-aar-direct-consumption-migration.md` |
+| 058 | DEBUG_RUNTIME_PASS gate suite 六门全绿（在 GLM-5.3 worker 上运行） | `docs/issues/2026-08-25-debug-runtime-pass-gate-suite.md` |
+
+关键新纪律（均来自 08-25 实战）：同工树=串行（两 Gradle 构建并发曾致 kernel OOM）；worker 只用 joycode GLM-5.3/5.2 模型；部署后必须设备端 sha256 二次校验（toybox cp 静默截断）；verity 保持 disabled（enable-verity 拆 overlay，见 PITFALLS §14）。
 
 ## 2. 环境确认
 
@@ -46,4 +58,4 @@ ls /home/conv/Android/Sdk/platforms/            # 必须有 android-SysUISdk
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：Release runtime closure（见 CURRENT_STATE 与 PLAN.md）。

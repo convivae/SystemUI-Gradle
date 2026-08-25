@@ -553,3 +553,27 @@ Release R8 的 missing refs 是真实 closure 缺口的信号；用宽泛 `-keep
 ---
 
 **下一步**: 阅读 `docs/architecture/STAGE2-3-RESEARCH-LOG.md` 深入调研。
+
+## 14. 设备/模拟器部署类踩坑（2026-08-25 收录）
+
+### 14.1 `adb enable-verity` 会拆掉 adb-remount overlay，部署的 APK 静默回退 stock
+
+**现象**: 按 task 054/055 流程把 Debug APK 部署到 `/system_ext/priv-app/SystemUI/` 并验证 sha256 正确后，想"恢复原状"执行了 `adb enable-verity` + reboot；重启后设备上的 APK 变回 stock（36,378,017 字节 / sha `dd1ff45a…`），部署产物凭空消失，无任何报错。
+
+**根因**: `adb disable-verity` + remount 走的是 overlayfs；`enable-verity` 重启后 dm-verity 重新启用，overlay 被整体拆除，底层只读分区原样暴露。部署态与 verity enabled 是**互斥**的两种终态。
+
+**结论/纪律**:
+- 采用 overlay 部署路线的设备，**verity 必须保持 disabled**，直到你主动决定放弃部署产物
+- reboot 本身不拆 overlay（overlay 跨重启存活已实测），**只有 enable-verity 才拆**
+- 每次 reboot 后 overlay 挂载可能需重新 `su 0 mount -o remount,rw /system_ext`（视镜像而定），但 enable-verity 是销毁性的，两者别混淆
+
+### 14.2 设备上 toybox `cp` 在 ENOSPC 时静默截断，必须 sha256 二次校验
+
+**现象**: task 058 部署时 scratch 空间将满，staged `cp` 返回成功但目标 APK 被截断（字节数不足），后续流程若无校验会把残缺 APK 当成功部署。
+
+**根因**: 设备端 toybox 的 `cp` 对写失败的兜底行为是截断而非报错退出。
+
+**结论/纪律（已写入部署规程）**:
+1. staging（`/data/local/tmp`）→ 同目录临时名 cp → `sync` → 原子 `mv`（同分区 rename）
+2. **mv 之后立刻 `su 0 sha256sum` 对比本地构建产物**，不一致 = 失败重来
+3. 空间不足时先 `am force-stop` + `kill -9` SystemUI 释放句柄，再删残缺文件
