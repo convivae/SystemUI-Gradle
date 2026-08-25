@@ -41,6 +41,7 @@ R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7
 | 2026-08-22 | **Debug 入口与真实首 fatal（Task 050）**：manifest 79 个组件入口改为 FQCN；fresh Debug APK 163,561,195 B / `4d8240fd…`，manifest→DEX 93 present + 2 aliases + 0 missing；扩容并重组 full super 后 byte-identical 部署，`-wipe-data` 触发 fresh PackageManager scan；真实 `SystemUIApplication` 启动后首 fatal 为 `Trace.registerWithPerfetto()` hidden-API denial | `docs/issues/2026-08-22-direct-debug-apk-runtime-closure.md` |
 | 2026-08-23 | **Task 051 根因审计闭环**：证明 `SystemUIApplication` 的 AOSP `static_libs`→Gradle project dependency→APK DEX assembly 正确；Soong `platform_apis:true` 注入 `usesNonSdkApi=true`，Google image 上 Gradle APK 为 policy 2 / `usesNonSdkApi=false` 且不在该 image 平台签名域；Debug 24 DEX / 77,342 classes，Release 2 DEX / 15,683 classes；四类方案均 `NOT APPROVED`，用户选择 same-tree Family B；双轴 PASS + main fresh static PASS | `docs/architecture/2026-08-22-systemui-application-runtime-and-debug-size-root-cause.md` |
 | 2026-08-23 | **Task 052 ARM64 构建/probe + 052A/B/C 研究闭环**：`sdk_phone64_arm64` `emu_img_zip` 在第二次严格 `-j4` 构建成功；direct SDK AArch64 QEMU/TCG 仅达 kernel/init/ADB、zygote 不稳且未 boot-complete；官方 source 证明 x86_64 launcher 拒绝 ARM64 guest、acloud 仍走该 launcher、`virt` 探针不是 Goldfish 支持路径；host-native `sdk_phone64_x86_64` 被选为下一候选；三个报告 main fresh acceptance PASS | `docs/issues/2026-08-22-same-tree-arm64-emulator-runtime.md` |
+| 2026-08-25 | **Task 059 直接 AAR 迁移（用户裁定 Task 043 packet）**：WifiTrackerLib/iconloader/setupcompat/LowLightDreamLib 四族从本地 Maven 退役改直接消费 `libs/aars/`（AGENTS.md §3.2 例外）；animationlib 按设计保留、SettingsLib 伞形实验永久关闭、tracinglib 推迟 Release——6/8 packet 关闭。新旧解析路径串行干净重建 APK 逐字节相同（`e8aad131…`），类集合 77,832 全等，243/243 测试 | `docs/issues/2026-08-25-aar-direct-consumption-migration.md` |
 
 ## Current build and verification matrix
 
@@ -91,8 +92,9 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 ## Dependency and artifact state
 
 - `libs/`（jar + aars + maven）全部提交入 git；新 clone 可直接构建。仅在重新生成 AOSP 产物时运行 `python3 tools/package_aosp_aar.py --all` + `python3 tools/install_aar_to_maven.py`。
-- 当前 artifact 数量是新架构只读审查的重点：`libs/maven/` 有 27 个 AAR，其中 20 个属于 SettingsLib family；`libs/aars/` 有 29 个 AAR。它们不是自动回退清单。
-- 当前本地 Maven 交付包括 SettingsLib 1.0.1（1153 类；POM 携 17 条 per-target 依赖边，ADR 0005）、SettingsLibSettingsTheme 1.0.1（15 类）、17 个 SettingsLib per-target res-only AAR、WindowManager-Shell 1.0.1（含 proto 闭包 1888 类）、iconloader 1.0.1（75 类）、animationlib、WifiTrackerLib、LowLightDreamLib、setupcompat、SettingsLibColor。
+- 当前 artifact 数量是新架构只读审查的重点：`libs/maven/` 有 23 个 AAR（Task 059 退役 4 个单 consumer 族后），其中 20 个属于 SettingsLib family；`libs/aars/` 有 29 个 AAR。它们不是自动回退清单。
+- 当前本地 Maven 交付包括 SettingsLib 1.0.1（1153 类；POM 携 17 条 per-target 依赖边，ADR 0005）、SettingsLibSettingsTheme 1.0.1（15 类）、17 个 SettingsLib per-target res-only AAR、WindowManager-Shell 1.0.1（含 proto 闭包 1888 类）、WindowManager-Shell-shared 1.0.0、animationlib（3 个模块共享，用户裁定按设计保留本地 Maven）、SettingsLibColor。
+- **直接 AAR 消费集（Task 059，用户 2026-08-25 批准，AGENTS.md §3.2 例外）**：WifiTrackerLib、iconloader、LowLightDreamLib、setupcompat 四个单 artifact、单 consumer（仅 `:SystemUI-core`）族经 `files("libs/aars/*.aar")` 直接消费；旧 Maven 坐标与 `libs/maven/` 树已退役。新旧解析路径各自串行干净重建产出**逐字节相同**的 APK（`e8aad131…`），定义类集合 77,832 全等（与 emulator-5554 现行部署基线 `b827df78…` 亦类集合全等，仅 D8 dex 打包布局差异）；详见 `docs/issues/2026-08-25-aar-direct-consumption-migration.md`。
 - Traceur：双直接 AAR（TraceurCommon 640 类 + Traceur-res 105 res，Task 038）；占位 jar 已退役。
 - 官方 Maven 坐标优先（Task 026 审计后）：zxing、protobuf-javalite、coroutines 1.10.2、errorprone 等走公网；AOSP prebuilts 版本多数不在公网，逐个查 `maven-metadata.xml`。
 - aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034，位于 `libs/` 根目录）；notification flags 已从本地 Maven 迁出，现为 `libs/notification-flags.jar`。
@@ -129,7 +131,7 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
    - ✅ **Task 055（2026-08-25 验收全绿）**：11 个同族 hazard 一次性批量关闭——8 个缺失 owning `java_aconfig_library` 单次 `m -j4`（lunch `sdk_phone64_x86_64-trunk_staging-userdebug`）构建齐，11 个 base-变体 javac JAR byte-identical 进 `libs/` + 接线；APK 24 dex 全扫 11+1（android/os 回归）Flags 类各恰好 1 处定义；emulator-5554 部署后 **PID 835 稳定 ≥5min、全窗零 NoClassDefFoundError、零 FATAL EXCEPTION、状态栏窗口存在且可见**（`docs/issues/2026-08-25-aconfig-flags-batch-closure.md`）。注：构建时 `export TOP=$(pwd)` 会破坏非交互 envsetup，应 `cd $AOSP_ROOT && . build/envsetup.sh`；部署 rm+cp 后必须校验目标 sha256（本任务拦到过 cp 静默截断）。
    - ✅ **Task 057（2026-08-25 验收全绿，用户方案 M）**：14 个族 JAR 合并为单一 `libs/systemui-aconfig-flags.jar`（确定性：连跑 sha256 相同；70 类+56 .uau 逐字节对源；类路径重叠 fail、manifest 去重）；wiring 收敛为 1 行；14 单 JAR 已 `git rm`；重建 APK 与 task055 已验基线**逐字节相同**（`b827df78…`），14/14 Flags 类 defs=1；设备按字节目标已满足，正式验证窗 PID 835 稳定 5min+、零 NCDF、状态栏可见。`pdvc_impl.txt` 确认为 task053 scratch 已删。（`docs/issues/2026-08-25-aconfig-flags-single-jar-merge.md`）
 8. same-tree stock baseline 只有在 `sys.boot_completed=1`、`system_server` 与原厂 SystemUI 稳定后才允许部署 frozen Debug APK；最终 Debug gate 为 PID 稳定至少 60 秒，以及状态栏、Quick Settings、锁屏/唤醒/解锁、launcher 交互均无 fatal/ANR/watchdog/crash loop。
-9. Debug runtime closure 后再单独验证 Release；Task 043 其余 7 个 `NOT APPROVED` packets 继续暂停。
+9. Debug runtime closure 后再单独验证 Release。Task 043 八个 `NOT APPROVED` packets 中 6 个已按用户 2026-08-25 裁定关闭（Task 059：4 族迁直接 AAR、animationlib 按设计保留、SettingsLib 伞形实验永久关闭）；AssumeTrueForR8 维持原标签（Release 姿态已由 Task 044 关闭），tracinglib-platform.jar 推迟到 Release 阶段。
 
 ## Verification commands and evidence
 

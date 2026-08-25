@@ -10,6 +10,7 @@
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
 | 055 | `w2:t1R` / `w2:p1X` (`task055-worker`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; AOSP `out/` writes only via `m -j4`; libs/*-flags.jar + tools + wiring + listed docs; adb emulator-5554 only; commits local, no push |
+| 059 | `w2:t1V` / `w2:p10` (`task059`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; 4 single-consumer AAR families to direct consumption; AGENTS.md §3.2 exception (user-approved); catalog + libs/maven retirement; audit §10 annotations; builds serialized `--max-workers=4`; commits local, no push |
 
 Task 050 worker panes (`w2J:p1` agent + `w2J:p2` shell) were closed 2026-08-25; the `SystemUI-Gradle-wt-050`
 evidence worktree and task branch remain on disk untouched. No active Task 050 worker.
@@ -23,9 +24,18 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 1. Present the bounded `sdk_phone64_x86_64 trunk_staging userdebug` build/launch design to the user; no build, QEMU stop, emulator launch, or ADB mutation before approval.
 2. After approval, stop PID 1727011 cleanly and prove zero QEMU/Emulator/ADB targets; build at strict `-j4` with 10 GiB disk stop threshold and no concurrent Gradle/Soong.
 3. Prove same-tree stock baseline (`sys.boot_completed=1`, stable `system_server` and stock SystemUI) before deploying the frozen Debug APK; then run 60-second PID and full UI/fatal/ANR/watchdog gates.
-4. Validate Release runtime only after Debug closure; keep the seven remaining Task 043 `NOT APPROVED` packets paused.
+4. Validate Release runtime only after Debug closure. Task 043: 6 of 8 `NOT APPROVED` packets closed by user decision 2026-08-25 (task 059: 4 families migrated to direct AAR, animationlib kept by design, SettingsLib umbrella permanently closed); AssumeTrueForR8 keeps its audit label (release posture already closed by Task 044); tracinglib-platform.jar deferred to Release phase.
 
 ## Recent Orchestration Transitions
+
+- 2026-08-25 — Task 059 (AAR direct-consumption migration) completed in the main checkout after
+  task058 was halted and the tree became exclusive. Four single-consumer families
+  (WifiTrackerLib/iconloader/setupcompat/LowLightDreamLib) now consume `libs/aars/*.aar` directly;
+  catalog aliases and `libs/maven/` trees retired; AGENTS.md §3.2 exception amended per user
+  approval. Byte-neutrality proven by cross-wiring A/B: old-wiring and new-wiring serial clean
+  rebuilds produce the byte-identical APK `e8aad131…`; class sets equal (77,832) to the deployed
+  `b827df78…` baseline. One concurrent-build OOM incident (task058 overlap) was isolated and
+  recovered via serialized `--max-workers=4` rebuilds. Commits local, not pushed.
 
 - 2026-08-25 — Task 053 (DEX bytecode forensics on the unscoped NLSUMI factory path) dispatched
   to a fresh tab `w2:t1Q` in the main checkout as a serial read-only task; brief at
@@ -304,6 +314,8 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-08-25 22:15 — Task 059 complete (reported): 4 single-consumer AAR families migrated from local Maven to direct `libs/aars/` consumption (byte-neutral, A/B-proven); 6 of 8 task-043 packets closed; AGENTS.md §3.2 exception added. Task 058 halted by chief; task059 owned the tree exclusively during final serial verification.
 
 2026-08-25 — Tasks 053/054/055 closed (android.os.Flags + 11 same-family flags runtime closure verified on emulator-5554, PID stable, zero NCDFE). User selected Option M; Task 057 single-JAR merge worker dispatched in same pane w2:p1X.
 
