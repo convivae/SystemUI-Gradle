@@ -33,6 +33,112 @@ def _soong(path: str) -> Path:
 
 # name -> (owning Soong javac source, destination, runtime package)
 CONFIGS = {
+    # Task 055 batch: the 11 residual aconfig runtime-closure hazards found by
+    # the APK prescan in task 054. Each owning java_aconfig_library lives in
+    # frameworks/base/AconfigFlags.bp (framework-minus-apex-aconfig-java-defaults,
+    # i.e. the device only carries the hidden_from_bootclasspath JarJar twin);
+    # the base-variant android_common/javac JAR (backing API
+    # PlatformAconfigPackageInternal, verified on the device bootclasspath)
+    # is packaged byte-identically.
+    "smartspace-flags": (
+        _soong(
+            "frameworks/base/android.app.smartspace.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.app.smartspace.flags-aconfig-java.jar"
+        ),
+        Path("libs/smartspace-flags.jar"),
+        "android.app.smartspace.flags",
+    ),
+    "content-pm-flags": (
+        _soong(
+            "frameworks/base/android.content.pm.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.content.pm.flags-aconfig-java.jar"
+        ),
+        Path("libs/content-pm-flags.jar"),
+        "android.content.pm",
+    ),
+    "biometrics-flags": (
+        _soong(
+            "frameworks/base/android.hardware.biometrics.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.hardware.biometrics.flags-aconfig-java.jar"
+        ),
+        Path("libs/biometrics-flags.jar"),
+        "android.hardware.biometrics",
+    ),
+    "usb-flags": (
+        _soong(
+            "frameworks/base/android.hardware.usb.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.hardware.usb.flags-aconfig-java.jar"
+        ),
+        Path("libs/usb-flags.jar"),
+        "android.hardware.usb.flags",
+    ),
+    "net-platform-flags": (
+        _soong(
+            "frameworks/base/android.net.platform.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.net.platform.flags-aconfig-java.jar"
+        ),
+        Path("libs/net-platform-flags.jar"),
+        "android.net.platform.flags",
+    ),
+    "permission-flags": (
+        _soong(
+            "frameworks/base/android.permission.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.permission.flags-aconfig-java.jar"
+        ),
+        Path("libs/permission-flags.jar"),
+        "android.permission.flags",
+    ),
+    "provider-flags": (
+        _soong(
+            "frameworks/base/android.provider.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.provider.flags-aconfig-java.jar"
+        ),
+        Path("libs/provider-flags.jar"),
+        "android.provider",
+    ),
+    "security-flags": (
+        _soong(
+            "frameworks/base/android.security.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.security.flags-aconfig-java.jar"
+        ),
+        Path("libs/security-flags.jar"),
+        "android.security",
+    ),
+    "service-controls-flags": (
+        _soong(
+            "frameworks/base/android.service.controls.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.service.controls.flags-aconfig-java.jar"
+        ),
+        Path("libs/service-controls-flags.jar"),
+        "android.service.controls.flags",
+    ),
+    "service-notification-flags": (
+        _soong(
+            "frameworks/base/android.service.notification.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.service.notification.flags-aconfig-java.jar"
+        ),
+        Path("libs/service-notification-flags.jar"),
+        "android.service.notification",
+    ),
+    "quickaccesswallet-flags": (
+        _soong(
+            "frameworks/base/android.service.quickaccesswallet.flags-aconfig-java/"
+            "android_common/javac/"
+            "android.service.quickaccesswallet.flags-aconfig-java.jar"
+        ),
+        Path("libs/quickaccesswallet-flags.jar"),
+        "android.service.quickaccesswallet",
+    ),
     "systemui-shared-flags": (
         _soong(
             "frameworks/libs/systemui/aconfig/"
@@ -172,11 +278,27 @@ def copy_jar(source: Path, destination: Path, runtime_package: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Package concrete AOSP aconfig JARs")
-    parser.add_argument("artifact", choices=sorted(CONFIGS))
+    parser.add_argument(
+        "artifact",
+        nargs="?",
+        choices=sorted(CONFIGS),
+        help="single artifact to package (backward-compatible positional)",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="package every configured artifact in sorted order",
+    )
     args = parser.parse_args()
-    source, destination, runtime_package = CONFIGS[args.artifact]
-    copy_jar(source, destination, runtime_package)
-    print(f"{args.artifact}: {source} -> {destination}")
+    if args.all and args.artifact:
+        parser.error("pass either a single artifact or --all, not both")
+    if not args.all and not args.artifact:
+        parser.error("pass a single artifact or --all")
+    names = sorted(CONFIGS) if args.all else [args.artifact]
+    for name in names:
+        source, destination, runtime_package = CONFIGS[name]
+        copy_jar(source, destination, runtime_package)
+        print(f"{name}: {source} -> {destination}")
     return 0
 
 

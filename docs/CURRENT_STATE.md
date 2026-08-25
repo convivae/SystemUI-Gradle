@@ -96,7 +96,7 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 - Traceur：双直接 AAR（TraceurCommon 640 类 + Traceur-res 105 res，Task 038）；占位 jar 已退役。
 - 官方 Maven 坐标优先（Task 026 审计后）：zxing、protobuf-javalite、coroutines 1.10.2、errorprone 等走公网；AOSP prebuilts 版本多数不在公网，逐个查 `maven-metadata.xml`。
 - aconfig flags：五个完整 Soong `javac` 产物 JAR（Task 034，位于 `libs/` 根目录）；notification flags 已从本地 Maven 迁出，现为 `libs/notification-flags.jar`。
-- aconfig 运行时闭包族（2026-08-24 起）：`libs/window-flags.jar`、`libs/device-state-feature-flags.jar`、`libs/android-os-flags.jar` 均为 owning `java_aconfig_library` javac JAR 的 byte-identical 副本（sha256 对源一致），修复设备 bootclasspath 只有 `hidden_from_bootclasspath` 重写名、缺公开名的 `NoClassDefFoundError`。Task 054 预扫描发现 11 个同族残留 hazard（详见 `docs/issues/2026-08-25-android-os-flags-runtime-closure.md`），当前 boot 首因为 `android/service/notification/Flags`（其 Soong javac 产物在 AOSP 树尚未构建，需先 `m android.service.notification.flags-aconfig-java`）。
+- aconfig 运行时闭包族（2026-08-24 起）：`libs/window-flags.jar`、`libs/device-state-feature-flags.jar`、`libs/android-os-flags.jar` 及 task 055 新增的 11 个（`smartspace-flags.jar`、`content-pm-flags.jar`、`biometrics-flags.jar`、`usb-flags.jar`、`net-platform-flags.jar`、`permission-flags.jar`、`provider-flags.jar`、`security-flags.jar`、`service-controls-flags.jar`、`service-notification-flags.jar`、`quickaccesswallet-flags.jar`）均为 owning `java_aconfig_library`（base 变体，定义于 `frameworks/base/AconfigFlags.bp`）javac JAR 的 byte-identical 副本（sha256 对源一致），修复设备 bootclasspath 只有 `hidden_from_bootclasspath` 重写名、缺公开名的 `NoClassDefFoundError`。至 task 055，该族已知的 14 个公开名类全部在 APK 内各恰有 1 处定义，设备 PID 稳定 ≥5min、零 NCDF（详见 `docs/issues/2026-08-25-aconfig-flags-batch-closure.md`）。
 - **Task 045 后**：`libs/android-merged.jar` 与 `libs/framework-res.apk` 已删除（被单入口生成器的 AOSP 输入取代）；`libs/keepanno-annotations.jar` 保留（`:SystemUI-core` 独立 compile-only 依赖）。
 - `libs/prebuilts/` 仅剩 `tracinglib-platform.jar`（历史遗留，逐步清理）。
 
@@ -126,6 +126,7 @@ assume/folding 规则；aconfig flag runtime 语义不变。Task 044 contract �
 
 6. ✅ Task 053：DEX 字节码取证完成（`docs/issues/2026-08-25-dex-bytecode-forensics.md`），NLSUMI 重复注册根因锁定为构造首次拋出（`alreadyRegistered` 循环）。
 7. ✅ Task 054：`libs/android-os-flags.jar`（base 变体，byte-identical）已打包并接入 `:SystemUI-core`；task053 三处 TEMP-DEBUG 已移除且源对齐 MISSING/MISPLACED/EXTRA=0。设备验收：`android/os/Flags` NCDF 归零、重复注册 crash 归零、SysUIDup 静默；**PID 稳定被下一族 hazard `android/service/notification/Flags` 阻塞**（预扫描共 11 个，均有 hidden twin），建议 Task 055 同法修复。
+   - ✅ **Task 055（2026-08-25 验收全绿）**：11 个同族 hazard 一次性批量关闭——8 个缺失 owning `java_aconfig_library` 单次 `m -j4`（lunch `sdk_phone64_x86_64-trunk_staging-userdebug`）构建齐，11 个 base-变体 javac JAR byte-identical 进 `libs/` + 接线；APK 24 dex 全扫 11+1（android/os 回归）Flags 类各恰好 1 处定义；emulator-5554 部署后 **PID 835 稳定 ≥5min、全窗零 NoClassDefFoundError、零 FATAL EXCEPTION、状态栏窗口存在且可见**（`docs/issues/2026-08-25-aconfig-flags-batch-closure.md`）。注：构建时 `export TOP=$(pwd)` 会破坏非交互 envsetup，应 `cd $AOSP_ROOT && . build/envsetup.sh`；部署 rm+cp 后必须校验目标 sha256（本任务拦到过 cp 静默截断）。
 8. same-tree stock baseline 只有在 `sys.boot_completed=1`、`system_server` 与原厂 SystemUI 稳定后才允许部署 frozen Debug APK；最终 Debug gate 为 PID 稳定至少 60 秒，以及状态栏、Quick Settings、锁屏/唤醒/解锁、launcher 交互均无 fatal/ANR/watchdog/crash loop。
 9. Debug runtime closure 后再单独验证 Release；Task 043 其余 7 个 `NOT APPROVED` packets 继续暂停。
 

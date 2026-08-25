@@ -257,6 +257,24 @@ dependencies {
     // javac runtime JAR。base 变体的 backing API
     // android.os.flagging.PlatformAconfigPackageInternal 已验证存在于设备 framework.jar。
     implementation(files("${rootProject.projectDir}/libs/android-os-flags.jar"))
+    // Task 055 批量：task 054 预扫描出的 11 个同族残留 hazard。每个 owning
+    // java_aconfig_library 均定义于 frameworks/base/AconfigFlags.bp（framework-minus-apex-
+    // aconfig-java-defaults，设备 bootclasspath 上仅有 JarJar 重写后的
+    // com.android.internal.hidden_from_bootclasspath.* 双生类，公开名不存在）；AGP 不继承
+    // 该重写，因此打包 base 变体的真实 javac runtime JAR（backing API
+    // android.os.flagging.PlatformAconfigPackageInternal 已验证在设备 BCP，字节级与
+    // Soong 产物一致，validator 核查五类集合）。
+    implementation(files("${rootProject.projectDir}/libs/smartspace-flags.jar"))          // android.app.smartspace.flags.*
+    implementation(files("${rootProject.projectDir}/libs/content-pm-flags.jar"))          // android.content.pm.*
+    implementation(files("${rootProject.projectDir}/libs/biometrics-flags.jar"))          // android.hardware.biometrics.*
+    implementation(files("${rootProject.projectDir}/libs/usb-flags.jar"))                 // android.hardware.usb.flags.*
+    implementation(files("${rootProject.projectDir}/libs/net-platform-flags.jar"))        // android.net.platform.flags.*
+    implementation(files("${rootProject.projectDir}/libs/permission-flags.jar"))          // android.permission.flags.*
+    implementation(files("${rootProject.projectDir}/libs/provider-flags.jar"))            // android.provider.*
+    implementation(files("${rootProject.projectDir}/libs/security-flags.jar"))            // android.security.*
+    implementation(files("${rootProject.projectDir}/libs/service-controls-flags.jar"))    // android.service.controls.flags.*
+    implementation(files("${rootProject.projectDir}/libs/service-notification-flags.jar")) // android.service.notification.*（boot 关键首因）
+    implementation(files("${rootProject.projectDir}/libs/quickaccesswallet-flags.jar"))   // android.service.quickaccesswallet.*
     // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖；tier③ 官方坐标，task 027。
     // AOSP 私有 com.google.protobuf.nano.android.* 3 类全仓零引用，由 framework.jar/platform 兑底）
     implementation(libs.protobuf.javanano)

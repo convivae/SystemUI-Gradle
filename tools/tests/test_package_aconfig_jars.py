@@ -65,6 +65,68 @@ BATCH2_CONFIGS = {
 }
 
 
+BATCH3_CONFIGS = {
+    # Task 055 batch: 11 residual same-family hazards. Each maps the base-variant
+    # android_common/javac JAR of its java_aconfig_library in
+    # frameworks/base/AconfigFlags.bp to libs/ and its runtime package.
+    "smartspace-flags": (
+        "android.app.smartspace.flags-aconfig-java",
+        Path("libs/smartspace-flags.jar"),
+        "android.app.smartspace.flags",
+    ),
+    "content-pm-flags": (
+        "android.content.pm.flags-aconfig-java",
+        Path("libs/content-pm-flags.jar"),
+        "android.content.pm",
+    ),
+    "biometrics-flags": (
+        "android.hardware.biometrics.flags-aconfig-java",
+        Path("libs/biometrics-flags.jar"),
+        "android.hardware.biometrics",
+    ),
+    "usb-flags": (
+        "android.hardware.usb.flags-aconfig-java",
+        Path("libs/usb-flags.jar"),
+        "android.hardware.usb.flags",
+    ),
+    "net-platform-flags": (
+        "android.net.platform.flags-aconfig-java",
+        Path("libs/net-platform-flags.jar"),
+        "android.net.platform.flags",
+    ),
+    "permission-flags": (
+        "android.permission.flags-aconfig-java",
+        Path("libs/permission-flags.jar"),
+        "android.permission.flags",
+    ),
+    "provider-flags": (
+        "android.provider.flags-aconfig-java",
+        Path("libs/provider-flags.jar"),
+        "android.provider",
+    ),
+    "security-flags": (
+        "android.security.flags-aconfig-java",
+        Path("libs/security-flags.jar"),
+        "android.security",
+    ),
+    "service-controls-flags": (
+        "android.service.controls.flags-aconfig-java",
+        Path("libs/service-controls-flags.jar"),
+        "android.service.controls.flags",
+    ),
+    "service-notification-flags": (
+        "android.service.notification.flags-aconfig-java",
+        Path("libs/service-notification-flags.jar"),
+        "android.service.notification",
+    ),
+    "quickaccesswallet-flags": (
+        "android.service.quickaccesswallet.flags-aconfig-java",
+        Path("libs/quickaccesswallet-flags.jar"),
+        "android.service.quickaccesswallet",
+    ),
+}
+
+
 def write_runtime_jar(path, package="com.example.flags", classes=RUNTIME_CLASSES):
     """Write a synthetic aconfig runtime JAR with the given class names."""
     prefix = package.replace(".", "/")
@@ -150,6 +212,25 @@ class TestAconfigJarPackaging(unittest.TestCase):
                 self.assertEqual(module.CONFIGS[name][1], destination)
                 self.assertEqual(module.CONFIGS[name][2], package)
 
+    def test_batch3_config_matrix(self):
+        # The eleven Batch-3 (task 055) artifacts must map exact owning Soong
+        # javac sources to their destinations and runtime packages.
+        for name, (soong_module, destination, package) in BATCH3_CONFIGS.items():
+            with self.subTest(config=name):
+                self.assertIn(name, module.CONFIGS)
+                source = module.CONFIGS[name][0]
+                self.assertEqual(
+                    source,
+                    module.AOSP_INTERMEDIATES
+                    / "frameworks/base"
+                    / soong_module
+                    / "android_common/javac"
+                    / f"{soong_module}.jar",
+                )
+                self.assertNotIn("turbine", str(source))
+                self.assertEqual(module.CONFIGS[name][1], destination)
+                self.assertEqual(module.CONFIGS[name][2], package)
+
     def test_copy_preserves_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -196,6 +277,46 @@ class TestAconfigJarPackaging(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 module.copy_jar(source, root / "out.jar", "com.example.flags")
+
+class TestBatchAllFlag(unittest.TestCase):
+    """The optional --all batch mode keeps the single-artifact path intact."""
+
+    def _run_main(self, argv):
+        with mock.patch.object(sys, "argv", ["package_aconfig_jars.py"] + argv):
+            return module.main()
+
+    def test_all_packages_every_config_in_sorted_order(self):
+        fake_configs = {
+            "z-last": (Path("/a.jar"), Path("libs/z.jar"), "a.z"),
+            "a-first": (Path("/b.jar"), Path("libs/a.jar"), "a.b"),
+        }
+        calls = []
+        with mock.patch.object(module, "CONFIGS", fake_configs), mock.patch.object(
+            module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
+        ):
+            self.assertEqual(self._run_main(["--all"]), 0)
+        self.assertEqual(
+            calls,
+            [fake_configs["a-first"], fake_configs["z-last"]],
+        )
+
+    def test_single_artifact_still_works(self):
+        fake_configs = {"only": (Path("/a.jar"), Path("libs/a.jar"), "a.b")}
+        calls = []
+        with mock.patch.object(module, "CONFIGS", fake_configs), mock.patch.object(
+            module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
+        ):
+            self.assertEqual(self._run_main(["only"]), 0)
+        self.assertEqual(calls, [fake_configs["only"]])
+
+    def test_missing_selection_is_an_error(self):
+        with self.assertRaises(SystemExit):
+            self._run_main([])
+
+    def test_artifact_and_all_is_an_error(self):
+        with self.assertRaises(SystemExit):
+            self._run_main(["systemui-flags", "--all"])
+
 
 class TestAospPaths(unittest.TestCase):
     """The unified AOSP root source: one default, env and explicit overrides."""
