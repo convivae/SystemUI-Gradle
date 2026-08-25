@@ -1,8 +1,8 @@
 # Task 044 (user-approved option A, 2026-08-21): Gradle-native R8 adapter.
 #
-# The suppressed descriptor below is a CLASS-retained annotation referenced by
-# generated aconfig flag JARs (e.g. com.android.wifi.flags.FeatureFlags). It
-# is a build/optimizer-only signature with no APK runtime behavior: it is not
+# The suppressed descriptors below are CLASS-retained annotations referenced by
+# generated aconfig flag JARs (e.g. com.android.wifi.flags.FeatureFlags). They
+# are build/optimizer-only signatures with no APK runtime behavior: not
 # instantiated, reflected, or JNI-resolved on any supported runtime path
 # (classified in Task 043).
 #
@@ -10,8 +10,16 @@
 # no SysUISdk mutation) and does NOT import any part of AOSP's
 # aconfig_proguard.flags: no keep/assumevalues/assumenosideeffects rules and
 # no aconfig flag folding are introduced, so flag runtime semantics stay
-# unchanged. The single exact-FQN suppression below only tells R8 that the
-# unresolved annotation reference may be ignored.
+# unchanged. The exact-FQN suppressions below only tell R8 that the unresolved
+# annotation references may be ignored.
+#
+# Second same-family instance (task 060, user-approved option A, 2026-08-25):
+# -dontwarn com.android.aconfig.annotations.AssumeFalseForR8 — the false-valued
+# sibling of AssumeTrueForR8 from the same aconfig pipeline. It entered the
+# classpath via the task 055 window-flags jar (libs/systemui-aconfig-flags.jar,
+# com.android.window.flags.FeatureFlags, RuntimeInvisibleAnnotations / CLASS
+# retention) and is never runtime-resolved.
 #
 # Wired only into the minified `release` build type of app/build.gradle.kts.
 -dontwarn com.android.aconfig.annotations.AssumeTrueForR8
+-dontwarn com.android.aconfig.annotations.AssumeFalseForR8
