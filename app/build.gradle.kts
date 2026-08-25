@@ -8,10 +8,14 @@ plugins {
 android {
     // AGP namespace vs AOSP package: AOSP soong has no namespace concept,
     // but AGP requires every module to have a unique namespace.
-    // Strategy (per ref CarSystemUIGradle pattern): :app is the APK producer
-    // so it gets a distinct namespace; :SystemUI-core keeps com.android.systemui
-    // so its internal `import com.android.systemui.R` continues to resolve
-    // (aapt2 generates R.jar in :SystemUI-core's namespace).
+    // Strategy (Task 050): the namespace CANNOT be unified with :SystemUI-core
+    // — AGP 9.3.1 manifest merger rejects two modules sharing one namespace
+    // ("Namespace 'com.android.systemui' is used in multiple modules"),
+    // and a distinct namespace makes AGP expand the AOSP manifest's relative
+    // component names against com.android.systemui.app (79 unresolvable
+    // packaged entries, runtime ClassNotFoundException; Tasks 048/049/050).
+    // Fix: the manifest's package-dependent entry attributes are fully
+    // qualified to com.android.systemui.* FQCNs (user-approved, Task 050).
     // applicationId stays "com.android.systemui" — that's the AOSP APK id.
     namespace = "com.android.systemui.app"
     compileSdkPreview = "SysUISdk"

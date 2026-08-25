@@ -394,10 +394,10 @@
     <protected-broadcast android:name="com.android.systemui.STARTED" />
 
     <application
-        android:name=".SystemUIApplication"
+        android:name="com.android.systemui.SystemUIApplication"
         android:persistent="true"
         android:allowClearUserData="false"
-        android:backupAgent=".backup.BackupHelper"
+        android:backupAgent="com.android.systemui.backup.BackupHelper"
         android:killAfterRestore="false"
         android:hardwareAccelerated="true"
         android:label="@string/app_label"
@@ -417,15 +417,15 @@
              up everything else.
              TODO: Should have an android:permission attribute
              -->
-        <service android:name="SystemUIService"
+        <service android:name="com.android.systemui.SystemUIService"
             android:exported="true"
         />
-        <service android:name=".wallet.controller.WalletContextualLocationsService"
+        <service android:name="com.android.systemui.wallet.controller.WalletContextualLocationsService"
             android:exported="true"
             />
 
         <!-- Service for dumping extremely verbose content during a bug report -->
-        <service android:name=".dump.SystemUIAuxiliaryDumpService"
+        <service android:name="com.android.systemui.dump.SystemUIAuxiliaryDumpService"
              android:exported="false"
              android:permission="com.android.systemui.permission.SELF"
         />
@@ -434,19 +434,19 @@
              process for the current user is started. See the resource
              "config_systemUIServiceComponentsPerUser".
              -->
-        <service android:name="SystemUISecondaryUserService"
+        <service android:name="com.android.systemui.SystemUISecondaryUserService"
             android:exported="false"
             android:permission="com.android.systemui.permission.SELF" />
 
         <!-- started from PhoneWindowManager
              TODO: Should have an android:permission attribute -->
-        <service android:name=".screenshot.TakeScreenshotService"
+        <service android:name="com.android.systemui.screenshot.TakeScreenshotService"
             android:permission="com.android.systemui.permission.SELF"
             android:process=":screenshot"
             android:exported="false" />
 
         <!-- Called from PhoneWindowManager -->
-        <receiver android:name=".screenshot.ScreenshotServiceErrorReceiver"
+        <receiver android:name="com.android.systemui.screenshot.ScreenshotServiceErrorReceiver"
             android:process=":screenshot"
             android:exported="false">
             <intent-filter>
@@ -454,22 +454,22 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".screenshot.scroll.LongScreenshotActivity"
+        <activity android:name="com.android.systemui.screenshot.scroll.LongScreenshotActivity"
                   android:theme="@style/LongScreenshotActivity"
                   android:process=":screenshot"
                   android:exported="false"
                   android:label="@string/screenshot_scroll_label"
                   android:finishOnTaskLaunch="true" />
 
-        <service android:name=".screenshot.proxy.ScreenshotProxyService"
+        <service android:name="com.android.systemui.screenshot.proxy.ScreenshotProxyService"
                  android:permission="com.android.systemui.permission.SELF"
                  android:exported="false" />
 
-        <service android:name=".screenshot.ScreenshotCrossProfileService"
+        <service android:name="com.android.systemui.screenshot.ScreenshotCrossProfileService"
                  android:permission="com.android.systemui.permission.SELF"
                  android:exported="false" />
 
-        <activity android:name=".screenshot.appclips.AppClipsTrampolineActivity"
+        <activity android:name="com.android.systemui.screenshot.appclips.AppClipsTrampolineActivity"
             android:theme="@style/AppClipsTrampolineActivity"
             android:label="@string/screenshot_preview_description"
             android:permission="android.permission.LAUNCH_CAPTURE_CONTENT_ACTIVITY_FOR_NOTE"
@@ -480,7 +480,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".screenshot.appclips.AppClipsActivity"
+        <activity android:name="com.android.systemui.screenshot.appclips.AppClipsActivity"
             android:theme="@style/AppClipsActivity"
             android:process=":appclips.screenshot"
             android:label="@string/screenshot_preview_description"
@@ -489,7 +489,7 @@
             android:exported="false"
             android:noHistory="true" />
 
-        <activity android:name=".touchpad.tutorial.ui.view.TouchpadTutorialActivity"
+        <activity android:name="com.android.systemui.touchpad.tutorial.ui.view.TouchpadTutorialActivity"
             android:exported="true"
             android:showForAllUsers="true"
             android:excludeFromRecents="true"
@@ -500,7 +500,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity"
+        <activity android:name="com.android.systemui.inputdevice.tutorial.ui.view.KeyboardTouchpadTutorialActivity"
             android:exported="true"
             android:showForAllUsers="true"
             android:excludeFromRecents="true"
@@ -511,23 +511,23 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".screenshot.appclips.AppClipsScreenshotHelperService"
+        <service android:name="com.android.systemui.screenshot.appclips.AppClipsScreenshotHelperService"
             android:exported="false"
             android:singleUser="true"
             android:permission="com.android.systemui.permission.SELF" />
 
-        <service android:name=".screenshot.appclips.AppClipsService"
+        <service android:name="com.android.systemui.screenshot.appclips.AppClipsService"
             android:exported="true"
             android:singleUser="true"
             android:permission="android.permission.LAUNCH_CAPTURE_CONTENT_ACTIVITY_FOR_NOTE" />
 
-        <service android:name=".screenrecord.RecordingService"
+        <service android:name="com.android.systemui.screenrecord.RecordingService"
                  android:foregroundServiceType="systemExempted"/>
 
-        <service android:name=".recordissue.IssueRecordingService"
+        <service android:name="com.android.systemui.recordissue.IssueRecordingService"
                  android:foregroundServiceType="systemExempted"/>
 
-        <receiver android:name=".SysuiRestartReceiver"
+        <receiver android:name="com.android.systemui.SysuiRestartReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.android.systemui.action.RESTART" />
@@ -536,12 +536,12 @@
             </intent-filter>
         </receiver>
 
-        <service android:name=".wallpapers.ImageWallpaper"
+        <service android:name="com.android.systemui.wallpapers.ImageWallpaper"
                 android:singleUser="true"
                 android:permission="android.permission.BIND_WALLPAPER"
                 android:exported="true" />
 
-        <activity android:name=".tuner.TunerActivity"
+        <activity android:name="com.android.systemui.tuner.TunerActivity"
                   android:enabled="false"
                   android:icon="@drawable/tuner"
                   android:theme="@style/TunerSettings"
@@ -558,8 +558,8 @@
                     android:resource="@string/summary_empty"/>
         </activity>
 
-        <activity-alias android:name=".DemoMode"
-                  android:targetActivity=".tuner.TunerActivity"
+        <activity-alias android:name="com.android.systemui.DemoMode"
+                  android:targetActivity="com.android.systemui.tuner.TunerActivity"
                   android:icon="@drawable/tuner"
                   android:theme="@style/TunerSettings"
                   android:label="@string/demo_mode"
@@ -572,11 +572,11 @@
         </activity-alias>
 
         <!-- Callback for invoking a smart action from the screenshot notification. -->
-        <receiver android:name=".screenshot.SmartActionsReceiver"
+        <receiver android:name="com.android.systemui.screenshot.SmartActionsReceiver"
                   android:exported="false"/>
 
         <!-- started from UsbDeviceSettingsManager -->
-        <activity android:name=".usb.UsbConfirmActivity"
+        <activity android:name="com.android.systemui.usb.UsbConfirmActivity"
             android:exported="true"
             android:permission="android.permission.MANAGE_USB"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
@@ -585,7 +585,7 @@
         </activity>
 
         <!-- started from UsbDeviceSettingsManager -->
-        <activity android:name=".usb.UsbPermissionActivity"
+        <activity android:name="com.android.systemui.usb.UsbPermissionActivity"
             android:exported="true"
             android:permission="android.permission.MANAGE_USB"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
@@ -594,7 +594,7 @@
         </activity>
 
         <!-- started from UsbDeviceSettingsManager -->
-        <activity android:name=".usb.UsbResolverActivity"
+        <activity android:name="com.android.systemui.usb.UsbResolverActivity"
             android:exported="true"
             android:permission="android.permission.MANAGE_USB"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
@@ -603,7 +603,7 @@
         </activity>
 
         <!-- started from SensoryPrivacyService -->
-        <activity android:name=".sensorprivacy.SensorUseStartedActivity"
+        <activity android:name="com.android.systemui.sensorprivacy.SensorUseStartedActivity"
                   android:exported="true"
                   android:launchMode="singleTop"
                   android:permission="android.permission.MANAGE_SENSOR_PRIVACY"
@@ -613,7 +613,7 @@
         </activity>
 
         <!-- started from UsbDeviceSettingsManager -->
-        <activity android:name=".usb.UsbAccessoryUriActivity"
+        <activity android:name="com.android.systemui.usb.UsbAccessoryUriActivity"
             android:exported="true"
             android:permission="android.permission.MANAGE_USB"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
@@ -622,7 +622,7 @@
         </activity>
 
         <!-- started from UsbPortManager -->
-        <activity android:name=".usb.UsbContaminantActivity"
+        <activity android:name="com.android.systemui.usb.UsbContaminantActivity"
             android:exported="true"
             android:permission="android.permission.MANAGE_USB"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
@@ -631,32 +631,32 @@
         </activity>
 
         <!-- started from AdbDebuggingManager -->
-        <activity android:name=".usb.UsbDebuggingActivity"
+        <activity android:name="com.android.systemui.usb.UsbDebuggingActivity"
             android:permission="android.permission.MANAGE_DEBUGGING"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true">
         </activity>
-        <activity android:name=".usb.UsbDebuggingSecondaryUserActivity"
+        <activity android:name="com.android.systemui.usb.UsbDebuggingSecondaryUserActivity"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true">
         </activity>
 
         <!-- started from WirelessDebuggingManager -->
-        <activity android:name=".wifi.WifiDebuggingActivity"
+        <activity android:name="com.android.systemui.wifi.WifiDebuggingActivity"
             android:permission="android.permission.MANAGE_DEBUGGING"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true">
         </activity>
         <activity-alias
-            android:name=".WifiDebuggingActivityAlias"
+            android:name="com.android.systemui.WifiDebuggingActivityAlias"
             android:permission="android.permission.DUMP"
-            android:targetActivity=".wifi.WifiDebuggingActivity"
+            android:targetActivity="com.android.systemui.wifi.WifiDebuggingActivity"
             android:exported="true">
         </activity-alias>
-        <activity android:name=".wifi.WifiDebuggingSecondaryUserActivity"
+        <activity android:name="com.android.systemui.wifi.WifiDebuggingSecondaryUserActivity"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true">
@@ -664,7 +664,7 @@
 
         <!-- started from NetworkPolicyManagerService -->
         <activity
-            android:name=".net.NetworkOverLimitActivity"
+            android:name="com.android.systemui.net.NetworkOverLimitActivity"
             android:exported="true"
             android:permission="android.permission.MANAGE_NETWORK_POLICY"
             android:theme="@android:style/Theme.DeviceDefault.Light.Panel"
@@ -676,7 +676,7 @@
 
         <!-- started from MediaProjectionManager -->
         <activity
-            android:name=".mediaprojection.permission.MediaProjectionPermissionActivity"
+            android:name="com.android.systemui.mediaprojection.permission.MediaProjectionPermissionActivity"
             android:showForAllUsers="true"
             android:exported="true"
             android:theme="@style/Theme.SystemUI.MediaProjectionAlertDialog"
@@ -686,7 +686,7 @@
             android:visibleToInstantApps="true"/>
 
         <activity
-            android:name=".mediaprojection.appselector.MediaProjectionAppSelectorActivity"
+            android:name="com.android.systemui.mediaprojection.appselector.MediaProjectionAppSelectorActivity"
             android:theme="@style/Theme.SystemUI.MediaProjectionAppSelector"
             android:showForAllUsers="true"
             android:finishOnCloseSystemDialogs="true"
@@ -700,7 +700,7 @@
             android:permission="android.permission.MANAGE_MEDIA_PROJECTION"/>
 
         <!-- started from SliceProvider -->
-        <activity android:name=".SlicePermissionActivity"
+        <activity android:name="com.android.systemui.SlicePermissionActivity"
             android:theme="@style/Theme.SystemUI.Dialog.Alert"
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true"
@@ -710,7 +710,7 @@
         <!-- Sets an empty label to avoid an announcement from TalkBack,
              the dialog contents are sufficient and will still be read by TalkBack -->
         <activity
-            android:name=".telephony.ui.activity.SwitchToManagedProfileForCallActivity"
+            android:name="com.android.systemui.telephony.ui.activity.SwitchToManagedProfileForCallActivity"
             android:label=" "
             android:excludeFromRecents="true"
             android:exported="true"
@@ -726,7 +726,7 @@
 
         <!-- platform logo easter egg activity -->
         <activity
-            android:name=".DessertCase"
+            android:name="com.android.systemui.DessertCase"
             android:exported="true"
             android:label="@string/dessert_case"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
@@ -741,7 +741,7 @@
         </activity>
 
         <!-- People Space UI Screen -->
-        <activity android:name=".people.PeopleSpaceActivity"
+        <activity android:name="com.android.systemui.people.PeopleSpaceActivity"
             android:label="@string/people_tile_title"
             android:enabled="true"
             android:exported="true"
@@ -752,13 +752,13 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".people.widget.LaunchConversationActivity"
+        <activity android:name="com.android.systemui.people.widget.LaunchConversationActivity"
             android:windowDisablePreview="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
 
         <!-- People Space Widget -->
         <receiver
-            android:name=".people.widget.PeopleSpaceWidgetProvider"
+            android:name="com.android.systemui.people.widget.PeopleSpaceWidgetProvider"
             android:label="@string/people_tile_title"
             android:enabled="true"
             android:exported="true">
@@ -769,7 +769,7 @@
                 android:resource="@xml/people_space_widget_info" />
         </receiver>
 
-        <receiver android:name=".people.widget.PeopleSpaceWidgetPinnedReceiver"
+        <receiver android:name="com.android.systemui.people.widget.PeopleSpaceWidgetPinnedReceiver"
             android:enabled="true"/>
 
         <!-- ContentProvider that returns a People Tile preview for a given shortcut -->
@@ -780,12 +780,12 @@
             android:permission="android.permission.GET_PEOPLE_TILE_PREVIEW">
         </provider>
 
-        <service android:name=".people.PeopleBackupFollowUpJob"
+        <service android:name="com.android.systemui.people.PeopleBackupFollowUpJob"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
 
         <!-- a gallery of delicious treats -->
         <service
-            android:name=".DessertCaseDream"
+            android:name="com.android.systemui.DessertCaseDream"
             android:exported="true"
             android:label="@string/dessert_case"
             android:permission="android.permission.BIND_DREAM_SERVICE"
@@ -799,16 +799,16 @@
         </service>
 
         <service
-            android:name=".keyguard.KeyguardService"
+            android:name="com.android.systemui.keyguard.KeyguardService"
             android:exported="true" />
 
         <service
-            android:name=".dreams.DreamOverlayService"
+            android:name="com.android.systemui.dreams.DreamOverlayService"
             android:enabled="false"
             android:exported="true"
             android:singleUser="true" />
 
-        <activity android:name=".keyguard.WorkLockActivity"
+        <activity android:name="com.android.systemui.keyguard.WorkLockActivity"
                   android:label="@string/accessibility_desc_work_lock"
                   android:permission="android.permission.MANAGE_USERS"
                   android:exported="false"
@@ -823,14 +823,14 @@
         </activity>
 
         <activity
-            android:name=".user.CreateUserActivity"
+            android:name="com.android.systemui.user.CreateUserActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:finishOnCloseSystemDialogs="true"
             android:launchMode="singleInstance"
             android:theme="@style/Theme.CreateUser" />
 
-        <activity android:name=".Somnambulator"
+        <activity android:name="com.android.systemui.Somnambulator"
             android:label="@string/start_dreams"
             android:icon="@mipmap/ic_launcher_dreams"
             android:theme="@android:style/Theme.Wallpaper.NoTitleBar"
@@ -851,7 +851,7 @@
         </activity>
 
         <activity
-            android:name=".settings.brightness.BrightnessDialog"
+            android:name="com.android.systemui.settings.brightness.BrightnessDialog"
             android:label="@string/quick_settings_brightness_dialog_title"
             android:theme="@style/BrightnessDialog"
             android:finishOnCloseSystemDialogs="true"
@@ -864,7 +864,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ForegroundServicesDialog"
+        <activity android:name="com.android.systemui.ForegroundServicesDialog"
             android:process=":fgservices"
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
@@ -876,14 +876,14 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".clipboardoverlay.EditTextActivity"
+        <activity android:name="com.android.systemui.clipboardoverlay.EditTextActivity"
                   android:theme="@style/EditTextActivity"
                   android:exported="false"
                   android:excludeFromRecents="true"
                   android:label="@string/clipboard_editor"
                   />
 
-        <activity android:name=".controls.management.ControlsProviderSelectorActivity"
+        <activity android:name="com.android.systemui.controls.management.ControlsProviderSelectorActivity"
                   android:label="@string/controls_providers_title"
                   android:theme="@style/Theme.ControlsManagement"
                   android:showForAllUsers="true"
@@ -895,7 +895,7 @@
                   android:exported="true"
                   />
 
-        <activity android:name=".controls.management.ControlsEditingActivity"
+        <activity android:name="com.android.systemui.controls.management.ControlsEditingActivity"
                   android:label="@string/controls_menu_edit"
                   android:theme="@style/Theme.ControlsManagement"
                   android:excludeFromRecents="true"
@@ -906,7 +906,7 @@
                   android:visibleToInstantApps="true">
         </activity>
 
-        <activity android:name=".controls.management.ControlsFavoritingActivity"
+        <activity android:name="com.android.systemui.controls.management.ControlsFavoritingActivity"
                   android:label="@string/controls_favorite_default_title"
                   android:theme="@style/Theme.ControlsManagement"
                   android:excludeFromRecents="true"
@@ -917,7 +917,7 @@
                   android:visibleToInstantApps="true">
         </activity>
 
-        <activity android:name=".controls.ui.ControlsActivity"
+        <activity android:name="com.android.systemui.controls.ui.ControlsActivity"
                   android:label="@string/quick_controls_title"
                   android:theme="@style/Theme.ControlsActivity"
                   android:excludeFromRecents="true"
@@ -930,7 +930,7 @@
                   android:exported="true"
                   />
 
-        <activity android:name=".wallet.ui.WalletActivity"
+        <activity android:name="com.android.systemui.wallet.ui.WalletActivity"
                   android:label="@string/wallet_title"
                   android:theme="@style/Wallet.Theme"
                   android:excludeFromRecents="true"
@@ -941,19 +941,19 @@
                   android:visibleToInstantApps="true">
         </activity>
 
-        <receiver android:name=".controls.management.ControlsRequestReceiver"
+        <receiver android:name="com.android.systemui.controls.management.ControlsRequestReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.service.controls.action.ADD_CONTROL" />
             </intent-filter>
         </receiver>
 
-        <service android:name=".controls.controller.AuxiliaryPersistenceWrapper$DeletionJobService"
+        <service android:name="com.android.systemui.controls.controller.AuxiliaryPersistenceWrapper$DeletionJobService"
                  android:permission="android.permission.BIND_JOB_SERVICE"/>
 
         <!-- region Note Task -->
         <activity
-            android:name=".notetask.shortcut.CreateNoteTaskShortcutActivity"
+            android:name="com.android.systemui.notetask.shortcut.CreateNoteTaskShortcutActivity"
             android:enabled="false"
             android:exported="true"
             android:excludeFromRecents="true"
@@ -968,15 +968,15 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".notetask.NoteTaskControllerUpdateService" />
+        <service android:name="com.android.systemui.notetask.NoteTaskControllerUpdateService" />
 
-        <service android:name=".notetask.NoteTaskBubblesController$NoteTaskBubblesService"
+        <service android:name="com.android.systemui.notetask.NoteTaskBubblesController$NoteTaskBubblesService"
             android:exported="false"
             android:singleUser="true"
             android:permission="com.android.systemui.permission.SELF" />
 
         <activity
-            android:name=".notetask.shortcut.LaunchNoteTaskActivity"
+            android:name="com.android.systemui.notetask.shortcut.LaunchNoteTaskActivity"
             android:exported="true"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.NoDisplay" >
@@ -988,7 +988,7 @@
         </activity>
 
         <activity
-            android:name=".notetask.LaunchNotesRoleSettingsTrampolineActivity"
+            android:name="com.android.systemui.notetask.LaunchNotesRoleSettingsTrampolineActivity"
             android:exported="true"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.NoDisplay" >
@@ -1001,7 +1001,7 @@
 
         <!-- started from ControlsRequestReceiver -->
         <activity
-            android:name=".controls.management.ControlsRequestDialog"
+            android:name="com.android.systemui.controls.management.ControlsRequestDialog"
             android:theme="@style/Theme.ControlsRequestDialog"
             android:finishOnCloseSystemDialogs="true"
             android:showForAllUsers="true"
@@ -1027,13 +1027,13 @@
 
         <!-- Doze with notifications, run in main sysui process for every user  -->
         <service
-            android:name=".doze.DozeService"
+            android:name="com.android.systemui.doze.DozeService"
             android:exported="true"
             android:singleUser="true"
             android:permission="android.permission.BIND_DREAM_SERVICE" />
 
         <receiver
-            android:name=".tuner.TunerService$ClearReceiver"
+            android:name="com.android.systemui.tuner.TunerService$ClearReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.android.systemui.action.CLEAR_TUNER" />
@@ -1050,14 +1050,14 @@
                 android:resource="@xml/fileprovider" />
         </provider>
 
-        <provider android:name=".keyguard.KeyguardSliceProvider"
+        <provider android:name="com.android.systemui.keyguard.KeyguardSliceProvider"
                   android:authorities="com.android.systemui.keyguard"
                   android:grantUriPermissions="true"
                   android:exported="true">
         </provider>
 
         <receiver
-            android:name=".statusbar.KeyboardShortcutsReceiver"
+            android:name="com.android.systemui.statusbar.KeyboardShortcutsReceiver"
             android:visibleToInstantApps="true"
             android:exported="true">
             <intent-filter>
@@ -1066,7 +1066,7 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".media.dialog.MediaOutputDialogReceiver"
+        <receiver android:name="com.android.systemui.media.dialog.MediaOutputDialogReceiver"
                   android:exported="true">
             <intent-filter android:priority="1">
                 <action android:name="com.android.systemui.action.LAUNCH_MEDIA_OUTPUT_DIALOG" />
@@ -1076,7 +1076,7 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".volume.VolumePanelDialogReceiver"
+        <receiver android:name="com.android.systemui.volume.VolumePanelDialogReceiver"
                   android:exported="true">
             <intent-filter>
                 <action android:name="android.settings.panel.action.VOLUME" />
@@ -1085,14 +1085,14 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".accessibility.hearingaid.HearingDevicesDialogReceiver"
+        <receiver android:name="com.android.systemui.accessibility.hearingaid.HearingDevicesDialogReceiver"
             android:exported="false">
             <intent-filter android:priority="1">
                 <action android:name="com.android.systemui.action.LAUNCH_HEARING_DEVICES_DIALOG" />
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".accessibility.extradim.ExtraDimDialogReceiver"
+        <receiver android:name="com.android.systemui.accessibility.extradim.ExtraDimDialogReceiver"
             android:singleUser="true"
             android:exported="false">
             <intent-filter android:priority="1">
@@ -1100,7 +1100,7 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".logcat.LogAccessDialogActivity"
+        <activity android:name="com.android.systemui.logcat.LogAccessDialogActivity"
                   android:theme="@android:style/Theme.Translucent.NoTitleBar"
                   android:excludeFromRecents="true"
                   android:exported="false">
