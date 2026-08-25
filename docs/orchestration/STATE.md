@@ -9,7 +9,10 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 050 | `w2J:p1` | `task-050-direct-debug-runtime-closure` / `SystemUI-Gradle-wt-050` | `joycode/GLM-5.3` | paused after hidden-API fatal capture; user rejected call-site try/catch | Evidence/frozen Debug APK retained; no further implementation until approved same-tree baseline |
+| 055 | `w2:t1R` / `w2:p1X` (`task055-worker`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; AOSP `out/` writes only via `m -j4`; libs/*-flags.jar + tools + wiring + listed docs; adb emulator-5554 only; commits local, no push |
+
+Task 050 worker panes (`w2J:p1` agent + `w2J:p2` shell) were closed 2026-08-25; the `SystemUI-Gradle-wt-050`
+evidence worktree and task branch remain on disk untouched. No active Task 050 worker.
 
 Tasks 051 and 052A/B/C have no active Worker/reviewer workspace: all reviewed commits are on main,
 patch-equivalence was proven, and their ten clean worktrees plus four local task branches were removed.
@@ -23,6 +26,11 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 4. Validate Release runtime only after Debug closure; keep the seven remaining Task 043 `NOT APPROVED` packets paused.
 
 ## Recent Orchestration Transitions
+
+- 2026-08-25 — Task 053 (DEX bytecode forensics on the unscoped NLSUMI factory path) dispatched
+  to a fresh tab `w2:t1Q` in the main checkout as a serial read-only task; brief at
+  `docs/orchestration/tasks/053-dex-bytecode-forensics.md`. Task 050 worker panes closed per user
+  instruction to close unused workers; wt-050 evidence worktree retained on disk.
 
 - 2026-08-23 — Task 051 fixed range `1bfe57f8...75c96f13` completed four docs-only commits. Initial Standards/Spec reviews passed with no BLOCKER/HIGH/MEDIUM; two precision amendments removed a dangling factory-gate reference, made all four solution-family rule impacts explicit, removed an unsupported signature-display mechanism, corrected the outline, and unified all `ApplicationInfo` citations. Final Standards PASS had zero findings; final Spec PASS had only two TRIVIAL evidence/detail notes. Worker commits were cherry-picked as `39b6c308`, `873ce4f5`, `44d3ba64`, and `548a3fab`; patch IDs and main fresh report/hash/scope gates passed. Gradle and device mutation were not run.
 - 2026-08-23 — Tasks 052A/B/C read-only research converged on host-native same-tree runtime: x86_64 Emulator launcher deliberately rejects ARM64 guest, acloud Goldfish still invokes that launcher, direct AArch64 QEMU/TCG capability is not official product support, and `sdk_phone64_x86_64` is the primary next candidate. Seven reviewed commits were merged to main through `b4f7ec1c`; main fresh `TASK052A/B/C_REPORT=PASS` and exact three-report scope passed. No build/emulator/ADB mutation occurred in those research tasks.
@@ -297,6 +305,8 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 
 ## Last Updated
 
-2026-08-22 — Task 049 Debug-only stabilization is planned under the user's simplified
-build → ADB push → diagnose/fix → rebuild/push → UI-stability flow. Release remains
-forbidden until the Debug-proven repository version is reviewed and pushed.
+2026-08-25 — Task 053 closed (root cause confirmed by architect runtime verification: NoClassDefFoundError Landroid/os/Flags at NLSUMI.<init>→init→privateSpaceFlagsEnabled:844); task053-worker tab closed. Task 054 android-os-flags runtime closure worker dispatched (tab w2:t1R pane w2:p1X).
+
+2026-08-25 17:53 — Task 054 worker report ready (docs/issues/2026-08-25-android-os-flags-runtime-closure.md): android-os-flags.jar packaged byte-identical (base variant, sha256 116d5b6f…), wired into :SystemUI-core, task053 TEMP-DEBUG removed (alignment MISSING/MISPLACED/EXTRA=0), emulator-5554 verification: android/os/Flags NCDF = 0, duplicate-dump crash = 0, SysUIDup silent. PID stability BLOCKED by next same-family hazard Landroid/service/notification/Flags; (prescan lists 11, all hidden-twin confirmed; its Soong javac JAR not yet built in AOSP tree — needs `m android.service.notification.flags-aconfig-java`). Worker commits made locally, not pushed; STATE.md/log.md lines left uncommitted for architect.
+
+2026-08-25 18:25 — Task 054 review PASS (chief); Task 055 batch-closure dispatched (same tab w2:t1R pane w2:p1X, brief docs/orchestration/tasks/055-aconfig-flags-batch-closure.md). Worker verified all 11 owning java_aconfig_library in frameworks/base/AconfigFlags.bp, built 8 missing javac JARs in one `m -j4` under lunch sdk_phone64_x86_64-trunk_staging-userdebug (note: pre-exporting TOP breaks non-interactive envsetup), packaged 11 byte-identical base-variant jars into libs/, wired into :SystemUI-core, rebuilt APK (24-dex sweep: each of 11+1 Flags classes defined exactly once), redeployed emulator-5554 (/data staging; first cp silently truncated to 6.4MB because old-APK handle still held overlay space — caught by sha256 gate, retried OK). Runtime acceptance ALL GREEN: PID 835 stable across 11 samples/5min, zero NoClassDefFoundError (any package), zero FATAL EXCEPTION, zero alreadyRegistered, StatusBar window present+visible. Two local commits (docs-sync + code), not pushed.
