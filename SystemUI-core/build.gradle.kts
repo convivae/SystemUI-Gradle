@@ -239,6 +239,16 @@ dependencies {
     // WM-Shell aconfig flags（com.android.wm.shell.Flags；WindowManager-Shell static_libs
     // 进入 APK 打包闭包——AOSP static_libs runtime/program 输入，故 implementation）
     implementation(files("${rootProject.projectDir}/libs/wm-shell-flags.jar"))
+    // Framework window flags（com.android.window.flags.Flags）。Soong 通过 exportable
+    // aconfig 的 JarJarProvider 将调用重写到 framework-minus-apex 的
+    // com.android.internal.hidden_from_bootclasspath.* 实现；AGP 不传播该 Soong JarJar 规则，
+    // 因此打包同一 owning java_aconfig_library 的真实 javac runtime JAR。
+    implementation(files("${rootProject.projectDir}/libs/window-flags.jar"))
+    // Framework device-state flags（android.hardware.devicestate.feature.flags.Flags）。
+    // 与 window-flags 相同：该 exportable aconfig 在 Soong 中被 JarJar 迁移至
+    // framework-minus-apex 的 com.android.internal.hidden_from_bootclasspath.*；
+    // AGP 不继承该重写，因此打包 owning java_aconfig_library 的真实 javac runtime JAR。
+    implementation(files("${rootProject.projectDir}/libs/device-state-feature-flags.jar"))
     // com.google.protobuf.nano.MessageNano（SystemUI-proto 依赖；tier③ 官方坐标，task 027。
     // AOSP 私有 com.google.protobuf.nano.android.* 3 类全仓零引用，由 framework.jar/platform 兑底）
     implementation(libs.protobuf.javanano)
