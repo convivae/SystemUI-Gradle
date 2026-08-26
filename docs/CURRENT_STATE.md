@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-25（**DEBUG_RUNTIME_PASS 达成**：Task 058 gate suite 全绿——pytest 243+、duplicate-classes、源码对齐 0/0/0、manifest-dex 闭包、clean build `e8aad131`、emulator-5554 原子部署后 PID 稳定零 crash；Tasks 053–059 same-tree x86_64 runtime 全线闭环；origin/main 同步至 `abbecdde`+镜像提交）
+> **Last verified**: 2026-08-26（Release runtime 闭环：task 060/060b/061 三轮修复 AssumeFalseForR8 → -dontobfuscate → -keep 抗 R8 水平合并，emulator-5554 现跑 Release APK 14768581 零 crash；此前 2026-08-25（**DEBUG_RUNTIME_PASS 达成**：Task 058 gate suite 全绿——pytest 243+、duplicate-classes、源码对齐 0/0/0、manifest-dex 闭包、clean build `e8aad131`、emulator-5554 原子部署后 PID 稳定零 crash；Tasks 053–059 same-tree x86_64 runtime 全线闭环；origin/main 同步至 `abbecdde`+镜像提交）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -16,7 +16,7 @@
 | `:app:assembleRelease` | **SUCCESS（Task 045 main fresh）**：两个 AGP 9.3.1 optimized-resource tasks 实际执行 + V2 签名；APK 28,600,808 B，SHA-256 `cd4b885e...` |
 | SysUISdk 生成器 | **单入口落地并 main fresh 验收（Task 045）**：`python3 tools/build_sysuisdk.py --aosp-root <aosp>`；确定性、事务性、39-entry bridge；两次 11,382-file 输出逐字节相等 |
 | 设备/模拟器运行验证 | **DEBUG_RUNTIME_PASS（2026-08-25，Task 058）**：same-tree `sdk_phone64_x86_64` emulator-5554 运行迁移后最终树 Debug APK（sha256 `e8aad131…`，本地构建与设备逐字节相同）；PID 稳定 10×30s 采样、零 FATAL/NoClassDefFoundError、StatusBar/NotificationShade/Taskbar 在屏。路径：Task 052c 产品矩阵 → Task 053 dex forensics 定根因（SysUISdk 公开名 vs 设备 hidden twin）→ Task 054/055 批量 12 个 aconfig flags JAR 补类 → Task 057 合并单 JAR `libs/systemui-aconfig-flags.jar` → Task 059 四族 AAR 直接消费迁移（字节中性已证）。 |
-| 当前唯一工程优先级 | **Release 阶段**：Release runtime closure 上设备验证（R8 闭包独立风险面）；遗留 2 包挂 Release——AssumeTrueForR8 blocker（NOT APPROVED 维持，待真 blocker 证据）、tracinglib-platform.jar 溯源（用户拍板延至 Release）。 |
+| 当前唯一工程优先级 | Release runtime **已 PASS**（task 061，2026-08-26）。剩余：tracinglib-platform.jar 溯源；维护性观察（Kotlin 2.3/AGP 9.5 解锁、AOSP 树漂移回查、官方 Maven 等价物回查）。 |
 
 R8 missing refs 轨迹：140 → 126 → 119 → 109 → 106 → 88 → 81 → 7 → 1 → **0（Task 044）**。该轨迹继续作为诊断证据，但不再驱动 artifact seam 或要求 Soong/Gradle 输出一致。
 
