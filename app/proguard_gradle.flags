@@ -19,7 +19,18 @@
 # classpath via the task 055 window-flags jar (libs/systemui-aconfig-flags.jar,
 # com.android.window.flags.FeatureFlags, RuntimeInvisibleAnnotations / CLASS
 # retention) and is never runtime-resolved.
+# Third instance (task 060, user-approved option A, 2026-08-25):
+# -dontobfuscate — aligns R8 obfuscation semantics with the AOSP Soong build.
+# Evidence: Soong appends -dontobfuscate when the bp `optimize.obfuscate` prop is
+# unset (build/soong/java/dex.go:545); SystemUI's Android.bp never sets
+# obfuscate:true (SystemUI_optimized_defaults sets optimize/shrink/
+# shrink_resources only) → AOSP SystemUI is NEVER obfuscated. AGP's
+# isMinifyEnabled obfuscates by default → getClass().getSimpleName()-keyed
+# DumpManager registrations collided (39 classes renamed to simple name "a",
+# incl. multiple dumpable registrants) → 1290 FATAL 'a' is already registered
+# crash-loop on device (task 060, 2026-08-26).
 #
 # Wired only into the minified `release` build type of app/build.gradle.kts.
 -dontwarn com.android.aconfig.annotations.AssumeTrueForR8
 -dontwarn com.android.aconfig.annotations.AssumeFalseForR8
+-dontobfuscate
