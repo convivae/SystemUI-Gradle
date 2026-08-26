@@ -8,23 +8,22 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
-### 1. 独立验证 Release runtime（当前主线）
+### 1. ~~独立验证 Release runtime~~ ✅ 已完成（2026-08-26，RELEASE_RUNTIME_PASS）
 
-- Debug runtime 已于 2026-08-25 闭环（DEBUG_RUNTIME_PASS，Task 058）；**不得用 Debug 结果推断 Release 的 manifest keep/混淆/runtime 行为**。
-- Release APK 静态面已绿（Task 045：R8 missing refs 0、28,600,808 B、V2 签名、0/39 bridge），但从未上过设备。
-- **执行要点**：在 emulator-5554（same-tree `sdk_phone64_x86_64`）用 task 054/058 的原子部署规程部署 Release APK；预期会暴露 Debug 没有的一类问题（aconfig 假设注解 shrink、BuildConfig 字段、反射入口 keep）；一次只根据一个明确 runtime 根因改一个假设。
-- **完成条件**：与 Debug 门同级——PID 稳定 ≥5 分钟、零 FATAL/NoClassDefFoundError、StatusBar/NotificationShade 在屏、关键交互正常。
+三轮修复闭环：R8 missing `AssumeFalseForR8`（精确 dontwarn，Task 044 同款）→ `-dontobfuscate`（对齐 Soong dex.go:545 语义，治愈 getSimpleName 撞名）→ 3 行 `-keep`（抗 R8 水平合并，DumpManager 类名注册撞键）。Release APK `14768581…` 在 emulator-5554 上门级验证通过。证据：`docs/issues/2026-08-26-release-runtime-closure.md`（四轮完整记录）。
 
-### 2. Release 阶段遗留 2 包（Task 043 尾账，用户 2026-08-25 拍板）
+### 2. Release 阶段遗留尾账
 
-- **AssumeTrueForR8**：NOT APPROVED 维持；等 Release runtime 出现真 blocker 证据后逐项讨论处置。
 - **tracinglib-platform.jar 溯源**：查清 AOSP 出处，决定保留 jar 还是换官方坐标。
+- ~~AssumeTrueForR8 blocker~~ 已随 round-1 修复关闭（同族 AssumeFalseForR8 精确 dontwarn 落地，`app/proguard_gradle.flags`）。
 
 ### 3. 维护性观察（定期，无 deadline）
 
 - Kotlin 2.3 / AGP 9.5 解锁后升级检查（当前 AGP 9.3.1 绑 Kotlin 2.2.10）。
 - AOSP 树漂移时重跑 `package_aconfig_jars.py --merge-framework`（源字节已漂过两次）。
 - 存量本地 jar 定期回查官方 Maven 等价物（规则 §1.5，Task 026 首开）。
+- 可选诊断：AOSP prebuilts R8 与 AGP 9.3.1 内嵌 R8 的版本差（解释 AOSP 为何不合并 no-op CoreStartable；task 060b 建议）。
+- CoreStartable 伞形 `-keep`（`implements CoreStartable`）作为未来再出合并碰撞时的备选（目前不需要）。
 
 ---
 
@@ -38,4 +37,4 @@
 
 ## 已完成工作
 
-从 5296 个编译错误到 Debug APK、239/239 测试、Release R8 140→0、完整 optimized-resource Release APK + V2 签名，以及 **same-tree x86_64 模拟器 DEBUG_RUNTIME_PASS（Tasks 052c→059，2026-08-25：dex forensics → 12 族 aconfig flags 闭环 → 合并单 JAR → AAR 直接消费迁移 → 六门 gate suite 全绿）** 的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 2026-08-24/25 五篇报告。
+从 5296 个编译错误到 Debug APK、239/239 测试、Release R8 140→0、完整 optimized-resource Release APK + V2 签名，以及 **same-tree x86_64 模拟器 DEBUG_RUNTIME_PASS（Tasks 052c→059，2026-08-25）+ RELEASE_RUNTIME_PASS（Tasks 060→061，2026-08-26）** 的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 2026-08-24/25 五篇报告。
