@@ -202,3 +202,176 @@ windows present; 44 SystemUI service references alive. Device back at known-good
    class entirely (all name-keyed registrations become safe again).
 2. Environment (recurring): heavy Release builds on this host require stopping idle
    Kotlin/AS daemons first (three daemon OOM kills across this task's builds).
+
+---
+
+## Round 3 (Task 060b) — second crash captured and fully classified: R8 horizontal class merging
+
+**Worker**: task060b (forensics-only; no Gradle, no builds, no source edits).
+**APK under test**: `app-release.apk` sha256 `90c412d8c86fafc42ea1233474d2da9f2e3823ca0806b1ead822bb4e1c0f64fa`
+(the `-dontobfuscate` build from Round 2's approved fix).
+
+### Preflight (all green)
+
+| Check | Result |
+|---|---|
+| `adb devices` | only `emulator-5554` |
+| On-device sha | `e8aad131…` (Debug baseline, PID 833 healthy) ✓ expected |
+| Release APK sha | `90c412d8…` ✓ matches brief |
+| Host memory | 30 GiB total, 18 GiB available (swap 7.7/8.0 GiB used — noted, bounded logcat capture only) |
+
+### Deployment
+
+Proven staged procedure: push → remount,rw → staged `cp` → **sha gate `90c412d8…` MATCH** →
+atomic mv → root:root 0644 `u:object_r:system_file:s0` → oat/dalvik-cache cleared → reboot →
+`sys.boot_completed=1`.
+
+### Loop evidence
+
+- Crash buffer after boot+75 s: **195 FATAL EXCEPTION instances** (00:53:58 → 00:56:03+,
+  new PID every ~0.65 s; PID churn re-confirmed by `pidof` sampling: empty → 17891 → 21216).
+- **Signature dedup: all 195 instances are ONE crash signature** — no alternating distinct
+  crashes. Two *entry services* surface it (`SystemUIService` first instance PID 826 @00:53:58;
+  `KeyguardService` for later instances, PID 7037+), but both onCreate paths funnel into the
+  same `startServicesIfNeeded` registration loop — same root cause.
+
+### Full first FATAL instance (verbatim, PID 826, 00:53:58.465)
+
+```text
+FATAL EXCEPTION: main
+Process: com.android.systemui, PID: 826
+java.lang.RuntimeException: Unable to create service com.android.systemui.SystemUIService: java.lang.IllegalArgumentException: 'com.android.systemui.CoreStartable$Nop' is already registered
+	at android.app.ActivityThread.handleCreateService(ActivityThread.java:5170)
+	at android.app.ActivityThread.-$$Nest$mhandleCreateService(Unknown Source:0)
+	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2569)
+	at android.os.Handler.dispatchMessage(Handler.java:110)
+	at android.os.Looper.loopOnce(Looper.java:239)
+	at android.os.Looper.loop(Looper.java:328)
+	at android.app.ActivityThread.main(ActivityThread.java:8956)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:593)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:932)
+Caused by: java.lang.IllegalArgumentException: 'com.android.systemui.CoreStartable$Nop' is already registered
+	at com.android.systemui.dump.DumpManager.registerDumpable(r8-map-id-f2ccef4bf99c013e76a0286e41e7ecd3b8df7af1dbc6f6b21573a8e2a9660ef5:52)
+	at com.android.systemui.dump.DumpManager.registerCriticalDumpable(r8-map-id-f2ccef4bf99c013e76a0286e41e7ecd3b8df7af1dbc6f6b21573a8e2a9660ef5:3)
+	at com.android.systemui.SystemUIApplication.startServicesIfNeeded(r8-map-id-f2ccef4bf99c013e76a0286e41e7ecd3b8df7af1dbc6f6b21573a8e2a9660ef5:409)
+	at com.android.systemui.SystemUIApplication.startSystemUserServicesIfNeeded(r8-map-id-f2ccef4bf99c013e76a0286e41e7ecd3b8df7af1dbc6f6b21573a8e2a9660ef5:65)
+	at com.android.systemui.SystemUIService.onCreate(r8-map-id-f2ccef4bf99c013e76a0286e41e7ecd3b8df7af1dbc6f6b21573a8e2a9660ef5:10)
+	at android.app.ActivityThread.handleCreateService(ActivityThread.java:5157)
+	... 9 more
+```
+
+(Original `/tmp/r3_crash_buffer.txt` capture — 4096 lines, 195 FATALs — was lost when the host
+rebooted at ~08:47; the above was captured before the reboot and is preserved verbatim here.
+The 195-instance/one-signature count was verified pre-reboot via
+`grep -c "FATAL EXCEPTION"` and message-level `sort | uniq` over the full buffer.)
+
+### Name-reality check: -dontobfuscate IS working
+
+All class names in the stack are **real** (`com.android.systemui.dump.DumpManager`,
+`SystemUIApplication.startServicesIfNeeded`, …) — no single-letter names. The
+`r8-map-id-…` source-file suffixes are R8's normal mapping-id retention for unobfuscated
+builds. Round 2's obfuscation collision ("'a' is already registered") is fully cleared.
+
+### Root cause: R8 **horizontal class merging** (the second, distinct R8 divergence)
+
+Not obfuscation (fixed), not a missing shrink-keep (all classes present), not init-order.
+It is R8 full-mode **optimization merging structurally-identical classes**, which breaks
+DumpManager's name-keyed registration:
+
+1. **Registration key is the runtime class name.**
+   `DumpManager.kt:47-48` — `registerCriticalDumpable(module)` →
+   `registerCriticalDumpable(module::class.java.name, module)`;
+   `DumpManager.kt:109-110` same for the normal variant.
+2. **Duplicate name allowed only for the same instance.**
+   `DumpManager.kt:162-166` — `canAssignToNameLocked` returns true only if
+   `existingDumpable == null || newDumpable == existingDumpable`; otherwise
+   `DumpManager.kt:101` throws `IllegalArgumentException("'$name' is already registered")`.
+3. **Three identity-distinct instances exist at runtime, all CoreStartables:**
+   - `CoreStartable.NOP` — a shared singleton (`CoreStartable.java:75`), returned by ~20
+     feature-flag-off `@Provides`/`@Binds` methods (`StatusBarPhoneModule.kt:92,97,150,164,178,218`,
+     `DisplayModule.kt:87,101`, `StatusBarModule.kt:97,131`, etc.);
+   - `NoOpCoreStartable()` — a fresh instance (`NoOpCoreStartable.kt:21`,
+     provided at `NotificationStatsLoggerModule.kt:145`);
+   - `FeatureFlagsReleaseStartable` — a fresh instance with constructor side effects
+     (`FeatureFlagsReleaseStartable.kt:29-38`, bound via its own `@IntoMap @ClassKey` module).
+   All are iterated by `SystemUIApplication.startServicesIfNeeded`
+   (`SystemUIApplication.java:371-381`; `isDumpCritical()` defaults true, `CoreStartable.java:64-66`)
+   and each is passed to `registerCriticalDumpable(service)`.
+4. **R8 merged the latter two classes INTO `CoreStartable$Nop`.** mapping.txt
+   (`app/build/outputs/mapping/release/mapping.txt:499557-499565`) — the
+   `com.android.systemui.CoreStartable$Nop -> com.android.systemui.CoreStartable$Nop:` entry
+   contains synthesized members:
+   ```text
+   1:1:void start():79:79 -> start$com$android$systemui$CoreStartable$Nop
+   1:1:void com.android.systemui.NoOpCoreStartable.start():21:21 -> start$com$android$systemui$NoOpCoreStartable
+   1:1:void com.android.systemui.flags.FeatureFlagsReleaseStartable.start():40:40 -> start$com$android$systemui$flags$FeatureFlagsReleaseStartable
+   ```
+   and neither `NoOpCoreStartable` nor `FeatureFlagsReleaseStartable` has its own top-level
+   mapping entry — they were merged away (their Dagger factories still exist and still
+   construct instances, now of runtime class `CoreStartable$Nop`).
+5. **Collision.** After the merge, the NOP singleton, the NoOpCoreStartable instance and the
+   FeatureFlagsReleaseStartable instance are *distinct objects sharing one runtime class
+   name*. The first `registerCriticalDumpable` stores key
+   `com.android.systemui.CoreStartable$Nop`; the next distinct instance fails
+   `canAssignToNameLocked` → `IllegalArgumentException` → service creation fails →
+   process death → persistent ~0.65 s crash loop. (Note: the ~20 NOP-singleton returns alone
+   would NOT crash — `canAssignToNameLocked` permits same-instance re-registration. The
+   crash requires the merged distinct instances, which is why this never reproduces in
+   Debug: debug does not minify, so no merging occurs.)
+
+**Why AOSP doesn't hit this (hypothesis, not verified)**: AOSP's own
+`proguard.flags`/`proguard_common.flags`/`proguard_kotlin.flags` contain **no** keep rules for
+these classes either, yet AOSP-built SystemUI doesn't crash-loop. Most plausible explanations:
+(a) AOSP's bundled R8 (`prebuilts/r8`) is a different version from AGP 9.3.1's R8 and its
+horizontal-class-merging pass doesn't merge these (or bails on classes whose names are used
+via `getClass().getName()` semantics differently); (b) the Soong R8 pipeline applies different
+optimization flags. Verifying would require inspecting AOSP's prebuilts/r8 version vs ours —
+left as the recommended next diagnostic for the chief.
+
+### Classification (brief taxonomy)
+
+**Optimization (class-merging) breaking identity-sensitive, name-keyed registration —
+a keep-rule gap in our Gradle proguard config, distinct from Round 2's obfuscation divergence.**
+Round 2 = R8 renaming collision; Round 3 = R8 merging collision. Both are
+"AGP R8 ≠ Soong R8 semantics" family, but the fixes differ.
+
+### Recommended fix (NOT applied — outside worker authority)
+
+Add targeted keeps to `app/proguard_gradle.flags` (same file as the approved
+`-dontobfuscate`/`-dontwarn` entries):
+
+```proguard
+# R8 horizontal class merging collapses identity-distinct CoreStartables into one
+# runtime class; DumpManager registers dumpables by class name and rejects distinct
+# instances sharing a name. Keep these classes un-merged (task 060b round-3 crash).
+-keep class com.android.systemui.CoreStartable$Nop { *; }
+-keep class com.android.systemui.NoOpCoreStartable { *; }
+-keep class com.android.systemui.flags.FeatureFlagsReleaseStartable { *; }
+```
+
+Note `-keepnames` is NOT sufficient — renaming is already off; only `-keep` prevents merging.
+A broader `-keep class * implements com.android.systemui.CoreStartable { *; }` would close the
+whole collision class (any two merged CoreStartable implementations would collide the same
+way) at higher APK-size cost. Recommended next diagnostic before/after the fix: grep the new
+mapping.txt for CoreStartable implementations lacking their own top-level entry, to confirm
+no other merge targets lurk (1822 `R8$$REMOVED$$CLASS` entries exist; only these three are
+implicated by the stack).
+
+### Device restoration: BLOCKED (host reboot incident)
+
+The host rebooted at ~08:47 (uptime 2h16m at 11:03), killing the emulator process and wiping
+`/tmp` AFTER all crash evidence above was captured. `adb devices` shows no device; the
+emulator relaunch procedure (acloud/emulator launcher, per task 053/054 infrastructure) is
+outside this forensics brief's authority → **escalated to chief**. The Debug baseline APK
+(`e8aad131…`) restore procedure is ready to execute as soon as the device is back; note the
+emulator was killed while the round-3 Release APK was still deployed, so whichever relaunch
+path is used must be followed by the standard Debug restore (push → sha gate → atomic mv →
+perms → cache clear → reboot → verify) before any other device work.
+
+### Verdict
+
+Task 060b acceptance: **PASS** (full round-3 crash stack captured verbatim with cause chain;
+single-signature loop documented; name-reality check done; root cause classified with
+file:line + mapping.txt evidence). Release verdict remains **RELEASE_RUNTIME_FAIL** —
+round 3 is a new, distinct failure (class merging), fix pending chief/user approval.
