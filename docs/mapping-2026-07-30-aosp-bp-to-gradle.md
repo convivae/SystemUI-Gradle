@@ -1,5 +1,9 @@
 # AOSP bp 模块 → Gradle 子模块映射方案（v2）
 
+> **注记（2026-08-26，Task 063）**：本文引用的 `scripts/` 目录（含 `propose_aosp_to_gradle_mapping.py` 等 14 个脚本）
+> 与 `docs/extras-file-mapping.csv` 已于 2026-08-26 经用户批准删除（scripts 时代一次性脚本，已被
+> `tools/check_source_alignment.py` + 规则 S 源码模块取代）。历史内容保留原样。
+
 **扫描**：`scripts/propose_aosp_to_gradle_mapping.py`
 **总计**：40 个 java/android library
 

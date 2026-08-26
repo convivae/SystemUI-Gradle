@@ -1,5 +1,8 @@
 # Task 019 — 文档/脚本小清理（docstring + legacy .sh + AGENTS.md libs 树）
 
+> **注记（2026-08-26，Task 063）**：本 brief 提及的 `scripts/check_aosp_src_parity.py`（及整个 `scripts/` 目录）
+> 已于 2026-08-26 经用户批准删除（被 `tools/check_source_alignment.py` 取代）。历史内容保留原样。
+
 ## Goal
 
 三项已批准的小清理：

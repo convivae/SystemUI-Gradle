@@ -132,6 +132,10 @@ frameworks/base/packages/SystemUI/
 
 ## 6. 完整映射结果（基于 `extras-file-mapping.csv`）
 
+> **注记（2026-08-26，Task 063）**：本节引用的 `scripts/map_extras_to_modules.py` 与
+> `docs/extras-file-mapping.csv` 已于 2026-08-26 经用户批准删除（scripts 时代一次性产物，
+> 映射工作已由规则 S 源码模块 + `tools/check_source_alignment.py` 取代）。历史内容保留原样。
+
 通过 `scripts/map_extras_to_modules.py` 扫描 AOSP 整树索引，按文件实际路径匹配到目标 AOSP 模块：
 
 **316 个文件**已精确映射到目标 AOSP bp 模块（见 `docs/extras-file-mapping.csv`）。

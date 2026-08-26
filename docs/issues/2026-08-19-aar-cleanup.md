@@ -57,6 +57,7 @@ Task 017 审查（`docs/architecture/2026-08-19-aar-dependency-audit.md`）结�
   “与 gen_aar_maven.py 的区别：gen_aar_maven.py 把 R.jar 错误合并进 classes.jar（已废弃的失败实验）”）。
   导致验收 grep 在该文件残留 2 行匹配。建议下个 brief 授权后清理。
 - 根目录存在 `scripts/extract_prebuilts.sh`（.sh，违反 ADR 0002 的历史遗留）与 `scripts/scaffold_aosp_modules.py`，均在 brief 范围外，仅报告不处理。
+  （注记 2026-08-26 Task 063：两者及整个 `scripts/` 目录已经用户批准删除。）
 
 ### 验证（真实输出）
 

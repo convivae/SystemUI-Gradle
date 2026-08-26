@@ -106,6 +106,9 @@ rm -rf SystemUI-proto/src/main/java
 
 修改 `docs/extras-file-mapping.csv` 移除 2 条 proto 错误映射。
 
+> **注记（2026-08-26，Task 063）**：本文件引用的 `map_extras_to_modules.py` 与
+> `docs/extras-file-mapping.csv` 已于 2026-08-26 经用户批准删除。历史内容保留原样。
+
 ## SystemUI-shared-biometrics 补 res 目录
 
 AOSP `BiometricsSharedLib.Android.bp`：

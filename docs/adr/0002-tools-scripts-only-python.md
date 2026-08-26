@@ -1,5 +1,9 @@
 # ADR 0002: tools/ 下脚本一律 Python，禁止 .sh
 
+> **注记（2026-08-26，Task 063）**：本文提及的 `extract_prebuilts.sh` 已于 2026-08-26 经用户批准删除
+> （其 4 个产物均已由源码模块取代，见 `docs/architecture/2026-08-26-tools-scripts-inventory-audit.md`）。
+> 本 ADR 的决策内容不变；`install_keystore.sh` 仍存在（KEEP-with-fix，待 .py 转换）。
+
 ## 上下文
 
 本项目 `tools/` 下当前有 2 个 .sh：
@@ -36,7 +40,7 @@
 
 "现在"迁写 = 下次需要跑这两个脚本时优先迁，而不是作为独立 commit。
 
-实际触发点：
+实际触发点（注：`extract_prebuilts.sh` 已于 2026-08-26 删除，首条触发点作废）：
 - 用户运行 `./tools/extract_prebuilts.sh` 拉新 jar 时
 - 用户新装 AOSP 或换机器，需要 `install_keystore.sh` 时
 
