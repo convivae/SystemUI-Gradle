@@ -98,7 +98,7 @@ python3 -m py_compile \
   tools/gen_aar_maven.py \
   tools/rebuild_settingslib_aar.py \
   tools/check_source_alignment.py \
-  tools/fix_r_imports_to_res.py
+  tools/fix_r_imports_to_res.py  # 已删除 (task 067, 2026-08-26)
 ```
 
 - [ ] **Step 3: Verify jar integrity**

@@ -47,7 +47,7 @@ android {
         debug {
             // SYSOPS: platform-signed so the APK is installable as a system app.
             // See v2 spec §11.7 risk #10. To regenerate keystore, run
-            // tools/install_keystore.sh.
+            // tools/install_keystore.py.
             signingConfig = signingConfigs.getByName("release")
             // AOSP bp: optimize.proguard_flags_files: ["proguard.flags"]
             // SystemUI-plugin-core 是 JVM library（无 AGP consumer DSL），其 AOSP

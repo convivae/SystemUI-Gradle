@@ -2,7 +2,9 @@
 
 > **注记（2026-08-26，Task 063）**：本文提及的 `extract_prebuilts.sh` 已于 2026-08-26 经用户批准删除
 > （其 4 个产物均已由源码模块取代，见 `docs/architecture/2026-08-26-tools-scripts-inventory-audit.md`）。
-> 本 ADR 的决策内容不变；`install_keystore.sh` 仍存在（KEEP-with-fix，待 .py 转换）。
+> 本 ADR 的决策内容不变；`install_keystore.sh` 已于 2026-08-26 经用户批准转换为
+> `tools/install_keystore.py`（Task 067，逻辑等价：openssl/keytool 链经 subprocess 调用，
+> 证书 SHA-256 指纹与 tracked `keystore/platform.keystore` 一致），原 .sh 已删除。
 
 ## 上下文
 
