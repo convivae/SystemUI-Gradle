@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Contract tests for the Task 044 narrow R8 adapter (option A).
+"""Contract tests for the narrow R8 adapter (app/proguard_gradle.flags).
 
-Pins the user-approved boundary (docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md):
+Pins the cumulative user-approved rule set, one decision per rule:
 
-- ``app/proguard_gradle.flags`` exists and its only active rule is the exact
-  single-FQN ``-dontwarn com.android.aconfig.annotations.AssumeTrueForR8``;
-- no wildcard/``**``, ``-keep``, ``-assumevalues`` or ``-assumenosideeffects``
-  treatment is smuggled into the adapter;
-- the adapter is wired exactly once into the minified ``release`` build type of
-  ``app/build.gradle.kts`` and never into ``debug``;
-- the byte-exact AOSP-owned ``app/*.flags`` rule files carry no active rule
-  mentioning the annotation.
+- Task 044 (2026-08-21): exact single-FQN
+  ``-dontwarn com.android.aconfig.annotations.AssumeTrueForR8``
+  (docs/issues/2026-08-21-r8-aconfig-narrow-dontwarn.md);
+- task 060 (2026-08-25): same-family
+  ``-dontwarn com.android.aconfig.annotations.AssumeFalseForR8``
+  plus ``-dontobfuscate`` aligning R8 with Soong's never-obfuscated
+  SystemUI build contract (dex.go:545);
+- task 061 (2026-08-26): three exact-FQN ``-keep`` rules blocking R8
+  horizontal class merging of identity-distinct CoreStartables
+  (DumpManager registers by class name).
+
+Still forbidden: wildcards/``**``, ``-assumevalues``,
+``-assumenosideeffects``, and any ``-keep`` beyond the three approved
+exact classes. The adapter is wired exactly once into the minified
+``release`` build type of ``app/build.gradle.kts`` and never into
+``debug``; the byte-exact AOSP-owned ``app/*.flags`` rule files carry
+no active rule mentioning the annotation.
 """
 
 import unittest
@@ -23,7 +32,21 @@ ADAPTER = APP_DIR / "proguard_gradle.flags"
 BUILD_GRADLE = APP_DIR / "build.gradle.kts"
 
 FQN = "com.android.aconfig.annotations.AssumeTrueForR8"
-EXACT_RULE = f"-dontwarn {FQN}"
+FQN_FALSE = "com.android.aconfig.annotations.AssumeFalseForR8"
+
+# Cumulative user-approved active rules, in file order (one decision each:
+# Task 044, task 060, task 061 — see module docstring for provenance).
+APPROVED_RULES = [
+    f"-dontwarn {FQN}",
+    f"-dontwarn {FQN_FALSE}",
+    "-dontobfuscate",
+    "-keep class com.android.systemui.CoreStartable$Nop { *; }",
+    "-keep class com.android.systemui.NoOpCoreStartable { *; }",
+    "-keep class com.android.systemui.flags.FeatureFlagsReleaseStartable { *; }",
+]
+APPROVED_KEEP_RULES = {
+    line for line in APPROVED_RULES if line.startswith("-keep ")
+}
 
 # Stable ordering markers in app/build.gradle.kts (audited 2026-08-21):
 # buildTypes { debug { ... } release { ... } } followed by the AOSP bp comment.
@@ -66,18 +89,19 @@ class TestAdapterFile(unittest.TestCase):
     def test_adapter_file_exists(self):
         self.assertTrue(ADAPTER.is_file(), f"missing adapter file: {ADAPTER}")
 
-    def test_adapter_has_exactly_one_exact_active_rule(self):
+    def test_adapter_has_exactly_the_approved_rules(self):
         self.assertTrue(ADAPTER.is_file(), f"missing adapter file: {ADAPTER}")
         active = _active_lines(ADAPTER.read_text())
-        self.assertEqual(active, [EXACT_RULE], active)
+        self.assertEqual(active, APPROVED_RULES, active)
 
-    def test_adapter_has_no_wildcard_keep_or_assume_rules(self):
+    def test_adapter_has_no_wildcard_or_assume_rules(self):
         self.assertTrue(ADAPTER.is_file(), f"missing adapter file: {ADAPTER}")
         for line in _active_lines(ADAPTER.read_text()):
             self.assertNotIn("**", line)
-            self.assertFalse(line.startswith("-keep"), line)
             self.assertFalse(line.startswith("-assumevalues"), line)
             self.assertFalse(line.startswith("-assumenosideeffects"), line)
+            if line.startswith("-keep"):
+                self.assertIn(line, APPROVED_KEEP_RULES, line)
 
 
 class TestGradleWiring(unittest.TestCase):
