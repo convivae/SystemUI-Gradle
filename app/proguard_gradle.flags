@@ -34,3 +34,16 @@
 -dontwarn com.android.aconfig.annotations.AssumeTrueForR8
 -dontwarn com.android.aconfig.annotations.AssumeFalseForR8
 -dontobfuscate
+#
+# Fourth instance (task 061, user-approved 2026-08-26): keep rules blocking R8
+# horizontal class merging. R8 full-mode merging collapsed the identity-distinct
+# CoreStartables (CoreStartable$Nop singleton, NoOpCoreStartable fresh instance,
+# FeatureFlagsReleaseStartable fresh instance) into one runtime class; DumpManager
+# registers dumpables by class name (module::class.java.name) and rejects distinct
+# instances sharing a name → IllegalArgumentException 'CoreStartable$Nop is already
+# registered' → 195-FATAL crash loop (task 060b round-3 crash). -keep (not merely
+# -keepnames) is required: renaming is already off via -dontobfuscate; only -keep
+# prevents the merge itself.
+-keep class com.android.systemui.CoreStartable$Nop { *; }
+-keep class com.android.systemui.NoOpCoreStartable { *; }
+-keep class com.android.systemui.flags.FeatureFlagsReleaseStartable { *; }
