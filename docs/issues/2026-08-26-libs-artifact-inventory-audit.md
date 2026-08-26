@@ -52,3 +52,39 @@ N/A（只读研究，无构建）。
 ## Git
 
 本地 commit（英文 message，未 push）：`docs: task062 libs artifact inventory audit (read-only, 1 orphan found)`
+
+---
+
+# 扩展审计：tools/ 与 scripts/ 脚本盘点（同日 chief 扩展授权）
+
+**授权**: report-only（report + log line only；实际删除全部等待用户批准）。
+**姿态**: 再生管线脚本为一等 KEEP；删除需四重否定证明；存疑即 KEEP/UNCERTAIN；borderline 一次性脚本标注 deferred。
+
+## 结论
+
+- **KEEP 23**（tools/ 16 脚本中 15 + 11 测试中…见下表）+ install_keystore.sh KEEP-with-fix（ADR 0002 转 .py 欠账）
+- **UNCERTAIN 1**: fix_r_imports_to_res.py（自声明 disabled，等 R-namespace 梳理）
+- **DELETE-CANDIDATE 16**（全部 deferred 至 Phase C pipeline 文档确认非成员资格）:
+  1. gradle/replace-sdk-jar.gradle.kts（零接线、输入不 tracked、被 ADR 0006 取代 — 最强）
+  2-9. scripts/ 8 个零引用一次性迁移（move_extras、rollback_moves、recover_aosp、recover_compose、strip_extras_already_in_jars、strip_extras_stubs、check_extras_in_jars、scan_aosp_bp_modules）
+  10-15. scripts/ 6 个历史分析工具（check_aosp_src_parity[被 tools/check_source_alignment.py 取代]、check_aosp_extras_breakdown/sysui、map_extras_to_modules、propose_aosp_to_gradle_mapping、scaffold_aosp_modules[被 ADR 0003 取代]）
+  16. tools/extract_prebuilts.sh（4 产物全被源码模块取代 + ADR 0002 .sh 违规）
+
+## 再生性 GAP（重点，用户可复现目标阻塞）
+
+libs/ 28 个根目录 jar 中 **15 个无再生脚本**：3 个 flags jar 是 quick win（settingslib-flags、settingslib-media-flags、device-state-flags —— 补 package_aconfig_jars.py CONFIGS 即可，注意 device-state-feature-flags 是已合并的另一个族勿混淆）；其余 12 个（framework、framework-statsd、android.car、android_module_lib_stubs、SystemUI-proto/statsd/tags、contextualeducationlib、msdl、PlatformMotionTestingComposeValues、keepanno-annotations、tracinglib-platform）需新增 AOSP out/ 提取脚本。覆盖良好：29/29 AAR、23/23 maven、monet/viewcapture/motiontool/compilelib、9/12 flags。
+
+## Ghost 脚本考古
+
+install_sdk/patch_sdk_dalvik_annotations/patch_sdk_r8_library_classes 已删于 8cb7279b；gen_aar_maven/rebuild_settingslib_aar/clean_aar_maven 已删于 6741324d —— chief 假设由 git 历史证实。仅剩 gitignored .pyc（本地卫生，`git clean -fdX tools/ scripts/` 可清，本次未执行）。
+
+## aosp_paths 单一来源合规
+
+合规 2 个（package_aconfig_jars、build_sysuisdk）；KEEP-with-fix 5 个（package_aosp_aar、package_compilelib_jars、check_source_alignment 无 --aosp-root；package_monet、package_viewcapture default 硬编码）；scripts/ 全部 14 个硬编码（若删除则自然消解）。
+
+## 输出
+
+- 主报告: `docs/architecture/2026-08-26-tools-scripts-inventory-audit.md`
+- log line: `docs/orchestration/log.md`（task062-extension 一行）
+- 本地 commit（英文 message，未 push）
+- 未运行任何 Gradle 构建（report-only mandate）
