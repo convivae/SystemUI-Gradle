@@ -15,8 +15,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+# The script under test imports aosp_paths; make tools/ importable no matter
+# where the test runner is invoked from.
+_TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
 # 动态导入 tools/check_source_alignment.py（非 package）
-_SCRIPT = Path(__file__).resolve().parents[1] / "check_source_alignment.py"
+_SCRIPT = _TOOLS_DIR / "check_source_alignment.py"
 _spec = importlib.util.spec_from_file_location("check_source_alignment", _SCRIPT)
 csa = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(csa)

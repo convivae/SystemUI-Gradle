@@ -10,7 +10,15 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
-_SCRIPT = Path(__file__).resolve().parents[1] / "package_aosp_aar.py"
+# The script under test imports aosp_paths; make tools/ importable no matter
+# where the test runner is invoked from.
+_TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOLS_DIR))
+
+import aosp_paths
+
+_SCRIPT = _TOOLS_DIR / "package_aosp_aar.py"
 _spec = importlib.util.spec_from_file_location("package_aosp_aar", _SCRIPT)
 paar = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(paar)
@@ -1220,6 +1228,30 @@ class TestAllFlag(unittest.TestCase):
             self.assertEqual(set(called), set(paar.CONFIGS))
         finally:
             paar.build_artifact = orig
+
+
+class TestAospRootSingleSource(unittest.TestCase):
+    """aosp_paths integration (user rule 2026-08-25): no private hardcoded root."""
+
+    def test_module_constants_come_from_shared_source(self):
+        self.assertEqual(paar.AOSP_ROOT, aosp_paths.aosp_root())
+        self.assertEqual(paar.SOONG_DIR, aosp_paths.aosp_root() / "out/soong/.intermediates")
+
+    def test_configure_aosp_root_rebuilds_configs(self):
+        # --aosp-root must re-point every derived constant, not just AOSP_ROOT.
+        original = (paar.AOSP_ROOT, paar.SOONG_DIR, paar.CONFIGS)
+        try:
+            paar.configure_aosp_root(Path("/opt/other-aosp"))
+            self.assertEqual(paar.AOSP_ROOT, Path("/opt/other-aosp"))
+            self.assertEqual(
+                paar.SOONG_DIR, Path("/opt/other-aosp/out/soong/.intermediates"))
+            wifi = paar.CONFIGS["WifiTrackerLib"]
+            self.assertTrue(
+                str(wifi["res"][0]).startswith("/opt/other-aosp/"))
+        finally:
+            paar.configure_aosp_root(original[0])
+        self.assertEqual(paar.SOONG_DIR, original[1])
+        self.assertIn("WifiTrackerLib", paar.CONFIGS)
 
 
 if __name__ == "__main__":

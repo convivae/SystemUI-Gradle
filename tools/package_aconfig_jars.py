@@ -62,7 +62,32 @@ def _soong(path: str) -> Path:
     return AOSP_INTERMEDIATES / path
 
 
-# name -> (owning Soong javac source, destination, runtime package)
+#: SettingsLib aconfig runtime whose owning Soong module has no javac output
+#: in the build (only turbine artifacts exist; task 064). The kept libs/
+#: baseline jar was hand-built on 2026-07-29 from the same turbine-combined
+#: classes with a JDK jar-tool wrapper; it is compileOnly wiring, so turbine
+#: stub bodies are acceptable. ``repack_baseline_stub_jar`` reproduces the
+#: baseline bytes exactly from the turbine source.
+TURBINE_BASELINE_CONFIGS = {
+    "settingslib-flags": (
+        _soong(
+            "frameworks/base/aconfig_settingslib_flags_java_lib/"
+            "android_common/turbine-combined/"
+            "aconfig_settingslib_flags_java_lib.jar"
+        ),
+        Path("libs/settingslib-flags.jar"),
+        "com.android.settingslib.flags",
+    ),
+}
+
+#: Manifest bytes of the 2026-07-29 hand-built baseline jar (JDK 25 jar tool).
+_BASELINE_MANIFEST = b"Manifest-Version: 1.0\r\nCreated-By: 25.0.2 (Oracle Corporation)\r\n\r\n"
+
+#: Entry timestamp the jar tool stamped on the manifest and directory
+#: entries of the baseline jar.
+_BASELINE_WRAPPER_DATETIME = (2026, 7, 29, 1, 37, 0)
+
+#: Name -> (owning Soong javac source, destination, runtime package)
 CONFIGS = {
     # Task 055 batch: the 11 residual aconfig runtime-closure hazards found by
     # the APK prescan in task 054. Each owning java_aconfig_library lives in
@@ -271,6 +296,25 @@ CONFIGS = {
         Path("libs/settingslib-selector-flags.jar"),
         "com.android.settingslib.widget.selectorwithwidgetpreference.flags",
     ),
+    # Task 064 (regeneration gap closure): the two remaining javac-backed
+    # aconfig runtime jars that were hand-copied in 2026-07.
+    "settingslib-media-flags": (
+        _soong(
+            "frameworks/base/packages/SettingsLib/settingslib_media_flags_lib/"
+            "android_common/javac/settingslib_media_flags_lib.jar"
+        ),
+        Path("libs/settingslib-media-flags.jar"),
+        "com.android.settingslib.media.flags",
+    ),
+    "device-state-flags": (
+        _soong(
+            "frameworks/base/services/foldables/devicestateprovider/src/com/"
+            "android/server/policy/feature/device_state_flags_lib/"
+            "android_common/javac/device_state_flags_lib.jar"
+        ),
+        Path("libs/device-state-flags.jar"),
+        "com.android.server.policy.feature.flags",
+    ),
 }
 
 
@@ -304,6 +348,132 @@ def copy_jar(source: Path, destination: Path, runtime_package: str) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".tmp")
     shutil.copyfile(source, temporary)
+    temporary.replace(destination)
+
+
+def _dos_datetime(when: tuple[int, int, int, int, int, int]) -> tuple[int, int]:
+    """DOS zip (time, date) pair for a ``(y, m, d, h, mi, s)`` tuple."""
+    year, month, day, hour, minute, second = when
+    dos_time = (second // 2) | (minute << 5) | (hour << 11)
+    dos_date = ((year - 1980) << 9) | (month << 5) | day
+    return dos_time, dos_date
+
+
+def _jar_tool_zip_bytes(entries: list[tuple[str, tuple[int, int, int, int, int, int], int, bytes]]) -> bytes:
+    """Serialize ``entries`` in the exact byte format of a JDK ``jar`` tool run.
+
+    ``entries`` is a list of ``(name, date_time, method, payload)``. The layout
+    replicates what ``java.util.zip.ZipOutputStream`` (as driven by the jar
+    tool) produces, verified byte-for-byte against the 2026-07-29 baseline
+    ``libs/settingslib-flags.jar`` (task 064):
+
+    * local file headers carry the UTF-8 flag (0x800); deflated entries add
+      the data-descriptor flag (0x808) and write crc/sizes only in a
+      signature-prefixed trailing data descriptor;
+    * the first local header (and only it) carries the 4-byte 0xCAFE dummy
+      extra field the JDK reserves for zip64 promotion;
+    * the central directory uses DOS (FAT) as the host system and zero
+      external attributes;
+    * deflated streams are zlib level 6, matching the JDK default.
+    """
+    import struct
+    import zlib
+
+    body = bytearray()
+    central = bytearray()
+    offset = 0
+    for index, (name, when, method, payload) in enumerate(entries):
+        dos_time, dos_date = _dos_datetime(when)
+        if method == zipfile.ZIP_DEFLATED:
+            compressor = zlib.compressobj(6, zlib.DEFLATED, -15)
+            compressed = compressor.compress(payload) + compressor.flush()
+        else:
+            compressed = payload
+        crc = zlib.crc32(payload) & 0xFFFFFFFF
+        version = 20 if method == zipfile.ZIP_DEFLATED else 10
+        flags = 0x808 if method == zipfile.ZIP_DEFLATED else 0x800
+        name_bytes = name.encode("utf-8")
+        extra = b"\xfe\xca\x00\x00" if index == 0 else b""
+        if method == zipfile.ZIP_DEFLATED:
+            body += struct.pack(
+                "<IHHHHHIIIHH", 0x04034B50, version, flags, method,
+                dos_time, dos_date, 0, 0, 0, len(name_bytes), len(extra),
+            )
+            body += name_bytes + extra + compressed
+            body += struct.pack(
+                "<IIII", 0x08074B50, crc, len(compressed), len(payload)
+            )
+        else:
+            body += struct.pack(
+                "<IHHHHHIIIHH", 0x04034B50, version, flags, method,
+                dos_time, dos_date, crc, len(compressed), len(payload),
+                len(name_bytes), len(extra),
+            )
+            body += name_bytes + extra + compressed
+        central += struct.pack(
+            "<IHHHHHHIIIHHHHHII", 0x02014B50, version, version, flags, method,
+            dos_time, dos_date, crc, len(compressed), len(payload),
+            len(name_bytes), len(extra), 0, 0, 0, 0, offset,
+        )
+        central += name_bytes + extra
+        offset = len(body)
+    body += central
+    body += struct.pack(
+        "<IHHHHIIH", 0x06054B50, 0, 0, len(entries), len(entries),
+        len(central), offset, 0,
+    )
+    return bytes(body)
+
+
+def repack_baseline_stub_jar(source: Path, destination: Path, runtime_package: str) -> None:
+    """Rebuild a hand-made baseline stub JAR from a Soong turbine source.
+
+    Used only for aconfig runtime modules whose javac output does not exist in
+    the build (``aconfig_settingslib_flags_java_lib`` is consumed purely via
+    turbine by the framework). The kept baseline jar wraps the identical
+    turbine classes in a JDK jar-tool zip; this function reproduces those
+    bytes deterministically so the baseline stays regenerable. The five-class
+    runtime validation still applies; the module-level turbine guard is
+    deliberately overridden here because the baseline itself carries turbine
+    stub bodies and the jar is compileOnly wiring.
+    """
+    source = Path(source)
+    destination = Path(destination)
+    if not source.is_file() or not zipfile.is_zipfile(source):
+        raise FileNotFoundError(f"missing or invalid AOSP JAR: {source}")
+    validate_runtime_jar(source, runtime_package)
+    with zipfile.ZipFile(source) as archive:
+        classes = [
+            (info.filename, info.date_time, zipfile.ZIP_DEFLATED,
+             archive.read(info.filename))
+            for info in archive.infolist()
+            if not info.is_dir()
+        ]
+    if any(name == "META-INF/MANIFEST.MF" for name, _, _, _ in classes):
+        raise ValueError(f"turbine source unexpectedly carries a manifest: {source}")
+    prefix = runtime_package.replace(".", "/") + "/"
+    directories = []
+    seen: set[str] = set()
+    for name, _, _, _ in classes:
+        parts = name.split("/")[:-1]
+        for depth in range(1, len(parts) + 1):
+            directory = "/".join(parts[:depth]) + "/"
+            if directory not in seen:
+                seen.add(directory)
+                directories.append(directory)
+    entries = [("META-INF/", _BASELINE_WRAPPER_DATETIME, zipfile.ZIP_STORED, b"")]
+    entries.append(
+        ("META-INF/MANIFEST.MF", _BASELINE_WRAPPER_DATETIME,
+         zipfile.ZIP_DEFLATED, _BASELINE_MANIFEST)
+    )
+    entries += [
+        (directory, _BASELINE_WRAPPER_DATETIME, zipfile.ZIP_STORED, b"")
+        for directory in directories
+    ]
+    entries += classes
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    temporary.write_bytes(_jar_tool_zip_bytes(entries))
     temporary.replace(destination)
 
 
@@ -390,7 +560,7 @@ def main() -> int:
     parser.add_argument(
         "artifact",
         nargs="?",
-        choices=sorted(CONFIGS),
+        choices=sorted(set(CONFIGS) | set(TURBINE_BASELINE_CONFIGS)),
         help="single artifact to package (backward-compatible positional)",
     )
     parser.add_argument(
@@ -416,13 +586,21 @@ def main() -> int:
         print(f"framework-family merge: {len(FRAMEWORK_FAMILY)} sources -> "
               f"{MERGED_FRAMEWORK_JAR}")
     names = (
-        sorted(name for name in CONFIGS if name not in FRAMEWORK_FAMILY)
+        sorted(
+            name
+            for name in set(CONFIGS) | set(TURBINE_BASELINE_CONFIGS)
+            if name not in FRAMEWORK_FAMILY
+        )
         if args.all
         else ([args.artifact] if args.artifact else [])
     )
     for name in names:
-        source, destination, runtime_package = CONFIGS[name]
-        copy_jar(source, destination, runtime_package)
+        if name in TURBINE_BASELINE_CONFIGS:
+            source, destination, runtime_package = TURBINE_BASELINE_CONFIGS[name]
+            repack_baseline_stub_jar(source, destination, runtime_package)
+        else:
+            source, destination, runtime_package = CONFIGS[name]
+            copy_jar(source, destination, runtime_package)
         print(f"{name}: {source} -> {destination}")
     return 0
 

@@ -395,6 +395,113 @@ class TestMergeSources(unittest.TestCase):
                 )
 
 
+class TestTask064Configs(unittest.TestCase):
+    """Regeneration gap closure (task 064): the three 2026-07 hand copies."""
+
+    def test_settingslib_media_flags_config(self):
+        source, destination, package = module.CONFIGS["settingslib-media-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base/packages/SettingsLib/settingslib_media_flags_lib"
+            / "android_common/javac/settingslib_media_flags_lib.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertEqual(destination, Path("libs/settingslib-media-flags.jar"))
+        self.assertEqual(package, "com.android.settingslib.media.flags")
+
+    def test_device_state_flags_config(self):
+        # device-state-flags (com.android.server.policy.feature.flags) is a
+        # different family from device-state-feature-flags; both must exist.
+        source, destination, package = module.CONFIGS["device-state-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base/services/foldables/devicestateprovider/src/com/"
+            / "android/server/policy/feature/device_state_flags_lib"
+            / "android_common/javac/device_state_flags_lib.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertEqual(destination, Path("libs/device-state-flags.jar"))
+        self.assertEqual(package, "com.android.server.policy.feature.flags")
+        self.assertIn("device-state-feature-flags", module.CONFIGS)
+        self.assertNotIn("device-state-flags", module.FRAMEWORK_FAMILY)
+
+    def test_turbine_baseline_config_shape(self):
+        # aconfig_settingslib_flags_java_lib has no javac output in the build;
+        # the baseline jar wraps its turbine-combined classes.
+        source, destination, package = module.TURBINE_BASELINE_CONFIGS[
+            "settingslib-flags"
+        ]
+        self.assertIn("turbine-combined", str(source))
+        self.assertEqual(destination, Path("libs/settingslib-flags.jar"))
+        self.assertEqual(package, "com.android.settingslib.flags")
+        self.assertNotIn("settingslib-flags", module.CONFIGS)
+
+
+class TestRepackBaselineStubJar(unittest.TestCase):
+    """Baseline-preserving jar-tool repack of a turbine stub source."""
+
+    def _turbine_source(self, root, package="com.android.settingslib.flags"):
+        source = root / "turbine-combined" / "flags.jar"
+        source.parent.mkdir(parents=True)
+        prefix = package.replace(".", "/")
+        with zipfile.ZipFile(source, "w", zipfile.ZIP_STORED) as archive:
+            for name in RUNTIME_CLASSES:
+                info = zipfile.ZipInfo(f"{prefix}/{name}.class", (2008, 1, 1, 0, 0, 0))
+                archive.writestr(info, f"stub-{name}".encode())
+        return source
+
+    def test_repack_is_deterministic_and_carries_baseline_wrapper(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = self._turbine_source(root)
+            out1 = root / "a.jar"
+            out2 = root / "b.jar"
+            module.repack_baseline_stub_jar(source, out1, "com.android.settingslib.flags")
+            module.repack_baseline_stub_jar(source, out2, "com.android.settingslib.flags")
+            self.assertEqual(out1.read_bytes(), out2.read_bytes())
+            with zipfile.ZipFile(out1) as archive:
+                self.assertIn("META-INF/MANIFEST.MF", archive.namelist())
+                self.assertEqual(
+                    archive.read("META-INF/MANIFEST.MF"), module._BASELINE_MANIFEST
+                )
+                for name in RUNTIME_CLASSES:
+                    self.assertEqual(
+                        archive.read(
+                            "com/android/settingslib/flags/" + name + ".class"
+                        ),
+                        ("stub-" + name).encode(),
+                    )
+                manifest_info = archive.getinfo("META-INF/MANIFEST.MF")
+                self.assertEqual(
+                    manifest_info.date_time, module._BASELINE_WRAPPER_DATETIME
+                )
+
+    def test_repack_rejects_incomplete_class_set(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "turbine-combined" / "flags.jar"
+            source.parent.mkdir(parents=True)
+            with zipfile.ZipFile(source, "w") as archive:
+                archive.writestr("com/android/settingslib/flags/Flags.class", b"x")
+            with self.assertRaises(ValueError):
+                module.repack_baseline_stub_jar(
+                    source, root / "out.jar", "com.android.settingslib.flags"
+                )
+
+    def test_repack_rejects_source_with_manifest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = self._turbine_source(root)
+            with zipfile.ZipFile(source, "a") as archive:
+                archive.writestr("META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\r\n\r\n")
+            with self.assertRaises(ValueError):
+                module.repack_baseline_stub_jar(
+                    source, root / "out.jar", "com.android.settingslib.flags"
+                )
+
+
 class TestBatchAllFlag(unittest.TestCase):
     """The optional --all batch mode keeps the single-artifact path intact."""
 
@@ -411,6 +518,8 @@ class TestBatchAllFlag(unittest.TestCase):
         merges = []
         with mock.patch.object(module, "CONFIGS", fake_configs), mock.patch.object(
             module, "FRAMEWORK_FAMILY", frozenset()
+        ), mock.patch.object(
+            module, "TURBINE_BASELINE_CONFIGS", {}
         ), mock.patch.object(
             module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
         ), mock.patch.object(
@@ -434,6 +543,8 @@ class TestBatchAllFlag(unittest.TestCase):
         with mock.patch.object(module, "CONFIGS", fake_configs), mock.patch.object(
             module, "FRAMEWORK_FAMILY", frozenset({"fam"})
         ), mock.patch.object(
+            module, "TURBINE_BASELINE_CONFIGS", {}
+        ), mock.patch.object(
             module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
         ), mock.patch.object(module, "merge_framework_family", return_value=None):
             self.assertEqual(self._run_main(["--all"]), 0)
@@ -452,6 +563,31 @@ class TestBatchAllFlag(unittest.TestCase):
             self.assertEqual(self._run_main(["--merge-framework"]), 0)
         self.assertEqual(merges, ["merged"])
         self.assertEqual(calls, [])
+
+    def test_all_repacks_turbine_baseline_entries(self):
+        # --all must also process TURBINE_BASELINE_CONFIGS through the repack
+        # path (settingslib-flags), never through the plain javac copy.
+        fake_configs = {"solo": (Path("/a.jar"), Path("libs/a.jar"), "a.b")}
+        copies = []
+        repacks = []
+        with mock.patch.object(module, "CONFIGS", fake_configs), mock.patch.object(
+            module, "FRAMEWORK_FAMILY", frozenset()
+        ), mock.patch.object(
+            module, "TURBINE_BASELINE_CONFIGS",
+            {"stub": (Path("/t.jar"), Path("libs/stub.jar"), "a.stub")},
+        ), mock.patch.object(
+            module, "copy_jar", side_effect=lambda s, d, p: copies.append((s, d, p))
+        ), mock.patch.object(
+            module, "repack_baseline_stub_jar",
+            side_effect=lambda s, d, p: repacks.append((s, d, p)),
+        ), mock.patch.object(
+            module, "merge_framework_family", return_value=None
+        ):
+            self.assertEqual(self._run_main(["--all"]), 0)
+        self.assertEqual(copies, [fake_configs["solo"]])
+        self.assertEqual(
+            repacks, [(Path("/t.jar"), Path("libs/stub.jar"), "a.stub")]
+        )
 
     def test_single_artifact_still_works(self):
         fake_configs = {"only": (Path("/a.jar"), Path("libs/a.jar"), "a.b")}

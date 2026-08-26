@@ -31,10 +31,12 @@ import sys
 from collections import defaultdict, namedtuple
 from pathlib import Path
 
+from aosp_paths import aosp_root
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 路径
 # ─────────────────────────────────────────────────────────────────────────────
-AOSP_ROOT = Path("/home/conv/myspace/aosp/frameworks/base/packages/SystemUI")
+AOSP_ROOT = aosp_root() / "frameworks/base/packages/SystemUI"
 PROJECT_ROOT = Path("/home/conv/myspace/SystemUI-Gradle")
 
 EXCLUDE_DIR_PARTS = {"build", ".gradle", ".git", ".idea", "out", "generated"}
@@ -305,11 +307,18 @@ def strict_should_fail(src_result, app_issues, res_result):
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     ap = argparse.ArgumentParser(description="检查 SystemUI 源码/资源与 AOSP 对齐")
+    ap.add_argument("--aosp-root", type=Path, default=None,
+                    help="AOSP 树根路径（默认走 tools/aosp_paths.py 单一来源；"
+                         "亦可用 AOSP_ROOT 环境变量覆盖）")
     ap.add_argument("--no-res", action="store_true", help="跳过 res 检查")
     ap.add_argument("--summary", action="store_true", help="只输出汇总数字")
     ap.add_argument("--strict", action="store_true",
                     help="任一 missing/misplaced/extra 时退出 1（MODIFIED 不卡，见 ADR 0004）")
     args = ap.parse_args()
+
+    if args.aosp_root is not None:
+        global AOSP_ROOT
+        AOSP_ROOT = args.aosp_root / "frameworks/base/packages/SystemUI"
 
     if not AOSP_ROOT.exists():
         return f"AOSP 根目录不存在: {AOSP_ROOT}"

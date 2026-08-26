@@ -22,7 +22,12 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
-AOSP_ROOT = Path("/home/conv/myspace/aosp")
+from aosp_paths import aosp_root
+
+# Single AOSP root source (user rule 2026-08-25): tools/aosp_paths.py resolves
+# the default and the AOSP_ROOT env override; --aosp-root rebuilds every
+# derived constant below (see configure_aosp_root).
+AOSP_ROOT = aosp_root()
 SOONG_DIR = AOSP_ROOT / "out/soong/.intermediates"
 
 ANIMATIONLIB_DIR = AOSP_ROOT / "frameworks/libs/systemui/animationlib"
@@ -51,7 +56,15 @@ def _discover_settingslib_code_jars() -> list:
 
 
 # Declarative artifact configs（canonical inputs，见 artifact-recovery 计划）
-CONFIGS = {
+def _build_configs() -> dict:
+    """Build the declarative artifact configs from the current path constants.
+
+    Called once at import for the default (aosp_paths-resolved) root and
+    again by ``configure_aosp_root`` when ``--aosp-root`` is given; the dict
+    literal resolves SOONG_DIR/AOSP_ROOT/... at call time, so a rebound
+    global is picked up automatically.
+    """
+    return {
     "animationlib": {
         "code": [ANIMATIONLIB_SOONG / "javac" / "animationlib.jar",
                  ANIMATIONLIB_SOONG / "kotlin" / "animationlib.jar"],
@@ -342,7 +355,25 @@ CONFIGS = {
         "rtxt": TRACEUR_SOONG / "Traceur-res/android_common/R.txt",
         "output": "libs/aars/Traceur-res.aar",
     },
-}
+    }
+
+
+CONFIGS = _build_configs()
+
+
+def configure_aosp_root(root: Path) -> None:
+    """Re-point every derived path constant and CONFIGS at another AOSP tree."""
+    global AOSP_ROOT, SOONG_DIR, ANIMATIONLIB_DIR, ANIMATIONLIB_SOONG
+    global TRACEUR_DIR, TRACEUR_SOONG, CONFIGS
+    AOSP_ROOT = Path(root)
+    SOONG_DIR = AOSP_ROOT / "out/soong/.intermediates"
+    ANIMATIONLIB_DIR = AOSP_ROOT / "frameworks/libs/systemui/animationlib"
+    ANIMATIONLIB_SOONG = (
+        SOONG_DIR / "frameworks/libs/systemui/animationlib/animationlib/android_common"
+    )
+    TRACEUR_DIR = AOSP_ROOT / "packages/apps/Traceur"
+    TRACEUR_SOONG = SOONG_DIR / "packages/apps/Traceur"
+    CONFIGS = _build_configs()
 
 
 class DuplicateEntryError(RuntimeError):
@@ -520,7 +551,13 @@ def main():
                    help="要打包的库（省略时配合 --all 打包全部）")
     ap.add_argument("--output", default=None, help="输出 AAR 路径（默认用 config）")
     ap.add_argument("--all", action="store_true", help="打包 CONFIGS 中所有库")
+    ap.add_argument("--aosp-root", type=Path, default=None,
+                   help="AOSP 树根路径（默认走 tools/aosp_paths.py 单一来源；"
+                        "亦可用 AOSP_ROOT 环境变量覆盖）")
     args = ap.parse_args()
+
+    if args.aosp_root is not None:
+        configure_aosp_root(args.aosp_root)
 
     if args.all:
         for name in CONFIGS:

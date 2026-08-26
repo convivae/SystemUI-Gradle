@@ -12,6 +12,7 @@ core 用 debugImplementation / releaseImplementation 分别消费。
   libs/compilelib-release.jar (IS_DEBUG = false)
 """
 
+import argparse
 import shutil
 import subprocess
 import sys
@@ -19,7 +20,11 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-AOSP_ROOT = Path("/home/conv/myspace/aosp")
+from aosp_paths import aosp_root
+
+# Single AOSP root source (user rule 2026-08-25): tools/aosp_paths.py resolves
+# the default and the AOSP_ROOT env override; --aosp-root rebinds below.
+AOSP_ROOT = aosp_root()
 COMPILELIB = AOSP_ROOT / "frameworks/libs/systemui/compilelib"
 DEBUG_SRC = COMPILELIB / "src-debug/com/android/systemui/util/Compile.java"
 RELEASE_SRC = COMPILELIB / "src-release/com/android/systemui/util/Compile.java"
@@ -66,7 +71,23 @@ def _compile_one(src: Path, output: Path) -> None:
     print(f"{output} ({output.stat().st_size} bytes)")
 
 
+def configure_aosp_root(root: Path) -> None:
+    """Re-point the derived source constants at another AOSP tree."""
+    global AOSP_ROOT, COMPILELIB, DEBUG_SRC, RELEASE_SRC
+    AOSP_ROOT = Path(root)
+    COMPILELIB = AOSP_ROOT / "frameworks/libs/systemui/compilelib"
+    DEBUG_SRC = COMPILELIB / "src-debug/com/android/systemui/util/Compile.java"
+    RELEASE_SRC = COMPILELIB / "src-release/com/android/systemui/util/Compile.java"
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description="打包 compilelib debug/release JAR")
+    parser.add_argument("--aosp-root", type=Path, default=None,
+                        help="AOSP 树根路径（默认走 tools/aosp_paths.py 单一来源；"
+                             "亦可用 AOSP_ROOT 环境变量覆盖）")
+    args = parser.parse_args()
+    if args.aosp_root is not None:
+        configure_aosp_root(args.aosp_root)
     _compile_one(DEBUG_SRC, DEBUG_JAR)
     _compile_one(RELEASE_SRC, RELEASE_JAR)
     return 0

@@ -27,7 +27,11 @@ FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 VIEW_PREFIX = "com/android/app/viewcapture/"
 MOTION_PREFIX = "com/android/app/motiontool/"
 
-DEFAULT_AOSP_ROOT = Path("/home/conv/myspace/aosp")
+from aosp_paths import aosp_root
+
+# Single AOSP root source (user rule 2026-08-25): tools/aosp_paths.py resolves
+# the default, the AOSP_ROOT env override, and any explicit --aosp-root value.
+DEFAULT_AOSP_ROOT = aosp_root()
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

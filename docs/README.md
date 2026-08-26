@@ -88,7 +88,8 @@
 | [`../tools/build_sysuisdk.py`](../tools/build_sysuisdk.py) | 从 tracked inputs 从零重建 SysUISdk（`--apply` 落盘） |
 | [`../tools/package_aosp_aar.py`](../tools/package_aosp_aar.py) | 从 AOSP Soong 产物打包确定性 AAR 到 `libs/aars/` |
 | [`../tools/install_aar_to_maven.py`](../tools/install_aar_to_maven.py) | 安装 AAR 到 `libs/maven/` 本地 Maven 仓（AAR + POM 骨架） |
-| [`../tools/package_aconfig_jars.py`](../tools/package_aconfig_jars.py) | 从 AOSP javac 产物打包完整 aconfig runtime JAR |
+| [`../tools/package_aconfig_jars.py`](../tools/package_aconfig_jars.py) | 从 AOSP javac 产物打包完整 aconfig runtime JAR（含 turbine 基准重打包 settingslib-flags） |
+| [`../tools/package_misc_jars.py`](../tools/package_misc_jars.py) | 12 个手工 jar 的冻结映射提取器（task 064；含 MATCH/DIFF 基准比对） |
 | [`../tools/package_compilelib_jars.py`](../tools/package_compilelib_jars.py) | 打包 compilelib debug/release JAR |
 | [`../tools/package_monet_jar.py`](../tools/package_monet_jar.py) / [`../tools/package_viewcapture_motiontool_jars.py`](../tools/package_viewcapture_motiontool_jars.py) | 确定性 clean JAR（monet / view-capture / motion-tool） |
 | [`../tools/check_source_alignment.py`](../tools/check_source_alignment.py) | AOSP src/AIDL/res 对齐校验（规则 C） |

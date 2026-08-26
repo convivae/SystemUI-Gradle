@@ -765,3 +765,10 @@ scene `Scene`/`Overlay`/`QuickSettingsShade`、biometric `asBiometricModality`�
 
 净降 215，仅新增 2 个 honest 缺口（MotionTestValues / setShowTitleItems）。
 详见 `docs/issues/2026-07-28-compose-features-source.md`。
+
+## 2026-08-26 · Task 064 — libs/ 再生性 GAP 关闭（15/15 纳入脚本管线；无 Gradle 运行）
+
+- 新建 `tools/package_misc_jars.py`（12 条冻结映射）+ `package_aconfig_jars.py` 扩 3 条（含 settingslib-flags turbine 基准重打包）。
+- 再生比对：13 MATCH（逐字节）/ 2 DIFF（framework-statsd、android.car——现存基准无当前树逐字节来源，Phase C 决策）。
+- W3：5 个脚本 AOSP 根路径统一走 `tools/aosp_paths.py`（package_aosp_aar / compilelib / check_source_alignment 加 `--aosp-root`；monet / viewcapture 改默认源）。
+- 验证：pytest 275 passed；libs/ 零改动。详见 `docs/architecture/2026-08-26-regeneration-gap-closure.md`。

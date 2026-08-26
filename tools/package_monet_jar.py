@@ -24,7 +24,11 @@ import sys
 import zipfile
 from pathlib import Path
 
-AOSP_ROOT = Path("/home/conv/myspace/aosp")
+from aosp_paths import aosp_root
+
+# Single AOSP root source (user rule 2026-08-25): tools/aosp_paths.py resolves
+# the default, the AOSP_ROOT env override, and any explicit --aosp-root value.
+AOSP_ROOT = aosp_root()
 MONET_INPUT = (
     "out/soong/.intermediates/frameworks/libs/systemui/monet/monet/"
     "android_common/javac/monet.jar"
