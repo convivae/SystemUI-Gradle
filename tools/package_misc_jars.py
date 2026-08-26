@@ -14,11 +14,15 @@ compared against the baseline and reported as MATCH/DIFF. DIFF is *not* a
 failure: the 2026-07 hand copies predate later AOSP syncs, and the report is
 the decision input for Phase C ("script output wins" vs "baseline wins").
 
-Two entries are known DIFF (frozen as such, see
-``docs/architecture/2026-08-26-regeneration-gap-closure.md``):
+Two entries were historically DIFF and were replaced with the script
+output on 2026-08-26 following explicit user approval ("script output wins
+over hand-copied jars"); their baselines are now the frozen Soong sources
+themselves, so ``--verify-only`` reports MATCH across the board. See
+``docs/architecture/2026-08-26-regeneration-gap-closure.md`` §4:
 
-* ``framework-statsd`` — no byte-exact Soong source exists in the current
-  build; the frozen source is the closest superset (impl javac, real classes).
+* ``framework-statsd`` — no byte-exact Soong source of the 2026-07 hand copy
+  exists in the current build; the frozen source is the closest superset
+  (impl javac, real classes).
 * ``android.car`` — the module only produces turbine output in this build;
   the frozen source is the turbine-combined closure (stub bodies, fine for
   the compileOnly wiring).
@@ -66,10 +70,11 @@ CONFIGS: dict[str, dict] = {
             "0fe39d800f34f6c7b17e5c936571bc29367e1329c8af9c6ab47e894beb05be26",
     },
     "framework-statsd": {
-        # Known DIFF: the 2026-07 hand copy (39 API-stub classes) has no
-        # byte-exact Soong source in the current build. Frozen source is the
-        # closest superset: the impl javac jar (61 entries, real classes,
-        # contains every baseline class name).
+        # Replaced 2026-08-26 (task 065, user-approved): the 2026-07 hand
+        # copy (39 API-stub classes) had no byte-exact Soong source in the
+        # current build. Baseline is now the frozen source itself: the impl
+        # javac jar (70 entries, real classes, class-name superset of the
+        # old hand copy).
         "module": "framework-statsd.impl",
         "relpath": "packages/modules/StatsD/framework/framework-statsd.impl/"
                    "android_common_apex30/javac/framework-statsd.jar",
@@ -77,13 +82,14 @@ CONFIGS: dict[str, dict] = {
         "source_sha256":
             "058f30a1a7ef191b1c4ecef3658b215d996d657f6d0a2591956eb6e3e5aba352",
         "baseline_sha256":
-            "d54489eea0289da14cbac81f803990f5505fe39a62303783f227c69b39daf80c",
+            "058f30a1a7ef191b1c4ecef3658b215d996d657f6d0a2591956eb6e3e5aba352",
     },
     "android.car": {
-        # Known DIFF: module only has turbine output in this build (1219 stub
-        # classes incl. the static dep closure); the baseline (678 stored
-        # stubs) came from a July-era tree state and carries 14 classes that
-        # no longer exist upstream. compileOnly wiring — stubs are fine.
+        # Replaced 2026-08-26 (task 065, user-approved): the 2026-07 hand copy
+        # (678 stored stubs) came from a July-era tree state and carried 14
+        # classes that no longer exist upstream. Baseline is now the frozen
+        # turbine-combined closure (1219 stub classes incl. the static dep
+        # closure). compileOnly wiring — stubs are fine.
         "module": "android.car",
         "relpath": "packages/services/Car/car-lib/android.car/android_common/"
                    "turbine-combined/android.car.jar",
@@ -91,7 +97,7 @@ CONFIGS: dict[str, dict] = {
         "source_sha256":
             "89f04e0a30bf8889ab2198516d9ecf362e90559e3bc7dbad8863b1c6263919c0",
         "baseline_sha256":
-            "bd5faa75542bf93d9dc9c989ce09a9510261e1e72188396a4c7abf30ae3bea62",
+            "89f04e0a30bf8889ab2198516d9ecf362e90559e3bc7dbad8863b1c6263919c0",
     },
     "android_module_lib_stubs_current": {
         "module": "android_module_lib_stubs_current",

@@ -107,16 +107,30 @@ class TestFrozenMapping(unittest.TestCase):
                         entry[field], r"^[0-9a-f]{64}$"
                     )
 
-    def test_two_entries_are_frozen_as_known_diff(self):
-        # Task 064 finding: only framework-statsd and android.car lack a
-        # byte-exact source in the current build; every other frozen source
-        # fingerprint equals its baseline fingerprint.
+    def test_no_entry_is_frozen_as_diff(self):
+        # Task 065 (user-approved replacement): framework-statsd and
+        # android.car were replaced with the script-regenerated Soong outputs
+        # on 2026-08-26, and their baselines re-frozen to the sources. Every
+        # frozen source fingerprint must now equal its baseline fingerprint —
+        # a mismatch means someone introduced a new hand-copied jar.
         diff = {
             name
             for name, entry in module.CONFIGS.items()
             if entry["source_sha256"] != entry["baseline_sha256"]
         }
-        self.assertEqual(diff, {"framework-statsd", "android.car"})
+        self.assertEqual(diff, set())
+
+    def test_replaced_jars_are_the_frozen_soong_sources(self):
+        # Pins the task 065 replacement hashes so an accidental revert to the
+        # 2026-07 hand copies is caught by CI.
+        self.assertEqual(
+            module.CONFIGS["framework-statsd"]["baseline_sha256"],
+            "058f30a1a7ef191b1c4ecef3658b215d996d657f6d0a2591956eb6e3e5aba352",
+        )
+        self.assertEqual(
+            module.CONFIGS["android.car"]["baseline_sha256"],
+            "89f04e0a30bf8889ab2198516d9ecf362e90559e3bc7dbad8863b1c6263919c0",
+        )
 
     def test_keepanno_shares_the_sysuisdk_frozen_input(self):
         # build_sysuisdk.py AOSP_INPUT_RELPATHS["keepanno_jar"] is the same
