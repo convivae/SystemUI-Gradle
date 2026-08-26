@@ -773,3 +773,9 @@ scene `Scene`/`Overlay`/`QuickSettingsShade`、biometric `asBiometricModality`�
 - W3：5 个脚本 AOSP 根路径统一走 `tools/aosp_paths.py`（package_aosp_aar / compilelib / check_source_alignment 加 `--aosp-root`；monet / viewcapture 改默认源）。
 - 验证：pytest 275 passed；libs/ 零改动。详见 `docs/architecture/2026-08-26-regeneration-gap-closure.md`。
 - Task 065（DIFF jar 替换）：framework-statsd/android.car 换为脚本再生 jar（用户拍板）；clean assembleDebug 229/229 → e8aad131（与旧基线逐字节一致，compileOnly 不改变输出）；assembleRelease → d3968fb2（新 Release 基线）；Debug/Release 双设备门全过（PID 稳定、零 FATAL、窗口三件套）；对齐 0-0-0；pytest 276 passed。
+
+## 2026-08-26 · Task 068 — android-17.0.0_r1 tag 核查（Phase C 前置，只读研究）
+
+- TUNA 镜像确认 tag 存在（manifest `5bc9a7ce`，无 -gpl 变体）；`sdk_phone64_x86_64` 产品、trunk_staging release config、build_sysuisdk 八个冻结输入模块与 turbine-combined 路径逻辑在 tag 上全部验证无迁移 → **GO**。
+- 重大事实修正：本地 AOSP 树实际停在 2025-03-26（非 2026-04-27），距 tag 漂移约 14 个月、SDK 35 preview → 37 release；SystemUI 子树 10318 文件 +773k/−415k 行 → Phase C 主成本是 tier-① 全量源码重对齐。
+- sync 体量粗估 15–40GB（夜间可行）；磁盘剩 134G，建议重建前清 out/（187G）。详见 `docs/architecture/2026-08-26-android17-tag-verification.md`。未运行构建。
