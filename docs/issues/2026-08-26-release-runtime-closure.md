@@ -375,3 +375,24 @@ Task 060b acceptance: **PASS** (full round-3 crash stack captured verbatim with 
 single-signature loop documented; name-reality check done; root cause classified with
 file:line + mapping.txt evidence). Release verdict remains **RELEASE_RUNTIME_FAIL** —
 round 3 is a new, distinct failure (class merging), fix pending chief/user approval.
+
+### Round 3.5 — Device restoration completed (fresh deploy after host reboot)
+
+The ~08:47 host reboot wiped `/tmp` and killed the emulator instance entirely; chief
+relaunched emulator-5554 (identity re-verified: qemu=1, `emu64x` userdebug, boot_completed=1).
+Fresh userdata meant the device came back STOCK: on-device SystemUI sha `dd1ff45a…`
+(known-good stock hash), verity enforcing, no overlay — the old overlay carrying the
+round-3 APK was gone. Restoration was therefore a **fresh deploy**, not an overlay re-push:
+
+1. `adb root` → `su 0 disable-verity` (success, overlayfs enabled) → reboot →
+   boot_completed=1, `/system_ext` overlay active.
+2. Push `app-debug.apk` → remount,rw → staged `cp` → **sha gate `e8aad131…` MATCH**
+   (163,896,493 B, no ENOSPC truncation) → atomic mv → root:root 0644
+   `u:object_r:system_file:s0` → oat/dalvik-cache cleared → pre-restart on-device sha
+   re-verified `e8aad131…`.
+3. Reboot → verification: `sys.boot_completed=1`; on-device sha256 `e8aad131…` ✓;
+   PID 824 stable across 2×30 s; crash buffer **0 FATAL**; `StatusBar` +
+   `NotificationShade` + `Taskbar` windows present.
+
+Device back at the known-good Debug baseline. Verity stays disabled per task-055/058
+end-state precedent (overlay-deployed APK requires it).
