@@ -2,7 +2,11 @@
 
 ## Verdict
 
-**RELEASE_RUNTIME_FAIL — runtime phase.** Build blocker resolved (chief-approved Option A);
+**FINAL (Round 4, task 061, 2026-08-26): RELEASE_RUNTIME_PASS** — see the Round 4 section
+below. (Earlier rounds' verdicts preserved in place: Round 1/2 RELEASE_RUNTIME_FAIL,
+Round 3 crash classified as R8 horizontal class merging.)
+
+**RELEASE_RUNTIME_FAIL — runtime phase (Round 1/2, superseded).** Build blocker resolved (chief-approved Option A);
 deployed Release APK **crash-loops at startup** with a novel, fully-classified R8 failure:
 
 > **Root cause: R8 obfuscation divergence.** AGP `isMinifyEnabled = true` runs R8 full mode
@@ -396,3 +400,110 @@ round-3 APK was gone. Restoration was therefore a **fresh deploy**, not an overl
 
 Device back at the known-good Debug baseline. Verity stays disabled per task-055/058
 end-state precedent (overlay-deployed APK requires it).
+
+---
+
+## Round 4 (Task 061) — -keep fix applied, deployed, runtime gate PASSED: RELEASE_RUNTIME_PASS
+
+**Worker**: task061. **Fix**: chief-approved (user-delegated, 2026-08-26) three targeted
+`-keep` rules in `app/proguard_gradle.flags` blocking R8 horizontal class merging of the
+identity-distinct CoreStartables implicated in Round 3.
+
+### Preflight (all green)
+
+| Check | Result |
+|---|---|
+| `adb devices` | only `emulator-5554` (emu64x, userdebug, qemu=1) |
+| On-device sha | `e8aad131…` (Debug baseline restored by task 060b round-3.5) ✓ |
+| SystemUI PID | 824 (stable, 0 FATAL, StatusBar/NotificationShade/Taskbar windows present) ✓ |
+| Host memory | 19 GiB available, swap 0/8 GiB used, no idle Gradle/Kotlin daemons (no stop needed) |
+| Git tree | clean on `fd8c8d8e` |
+
+### Fix applied
+
+`app/proguard_gradle.flags` — exact chief-approved lines plus a context comment
+("Fourth instance, task 061"); no other file touched:
+
+```proguard
+-keep class com.android.systemui.CoreStartable$Nop { *; }
+-keep class com.android.systemui.NoOpCoreStartable { *; }
+-keep class com.android.systemui.flags.FeatureFlagsReleaseStartable { *; }
+```
+
+### Build
+
+`./gradlew :app:assembleRelease --console=plain --max-workers=4` →
+**BUILD SUCCESSFUL in 2m 10s** (380 tasks: 9 executed, 371 up-to-date). No daemon OOM
+(idle-daemon preflight held).
+
+Release APK: **34,688,965 B (~33.1 MiB)**, sha256
+`1476858123207154372c92efa2251071d27e234b0cde925c134bc99b92e2d3dd`.
+Static sanity: `unzip -t` CLEAN; apksigner `Verifies` (v2 true, v1/v3 false — same
+signing config as all prior rounds); package `com.android.systemui`, targetSdk 35.
+APK grew ~2.6 MB vs Round 2's obfuscated-then-dontobfuscate build (32,100,023 B) —
+the cost of keeping three classes un-merged.
+
+### Static merge validation (before deploy) — PASS
+
+1. **The three kept classes now have their own identity top-level mapping entries**
+   (`CoreStartable$Nop -> itself`, `NoOpCoreStartable -> itself`,
+   `FeatureFlagsReleaseStartable -> itself`) and their member bodies contain **no**
+   synthesized merged-member signatures — Round 3's
+   `start$com$android$systemui$NoOpCoreStartable` / `…FeatureFlagsReleaseStartable`
+   traces are gone.
+2. **No `com.android.systemui.**` class whose simple name ends in `Startable` or `Nop`
+   maps to a different name** (grep over all top-level mapping entries; the only
+   non-identity mappings are 742 unrelated inner-class removals/`R8$$REMOVED$$CLASS`,
+   none Startable/Nop-named).
+3. **No round-3-style merged-class trace remains**: zero occurrences of
+   `start$com$android$systemui` synthesized members in the whole mapping. The only
+   Startable-related synthesized members are `get$…$ScrimStartable_Factory` **method
+   inlining** traces inside another class's entry — ScrimStartable itself retains its
+   own identity top-level entry, so its runtime class name is preserved.
+4. **Source-side cross-check**: every `*Startable`/`*Nop` implementation in our source
+   tree either has an identity top-level mapping entry or is fully shrunk away. The one
+   exception class, `com.android.systemui.volume.panel.domain.VolumePanelStartable`,
+   has **zero occurrences in mapping.txt AND zero in the APK dex** → removed as
+   unreachable (nothing constructs it, so it can never reach DumpManager registration;
+   a merged class would have left synthesized-member traces as it did in Round 3).
+   All other NO-MAPPING names are Dagger `*_Factory`/module/qualifier classes
+   (build-time only) or `FeatureFlagsDebugStartable` (debug variant, not in release).
+
+### Deployment (proven staged procedure)
+
+push (sha match) → `remount,rw /system_ext` → staged `cp` → **sha gate `14768581…`
+MATCH** (no ENOSPC) → atomic `mv` → root:root 0644 `u:object_r:system_file:s0` →
+oat/ + dalvik-cache cleared → pre-restart on-device sha re-verified `14768581…` →
+reboot → `sys.boot_completed=1` in ~50 s → post-boot on-device sha `14768581…` ✓
+(survived reboot), SystemUI PID 835.
+
+### Runtime health gate — PASS
+
+| Check | Result |
+|---|---|
+| boot_completed | 1 (~50 s) |
+| PID stability | **835 stable across 10×30 s** (11:43:50 → 11:48:20) ✓ |
+| `logcat -b crash -d` FATAL | **0** |
+| full logcat `FATAL EXCEPTION\|NoClassDefFoundError` | **0** |
+| `dumpsys window windows` | `StatusBar` + `NotificationShade` + `Taskbar` present ✓ |
+| `dumpsys statusbar` | responsive, normal state ✓ |
+| QS bonus | `cmd statusbar expand-settings` → NotificationShade window surfaces →
+  `collapse` OK; post-interaction crash buffer still 0, PID still 835 ✓ |
+
+Round 3's crash signature (`IllegalArgumentException: 'CoreStartable$Nop' is already
+registered`) is fully cleared — no crash-loop, no PID churn, UI reached.
+
+### Verdict
+
+**RELEASE_RUNTIME_PASS.** The minified Release APK (R8 shrink + optimize +
+resource-shrink, `-dontobfuscate`, targeted CoreStartable `-keep`s) runs stably on
+emulator-5554: sha-verified deployment, PID stable 10×30 s, zero FATAL/NCDFE,
+StatusBar/NotificationShade/Taskbar live, QS interaction clean.
+
+Runtime divergence ledger now closed across rounds: Round 2 = obfuscation renaming
+collision (fixed by `-dontobfuscate`); Round 3 = horizontal class merging collision
+(fixed by the three `-keep`s); Round 4 = green. Remaining known follow-ups for chief:
+(a) the ScrimStartable_Factory method-inlining traces are benign here but the broader
+`-keep class * implements com.android.systemui.CoreStartable` umbrella (rejected for
+now due to APK size) remains an option if future merges surface; (b) environment note:
+this build needed no daemon kills (preflight discipline), unlike task 060.

@@ -23,6 +23,10 @@
 - **Python 工具测试 179/179**；debug APK 每批硬门禁保持成功。
 - **剩余工作**：SettingsLib 74 + B1–B4 6 + `AssumeTrueForR8` 1 → release R8 归零 →
   shrinkResources/签名 → 设备运行验证。实时状态与排序见 `docs/CURRENT_STATE.md` 与 `docs/PLAN.md`。
+- **RELEASE_RUNTIME_PASS**（2026-08-26，Tasks 060/060b/061）：Release APK 设备运行闭环达成；
+  依次修复 R8 混淆命名冲突（`-dontobfuscate`）与 R8 水平类合并冲突（三条 CoreStartable
+  `-keep`），PID 稳定 10×30s、零 FATAL。见
+  `docs/issues/2026-08-26-release-runtime-closure.md`。
 
 ---
 
