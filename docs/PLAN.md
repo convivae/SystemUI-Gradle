@@ -22,7 +22,8 @@
 - Kotlin 2.3 / AGP 9.5 解锁后升级检查（当前 AGP 9.3.1 绑 Kotlin 2.2.10）。
 - AOSP 树漂移时重跑 `package_aconfig_jars.py --merge-framework`（源字节已漂过两次）。
 - 存量本地 jar 定期回查官方 Maven 等价物（规则 §1.5，Task 026 首开）。
-- 可选诊断：AOSP prebuilts R8 与 AGP 9.3.1 内嵌 R8 的版本差（解释 AOSP 为何不合并 no-op CoreStartable；task 060b 建议）。
+- ~~可选诊断：AOSP prebuilts R8 与 AGP 9.3.1 内嵌 R8 的版本差~~ **已关闭（2026-08-26，用户批准跳过）**：纯好奇心诊断，不影响构建/运行，修复已用 3 行精确 `-keep` 对症落地；查出版本差也不改变方案。
+- 观察项：pytest 全套偶发一次 `test_build_sysuisdk` 事务测试间歇失败（2026-08-26 观测，重跑即绿，疑文件系统时序）；不修，再次出现时先稳定复现再查。
 - CoreStartable 伞形 `-keep`（`implements CoreStartable`）作为未来再出合并碰撞时的备选（目前不需要）。
 
 ---
