@@ -93,7 +93,7 @@ python3 tools/package_aconfig_jars.py device-state-flags
 - 既有 `copy_jar` 的"禁止 turbine"守卫在此被显式越过并文档化：基准本身就是 turbine stub；
   五类运行时类校验仍然生效
 
-## 4. DIFF 分析（2 个，Phase C 决策输入）
+## 4. DIFF 分析（2 个，Phase C 决策输入）→ 已由 Task 065 关闭（见 §4.4）
 
 ### 4.1 `framework-statsd.jar`
 
@@ -126,6 +126,42 @@ python3 tools/package_aconfig_jars.py device-state-flags
 `framework.jar` 被 12 个 module compileOnly + 根 build.gradle.kts JavaCompile classpath 引用。
 本次验证为 **MATCH**（turbine-combined 与基准逐字节一致，sha256 `0fe39d80…`），不存在版本漂移；
 AOSP 后续 sync 若致漂移，`package_misc_jars.py` 的源指纹 warning 即早期信号。
+
+### 4.4 Phase C 决议与执行（Task 065，2026-08-26）
+
+**用户拍板（2026-08-26）**：无法从 AOSP 再生的 jar 一律不用 —— 选 **option (a)：以脚本冻结源产出替换基准**。
+执行（`docs/issues/2026-08-26-diff-jar-replacement-and-gates.md`，commit `fee014cd`）：
+
+**新 sha256 台账**：
+
+| jar | 旧基准（手工拷贝） | 新基准（脚本产出 = 冻结源） | 形态变化 |
+|-----|--------------------|------------------------------|----------|
+| `libs/framework-statsd.jar` | `d54489ee…`（39 entries，API stub） | `058f30a1…`（70 entries，impl javac 真实类，类名超集） | compileOnly，语义更完整 |
+| `libs/android.car.jar` | `bd5faa75…`（678 stored stub，含 14 个上游已删类） | `89f04e0a…`（1219 turbine-combined stub 含 dep closure） | compileOnly，超集 |
+
+`package_misc_jars.py` 两条目 baseline 重新冻结为源指纹，`--verify-only` 12/12 MATCH；
+测试同步改为钉住“零 DIFF 基线 + 替换后 sha”。
+
+**双门验证结果（全部通过）**：
+
+1. **构建门（串行，clean）**：`:app:assembleDebug` 229/229 executed → BUILD SUCCESSFUL，
+   APK sha256 `e8aad131…`（163,896,493 B，与替换前基线**逐字节一致** —— compileOnly
+   jar 只影响编译签名，符号引用未变）；`:app:assembleRelease` 318 executed →
+   BUILD SUCCESSFUL，APK sha256 `d3968fb2…`（34,688,965 B，与旧 Release 基线
+   `14768581…` 同尺寸不同字节，R8 输出漂移；**此为新 Release 基线**）。
+   apksigner v2 验签通过。
+2. **Debug 运行门**（emulator-5554，staged 部署 `e8aad131…`）：boot_completed=1；
+   部署后设备端 sha MATCH；PID 821 稳定 2×30s；crash buffer 0 行、全量 logcat
+   FATAL/NCDFE=0；dumpsys windows：StatusBar/NotificationShade/Taskbar/ImageWallpaper
+   全在。
+3. **Release 运行门**（staged 部署 `d3968fb2…`）：boot_completed=1；设备端 sha MATCH；
+   PID 840 稳定 2×30s；crash buffer 0 行、FATAL/NCDFE=0；窗口三件套全在；
+   bonus `cmd statusbar expand-settings/collapse` 无崩溃、PID 不变。
+4. **对齐门 + pytest**：`check_source_alignment.py --strict` MISSING/MISPLACED/EXTRA
+   = 0-0-0（MODIFIED 1 + RES-MODIFIED 86 为 ADR 0004 已知基线）；
+   `uv run pytest tools/tests/ -q` → **276 passed, 102 subtests**。
+
+设备终态：Release `d3968fb2…` 在机上（新基线）。
 
 ## 5. W3：硬编码 AOSP 路径治理（aosp_paths 单一来源，用户规则 2026-08-25）
 
@@ -165,8 +201,8 @@ test_package_aconfig_jars.py 既有模式）；`test_package_aosp_aar.py` 新增
 
 ## 8. 遗留（Phase C 输入）
 
-1. `framework-statsd.jar` / `android.car.jar` 的"脚本产出 vs 现存基准"取舍（§4 建议：替换为冻结源，
-   均为 compileOnly，风险低；替换时升版/替换后需跑一次 compileDebugKotlin 验证）
+1. ~~`framework-statsd.jar` / `android.car.jar` 的“脚本产出 vs 现存基准”取舍~~ **已解决**：
+   Task 065 用户拍板 option (a) 替换为冻结源，双门验证全过（§4.4）
 2. AOSP sync 后重跑 `package_misc_jars.py --all` 会触发源指纹 warning：属预期流程
    （重新生成 → 比对 → 必要时更新冻结指纹），runbook 应写明
 3. `tools/install_keystore.sh` 的 .py 转换欠账（ADR 0002，不在本任务范围）

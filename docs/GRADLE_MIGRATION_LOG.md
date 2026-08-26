@@ -772,3 +772,4 @@ scene `Scene`/`Overlay`/`QuickSettingsShade`、biometric `asBiometricModality`�
 - 再生比对：13 MATCH（逐字节）/ 2 DIFF（framework-statsd、android.car——现存基准无当前树逐字节来源，Phase C 决策）。
 - W3：5 个脚本 AOSP 根路径统一走 `tools/aosp_paths.py`（package_aosp_aar / compilelib / check_source_alignment 加 `--aosp-root`；monet / viewcapture 改默认源）。
 - 验证：pytest 275 passed；libs/ 零改动。详见 `docs/architecture/2026-08-26-regeneration-gap-closure.md`。
+- Task 065（DIFF jar 替换）：framework-statsd/android.car 换为脚本再生 jar（用户拍板）；clean assembleDebug 229/229 → e8aad131（与旧基线逐字节一致，compileOnly 不改变输出）；assembleRelease → d3968fb2（新 Release 基线）；Debug/Release 双设备门全过（PID 稳定、零 FATAL、窗口三件套）；对齐 0-0-0；pytest 276 passed。
