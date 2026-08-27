@@ -17,29 +17,28 @@
 package com.android.systemui.keyboard.shortcut
 
 import com.android.systemui.CoreStartable
-import com.android.systemui.Flags.keyboardShortcutHelperRewrite
+import com.android.systemui.keyboard.shortcut.data.repository.AppsShortcutCategoryRepository
 import com.android.systemui.keyboard.shortcut.data.repository.CustomShortcutCategoriesRepository
 import com.android.systemui.keyboard.shortcut.data.repository.DefaultShortcutCategoriesRepository
 import com.android.systemui.keyboard.shortcut.data.repository.ShortcutCategoriesRepository
-import com.android.systemui.keyboard.shortcut.data.repository.ShortcutHelperStateRepository
+import com.android.systemui.keyboard.shortcut.data.source.AccessibilityShortcutsSource
 import com.android.systemui.keyboard.shortcut.data.source.AppCategoriesShortcutsSource
 import com.android.systemui.keyboard.shortcut.data.source.CurrentAppShortcutsSource
 import com.android.systemui.keyboard.shortcut.data.source.InputShortcutsSource
 import com.android.systemui.keyboard.shortcut.data.source.KeyboardShortcutGroupsSource
 import com.android.systemui.keyboard.shortcut.data.source.MultitaskingShortcutsSource
 import com.android.systemui.keyboard.shortcut.data.source.SystemShortcutsSource
+import com.android.systemui.keyboard.shortcut.qualifiers.AccessibilityShortcuts
 import com.android.systemui.keyboard.shortcut.qualifiers.AppCategoriesShortcuts
+import com.android.systemui.keyboard.shortcut.qualifiers.AppsShortcutCategories
 import com.android.systemui.keyboard.shortcut.qualifiers.CurrentAppShortcuts
 import com.android.systemui.keyboard.shortcut.qualifiers.CustomShortcutCategories
 import com.android.systemui.keyboard.shortcut.qualifiers.DefaultShortcutCategories
 import com.android.systemui.keyboard.shortcut.qualifiers.InputShortcuts
 import com.android.systemui.keyboard.shortcut.qualifiers.MultitaskingShortcuts
 import com.android.systemui.keyboard.shortcut.qualifiers.SystemShortcuts
-import com.android.systemui.keyboard.shortcut.ui.ShortcutHelperDialogStarter
 import dagger.Binds
-import dagger.Lazy
 import dagger.Module
-import dagger.Provides
 import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
 
@@ -69,6 +68,12 @@ interface ShortcutHelperModule {
     ): KeyboardShortcutGroupsSource
 
     @Binds
+    @AccessibilityShortcuts
+    fun accessibilityShortcutsSource(
+        impl: AccessibilityShortcutsSource
+    ): KeyboardShortcutGroupsSource
+
+    @Binds
     @DefaultShortcutCategories
     fun defaultShortcutCategoriesRepository(
         impl: DefaultShortcutCategoriesRepository
@@ -80,33 +85,14 @@ interface ShortcutHelperModule {
         impl: CustomShortcutCategoriesRepository
     ): ShortcutCategoriesRepository
 
-    companion object {
-        @Provides
-        @IntoMap
-        @ClassKey(ShortcutHelperDialogStarter::class)
-        fun starter(implLazy: Lazy<ShortcutHelperDialogStarter>): CoreStartable {
-            return if (keyboardShortcutHelperRewrite()) {
-                implLazy.get()
-            } else {
-                // No-op implementation when the flag is disabled.
-                NoOpStartable
-            }
-        }
+    @Binds
+    @AppsShortcutCategories
+    fun appsShortcutCategoriesRepository(
+        impl: AppsShortcutCategoryRepository
+    ): ShortcutCategoriesRepository
 
-        @Provides
-        @IntoMap
-        @ClassKey(ShortcutHelperStateRepository::class)
-        fun repo(implLazy: Lazy<ShortcutHelperStateRepository>): CoreStartable {
-            return if (keyboardShortcutHelperRewrite()) {
-                implLazy.get()
-            } else {
-                // No-op implementation when the flag is disabled.
-                NoOpStartable
-            }
-        }
-    }
-}
-
-private object NoOpStartable : CoreStartable {
-    override fun start() {}
+    @Binds
+    @IntoMap
+    @ClassKey(ShortcutHelperCoreStartable::class)
+    fun shortcutHelperCoreStartable(impl: ShortcutHelperCoreStartable): CoreStartable
 }

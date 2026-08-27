@@ -16,21 +16,19 @@
 
 package com.android.systemui.shade
 
+import com.android.keyguard.KeyguardViewController
 import com.android.systemui.assist.AssistManager
 import com.android.systemui.statusbar.CommandQueue
 import com.android.systemui.statusbar.NotificationPresenter
 import com.android.systemui.statusbar.NotificationShadeWindowController
-import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager
 import dagger.Lazy
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /** A base class for non-empty implementations of ShadeController. */
-@OptIn(ExperimentalCoroutinesApi::class)
 abstract class BaseShadeControllerImpl(
     protected val commandQueue: CommandQueue,
-    protected val statusBarKeyguardViewManager: StatusBarKeyguardViewManager,
+    protected val keyguardViewController: KeyguardViewController,
     protected val notificationShadeWindowController: NotificationShadeWindowController,
-    protected val assistManagerLazy: Lazy<AssistManager>
+    protected val assistManagerLazy: Lazy<AssistManager>,
 ) : ShadeController {
     protected lateinit var notifPresenter: NotificationPresenter
     /** Runnables to run after completing a collapse of the shade. */
@@ -68,7 +66,7 @@ abstract class BaseShadeControllerImpl(
         for (r in clonedList) {
             r.run()
         }
-        statusBarKeyguardViewManager.readyForKeyguardDone()
+        keyguardViewController.readyForKeyguardDone()
     }
 
     final override fun onLaunchAnimationEnd(launchIsFullScreen: Boolean) {
@@ -76,9 +74,14 @@ abstract class BaseShadeControllerImpl(
             onClosingFinished()
         }
         if (launchIsFullScreen) {
+            // Make sure that visually the Shade is gone immediately, even though the rest of the
+            // state takes a little time to catch up.
+            notificationShadeWindowController.setPanelVisible(false)
+            notificationShadeWindowController.setForceHideAfterActivityLaunch(true)
             instantCollapseShade()
         }
     }
+
     final override fun onLaunchAnimationCancelled(isLaunchForActivity: Boolean) {
         if (
             notifPresenter.isPresenterFullyCollapsed() &&

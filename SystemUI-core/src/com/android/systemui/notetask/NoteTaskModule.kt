@@ -27,21 +27,22 @@ import com.android.systemui.notetask.NoteTaskBubblesController.NoteTaskBubblesSe
 import com.android.systemui.notetask.quickaffordance.NoteTaskQuickAffordanceModule
 import com.android.systemui.notetask.shortcut.CreateNoteTaskShortcutActivity
 import com.android.systemui.notetask.shortcut.LaunchNoteTaskActivity
+import com.android.systemui.notetask.shortcut.WindowingModeFetcher
+import com.android.systemui.notetask.shortcut.WindowingModeFetcherImpl
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.model.TileCategory
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.tiles.NotesTile
-import com.android.systemui.qs.tiles.base.interactor.QSTileAvailabilityInteractor
-import com.android.systemui.qs.tiles.base.viewmodel.QSTileViewModelFactory
-import com.android.systemui.qs.tiles.impl.notes.domain.NotesTileMapper
+import com.android.systemui.qs.tiles.base.domain.interactor.QSTileAvailabilityInteractor
+import com.android.systemui.qs.tiles.base.shared.model.QSTileConfig
+import com.android.systemui.qs.tiles.base.shared.model.QSTileUIConfig
+import com.android.systemui.qs.tiles.base.ui.viewmodel.QSTileViewModel
+import com.android.systemui.qs.tiles.base.ui.viewmodel.QSTileViewModelFactory
 import com.android.systemui.qs.tiles.impl.notes.domain.interactor.NotesTileDataInteractor
 import com.android.systemui.qs.tiles.impl.notes.domain.interactor.NotesTileUserActionInteractor
 import com.android.systemui.qs.tiles.impl.notes.domain.model.NotesTileModel
-import com.android.systemui.qs.tiles.viewmodel.QSTileConfig
-import com.android.systemui.qs.tiles.viewmodel.QSTileUIConfig
-import com.android.systemui.qs.tiles.viewmodel.QSTileViewModel
-import com.android.systemui.qs.tiles.viewmodel.StubQSTileViewModel
+import com.android.systemui.qs.tiles.impl.notes.ui.mapper.NotesTileMapper
 import com.android.systemui.res.R
 import dagger.Binds
 import dagger.Module
@@ -70,6 +71,8 @@ interface NoteTaskModule {
 
     @[Binds IntoMap ClassKey(CreateNoteTaskShortcutActivity::class)]
     fun bindNoteTaskShortcutActivity(activity: CreateNoteTaskShortcutActivity): Activity
+
+    @Binds fun bindWindowingModeFetcher(impl: WindowingModeFetcherImpl): WindowingModeFetcher
 
     @Binds
     @IntoMap
@@ -107,14 +110,12 @@ interface NoteTaskModule {
             stateInteractor: NotesTileDataInteractor,
             userActionInteractor: NotesTileUserActionInteractor,
         ): QSTileViewModel =
-            if (com.android.systemui.Flags.qsNewTilesFuture())
-                factory.create(
-                    TileSpec.create(NOTES_TILE_SPEC),
-                    userActionInteractor,
-                    stateInteractor,
-                    mapper,
-                )
-            else StubQSTileViewModel
+            factory.create(
+                TileSpec.create(NOTES_TILE_SPEC),
+                userActionInteractor,
+                stateInteractor,
+                mapper,
+            )
 
         @Provides
         @IntoMap

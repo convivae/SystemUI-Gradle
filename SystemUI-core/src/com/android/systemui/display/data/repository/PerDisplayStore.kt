@@ -16,6 +16,7 @@
 
 package com.android.systemui.display.data.repository
 
+import android.util.Log
 import android.view.Display
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.CoreStartable
@@ -25,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 
 /** Provides per display instances of [T]. */
+@Deprecated("Use PerDisplayInstanceProvider<T> instead")
 interface PerDisplayStore<T> {
 
     /**
@@ -36,20 +38,19 @@ interface PerDisplayStore<T> {
     val defaultDisplay: T
 
     /**
-     * Returns an instance for a specific display id.
-     *
-     * @throws IllegalArgumentException if [displayId] doesn't match the id of any existing
-     *   displays.
+     * Returns an instance for a specific display id, or null if [displayId] doesn't match the id of
+     * any existing displays.
      */
-    fun forDisplay(displayId: Int): T
+    fun forDisplay(displayId: Int): T?
 }
 
+@Deprecated("Use PerDisplayRepository<T> instead")
 abstract class PerDisplayStoreImpl<T>(
     @Background private val backgroundApplicationScope: CoroutineScope,
     private val displayRepository: DisplayRepository,
 ) : PerDisplayStore<T>, CoreStartable {
 
-    private val perDisplayInstances = ConcurrentHashMap<Int, T>()
+    protected val perDisplayInstances = ConcurrentHashMap<Int, T>()
 
     /**
      * The instance for the default/main display of the device. For example, on a phone or a tablet,
@@ -58,7 +59,7 @@ abstract class PerDisplayStoreImpl<T>(
      * Note that the id of the default display is [Display.DEFAULT_DISPLAY].
      */
     override val defaultDisplay: T
-        get() = forDisplay(Display.DEFAULT_DISPLAY)
+        get() = forDisplay(Display.DEFAULT_DISPLAY)!!
 
     /**
      * Returns an instance for a specific display id.
@@ -66,25 +67,53 @@ abstract class PerDisplayStoreImpl<T>(
      * @throws IllegalArgumentException if [displayId] doesn't match the id of any existing
      *   displays.
      */
-    override fun forDisplay(displayId: Int): T {
-        if (displayRepository.getDisplay(displayId) == null) {
-            throw IllegalArgumentException("Display with id $displayId doesn't exist.")
+    override fun forDisplay(displayId: Int): T? {
+        if (!displayRepository.containsDisplay(displayId)) {
+            Log.e(TAG, "<${instanceClass.simpleName}>: Display with id $displayId doesn't exist.")
+            return null
         }
-        return perDisplayInstances.computeIfAbsent(displayId) {
-            createInstanceForDisplay(displayId)
+        synchronized(perDisplayInstances) {
+            val existingInstance = perDisplayInstances[displayId]
+            if (existingInstance != null) {
+                return existingInstance
+            }
+            val newInstance = createInstanceForDisplay(displayId)
+            if (newInstance == null) {
+                Log.e(
+                    TAG,
+                    "<${instanceClass.simpleName}> returning null because createInstanceForDisplay($displayId) returned null.",
+                )
+            } else {
+                Log.d(
+                    TAG,
+                    "<${instanceClass.simpleName}> new instance created for displayId=$displayId",
+                )
+                perDisplayInstances[displayId] = newInstance
+            }
+            return newInstance
         }
     }
 
-    protected abstract fun createInstanceForDisplay(displayId: Int): T
+    protected abstract fun createInstanceForDisplay(displayId: Int): T?
 
     override fun start() {
         val instanceType = instanceClass.simpleName
         backgroundApplicationScope.launch("PerDisplayStore#<$instanceType>start") {
             displayRepository.displayRemovalEvent.collect { removedDisplayId ->
                 val removedInstance = perDisplayInstances.remove(removedDisplayId)
-                removedInstance?.let { onDisplayRemovalAction(it) }
+                removedInstance?.let {
+                    logRemovalAction(removedDisplayId)
+                    onDisplayRemovalAction(it)
+                }
             }
         }
+    }
+
+    protected fun logRemovalAction(displayId: Int) {
+        Log.d(
+            TAG,
+            "<${instanceClass.simpleName}> removing instance created for displayId=$displayId",
+        )
     }
 
     abstract val instanceClass: Class<T>
@@ -93,10 +122,19 @@ abstract class PerDisplayStoreImpl<T>(
      * Will be called when the display associated with [instance] was removed. It allows to perform
      * any clean up if needed.
      */
+    @Deprecated(
+        "Use PerDisplayInstanceProviderWithTeardown instead, and let " +
+            "PerDisplayInstanceRepositoryImpl decide when to destroy the instance (e.g. on " +
+            "display removal or other conditions."
+    )
     open suspend fun onDisplayRemovalAction(instance: T) {}
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
         pw.println(perDisplayInstances)
+    }
+
+    private companion object {
+        const val TAG = "PerDisplayStore"
     }
 }
 

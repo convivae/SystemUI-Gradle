@@ -25,7 +25,6 @@ import com.android.systemui.keyguard.shared.model.KeyguardState.DOZING
 import com.android.systemui.keyguard.ui.KeyguardTransitionAnimationFlow
 import com.android.systemui.keyguard.ui.transitions.DeviceEntryIconTransition
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 
@@ -33,19 +32,24 @@ import kotlinx.coroutines.flow.flatMapLatest
  * Breaks down ALTERNATE BOUNCER->DOZING transition into discrete steps for corresponding views to
  * consume.
  */
-@ExperimentalCoroutinesApi
 @SysUISingleton
 class AlternateBouncerToDozingTransitionViewModel
 @Inject
 constructor(
     deviceEntryUdfpsInteractor: DeviceEntryUdfpsInteractor,
     animationFlow: KeyguardTransitionAnimationFlow,
+    dozingTransitionFlows: DozingTransitionFlows,
 ) : DeviceEntryIconTransition {
     private val transitionAnimation =
         animationFlow.setup(
             duration = FromAlternateBouncerTransitionInteractor.TO_DOZING_DURATION,
             edge = Edge.create(from = ALTERNATE_BOUNCER, to = DOZING),
         )
+
+    val lockscreenAlpha: Flow<Float> =
+        dozingTransitionFlows.lockscreenAlpha(from = ALTERNATE_BOUNCER)
+
+    val nonAuthUIAlpha: Flow<Float> = dozingTransitionFlows.nonAuthUIAlpha(from = ALTERNATE_BOUNCER)
 
     val deviceEntryBackgroundViewAlpha: Flow<Float> =
         transitionAnimation.immediatelyTransitionTo(0f)

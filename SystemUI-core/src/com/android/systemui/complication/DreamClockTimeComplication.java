@@ -16,10 +16,13 @@
 
 package com.android.systemui.complication;
 
+import static android.text.format.DateFormat.getBestDateTimePattern;
+
 import static com.android.systemui.complication.dagger.DreamClockTimeComplicationComponent.DreamClockTimeComplicationModule.DREAM_CLOCK_TIME_COMPLICATION_VIEW;
 import static com.android.systemui.complication.dagger.RegisteredComplicationsModule.DREAM_CLOCK_TIME_COMPLICATION_LAYOUT_PARAMS;
 
 import android.view.View;
+import android.widget.TextClock;
 
 import com.android.internal.logging.UiEventLogger;
 import com.android.systemui.CoreStartable;
@@ -32,6 +35,7 @@ import com.android.systemui.util.condition.ConditionalCoreStartable;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 /**
  * Clock Time Complication that produce Clock Time view holder.
@@ -92,18 +96,24 @@ public class DreamClockTimeComplication implements Complication {
      * {@link ViewHolder} to contain value/logic associated with {@link DreamClockTimeComplication}.
      */
     public static class DreamClockTimeViewHolder implements ViewHolder {
-        private final View mView;
-        private final ComplicationLayoutParams mLayoutParams;
+        private final TextClock mView;
+        private final Provider<ComplicationLayoutParams> mLayoutParamsProvider;
 
         @Inject
         DreamClockTimeViewHolder(
-                @Named(DREAM_CLOCK_TIME_COMPLICATION_VIEW) View view,
+                @Named(DREAM_CLOCK_TIME_COMPLICATION_VIEW) TextClock view,
                 @Named(DREAM_CLOCK_TIME_COMPLICATION_LAYOUT_PARAMS)
-                        ComplicationLayoutParams layoutParams,
+                Provider<ComplicationLayoutParams> layoutParamsProvider,
                 DreamClockTimeViewController viewController) {
             mView = view;
-            mLayoutParams = layoutParams;
+            mLayoutParamsProvider = layoutParamsProvider;
             viewController.init();
+
+            // Support localized AM/PM marker for 12h mode in content description.
+            String formatSkeleton = view.is24HourModeEnabled() ? "Hm" : "hm";
+            String pattern = getBestDateTimePattern(view.getTextLocale(), formatSkeleton);
+            view.setContentDescriptionFormat12Hour(pattern);
+            view.setContentDescriptionFormat24Hour(pattern);
         }
 
         @Override
@@ -113,7 +123,7 @@ public class DreamClockTimeComplication implements Complication {
 
         @Override
         public ComplicationLayoutParams getLayoutParams() {
-            return mLayoutParams;
+            return mLayoutParamsProvider.get();
         }
     }
 
@@ -122,7 +132,7 @@ public class DreamClockTimeComplication implements Complication {
 
         @Inject
         DreamClockTimeViewController(
-                @Named(DREAM_CLOCK_TIME_COMPLICATION_VIEW) View view,
+                @Named(DREAM_CLOCK_TIME_COMPLICATION_VIEW) TextClock view,
                 UiEventLogger uiEventLogger) {
             super(view);
 

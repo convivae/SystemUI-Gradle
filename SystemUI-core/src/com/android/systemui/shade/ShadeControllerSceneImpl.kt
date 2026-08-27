@@ -17,7 +17,6 @@
 package com.android.systemui.shade
 
 import android.view.MotionEvent
-import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.assist.AssistManager
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
@@ -25,7 +24,7 @@ import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.scene.shared.model.TransitionKeys.Instant
-import com.android.systemui.scene.shared.model.TransitionKeys.SlightlyFasterShadeCollapse
+import com.android.systemui.scene.shared.model.TransitionKeys.SlightlyFasterShadeTransition
 import com.android.systemui.shade.ShadeController.ShadeVisibilityListener
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.CommandQueue
@@ -37,9 +36,9 @@ import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -47,7 +46,6 @@ import kotlinx.coroutines.withContext
  *
  * TODO(b/300258424) rename to ShadeControllerImpl and inline/delete all the deprecated methods
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class ShadeControllerSceneImpl
 @Inject
@@ -99,6 +97,12 @@ constructor(
             loggingReason = "ShadeControllerSceneImpl.instantCollapseShade",
             transitionKey = Instant,
         )
+
+        shadeInteractor.collapseQuickSettingsShade(
+            loggingReason = "ShadeControllerSceneImpl.instantCollapseShade",
+            transitionKey = Instant,
+            bypassNotificationsShade = true,
+        )
     }
 
     override fun animateCollapseShade(
@@ -138,7 +142,7 @@ constructor(
     private fun animateCollapseShadeInternal() {
         shadeInteractor.collapseEitherShade(
             loggingReason = "ShadeController.animateCollapseShade",
-            transitionKey = SlightlyFasterShadeCollapse,
+            transitionKey = SlightlyFasterShadeTransition,
         )
     }
 
@@ -188,13 +192,12 @@ constructor(
 
     override fun setVisibilityListener(listener: ShadeVisibilityListener) {
         scope.launch {
-            sceneInteractor.isVisible.collect { isVisible ->
+            sceneInteractor.isVisibleFlow.collect { isVisible ->
                 withContext(mainDispatcher) { listener.expandedVisibleChanged(isVisible) }
             }
         }
     }
 
-    @ExperimentalCoroutinesApi
     override fun collapseShadeForActivityStart() {
         if (shadeInteractor.isAnyExpanded.value) {
             animateCollapseShadeForcedDelayed()
@@ -205,17 +208,17 @@ constructor(
 
     @Deprecated("Deprecated in Java")
     override fun postAnimateCollapseShade() {
-        animateCollapseShade()
+        scope.launch(mainDispatcher) { animateCollapseShade() }
     }
 
     @Deprecated("Deprecated in Java")
     override fun postAnimateForceCollapseShade() {
-        animateCollapseShadeForced()
+        scope.launch(mainDispatcher) { animateCollapseShadeForced() }
     }
 
     @Deprecated("Deprecated in Java")
     override fun postAnimateExpandQs() {
-        expandToQs()
+        scope.launch(mainDispatcher) { expandToQs() }
     }
 
     override fun postOnShadeExpanded(action: Runnable) {

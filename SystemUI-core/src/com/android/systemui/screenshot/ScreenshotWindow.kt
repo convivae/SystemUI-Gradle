@@ -16,7 +16,7 @@
 
 package com.android.systemui.screenshot
 
-import android.R
+import android.R as androidR
 import android.annotation.MainThread
 import android.content.Context
 import android.graphics.PixelFormat
@@ -31,28 +31,21 @@ import android.view.Window
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.window.WindowContext
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager
 import com.android.internal.policy.PhoneWindow
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 
 /** Creates and manages the window in which the screenshot UI is displayed. */
-class ScreenshotWindow
+open class ScreenshotWindow
 @AssistedInject
-constructor(
-    private val windowManager: WindowManager,
-    private val viewCaptureAwareWindowManager: ViewCaptureAwareWindowManager,
-    private val context: Context,
-    @Assisted private val display: Display,
-) {
+constructor(context: Context, @Assisted private val display: Display) {
 
-    val window: PhoneWindow =
-        PhoneWindow(
-            context
-                .createDisplayContext(display)
-                .createWindowContext(WindowManager.LayoutParams.TYPE_SCREENSHOT, null)
-        )
+    private val windowContext =
+        context
+            .createDisplayContext(display)
+            .createWindowContext(WindowManager.LayoutParams.TYPE_SCREENSHOT, null)
+    private val windowManager = windowContext.getSystemService(WindowManager::class.java)
     private val params =
         WindowManager.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -66,7 +59,7 @@ constructor(
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                     WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
-                PixelFormat.TRANSLUCENT
+                PixelFormat.TRANSLUCENT,
             )
             .apply {
                 layoutInDisplayCutoutMode =
@@ -77,13 +70,16 @@ constructor(
                     privateFlags or WindowManager.LayoutParams.PRIVATE_FLAG_TRUSTED_OVERLAY
                 title = "ScreenshotUI"
             }
+
+    val window: PhoneWindow = PhoneWindow(windowContext)
+
     private var attachRequested: Boolean = false
     private var detachRequested: Boolean = false
 
     init {
         window.requestFeature(Window.FEATURE_NO_TITLE)
         window.requestFeature(Window.FEATURE_ACTIVITY_TRANSITIONS)
-        window.setBackgroundDrawableResource(R.color.transparent)
+        window.setBackgroundDrawableResource(androidR.color.transparent)
         window.setWindowManager(windowManager, null, null)
     }
 
@@ -97,10 +93,10 @@ constructor(
             Log.d(TAG, "attachWindow")
         }
         attachRequested = true
-        viewCaptureAwareWindowManager.addView(decorView, params)
+        windowManager.addView(decorView, params)
 
         decorView.requestApplyInsets()
-        decorView.requireViewById<ViewGroup>(R.id.content).apply {
+        decorView.requireViewById<ViewGroup>(androidR.id.content).apply {
             clipChildren = false
             clipToPadding = false
             // ignore system bar insets for the purpose of window layout
@@ -135,7 +131,7 @@ constructor(
             if (LogConfig.DEBUG_WINDOW) {
                 Log.d(TAG, "Removing screenshot window")
             }
-            viewCaptureAwareWindowManager.removeViewImmediate(decorView)
+            windowManager.removeViewImmediate(decorView)
             detachRequested = false
         }
         if (attachRequested && !detachRequested) {

@@ -17,13 +17,6 @@ package com.android.systemui.biometrics
 
 import android.Manifest
 import android.app.ActivityTaskManager
-import android.app.admin.DevicePolicyManager.PASSWORD_QUALITY_ALPHABETIC
-import android.app.admin.DevicePolicyManager.PASSWORD_QUALITY_ALPHANUMERIC
-import android.app.admin.DevicePolicyManager.PASSWORD_QUALITY_COMPLEX
-import android.app.admin.DevicePolicyManager.PASSWORD_QUALITY_MANAGED
-import android.app.admin.DevicePolicyManager.PASSWORD_QUALITY_NUMERIC
-import android.app.admin.DevicePolicyManager.PASSWORD_QUALITY_NUMERIC_COMPLEX
-import android.app.admin.DevicePolicyManager.PASSWORD_QUALITY_SOMETHING
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -44,7 +37,11 @@ import android.view.WindowMetrics
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityManager
 import com.android.internal.widget.LockPatternUtils
+import com.android.internal.widget.LockPatternUtils.CREDENTIAL_TYPE_PASSWORD
+import com.android.internal.widget.LockPatternUtils.CREDENTIAL_TYPE_PATTERN
+import com.android.internal.widget.LockPatternUtils.CREDENTIAL_TYPE_PIN
 import com.android.systemui.biometrics.shared.model.PromptKind
+import com.android.systemui.utils.windowmanager.WindowManagerUtils
 
 object Utils {
     private const val TAG = "SysUIBiometricUtils"
@@ -80,7 +77,7 @@ object Utils {
         view.notifySubtreeAccessibilityStateChanged(
             view,
             view,
-            AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE
+            AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE,
         )
     }
 
@@ -94,14 +91,10 @@ object Utils {
 
     @JvmStatic
     fun getCredentialType(utils: LockPatternUtils, userId: Int): PromptKind =
-        when (utils.getKeyguardStoredPasswordQuality(userId)) {
-            PASSWORD_QUALITY_SOMETHING -> PromptKind.Pattern
-            PASSWORD_QUALITY_NUMERIC,
-            PASSWORD_QUALITY_NUMERIC_COMPLEX -> PromptKind.Pin
-            PASSWORD_QUALITY_ALPHABETIC,
-            PASSWORD_QUALITY_ALPHANUMERIC,
-            PASSWORD_QUALITY_COMPLEX,
-            PASSWORD_QUALITY_MANAGED -> PromptKind.Password
+        when (utils.getCredentialTypeForUser(userId)) {
+            CREDENTIAL_TYPE_PATTERN -> PromptKind.Pattern
+            CREDENTIAL_TYPE_PIN -> PromptKind.Pin
+            CREDENTIAL_TYPE_PASSWORD -> PromptKind.Password
             else -> PromptKind.Password
         }
 
@@ -110,9 +103,14 @@ object Utils {
         context.getSystemService(UserManager::class.java)?.isManagedProfile(userId) ?: false
 
     @JvmStatic
+    fun isSupervisingProfile(context: Context, userId: Int): Boolean =
+        context.getSystemService(UserManager::class.java)?.getUserInfo(userId)?.userType ==
+            UserManager.USER_TYPE_PROFILE_SUPERVISING
+
+    @JvmStatic
     fun <T : SensorPropertiesInternal> findFirstSensorProperties(
         properties: List<T>?,
-        sensorIds: IntArray
+        sensorIds: IntArray,
     ): T? = properties?.firstOrNull { sensorIds.contains(it.sensorId) }
 
     @JvmStatic
@@ -124,11 +122,13 @@ object Utils {
     }
 
     @JvmStatic
-    fun getNavbarInsets(context: Context): Insets {
-        val windowManager: WindowManager? = context.getSystemService(WindowManager::class.java)
-        val windowMetrics: WindowMetrics? = windowManager?.maximumWindowMetrics
-        return windowMetrics?.windowInsets?.getInsets(WindowInsets.Type.navigationBars())
-            ?: Insets.NONE
+    fun getNavbarInsets(context: Context) = getInsetsOf(context, WindowInsets.Type.navigationBars())
+
+    @JvmStatic
+    fun getInsetsOf(context: Context, typeMask: Int): Insets {
+        val windowManager: WindowManager = WindowManagerUtils.getWindowManager(context)
+        val windowMetrics: WindowMetrics = windowManager.maximumWindowMetrics
+        return windowMetrics.windowInsets.getInsets(typeMask)
     }
 
     /** Converts `drawable` to a [Bitmap]. */
@@ -170,8 +170,10 @@ object Utils {
     fun ActivityTaskManager.isSystemAppOrInBackground(
         context: Context,
         clientPackage: String,
-        clientClassNameIfItIsConfirmDeviceCredentialActivity: String?
+        clientClassNameIfItIsConfirmDeviceCredentialActivity: String?,
     ): Boolean {
+        // TODO (b/409812027): Consolidate and scope out auth requirements for biometric prompt
+
         Log.v(TAG, "Checking if the authenticating is in background, clientPackage:$clientPackage")
         val tasks = getTasks(Int.MAX_VALUE)
         if (tasks == null || tasks.isEmpty()) {
@@ -184,11 +186,74 @@ object Utils {
         val topPackageEqualsToClient = topActivity!!.packageName == clientPackage
         val isClientConfirmDeviceCredentialActivity =
             clientClassNameIfItIsConfirmDeviceCredentialActivity != null
-        // b/339532378: If it's ConfirmDeviceCredentialActivity, we need to check further on
-        // class name.
-        return !(isSystemApp || topPackageEqualsToClient) ||
-            (isClientConfirmDeviceCredentialActivity &&
-                topActivity.className != clientClassNameIfItIsConfirmDeviceCredentialActivity)
+
+        if (
+            !isClientInBackgroundOrNotVisible(
+                isSystemApp,
+                isVisible = true,
+                topPackageEqualsToClient,
+                isClientConfirmDeviceCredentialActivity,
+                clientClassNameIfItIsConfirmDeviceCredentialActivity,
+                topActivity!!.className,
+                isTopPackage = true,
+            )
+        ) {
+            return false
+        }
+
+        for (task in tasks) {
+            val packageName = task.topActivity!!.packageName
+            val className = task.topActivity!!.className
+            val isVisible = task.isVisible
+
+            Log.v(TAG, "Running task, top: $packageName, isVisible: $isVisible")
+
+            if (
+                !isClientInBackgroundOrNotVisible(
+                    isSystemApp = false,
+                    isVisible,
+                    taskPackageEqualsClientPackage = packageName == clientPackage,
+                    isClientConfirmDeviceCredentialActivity,
+                    clientClassNameIfItIsConfirmDeviceCredentialActivity,
+                    className,
+                )
+            ) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    fun isClientInBackgroundOrNotVisible(
+        isSystemApp: Boolean,
+        isVisible: Boolean,
+        taskPackageEqualsClientPackage: Boolean,
+        isClientConfirmDeviceCredentialActivity: Boolean,
+        clientClassNameIfItIsConfirmDeviceCredentialActivity: String?,
+        topActivityClassName: String,
+        isTopPackage: Boolean = false,
+    ): Boolean {
+
+        if (isVisible) {
+            if (isSystemApp || taskPackageEqualsClientPackage) {
+                // b/339532378: If it's ConfirmDeviceCredentialActivity, we need to check further on
+                // class name.
+                if (isClientConfirmDeviceCredentialActivity) {
+                    return !isTopPackage ||
+                        clientClassNameIfItIsConfirmDeviceCredentialActivity != topActivityClassName
+                }
+                return false
+            } else if (
+                isTopPackage &&
+                    isClientConfirmDeviceCredentialActivity &&
+                    clientClassNameIfItIsConfirmDeviceCredentialActivity == topActivityClassName
+            ) {
+                return false
+            }
+        }
+
+        return true
     }
     // LINT.ThenChange(frameworks/base/services/core/java/com/android/server/biometrics/Utils.java)
 }

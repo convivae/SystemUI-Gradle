@@ -19,7 +19,6 @@ package com.android.systemui.statusbar.chips.mediaprojection.domain.interactor
 import android.content.pm.PackageManager
 import android.media.projection.StopReason
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.log.LogBuffer
@@ -32,6 +31,7 @@ import com.android.systemui.statusbar.chips.StatusBarChipsLog
 import com.android.systemui.statusbar.chips.mediaprojection.domain.model.ProjectionChipModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -53,6 +53,9 @@ constructor(
     private val packageManager: PackageManager,
     @StatusBarChipsLog private val logger: LogBuffer,
 ) {
+    val projectionStartedDuringCallAndActivePostCallEvent: Flow<Unit> =
+        mediaProjectionRepository.projectionStartedDuringCallAndActivePostCallEvent
+
     val projection: StateFlow<ProjectionChipModel> =
         mediaProjectionRepository.mediaProjectionState
             .map { state ->
@@ -69,16 +72,13 @@ constructor(
                                 ProjectionChipModel.Receiver.ShareToApp
                             }
                         val contentType =
-                            if (Flags.statusBarShowAudioOnlyProjectionChip()) {
-                                when (state) {
-                                    is MediaProjectionState.Projecting.EntireScreen,
-                                    is MediaProjectionState.Projecting.SingleTask ->
-                                        ProjectionChipModel.ContentType.Screen
-                                    is MediaProjectionState.Projecting.NoScreen ->
-                                        ProjectionChipModel.ContentType.Audio
-                                }
-                            } else {
-                                ProjectionChipModel.ContentType.Screen
+                            when (state) {
+                                is MediaProjectionState.Projecting.EntireScreen,
+                                is MediaProjectionState.Projecting.SingleTask,
+                                is MediaProjectionState.Projecting.AppContent ->
+                                    ProjectionChipModel.ContentType.Screen
+                                is MediaProjectionState.Projecting.NoScreen ->
+                                    ProjectionChipModel.ContentType.Audio
                             }
 
                         logger.log(

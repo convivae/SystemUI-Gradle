@@ -16,19 +16,15 @@
 
 package com.android.systemui.statusbar.window
 
-import android.content.Context
 import android.view.WindowManager
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager
+import com.android.app.displaylib.PerDisplayRepository
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent
 import com.android.systemui.display.data.repository.DisplayRepository
 import com.android.systemui.display.data.repository.DisplayWindowPropertiesRepository
 import com.android.systemui.display.data.repository.PerDisplayStore
-import com.android.systemui.display.data.repository.PerDisplayStoreImpl
-import com.android.systemui.display.data.repository.SingleDisplayStore
-import com.android.systemui.statusbar.core.StatusBarConnectedDisplays
-import com.android.systemui.statusbar.data.repository.StatusBarConfigurationControllerStore
-import com.android.systemui.statusbar.data.repository.StatusBarContentInsetsProviderStore
+import com.android.systemui.statusbar.data.repository.StatusBarPerDisplayStoreImpl
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 
@@ -42,31 +38,28 @@ constructor(
     @Background backgroundApplicationScope: CoroutineScope,
     private val controllerFactory: StatusBarWindowController.Factory,
     private val displayWindowPropertiesRepository: DisplayWindowPropertiesRepository,
-    private val viewCaptureAwareWindowManagerFactory: ViewCaptureAwareWindowManager.Factory,
-    private val statusBarConfigurationControllerStore: StatusBarConfigurationControllerStore,
-    private val statusBarContentInsetsProviderStore: StatusBarContentInsetsProviderStore,
+    private val perDisplaySubcomponentRepo: PerDisplayRepository<SystemUIDisplaySubcomponent>,
     displayRepository: DisplayRepository,
 ) :
     StatusBarWindowControllerStore,
-    PerDisplayStoreImpl<StatusBarWindowController>(backgroundApplicationScope, displayRepository) {
+    StatusBarPerDisplayStoreImpl<StatusBarWindowController>(
+        backgroundApplicationScope,
+        displayRepository,
+    ) {
 
-    init {
-        StatusBarConnectedDisplays.assertInNewMode()
-    }
-
-    override fun createInstanceForDisplay(displayId: Int): StatusBarWindowController {
+    override fun createInstanceForDisplay(displayId: Int): StatusBarWindowController? {
+        val displaySubcomponent = perDisplaySubcomponentRepo[displayId] ?: return null
         val statusBarDisplayContext =
             displayWindowPropertiesRepository.get(
                 displayId = displayId,
                 windowType = WindowManager.LayoutParams.TYPE_STATUS_BAR,
-            )
-        val viewCaptureAwareWindowManager =
-            viewCaptureAwareWindowManagerFactory.create(statusBarDisplayContext.windowManager)
+            ) ?: return null
         return controllerFactory.create(
             statusBarDisplayContext.context,
-            viewCaptureAwareWindowManager,
-            statusBarConfigurationControllerStore.forDisplay(displayId),
-            statusBarContentInsetsProviderStore.forDisplay(displayId),
+            statusBarDisplayContext.windowManager,
+            displaySubcomponent.statusBarConfigurationController,
+            displaySubcomponent.statusBarContentInsetsProvider,
+            displayId,
         )
     }
 
@@ -75,29 +68,4 @@ constructor(
     }
 
     override val instanceClass = StatusBarWindowController::class.java
-}
-
-@SysUISingleton
-class SingleDisplayStatusBarWindowControllerStore
-@Inject
-constructor(
-    context: Context,
-    viewCaptureAwareWindowManager: ViewCaptureAwareWindowManager,
-    factory: StatusBarWindowControllerImpl.Factory,
-    statusBarConfigurationControllerStore: StatusBarConfigurationControllerStore,
-    statusBarContentInsetsProviderStore: StatusBarContentInsetsProviderStore,
-) :
-    StatusBarWindowControllerStore,
-    PerDisplayStore<StatusBarWindowController> by SingleDisplayStore(
-        factory.create(
-            context,
-            viewCaptureAwareWindowManager,
-            statusBarConfigurationControllerStore.defaultDisplay,
-            statusBarContentInsetsProviderStore.defaultDisplay,
-        )
-    ) {
-
-    init {
-        StatusBarConnectedDisplays.assertInLegacyMode()
-    }
 }

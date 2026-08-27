@@ -16,11 +16,11 @@
 
 package com.android.systemui.statusbar.notification.row.wrapper
 
-import android.app.Flags
 import android.content.Context
 import android.graphics.drawable.AnimatedImageDrawable
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import com.android.internal.widget.CachingIconView
 import com.android.internal.widget.ConversationLayout
 import com.android.internal.widget.MessagingGroup
@@ -53,8 +53,7 @@ class NotificationConversationTemplateViewWrapper(
     private lateinit var badgeIconView: NotificationRowIconView
     private lateinit var conversationBadgeBg: View
     private lateinit var expandBtn: View
-    private lateinit var expandBtnContainer: View
-    private lateinit var imageMessageContainer: ViewGroup
+    private var imageMessageContainer: ViewGroup? = null
     private lateinit var messageContainers: ArrayList<MessagingGroup>
     private lateinit var messagingLinearLayout: MessagingLinearLayout
     private lateinit var conversationTitleView: View
@@ -72,16 +71,13 @@ class NotificationConversationTemplateViewWrapper(
             conversationIconContainer =
                 requireViewById(com.android.internal.R.id.conversation_icon_container)
             conversationIconView = requireViewById(com.android.internal.R.id.conversation_icon)
-            if (Flags.notificationsRedesignAppIcons()) {
-                badgeIconView = requireViewById(com.android.internal.R.id.icon)
-            }
+            badgeIconView = requireViewById(com.android.internal.R.id.icon)
             conversationBadgeBg =
                 requireViewById(com.android.internal.R.id.conversation_icon_badge_bg)
             expandBtn = requireViewById(com.android.internal.R.id.expand_button)
-            expandBtnContainer = requireViewById(com.android.internal.R.id.expand_button_container)
             importanceRing = requireViewById(com.android.internal.R.id.conversation_icon_badge_ring)
             appName = requireViewById(com.android.internal.R.id.app_name_text)
-            conversationTitleView = requireViewById(com.android.internal.R.id.conversation_text)
+            conversationTitleView = requireViewById(com.android.internal.R.id.title)
             facePileTop = findViewById(com.android.internal.R.id.conversation_face_pile_top)
             facePileBottom = findViewById(com.android.internal.R.id.conversation_face_pile_bottom)
             facePileBottomBg =
@@ -129,15 +125,8 @@ class NotificationConversationTemplateViewWrapper(
     override fun setRemoteInputVisible(visible: Boolean) =
         conversationLayout.showHistoricMessages(visible)
 
-    override fun updateExpandability(
-        expandable: Boolean,
-        onClickListener: View.OnClickListener,
-        requestLayout: Boolean,
-    ) = conversationLayout.updateExpandability(expandable, onClickListener)
-
     override fun disallowSingleClick(x: Float, y: Float): Boolean {
-        val isOnExpandButton =
-            expandBtnContainer.visibility == View.VISIBLE && isOnView(expandBtnContainer, x, y)
+        val isOnExpandButton = expandBtn.isVisible && isOnView(expandBtn, x, y)
         return isOnExpandButton || super.disallowSingleClick(x, y)
     }
 
@@ -158,7 +147,8 @@ class NotificationConversationTemplateViewWrapper(
         // and the top level image message container.
         val containers =
             messageContainers.asSequence().map { it.messageContainer } +
-                sequenceOf(imageMessageContainer)
+                if (imageMessageContainer == null) emptySequence()
+                else sequenceOf(imageMessageContainer!!)
         val drawables =
             containers
                 .flatMap { it.children }

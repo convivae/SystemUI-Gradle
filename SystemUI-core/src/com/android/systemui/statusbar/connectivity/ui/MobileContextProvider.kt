@@ -131,8 +131,10 @@ constructor(
          * system to properly load different carrier's iconography
          */
         private fun createCarrierConfigContext(context: Context, mcc: Int, mnc: Int): Context {
-            // Copy the existing configuration
-            val c = Configuration(context.resources.configuration)
+            // Create an empty Configuration, and only set the fields that need to be
+            // overridden. This way all the other fields will have the values of the base
+            // context, even after other Configuration changes.
+            val c = Configuration()
             c.mcc = mcc
             c.mnc = mnc
 

@@ -18,29 +18,23 @@ package com.android.systemui.statusbar.domain.interactor
 
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.domain.interactor.KeyguardOcclusionInteractor
+import com.android.systemui.keyguard.domain.interactor.KeyguardServiceShowLockscreenInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardSurfaceBehindInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.domain.interactor.WindowManagerLockscreenVisibilityInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.power.domain.interactor.PowerInteractor
+import com.android.systemui.scene.domain.interactor.SceneInteractor
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes
-import com.android.systemui.util.kotlin.sample
+import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-
-/**
- * Whether to set the status bar keyguard view occluded or not, and whether to animate that change.
- */
-data class OccludedState(
-    val occluded: Boolean,
-    val animate: Boolean = false,
-)
 
 /** Handles logic around calls to [StatusBarKeyguardViewManager] in legacy code. */
 @Deprecated("Will be removed once all of SBKVM's responsibilies are refactored.")
@@ -53,14 +47,23 @@ constructor(
     powerInteractor: PowerInteractor,
     wmLockscreenVisibilityInteractor: WindowManagerLockscreenVisibilityInteractor,
     surfaceBehindInteractor: KeyguardSurfaceBehindInteractor,
+    showLockscreenInteractor: KeyguardServiceShowLockscreenInteractor,
+    sceneInteractor: Lazy<SceneInteractor>,
 ) {
     /** Occlusion state to apply whenever a keyguard transition is STARTED, if any. */
-    private val occlusionStateFromStartedStep: Flow<OccludedState> =
+    private val occlusionStateFromStartedStep: Flow<Boolean> =
         keyguardTransitionInteractor.startedKeyguardTransitionStep
-            .sample(powerInteractor.detailedWakefulness, ::Pair)
-            .map { (startedStep, wakefulness) ->
+            .map { startedStep ->
+                val wakefulness = powerInteractor.detailedWakefulness.value
                 val transitioningFromPowerButtonGesture =
-                    KeyguardState.deviceIsAsleepInState(startedStep.from) &&
+                    KeyguardState.deviceIsAsleepInState(
+                        startedStep.from,
+                        if (SceneContainerFlag.isEnabled) {
+                            sceneInteractor.get().currentScene.value
+                        } else {
+                            null
+                        },
+                    ) &&
                         startedStep.to == KeyguardState.OCCLUDED &&
                         wakefulness.powerButtonLaunchGestureTriggered
 
@@ -70,7 +73,7 @@ constructor(
                     // Set occluded upon STARTED, *unless* we're transitioning from the power
                     // button, in which case we're going to play an animation over the lockscreen UI
                     // and need to remain unoccluded until the transition finishes.
-                    return@map OccludedState(occluded = true, animate = false)
+                    return@map true
                 }
 
                 if (
@@ -81,7 +84,7 @@ constructor(
                     // since we need the views visible to animate them back down. This is a special
                     // case due to the way unocclusion remote animations are run. We can remove this
                     // once the unocclude animation uses the return animation framework.
-                    return@map OccludedState(occluded = false, animate = false)
+                    return@map false
                 }
 
                 // Otherwise, wait for the transition to FINISH to decide.
@@ -93,12 +96,12 @@ constructor(
     private val occlusionStateFromFinishedStep =
         combine(
                 keyguardTransitionInteractor.isFinishedIn(
-                    scene = Scenes.Gone,
+                    content = Scenes.Gone,
                     stateWithoutSceneContainer = KeyguardState.GONE,
                 ),
-                keyguardTransitionInteractor.isFinishedIn(KeyguardState.OCCLUDED),
+                keyguardTransitionInteractor.isFinishedIn(Scenes.Occluded, KeyguardState.OCCLUDED),
                 keyguardOcclusionInteractor.isShowWhenLockedActivityOnTop,
-                ::Triple
+                ::Triple,
             )
             .map { (isOnGone, isOnOccluded, showWhenLockedOnTop) ->
                 // If we're FINISHED in OCCLUDED, we want to render as occluded. We also need to
@@ -106,25 +109,38 @@ constructor(
                 // and we're in any state other than GONE. This is necessary, for example, when we
                 // transition from OCCLUDED to a bouncer state. Otherwise, we should not be
                 // occluded.
-                val occluded = isOnOccluded || (showWhenLockedOnTop && !isOnGone)
-                OccludedState(occluded = occluded, animate = false)
+                return@map isOnOccluded || (showWhenLockedOnTop && !isOnGone)
             }
 
     /** Occlusion state to apply to SBKVM's setOccluded call. */
     val keyguardViewOcclusionState =
-        merge(occlusionStateFromStartedStep, occlusionStateFromFinishedStep)
-            .distinctUntilChangedBy {
-                // Don't switch 'animate' values mid-transition.
-                it.occluded
-            }
+        merge(occlusionStateFromStartedStep, occlusionStateFromFinishedStep).distinctUntilChanged()
 
     /** Visibility state to apply to SBKVM via show() and hide(). */
     val keyguardViewVisibility =
         combine(
                 wmLockscreenVisibilityInteractor.lockscreenVisibility,
                 surfaceBehindInteractor.isAnimatingSurface,
-            ) { lockscreenVisible, animatingSurface ->
+            ) { (lockscreenVisible, _), animatingSurface ->
                 lockscreenVisible || animatingSurface
             }
             .distinctUntilChanged()
+
+    /**
+     * Workaround for a bug where isKeyguardDismissible is not updated when we lock while awake and
+     * transition to DREAMING.
+     *
+     * Dismissability is currently (in our half-migrated world) updated via SBKVM#show/hide, which
+     * themselves are called whenever WM lockscreen visibility is updated. However, if we go to
+     * DREAMING directly from GONE (via a power button press or timeout), we never pass through a
+     * KeyguardState where WM lockscreen visibility is set to true. As a result, we never actually
+     * call SBKVM#show, and keyguard remains dismissible (according to KeyguardStateController)
+     * indefinitely.
+     *
+     * We can work around this by asking SBKVM to let KSC know when a 'lock now' event comes in. We
+     * can remove this once 'dismissibility' is refactored to be tracked in KeyguardRepository.
+     */
+    @Deprecated("Temporary workaround until SBKVM or KeyguardStateController are removed.")
+    val notifyKeyguardStateControllerKeyguardWillBeShowing =
+        showLockscreenInteractor.showNowEvents.map {}
 }

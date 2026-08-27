@@ -35,15 +35,14 @@ import com.android.settingslib.bluetooth.CachedBluetoothDevice;
 import com.android.settingslib.bluetooth.LocalBluetoothManager;
 import com.android.settingslib.bluetooth.LocalBluetoothProfile;
 import com.android.settingslib.bluetooth.LocalBluetoothProfileManager;
-import com.android.systemui.Flags;
 import com.android.systemui.bluetooth.BluetoothLogger;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.settings.UserTracker;
-import com.android.systemui.statusbar.policy.bluetooth.BluetoothRepository;
-import com.android.systemui.statusbar.policy.bluetooth.ConnectionStatusModel;
+import com.android.systemui.statusbar.policy.bluetooth.data.repository.BluetoothRepository;
+import com.android.systemui.statusbar.policy.bluetooth.data.repository.ConnectionStatusModel;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -137,10 +136,6 @@ public class BluetoothControllerImpl implements BluetoothController, BluetoothCa
         pw.print("  mIsActive="); pw.println(mIsActive);
         pw.print("  mConnectedDevices="); pw.println(getConnectedDevices());
         pw.print("  mCallbacks.size="); pw.println(mHandler.mCallbacks.size());
-        pw.println("  Bluetooth Devices:");
-        for (CachedBluetoothDevice device : getDevices()) {
-            pw.println("    " + getDeviceString(device));
-        }
     }
 
     private static String connectionStateToString(@ConnectionState int state) {
@@ -241,24 +236,15 @@ public class BluetoothControllerImpl implements BluetoothController, BluetoothCa
     @WorkerThread
     @Override
     public String getConnectedDeviceName() {
-        if (Flags.getConnectedDeviceNameUnsynchronized()) {
-            CachedBluetoothDevice connectedDevice = null;
-            // Calling the getName() API for CachedBluetoothDevice outside the synchronized block
-            // so that the main thread is not blocked.
-            synchronized (mConnectedDevices) {
-                if (mConnectedDevices.size() == 1) {
-                    connectedDevice = mConnectedDevices.get(0);
-                }
-            }
-            return connectedDevice != null ? connectedDevice.getName() : null;
-        } else {
-            synchronized (mConnectedDevices) {
-                if (mConnectedDevices.size() == 1) {
-                    return mConnectedDevices.get(0).getName();
-                }
+        CachedBluetoothDevice connectedDevice = null;
+        // Calling the getName() API for CachedBluetoothDevice outside the synchronized block
+        // so that the main thread is not blocked.
+        synchronized (mConnectedDevices) {
+            if (mConnectedDevices.size() == 1) {
+                connectedDevice = mConnectedDevices.get(0);
             }
         }
-        return null;
+        return connectedDevice != null ? connectedDevice.getName() : null;
     }
 
     private Collection<CachedBluetoothDevice> getDevices() {
@@ -268,12 +254,17 @@ public class BluetoothControllerImpl implements BluetoothController, BluetoothCa
     }
 
     private void updateConnected() {
+        mLogger.logUpdatingConnected();
         mBluetoothRepository.fetchConnectionStatusInBackground(
                 getDevices(), this::onConnectionStatusFetched);
     }
 
     // Careful! This may be invoked in the main thread.
     private void onConnectionStatusFetched(ConnectionStatusModel status) {
+        mLogger.logConnectionStatus(
+                status.getConnectedDevices(),
+                status.getMaxConnectionState()
+        );
         List<CachedBluetoothDevice> newList = status.getConnectedDevices();
         int state = status.getMaxConnectionState();
         synchronized (mConnectedDevices) {
@@ -288,6 +279,7 @@ public class BluetoothControllerImpl implements BluetoothController, BluetoothCa
     }
 
     private void updateActive() {
+        mLogger.logUpdatingActive();
         boolean isActive = false;
 
         for (CachedBluetoothDevice device : getDevices()) {

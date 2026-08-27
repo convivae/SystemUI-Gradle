@@ -27,7 +27,6 @@ import com.android.systemui.qs.shared.model.CategoryAndName
 sealed interface GridCell {
     val row: Int
     val span: GridItemSpan
-    val s: String
 }
 
 /**
@@ -40,7 +39,6 @@ data class TileGridCell(
     override val row: Int,
     override val width: Int,
     override val span: GridItemSpan = GridItemSpan(width),
-    override val s: String = "${tile.tileSpec.spec}-$row-$width",
     val column: Int,
 ) : GridCell, SizedTile<EditTileViewModel>, CategoryAndName by tile {
     val key: String = "${tile.tileSpec.spec}-$row"
@@ -57,7 +55,6 @@ data class TileGridCell(
 data class SpacerGridCell(
     override val row: Int,
     override val span: GridItemSpan = GridItemSpan(1),
-    override val s: String = "spacer",
 ) : GridCell
 
 /**

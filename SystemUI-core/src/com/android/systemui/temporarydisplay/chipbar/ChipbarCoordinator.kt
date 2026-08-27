@@ -29,6 +29,7 @@ import android.view.View
 import android.view.View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE
 import android.view.View.ACCESSIBILITY_LIVE_REGION_NONE
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.ImageView
@@ -37,7 +38,6 @@ import androidx.annotation.DimenRes
 import androidx.annotation.IdRes
 import androidx.annotation.VisibleForTesting
 import com.android.app.animation.Interpolators
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager
 import com.android.internal.widget.CachingIconView
 import com.android.systemui.Gefingerpoken
 import com.android.systemui.classifier.FalsingCollector
@@ -76,12 +76,13 @@ import javax.inject.Inject
  * Only one chipbar may be shown at a time.
  */
 @SysUISingleton
-open class ChipbarCoordinator
+open class
+ChipbarCoordinator
 @Inject
 constructor(
     context: Context,
     logger: ChipbarLogger,
-    viewCaptureAwareWindowManager: ViewCaptureAwareWindowManager,
+    windowManager: WindowManager,
     @Main mainExecutor: DelayableExecutor,
     accessibilityManager: AccessibilityManager,
     configurationController: ConfigurationController,
@@ -100,7 +101,7 @@ constructor(
     TemporaryViewDisplayController<ChipbarInfo, ChipbarLogger>(
         context,
         logger,
-        viewCaptureAwareWindowManager,
+        windowManager,
         mainExecutor,
         accessibilityManager,
         configurationController,
@@ -270,7 +271,9 @@ constructor(
     override fun animateViewIn(view: ViewGroup) {
         // We can only request focus once the animation finishes.
         val onAnimationEnd = Runnable {
-            maybeGetAccessibilityFocus(view.getTag(INFO_TAG) as ChipbarInfo?, view)
+            if (view.isAttachedToWindow) {
+                maybeGetAccessibilityFocus(view.getTag(INFO_TAG) as ChipbarInfo?, view)
+            }
         }
         val animatedIn = chipbarAnimator.animateViewIn(view.getInnerView(), onAnimationEnd)
 

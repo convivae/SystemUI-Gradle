@@ -16,8 +16,6 @@
 
 package com.android.systemui.keyguard.domain.interactor
 
-import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.internal.policy.IKeyguardDismissCallback
 import com.android.systemui.bouncer.domain.interactor.AlternateBouncerInteractor
 import com.android.systemui.bouncer.domain.interactor.PrimaryBouncerInteractor
 import com.android.systemui.dagger.SysUISingleton
@@ -30,17 +28,14 @@ import com.android.systemui.keyguard.shared.model.DismissAction
 import com.android.systemui.keyguard.shared.model.KeyguardDone
 import com.android.systemui.power.domain.interactor.PowerInteractor
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor
-import com.android.systemui.util.kotlin.Utils.Companion.toQuad
 import com.android.systemui.util.kotlin.sample
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.withContext
 
 /** Encapsulates business logic for requesting the keyguard to dismiss/finish/done. */
 @SysUISingleton
@@ -71,16 +66,10 @@ constructor(
      */
     private val onTrustGrantedRequestDismissKeyguard: Flow<Unit> =
         trustRepository.trustAgentRequestingToDismissKeyguard
-            .sample(
-                combine(
-                    primaryBouncerInteractor.isShowing,
-                    alternateBouncerInteractor.isVisible,
-                    powerInteractor.isInteractive,
-                    ::Triple,
-                ),
-                ::toQuad,
-            )
-            .filter { (trustModel, primaryBouncerShowing, altBouncerShowing, interactive) ->
+            .filter { trustModel ->
+                val altBouncerShowing = alternateBouncerInteractor.isVisible.value
+                val primaryBouncerShowing = primaryBouncerInteractor.isShowing.value
+                val interactive = powerInteractor.isInteractive.value
                 val bouncerShowing = primaryBouncerShowing || altBouncerShowing
                 (interactive || trustModel.flags.temporaryAndRenewable()) &&
                     (bouncerShowing || trustModel.flags.dismissKeyguardRequested())
@@ -137,31 +126,5 @@ constructor(
 
     suspend fun setKeyguardDone(keyguardDoneTiming: KeyguardDone) {
         keyguardRepository.setKeyguardDone(keyguardDoneTiming)
-    }
-
-    /**
-     * Dismiss the keyguard (or show the bouncer) and invoke the provided callback once dismissed.
-     *
-     * TODO(b/358412565): Support dismiss messages.
-     */
-    fun dismissKeyguardWithCallback(callback: IKeyguardDismissCallback?) {
-        scope.launch {
-            withContext(mainDispatcher) {
-                if (callback != null) {
-                    dismissCallbackRegistry.addCallback(callback)
-                }
-
-                // This will either show the bouncer, or dismiss the keyguard if insecure. We
-                // currently need to request showing the bouncer in order to start a transition to
-                // *_BOUNCER. Once we refactor that so that starting the transition is what causes
-                // the bouncer to show, we can remove this entire method, and simply call
-                // KeyguardDismissTransitionInteractor#startDismissKeyguardTransition.
-                if (alternateBouncerInteractor.canShowAlternateBouncer.value) {
-                    alternateBouncerInteractor.forceShow()
-                } else {
-                    primaryBouncerInteractor.show(true)
-                }
-            }
-        }
     }
 }

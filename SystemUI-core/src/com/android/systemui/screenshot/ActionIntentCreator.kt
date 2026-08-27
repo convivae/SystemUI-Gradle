@@ -22,12 +22,34 @@ import android.content.ComponentName
 import android.content.ContentProvider
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.PackageManager.NameNotFoundException
 import android.net.Uri
 import android.os.UserHandle
+import android.provider.DocumentsContract
+import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.res.R
+import com.android.systemui.screencapture.record.largescreen.data.repository.ParentUriRepository
 import com.android.systemui.screenshot.scroll.LongScreenshotActivity
+import java.util.function.Consumer
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-object ActionIntentCreator {
+@SysUISingleton
+class ActionIntentCreator
+@Inject
+constructor(
+    private val context: Context,
+    private val packageManager: PackageManager,
+    @Application private val applicationScope: CoroutineScope,
+    @Background private val backgroundDispatcher: CoroutineDispatcher,
+    private val parentUriRepository: ParentUriRepository,
+) {
     /** @return a chooser intent to share the given URI. */
     fun createShare(uri: Uri): Intent = createShare(uri, subject = null, text = null)
 
@@ -54,7 +76,7 @@ object ActionIntentCreator {
                 clipData =
                     ClipData(
                         ClipDescription("content", arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN)),
-                        ClipData.Item(uri)
+                        ClipData.Item(uri),
                     )
 
                 subject?.let { putExtra(Intent.EXTRA_SUBJECT, subject) }
@@ -69,18 +91,21 @@ object ActionIntentCreator {
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
+    // Non-suspend version for java compat
+    fun createEdit(rawUri: Uri, consumer: Consumer<Intent>) {
+        applicationScope.launch { consumer.accept(createEdit(rawUri)) }
+    }
+
     /**
-     * @return an ACTION_EDIT intent for the given URI, directed to config_screenshotEditor if
-     *   available.
+     * @return an ACTION_EDIT intent for the given URI, directed to config_preferredScreenshotEditor
+     *   if enabled, falling back to config_screenshotEditor if that's non-empty.
      */
-    fun createEdit(rawUri: Uri, context: Context): Intent {
+    suspend fun createEdit(rawUri: Uri): Intent {
         val uri = uriWithoutUserId(rawUri)
         val editIntent = Intent(Intent.ACTION_EDIT)
 
-        val editor = context.getString(R.string.config_screenshotEditor)
-        if (editor.isNotEmpty()) {
-            editIntent.component = ComponentName.unflattenFromString(editor)
-        }
+        // Use the preferred editor if it's available, otherwise fall back to the default editor
+        editIntent.component = preferredEditor() ?: defaultEditor()
 
         return editIntent
             .setDataAndType(uri, "image/png")
@@ -92,16 +117,68 @@ object ActionIntentCreator {
     }
 
     /** @return an Intent to start the LongScreenshotActivity */
-    fun createLongScreenshotIntent(owner: UserHandle, context: Context): Intent {
+    fun createLongScreenshotIntent(owner: UserHandle, originalScreenshotUri: Uri): Intent {
         return Intent(context, LongScreenshotActivity::class.java)
             .putExtra(LongScreenshotActivity.EXTRA_SCREENSHOT_USER_HANDLE, owner)
+            .putExtra(LongScreenshotActivity.EXTRA_ORIGINAL_SCREENSHOT_URI, originalScreenshotUri)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
     }
 
-    private const val EXTRA_EDIT_SOURCE = "edit_source"
-    private const val EDIT_SOURCE_SCREENSHOT = "screenshot"
+    /**
+     * @return an optional ACTION_VIEW intent for the parent directory of the given MediaStore URI.
+     */
+    suspend fun createOpenInFiles(rawUri: Uri): Intent? {
+        val parentUri = parentUriRepository.getParentDirectoryUri(rawUri)
+        if (parentUri != null) {
+            return Intent(Intent.ACTION_VIEW)
+                .setDataAndType(parentUri, DocumentsContract.Document.MIME_TYPE_DIR)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        } else {
+            return null
+        }
+    }
+
+    private suspend fun preferredEditor(): ComponentName? =
+        runCatching {
+                val preferredEditor = context.getString(R.string.config_preferredScreenshotEditor)
+                val component = ComponentName.unflattenFromString(preferredEditor) ?: return null
+
+                return if (isComponentAvailable(component)) component else null
+            }
+            .getOrNull()
+
+    private suspend fun isComponentAvailable(component: ComponentName): Boolean =
+        withContext(backgroundDispatcher) {
+            try {
+                val info =
+                    packageManager.getPackageInfo(
+                        component.packageName,
+                        PackageManager.GET_ACTIVITIES,
+                    )
+                info.activities?.firstOrNull {
+                    it.componentName.className == component.className
+                } != null
+            } catch (e: NameNotFoundException) {
+                false
+            }
+        }
+
+    private fun defaultEditor(): ComponentName? =
+        runCatching {
+                context.getString(R.string.config_screenshotEditor).let {
+                    ComponentName.unflattenFromString(it)
+                }
+            }
+            .getOrNull()
+
+    companion object {
+        private const val EXTRA_EDIT_SOURCE = "edit_source"
+        private const val EDIT_SOURCE_SCREENSHOT = "screenshot"
+    }
 }
 
 /**

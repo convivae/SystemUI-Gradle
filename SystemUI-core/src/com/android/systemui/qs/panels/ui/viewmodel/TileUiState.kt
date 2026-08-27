@@ -22,24 +22,57 @@ import android.service.quicksettings.Tile
 import android.text.TextUtils
 import android.widget.Switch
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.state.ToggleableState
 import com.android.systemui.plugins.qs.QSTile
+import com.android.systemui.qs.tileimpl.QSTileImpl.DrawableIconWithRes
 import com.android.systemui.qs.tileimpl.SubtitleArrayMapping
 import com.android.systemui.res.R
 import java.util.function.Supplier
 
+/**
+ * Ui State for the tiles. It doesn't contain the icon to be able to invalidate the icon part
+ * separately. For the icon, use [IconProvider].
+ */
 @Immutable
 data class TileUiState(
     val label: String,
     val secondaryLabel: String,
-    val state: Int,
-    val handlesLongClick: Boolean,
-    val handlesSecondaryClick: Boolean,
-    val icon: Supplier<QSTile.Icon?>,
+    /**
+     * Indicates the visual state for the tile. One of
+     * * [Tile.STATE_UNAVAILABLE]
+     * * [Tile.STATE_INACTIVE]
+     * * [Tile.STATE_ACTIVE]
+     */
+    val visualState: Int,
+    /**
+     * Indicates that the tile supports main click.
+     *
+     * This is regular click on single target tiles ([handlesToggleClick] = `false`), or click to
+     * open a dialog in dual target tiles ([handlesToggleClick] = `true`).
+     *
+     * @see TileViewModel
+     */
+    val handlesMainClick: Boolean,
+    /**
+     * Indicates that the tile supports long press on the tile going to Settings.
+     *
+     * @see TileViewModel
+     */
+    val handlesSettingsClick: Boolean,
+    /**
+     * Indicates that the tile supports toggle click (tile is dual target).
+     *
+     * @see TileViewModel
+     */
+    val handlesToggleClick: Boolean,
     val sideDrawable: Drawable?,
     val accessibilityUiState: AccessibilityUiState,
-)
+) {
+    val isToggleable: Boolean
+        get() = accessibilityUiState.toggleableState != null
+}
 
 data class AccessibilityUiState(
     val contentDescription: String,
@@ -59,12 +92,16 @@ fun QSTile.State.toUiState(resources: Resources): TileUiState {
     // State handling and description
     val stateDescription = StringBuilder()
     val stateText =
-        if (accessibilityRole == Role.Switch || state == Tile.STATE_UNAVAILABLE) {
+        if (
+            accessibilityRole == Role.Switch ||
+                state == Tile.STATE_UNAVAILABLE ||
+                handlesSecondaryClick
+        ) {
             getStateText(resources)
         } else {
             ""
         }
-    val secondaryLabel = getSecondaryLabel(stateText)
+    val secondaryLabel = getSecondaryLabel(if (state == Tile.STATE_UNAVAILABLE) stateText else "")
     if (!TextUtils.isEmpty(stateText)) {
         stateDescription.append(stateText)
     }
@@ -88,21 +125,34 @@ fun QSTile.State.toUiState(resources: Resources): TileUiState {
     return TileUiState(
         label = label?.toString() ?: "",
         secondaryLabel = secondaryLabel?.toString() ?: "",
-        state = if (disabledByPolicy) Tile.STATE_UNAVAILABLE else state,
-        handlesLongClick = handlesLongClick,
-        handlesSecondaryClick = handlesSecondaryClick,
-        icon = icon?.let { Supplier { icon } } ?: iconSupplier ?: Supplier { null },
+        // This is used for the colors, [disabledByPolicy] needs to look UNAVAILABLE
+        visualState = if (disabledByPolicy) Tile.STATE_UNAVAILABLE else state,
+        handlesSettingsClick = handlesLongClick,
+        handlesToggleClick = handlesSecondaryClick,
         sideDrawable = sideViewCustomDrawable,
-        AccessibilityUiState(
-            contentDescription?.toString() ?: "",
-            stateDescription.toString(),
-            accessibilityRole,
-            toggleableState,
-            resources
-                .getString(R.string.accessibility_tile_disabled_by_policy_action_description)
-                .takeIf { disabledByPolicy },
-        ),
+        // disable by policy is STATE_INACTIVE that looks like STATE_UNAVAILABLE
+        handlesMainClick = state != Tile.STATE_UNAVAILABLE,
+        accessibilityUiState =
+            AccessibilityUiState(
+                contentDescription?.toString() ?: label?.toString() ?: "",
+                stateDescription.toString(),
+                accessibilityRole,
+                toggleableState,
+                resources
+                    .getString(R.string.accessibility_tile_disabled_by_policy_action_description)
+                    .takeIf { disabledByPolicy },
+            ),
     )
+}
+
+fun QSTile.State.toIconProvider(): IconProvider {
+    return when {
+        // Provide a copy of the icon if it's preloaded as a DrawableIconWithRes to avoid the same
+        // drawable being used in both QS and QQS, which can lead to weird behaviors
+        icon != null -> IconProvider.ConstantIcon((icon as? DrawableIconWithRes)?.copy() ?: icon)
+        iconSupplier != null -> IconProvider.IconSupplier(iconSupplier)
+        else -> IconProvider.Empty
+    }
 }
 
 private fun QSTile.State.getStateText(resources: Resources): CharSequence {
@@ -114,4 +164,22 @@ private fun QSTile.State.getStateText(resources: Resources): CharSequence {
 private fun getUnavailableText(spec: String?, resources: Resources): String {
     val arrayResId = SubtitleArrayMapping.getSubtitleId(spec)
     return resources.getStringArray(arrayResId)[Tile.STATE_UNAVAILABLE]
+}
+
+@Stable
+sealed interface IconProvider {
+
+    val icon: QSTile.Icon?
+
+    data class ConstantIcon(override val icon: QSTile.Icon) : IconProvider
+
+    data class IconSupplier(val supplier: Supplier<QSTile.Icon?>) : IconProvider {
+        override val icon: QSTile.Icon?
+            get() = supplier.get()
+    }
+
+    data object Empty : IconProvider {
+        override val icon: QSTile.Icon?
+            get() = null
+    }
 }

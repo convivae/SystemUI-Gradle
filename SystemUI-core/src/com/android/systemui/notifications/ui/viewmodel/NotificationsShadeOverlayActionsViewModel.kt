@@ -21,9 +21,10 @@ import com.android.compose.animation.scene.Swipe
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
 import com.android.compose.animation.scene.UserActionResult.HideOverlay
-import com.android.compose.animation.scene.UserActionResult.ReplaceByOverlay
+import com.android.compose.animation.scene.UserActionResult.ShowOverlay
+import com.android.compose.animation.scene.UserActionResult.ShowOverlay.HideCurrentOverlays
 import com.android.systemui.scene.shared.model.Overlays
-import com.android.systemui.scene.ui.viewmodel.SceneContainerEdge
+import com.android.systemui.scene.ui.viewmodel.SceneContainerArea.TopEdgeEndHalf
 import com.android.systemui.scene.ui.viewmodel.UserActionsViewModel
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -37,8 +38,11 @@ class NotificationsShadeOverlayActionsViewModel @AssistedInject constructor() :
             mapOf(
                 Swipe.Up to HideOverlay(Overlays.NotificationsShade),
                 Back to HideOverlay(Overlays.NotificationsShade),
-                Swipe.Down(fromSource = SceneContainerEdge.TopRight) to
-                    ReplaceByOverlay(Overlays.QuickSettingsShade),
+                Swipe.Down(fromSource = TopEdgeEndHalf) to
+                    ShowOverlay(
+                        Overlays.QuickSettingsShade,
+                        hideCurrentOverlays = HideCurrentOverlays.Some(Overlays.NotificationsShade),
+                    ),
             )
         )
     }

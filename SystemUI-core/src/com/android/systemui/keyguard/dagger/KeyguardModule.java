@@ -19,7 +19,9 @@ package com.android.systemui.keyguard.dagger;
 import android.app.IActivityTaskManager;
 import android.app.trust.TrustManager;
 import android.content.Context;
+import android.content.res.Resources;
 import android.os.PowerManager;
+import android.uilatencystats.UiLatencyStatsManager;
 
 import com.android.internal.jank.InteractionJankMonitor;
 import com.android.internal.logging.UiEventLogger;
@@ -29,20 +31,23 @@ import com.android.keyguard.KeyguardDisplayManager;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardViewController;
 import com.android.keyguard.ViewMediatorCallback;
-import com.android.keyguard.dagger.KeyguardDisplayModule;
 import com.android.keyguard.dagger.KeyguardQsUserSwitchComponent;
 import com.android.keyguard.dagger.KeyguardStatusBarViewComponent;
-import com.android.keyguard.dagger.KeyguardStatusViewComponent;
-import com.android.keyguard.dagger.KeyguardUserSwitcherComponent;
+import com.android.keyguard.logging.KeyguardLoggerStartable;
 import com.android.keyguard.mediator.ScreenOnCoordinator;
 import com.android.systemui.CoreStartable;
+import com.android.systemui.Flags;
 import com.android.systemui.animation.ActivityTransitionAnimator;
 import com.android.systemui.bouncer.dagger.BouncerLoggerModule;
 import com.android.systemui.broadcast.BroadcastDispatcher;
+import com.android.systemui.camera.CameraSensorPrivacyModule;
 import com.android.systemui.classifier.FalsingCollector;
 import com.android.systemui.classifier.FalsingModule;
+import com.android.systemui.communal.domain.interactor.CommunalSceneInteractor;
+import com.android.systemui.communal.domain.interactor.CommunalSettingsInteractor;
 import com.android.systemui.communal.ui.viewmodel.CommunalTransitionViewModel;
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.dagger.qualifiers.Application;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dagger.qualifiers.UiBackground;
 import com.android.systemui.dreams.DreamOverlayStateController;
@@ -58,15 +63,21 @@ import com.android.systemui.keyguard.WindowManagerOcclusionManager;
 import com.android.systemui.keyguard.data.quickaffordance.KeyguardDataQuickAffordanceModule;
 import com.android.systemui.keyguard.data.repository.DeviceEntryFaceAuthModule;
 import com.android.systemui.keyguard.data.repository.KeyguardRepositoryModule;
+import com.android.systemui.keyguard.domain.interactor.KeyguardEnabledInteractor;
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor;
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionBootInteractor;
 import com.android.systemui.keyguard.domain.interactor.StartKeyguardTransitionModule;
+import com.android.systemui.keyguard.ui.binder.KeyguardChipbarViewBinder;
+import com.android.systemui.keyguard.ui.binder.SideFpsProgressBarViewBinder;
+import com.android.systemui.keyguard.ui.transitions.BlurConfig;
 import com.android.systemui.keyguard.ui.transitions.DeviceEntryIconTransitionModule;
 import com.android.systemui.keyguard.ui.view.AlternateBouncerWindowViewBinder;
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordancesCombinedViewModelModule;
 import com.android.systemui.log.SessionTracker;
 import com.android.systemui.navigationbar.NavigationModeController;
 import com.android.systemui.process.ProcessWrapper;
+import com.android.systemui.res.R;
+import com.android.systemui.scene.domain.interactor.SceneInteractor;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shade.ShadeController;
 import com.android.systemui.shade.ShadeDisplayAware;
@@ -95,31 +106,36 @@ import dagger.Provides;
 import dagger.multibindings.ClassKey;
 import dagger.multibindings.IntoMap;
 
-import kotlinx.coroutines.CoroutineDispatcher;
-import kotlinx.coroutines.ExperimentalCoroutinesApi;
+import kotlinx.coroutines.CoroutineScope;
 
+import java.util.Optional;
 import java.util.concurrent.Executor;
 
 /**
  * Dagger Module providing keyguard.
  */
-@ExperimentalCoroutinesApi
 @Module(subcomponents = {
         KeyguardQsUserSwitchComponent.class,
-        KeyguardStatusBarViewComponent.class,
-        KeyguardStatusViewComponent.class,
-        KeyguardUserSwitcherComponent.class},
+        KeyguardStatusBarViewComponent.class},
         includes = {
+            // go/keep-sorted start
+            BouncerLoggerModule.class,
+            CameraSensorPrivacyModule.class,
+            DeviceEntryFaceAuthModule.class,
             DeviceEntryIconTransitionModule.class,
             FalsingModule.class,
+            GlanceableHubTransitionImplModule.class,
+            GlanceableHubTransitionModule.class,
+            KeyguardConnectedDisplaysModule.class,
             KeyguardDataQuickAffordanceModule.class,
+            KeyguardEnabledInteractor.Module.class,
             KeyguardQuickAffordancesCombinedViewModelModule.class,
             KeyguardRepositoryModule.class,
-            DeviceEntryFaceAuthModule.class,
-            KeyguardDisplayModule.class,
-            StartKeyguardTransitionModule.class,
+            PrimaryBouncerTransitionImplModule.class,
+            PrimaryBouncerTransitionModule.class,
             ResourceTrimmerModule.class,
-            BouncerLoggerModule.class,
+            StartKeyguardTransitionModule.class,
+            // go/keep-sorted end
         })
 public interface KeyguardModule {
     /**
@@ -169,7 +185,7 @@ public interface KeyguardModule {
             SystemSettings systemSettings,
             SystemClock systemClock,
             ProcessWrapper processWrapper,
-            @Main CoroutineDispatcher mainDispatcher,
+            @Application CoroutineScope applicationScope,
             Lazy<DreamViewModel> dreamViewModel,
             Lazy<CommunalTransitionViewModel> communalTransitionViewModel,
             SystemPropertiesHelper systemPropertiesHelper,
@@ -177,7 +193,11 @@ public interface KeyguardModule {
             SelectedUserInteractor selectedUserInteractor,
             KeyguardInteractor keyguardInteractor,
             KeyguardTransitionBootInteractor transitionBootInteractor,
-            WindowManagerOcclusionManager windowManagerOcclusionManager) {
+            Lazy<CommunalSceneInteractor> communalSceneInteractor,
+            Lazy<CommunalSettingsInteractor> communalSettingsInteractor,
+            WindowManagerOcclusionManager windowManagerOcclusionManager,
+            Optional<UiLatencyStatsManager> uiLatencyStatsManager,
+            Lazy<SceneInteractor> sceneInteractor) {
         return new KeyguardViewMediator(
                 context,
                 uiEventLogger,
@@ -220,7 +240,7 @@ public interface KeyguardModule {
                 systemSettings,
                 systemClock,
                 processWrapper,
-                mainDispatcher,
+                applicationScope,
                 dreamViewModel,
                 communalTransitionViewModel,
                 systemPropertiesHelper,
@@ -228,13 +248,30 @@ public interface KeyguardModule {
                 selectedUserInteractor,
                 keyguardInteractor,
                 transitionBootInteractor,
-                windowManagerOcclusionManager);
+                communalSceneInteractor,
+                communalSettingsInteractor,
+                windowManagerOcclusionManager,
+                uiLatencyStatsManager,
+                sceneInteractor);
     }
 
     /** */
     @Provides
     static ViewMediatorCallback providesViewMediatorCallback(KeyguardViewMediator viewMediator) {
         return viewMediator.getViewMediatorCallback();
+    }
+
+    /** */
+    @Provides
+    @SysUISingleton
+    static BlurConfig provideBlurConfig(@Main Resources resources) {
+        int maxBlurRadius =
+                Flags.notificationShadeBlur() || Flags.bouncerUiRevamp()
+                        || Flags.glanceableHubBlurredBackground()
+                        ? resources.getDimensionPixelSize(R.dimen.max_shade_window_blur_radius)
+                        : resources.getDimensionPixelSize(R.dimen.max_window_blur_radius);
+
+        return new BlurConfig(0.0f, maxBlurRadius);
     }
 
     /** */
@@ -255,4 +292,22 @@ public interface KeyguardModule {
     @IntoMap
     @ClassKey(AlternateBouncerWindowViewBinder.class)
     CoreStartable bindsAlternateBouncerWindowViewBinder(AlternateBouncerWindowViewBinder binder);
+
+    /** A silly lint rule made me write this, this is a self-documenting function! */
+    @Binds
+    @IntoMap
+    @ClassKey(SideFpsProgressBarViewBinder.class)
+    CoreStartable bindSideFpsProgressBarViewBinder(SideFpsProgressBarViewBinder impl);
+
+    /***/
+    @Binds
+    @IntoMap
+    @ClassKey(KeyguardLoggerStartable.class)
+    CoreStartable keyguardLoggerStartable(KeyguardLoggerStartable impl);
+
+    /***/
+    @Binds
+    @IntoMap
+    @ClassKey(KeyguardChipbarViewBinder.class)
+    CoreStartable keyguardChipbarViewBinder(KeyguardChipbarViewBinder impl);
 }

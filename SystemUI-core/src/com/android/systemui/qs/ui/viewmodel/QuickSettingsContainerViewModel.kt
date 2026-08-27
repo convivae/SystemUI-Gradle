@@ -16,43 +16,88 @@
 
 package com.android.systemui.qs.ui.viewmodel
 
+import android.view.Display
 import com.android.systemui.brightness.ui.viewmodel.BrightnessSliderViewModel
-import com.android.systemui.lifecycle.ExclusiveActivatable
+import com.android.systemui.display.data.repository.DisplayTypeRepository
+import com.android.systemui.lifecycle.HydratedActivatable
+import com.android.systemui.media.controls.domain.pipeline.interactor.MediaCarouselInteractor
+import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager.Companion.LOCATION_QS
+import com.android.systemui.media.remedia.ui.compose.MediaUiBehavior
+import com.android.systemui.media.remedia.ui.viewmodel.MediaCarouselVisibility
+import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.DetailsViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
-import com.android.systemui.qs.panels.ui.viewmodel.QuickQuickSettingsViewModel
+import com.android.systemui.qs.panels.ui.viewmodel.MediaInRowInLandscapeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileGridViewModel
-import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
+import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.shade.ui.viewmodel.ShadeHeaderViewModel
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class QuickSettingsContainerViewModel
 @AssistedInject
 constructor(
     brightnessSliderViewModelFactory: BrightnessSliderViewModel.Factory,
-    quickQuickSettingsViewModelFactory: QuickQuickSettingsViewModel.Factory,
-    @Assisted supportsBrightnessMirroring: Boolean,
-    val tileGridViewModel: TileGridViewModel,
+    shadeHeaderViewModelFactory: ShadeHeaderViewModel.Factory,
+    tileGridViewModelFactory: TileGridViewModel.Factory,
+    @Assisted private val supportsBrightnessMirroring: Boolean,
     val editModeViewModel: EditModeViewModel,
     val detailsViewModel: DetailsViewModel,
-    val toolbarViewModelFactory: ToolbarViewModel.Factory,
-) : ExclusiveActivatable() {
+    private val mediaCarouselInteractor: MediaCarouselInteractor,
+    val mediaViewModelFactory: MediaViewModel.Factory,
+    mediaInRowInLandscapeViewModelFactory: MediaInRowInLandscapeViewModel.Factory,
+    @ShadeDisplayAware shadeDisplayTypeRepository: DisplayTypeRepository,
+) : HydratedActivatable() {
+
+    val isBrightnessSliderVisible by
+        shadeDisplayTypeRepository.displayType
+            // The shade could be on an external display: in that case the slider shouldn't
+            // be visible.
+            .map { it == Display.TYPE_INTERNAL }
+            .hydratedStateOf(
+                initialValue = shadeDisplayTypeRepository.displayType.value == Display.TYPE_INTERNAL
+            )
+
+    val isEditing by editModeViewModel.isEditing.hydratedStateOf()
 
     val brightnessSliderViewModel =
         brightnessSliderViewModelFactory.create(supportsBrightnessMirroring)
 
-    val quickQuickSettingsViewModel = quickQuickSettingsViewModelFactory.create()
+    val shadeHeaderViewModel = shadeHeaderViewModelFactory.create()
 
-    override suspend fun onActivated(): Nothing {
+    val tileGridViewModel = tileGridViewModelFactory.create()
+
+    val showMedia: Boolean by mediaCarouselInteractor.hasAnyMedia.hydratedStateOf()
+
+    val showMediaInRow: Boolean
+        get() = qsMediaInRowViewModel.shouldMediaShowInRow
+
+    fun onMediaSwipeToDismiss() = mediaCarouselInteractor.onSwipeToDismiss()
+
+    private val qsMediaInRowViewModel =
+        mediaInRowInLandscapeViewModelFactory.create(LOCATION_QS, mediaUiBehavior)
+
+    override suspend fun onActivated() {
         coroutineScope {
             launch { brightnessSliderViewModel.activate() }
-            launch { quickQuickSettingsViewModel.activate() }
-            awaitCancellation()
+            launch { shadeHeaderViewModel.activate() }
+            launch { tileGridViewModel.activate() }
+            launch { qsMediaInRowViewModel.activate() }
         }
+    }
+
+    companion object {
+
+        /** Behavior of the media carousel in quick settings */
+        val mediaUiBehavior =
+            MediaUiBehavior(
+                isCarouselDismissible = false,
+                carouselVisibility = MediaCarouselVisibility.WhenNotEmpty,
+            )
     }
 
     @AssistedFactory

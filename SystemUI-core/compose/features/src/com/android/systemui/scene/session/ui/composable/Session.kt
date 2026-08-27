@@ -17,10 +17,14 @@
 package com.android.systemui.scene.session.ui.composable
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffectResult
+import androidx.compose.runtime.DisposableEffectScope
+import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.currentCompositeKeyHash
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.saveable.mapSaver
@@ -28,6 +32,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.android.systemui.scene.session.shared.SessionStorage
 import com.android.systemui.util.kotlin.mapValuesNotNullTo
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 
 /**
  * An explicit storage for remembering composable state outside of the lifetime of a composition.
@@ -89,6 +97,58 @@ fun <T> Session.rememberSession(vararg inputs: Any?, key: String? = null, init: 
     rememberSession(key, *inputs, init = init)
 
 /**
+ * A side effect of composition that must be reversed or cleaned up if the [Session] ends.
+ *
+ * @see androidx.compose.runtime.DisposableEffect
+ */
+@Composable
+fun Session.SessionDisposableEffect(
+    vararg inputs: Any?,
+    key: String? = null,
+    effect: DisposableEffectScope.() -> DisposableEffectResult,
+) {
+    rememberSession(inputs = inputs, key = key) {
+        object : RememberObserver {
+
+            var onDispose: DisposableEffectResult? = null
+
+            override fun onAbandoned() {
+                // no-op
+            }
+
+            override fun onForgotten() {
+                onDispose?.dispose()
+                onDispose = null
+            }
+
+            override fun onRemembered() {
+                onDispose = DisposableEffectScope().effect()
+            }
+        }
+    }
+}
+
+/**
+ * Return a [CoroutineScope] bound to this [Session] using the optional [CoroutineContext] provided
+ * by [getContext]. [getContext] will only be called once and the same [CoroutineScope] instance
+ * will be returned for the duration of the [Session].
+ *
+ * @see androidx.compose.runtime.rememberCoroutineScope
+ */
+@Composable
+fun Session.sessionCoroutineScope(
+    key: String? = null,
+    getContext: () -> CoroutineContext = { EmptyCoroutineContext },
+): CoroutineScope {
+    val effectContext: CoroutineContext = rememberCompositionContext().effectCoroutineContext
+    val job = rememberSession(key = "Job(key=$key)") { Job() }
+    SessionDisposableEffect(key = "DisposeJob(key=$key)") { onDispose { job.cancel() } }
+    return rememberSession(key = "CoroutineScope(key=$key)") {
+        CoroutineScope(effectContext + job + getContext())
+    }
+}
+
+/**
  * An explicit storage for remembering composable state outside of the lifetime of a composition.
  *
  * Specifically, this allows easy conversion of standard [rememberSession] invocations to ones that
@@ -147,15 +207,10 @@ interface SaveableSession : Session {
  *   location in the composition tree.
  */
 @Composable
-fun rememberSaveableSession(
-    vararg inputs: Any?,
-    key: String? = null,
-): SaveableSession =
+fun rememberSaveableSession(vararg inputs: Any?, key: String? = null): SaveableSession =
     rememberSaveable(*inputs, SaveableSessionImpl.SessionSaver, key) { SaveableSessionImpl() }
 
-private class SessionImpl(
-    private val storage: SessionStorage = SessionStorage(),
-) : Session {
+private class SessionImpl(private val storage: SessionStorage = SessionStorage()) : Session {
     @Composable
     override fun <T> rememberSession(key: String?, vararg inputs: Any?, init: () -> T): T {
         val storage = storage.storage
@@ -169,16 +224,31 @@ private class SessionImpl(
             }
         if (finalKey !in storage) {
             val value = init()
-            SideEffect { storage[finalKey] = SessionStorage.StorageEntry(inputs, value) }
+            SideEffect {
+                storage[finalKey] = SessionStorage.StorageEntry(inputs, value)
+                if (value is RememberObserver) {
+                    value.onRemembered()
+                }
+            }
             return value
         }
         val entry = storage[finalKey]!!
         if (!inputs.contentEquals(entry.keys)) {
             val value = init()
-            SideEffect { entry.stored = value }
+            SideEffect {
+                val oldValue = entry.stored
+                if (oldValue is RememberObserver) {
+                    oldValue.onForgotten()
+                }
+                entry.stored = value
+                if (value is RememberObserver) {
+                    value.onRemembered()
+                }
+            }
             return value
         }
-        @Suppress("UNCHECKED_CAST") return entry.stored as T
+        @Suppress("UNCHECKED_CAST")
+        return entry.stored as T
     }
 }
 
@@ -228,7 +298,8 @@ private class SaveableSessionImpl(
                     }
                     return value
                 }
-                @Suppress("UNCHECKED_CAST") return entry.stored as T
+                @Suppress("UNCHECKED_CAST")
+                return entry.stored as T
             }
         }
     }
@@ -263,7 +334,7 @@ private class SaveableSessionImpl(
                             v?.let { StorageEntry.Unrestored(v) }
                         }
                 )
-            }
+            },
         )
 }
 

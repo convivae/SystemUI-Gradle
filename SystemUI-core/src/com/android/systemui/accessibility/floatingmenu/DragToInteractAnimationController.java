@@ -29,9 +29,7 @@ import androidx.annotation.NonNull;
 import androidx.dynamicanimation.animation.DynamicAnimation;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.systemui.Flags;
 import com.android.wm.shell.shared.bubbles.DismissCircleView;
-import com.android.wm.shell.shared.bubbles.DismissView;
 import com.android.wm.shell.shared.magnetictarget.MagnetizedObject;
 
 import java.util.Map;
@@ -41,27 +39,25 @@ import java.util.Objects;
  * Controls the interaction between {@link MagnetizedObject} and
  * {@link MagnetizedObject.MagneticTarget}.
  */
-class DragToInteractAnimationController {
+public class DragToInteractAnimationController {
     private static final float COMPLETELY_OPAQUE = 1.0f;
     private static final float COMPLETELY_TRANSPARENT = 0.0f;
     private static final float CIRCLE_VIEW_DEFAULT_SCALE = 1.0f;
     private static final float ANIMATING_MAX_ALPHA = 0.7f;
 
     private final DragToInteractView mInteractView;
-    private final DismissView mDismissView;
     private final MenuView mMenuView;
 
     /**
      * MagnetizedObject cannot differentiate between its MagnetizedTargets,
      * so we need an object & an animator for every interactable.
      */
-    private final ArrayMap<Integer, Pair<MagnetizedObject<MenuView>, ValueAnimator>> mInteractMap;
+    final ArrayMap<Integer, Pair<MagnetizedObject<MenuView>, ValueAnimator>> mInteractMap;
 
     private float mMinInteractSize;
     private float mSizePercent;
 
     DragToInteractAnimationController(DragToInteractView interactView, MenuView menuView) {
-        mDismissView = null;
         mInteractView = interactView;
         mInteractView.setPivotX(interactView.getWidth() / 2.0f);
         mInteractView.setPivotY(interactView.getHeight() / 2.0f);
@@ -76,32 +72,11 @@ class DragToInteractAnimationController {
         });
     }
 
-    DragToInteractAnimationController(DismissView dismissView, MenuView menuView) {
-        mDismissView = dismissView;
-        mInteractView = null;
-        mDismissView.setPivotX(dismissView.getWidth() / 2.0f);
-        mDismissView.setPivotY(dismissView.getHeight() / 2.0f);
-        mMenuView = menuView;
-
-        updateResources();
-
-        mInteractMap = new ArrayMap<>();
-        createMagnetizedObjectAndAnimator(dismissView.getCircle());
-    }
-
     void showInteractView(boolean show) {
-        if (Flags.floatingMenuDragToEdit() && mInteractView != null) {
-            if (show) {
-                mInteractView.show();
-            } else {
-                mInteractView.hide();
-            }
-        } else if (mDismissView != null) {
-            if (show) {
-                mDismissView.show();
-            } else {
-                mDismissView.hide();
-            }
+        if (show) {
+            mInteractView.show();
+        } else {
+            mInteractView.hide();
         }
     }
 

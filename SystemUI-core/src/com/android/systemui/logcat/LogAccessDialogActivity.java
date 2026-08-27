@@ -138,6 +138,17 @@ public class LogAccessDialogActivity extends Activity implements
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        if (mAlert != null && mAlert.isShowing()) {
+            mAlert.dismiss();
+        }
+        mAlert = null;
+
+        super.onDestroy();
+    }
+
+
     private boolean readIntentInfo(Intent intent) {
         if (intent == null) {
             Slog.e(TAG, "Intent is null");
@@ -171,7 +182,7 @@ public class LogAccessDialogActivity extends Activity implements
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
                 case MSG_DISMISS_DIALOG:
-                    if (mAlert != null) {
+                    if (mAlert != null && mAlert.isShowing()) {
                         mAlert.dismiss();
                         declineLogAccess();
                     }

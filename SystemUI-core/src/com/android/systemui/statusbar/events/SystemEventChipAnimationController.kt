@@ -31,22 +31,14 @@ import androidx.core.animation.AnimatorListenerAdapter
 import androidx.core.animation.AnimatorSet
 import androidx.core.animation.ValueAnimator
 import com.android.internal.annotations.VisibleForTesting
-import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.dagger.qualifiers.Default
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.DisplayAware
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.PerDisplaySingleton
 import com.android.systemui.res.R
-import com.android.systemui.statusbar.core.StatusBarConnectedDisplays
-import com.android.systemui.statusbar.data.repository.StatusBarContentInsetsProviderStore
-import com.android.systemui.statusbar.phone.StatusBarContentInsetsChangedListener
-import com.android.systemui.statusbar.phone.StatusBarContentInsetsProvider
+import com.android.systemui.statusbar.layout.StatusBarContentInsetsChangedListener
+import com.android.systemui.statusbar.layout.StatusBarContentInsetsProvider
 import com.android.systemui.statusbar.window.StatusBarWindowController
-import com.android.systemui.statusbar.window.StatusBarWindowControllerStore
 import com.android.systemui.util.animation.AnimationUtil.Companion.frames
-import dagger.Lazy
-import dagger.Module
-import dagger.Provides
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedFactory
-import dagger.assisted.AssistedInject
+import javax.inject.Inject
 import kotlin.math.roundToInt
 
 /** Controls the view for system event animations. */
@@ -70,12 +62,13 @@ interface SystemEventChipAnimationController : SystemStatusAnimationCallback {
     override fun onSystemEventAnimationFinish(hasPersistentDot: Boolean): Animator
 }
 
+@PerDisplaySingleton
 class SystemEventChipAnimationControllerImpl
-@AssistedInject
+@Inject
 constructor(
-    @Assisted private val context: Context,
-    @Assisted private val statusBarWindowController: StatusBarWindowController,
-    @Assisted private val contentInsetsProvider: StatusBarContentInsetsProvider,
+    @DisplayAware private val context: Context,
+    @DisplayAware private val statusBarWindowController: StatusBarWindowController?,
+    @DisplayAware private val contentInsetsProvider: StatusBarContentInsetsProvider,
 ) : SystemEventChipAnimationController {
 
     private lateinit var animationWindowView: FrameLayout
@@ -124,23 +117,32 @@ constructor(
                     ),
                 )
                 it.view.alpha = 0f
-                // For some reason, the window view's measured width is always 0 here, so use the
-                // parent (status bar)
-                it.view.measure(
-                    View.MeasureSpec.makeMeasureSpec(
-                        (animationWindowView.parent as View).width,
-                        AT_MOST,
-                    ),
-                    View.MeasureSpec.makeMeasureSpec(
-                        (animationWindowView.parent as View).height,
-                        AT_MOST,
-                    ),
-                )
 
-                updateChipBounds(
-                    it,
-                    contentInsetsProvider.getStatusBarContentAreaForCurrentRotation(),
-                )
+                // b/294462223: We are not guaranteed to be attached to a window at this point so we
+                // need this check to prevent a crash.
+                if (it.view.isAttachedToWindow) {
+                    measure(it.view)
+                    updateChipBounds(
+                        it,
+                        contentInsetsProvider.getStatusBarContentAreaForCurrentRotation(),
+                    )
+                } else {
+                    it.view.addOnAttachStateChangeListener(
+                        object : View.OnAttachStateChangeListener {
+                            override fun onViewAttachedToWindow(v: View) {
+                                measure(v)
+                                updateChipBounds(
+                                    it,
+                                    contentInsetsProvider
+                                        .getStatusBarContentAreaForCurrentRotation(),
+                                )
+                                v.removeOnAttachStateChangeListener(this)
+                            }
+
+                            override fun onViewDetachedFromWindow(v: View) {}
+                        }
+                    )
+                }
             }
     }
 
@@ -188,7 +190,11 @@ constructor(
         finish.addListener(
             object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    animationWindowView.removeView(currentAnimatedView!!.view)
+                    if (!::animationWindowView.isInitialized) {
+                        return
+                    }
+                    val animatedView = currentAnimatedView ?: return
+                    animationWindowView.removeView(animatedView.view)
                 }
             }
         )
@@ -322,7 +328,7 @@ constructor(
         val height = themedContext.resources.getDimensionPixelSize(R.dimen.status_bar_height)
         val lp = FrameLayout.LayoutParams(MATCH_PARENT, height)
         lp.gravity = Gravity.END or Gravity.TOP
-        statusBarWindowController.addViewToWindow(animationWindowView, lp)
+        statusBarWindowController?.addViewToWindow(animationWindowView, lp)
         animationWindowView.clipToPadding = false
         animationWindowView.clipChildren = false
 
@@ -336,7 +342,7 @@ constructor(
     }
 
     override fun announceForAccessibility(contentDescriptions: String) {
-        currentAnimatedView?.view?.announceForAccessibility(contentDescriptions)
+        currentAnimatedView?.view?.stateDescription = contentDescriptions
     }
 
     private fun updateDimens(contentArea: Rect) {
@@ -370,6 +376,15 @@ constructor(
         }
         chipBounds = Rect(chipLeft, chipTop, chipRight, chipBottom)
         animRect.set(chipBounds)
+    }
+
+    private fun measure(v: View) {
+        // For some reason, the window view's measured width is always 0 here, so use the parent
+        // (status bar)
+        v.measure(
+            View.MeasureSpec.makeMeasureSpec((animationWindowView.parent as View).width, AT_MOST),
+            View.MeasureSpec.makeMeasureSpec((animationWindowView.parent as View).height, AT_MOST),
+        )
     }
 
     private fun layoutParamsDefault(marginEnd: Int): FrameLayout.LayoutParams =
@@ -424,15 +439,6 @@ constructor(
             animRect.bottom,
         )
     }
-
-    @AssistedFactory
-    fun interface Factory {
-        fun create(
-            context: Context,
-            statusBarWindowController: StatusBarWindowController,
-            contentInsetsProvider: StatusBarContentInsetsProvider,
-        ): SystemEventChipAnimationControllerImpl
-    }
 }
 
 /** Chips should provide a view that can be animated with something better than a fade-in */
@@ -452,38 +458,3 @@ interface BackgroundAnimatableView {
 // Animation directions
 private const val LEFT = 1
 private const val RIGHT = 2
-
-@Module
-interface SystemEventChipAnimationControllerModule {
-
-    companion object {
-        @Provides
-        @Default
-        @SysUISingleton
-        fun defaultController(
-            factory: SystemEventChipAnimationControllerImpl.Factory,
-            context: Context,
-            statusBarWindowControllerStore: StatusBarWindowControllerStore,
-            contentInsetsProviderStore: StatusBarContentInsetsProviderStore,
-        ): SystemEventChipAnimationController {
-            return factory.create(
-                context,
-                statusBarWindowControllerStore.defaultDisplay,
-                contentInsetsProviderStore.defaultDisplay,
-            )
-        }
-
-        @Provides
-        @SysUISingleton
-        fun controller(
-            @Default defaultLazy: Lazy<SystemEventChipAnimationController>,
-            multiDisplayLazy: Lazy<MultiDisplaySystemEventChipAnimationController>,
-        ): SystemEventChipAnimationController {
-            return if (StatusBarConnectedDisplays.isEnabled) {
-                multiDisplayLazy.get()
-            } else {
-                defaultLazy.get()
-            }
-        }
-    }
-}

@@ -33,7 +33,6 @@ import android.app.WindowConfiguration;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.pm.UserInfo;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -44,6 +43,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Display;
 import android.window.TaskSnapshot;
+import android.window.TaskSnapshotManager;
 
 import com.android.internal.app.IVoiceInteractionManagerService;
 import com.android.systemui.shared.recents.model.Task;
@@ -131,12 +131,13 @@ public class ActivityManagerWrapper {
     }
 
     /**
-     * @return the task snapshot for the given {@param taskId}.
+     * @return the task snapshot for the given {@code taskId}.
      */
     public @NonNull ThumbnailData getTaskThumbnail(int taskId, boolean isLowResolution) {
         TaskSnapshot snapshot = null;
         try {
-            snapshot = getService().getTaskSnapshot(taskId, isLowResolution);
+            snapshot = TaskSnapshotManager.getInstance().getTaskSnapshot(
+                    taskId, TaskSnapshotManager.convertRetrieveFlag(isLowResolution));
         } catch (RemoteException e) {
             Log.w(TAG, "Failed to retrieve task snapshot", e);
         }
@@ -156,7 +157,31 @@ public class ActivityManagerWrapper {
     public ThumbnailData takeTaskThumbnail(int taskId) {
         TaskSnapshot snapshot = null;
         try {
-            snapshot = getService().takeTaskSnapshot(taskId, /* updateCache= */ true);
+            snapshot = TaskSnapshotManager.getInstance().takeTaskSnapshot(taskId,
+                    true /* updateCache */);
+        } catch (RemoteException e) {
+            Log.w(TAG, "Failed to take task snapshot", e);
+        }
+        if (snapshot != null) {
+            return ThumbnailData.fromSnapshot(snapshot);
+        } else {
+            return new ThumbnailData();
+        }
+    }
+
+    /**
+     * Requests for a new snapshot to be taken for the given task, stores it in the cache, and
+     * returns a {@link ThumbnailData} with specific resolution as result.
+     */
+    @NonNull
+    public ThumbnailData takeTaskThumbnail(int taskId, boolean lowResolution) {
+        if (!com.android.window.flags.Flags.onlyCacheLowResTaskSnapshot()) {
+            return takeTaskThumbnail(taskId);
+        }
+        TaskSnapshot snapshot = null;
+        try {
+            snapshot = TaskSnapshotManager.getInstance().takeTaskSnapshot(taskId,
+                    true /* updateCache */, lowResolution);
         } catch (RemoteException e) {
             Log.w(TAG, "Failed to take task snapshot", e);
         }
@@ -223,6 +248,17 @@ public class ActivityManagerWrapper {
             ActivityManager.getService().closeSystemDialogs(reason);
         } catch (RemoteException e) {
             Log.w(TAG, "Failed to close system windows", e);
+        }
+    }
+
+    /**
+     * Sets whether or not the specified task is perceptible.
+     */
+    public boolean setTaskIsPerceptible(int taskId, boolean isPerceptible) {
+        try {
+            return getService().setTaskIsPerceptible(taskId, isPerceptible);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
         }
     }
 
@@ -299,22 +335,15 @@ public class ActivityManagerWrapper {
     }
 
     /**
-     * Returns true if the system supports freeform multi-window.
-     */
-    public boolean supportsFreeformMultiWindow(Context context) {
-        final boolean freeformDevOption = Settings.Global.getInt(context.getContentResolver(),
-                Settings.Global.DEVELOPMENT_ENABLE_FREEFORM_WINDOWS_SUPPORT, 0) != 0;
-        return ActivityTaskManager.supportsMultiWindow(context)
-                && (context.getPackageManager().hasSystemFeature(
-                PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT)
-                || freeformDevOption);
-    }
-
-    /**
      * Returns true if the running task represents the home task
      */
     public static boolean isHomeTask(RunningTaskInfo info) {
         return info.configuration.windowConfiguration.getActivityType()
                 == WindowConfiguration.ACTIVITY_TYPE_HOME;
+    }
+
+    public boolean isRunningInTestHarness() {
+        return ActivityManager.isRunningInTestHarness()
+                || ActivityManager.isRunningInUserTestHarness();
     }
 }

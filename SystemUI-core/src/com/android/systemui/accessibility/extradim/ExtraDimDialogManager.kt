@@ -19,7 +19,9 @@ import android.os.Handler
 import com.android.systemui.animation.DialogCuj
 import com.android.systemui.animation.DialogTransitionAnimator
 import com.android.systemui.animation.Expandable
+import com.android.systemui.animation.TransitionAnimator
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import javax.inject.Inject
@@ -33,7 +35,7 @@ constructor(
     private val extraDimDialogDelegateProvider: Provider<ExtraDimDialogDelegate>,
     private val mActivityStarter: ActivityStarter,
     private val dialogTransitionAnimator: DialogTransitionAnimator,
-    private val mainHandler: Handler,
+    @Main private val mainHandler: Handler,
 ) {
     private var dialog: SystemUIDialog? = null
 
@@ -62,7 +64,16 @@ constructor(
             )
 
         controller?.let {
-            dialogTransitionAnimator.show(dialog2, it, animateBackgroundBoundsChange = true)
+            if (TransitionAnimator.dynamicTargetResolutionEnabled()) {
+                dialogTransitionAnimator.show(
+                    dialog2,
+                    expandable!!::dialogTransitionController,
+                    controller.cuj,
+                    animateBackgroundBoundsChange = true,
+                )
+            } else {
+                dialogTransitionAnimator.show(dialog2, it, animateBackgroundBoundsChange = true)
+            }
         } ?: dialog2.show()
     }
 }

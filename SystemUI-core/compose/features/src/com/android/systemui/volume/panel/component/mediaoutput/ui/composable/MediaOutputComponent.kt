@@ -33,46 +33,56 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.Expandable
 import com.android.systemui.common.ui.compose.Icon
 import com.android.systemui.common.ui.compose.toColor
+import com.android.systemui.compose.modifiers.sysuiResTag
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.TileDetailsEntryTightCornerRadius
+import com.android.systemui.qs.ui.compose.borderOnFocus
 import com.android.systemui.res.R
 import com.android.systemui.volume.panel.component.mediaoutput.ui.viewmodel.ConnectedDeviceViewModel
 import com.android.systemui.volume.panel.component.mediaoutput.ui.viewmodel.DeviceIconViewModel
 import com.android.systemui.volume.panel.component.mediaoutput.ui.viewmodel.MediaOutputViewModel
+import com.android.systemui.volume.panel.component.mediastream.ui.composable.MediaStreamStyle
 import com.android.systemui.volume.panel.dagger.scope.VolumePanelScope
 import com.android.systemui.volume.panel.ui.composable.ComposeVolumePanelUiComponent
 import com.android.systemui.volume.panel.ui.composable.VolumePanelComposeScope
+import com.google.common.annotations.VisibleForTesting
+import java.util.Objects
 import javax.inject.Inject
+import platform.test.motion.compose.values.MotionTestValueKey
+import platform.test.motion.compose.values.motionTestValues
 
 @VolumePanelScope
-class MediaOutputComponent
-@Inject
-constructor(
-    private val viewModel: MediaOutputViewModel,
-) : ComposeVolumePanelUiComponent {
+class MediaOutputComponent @Inject constructor(private val viewModel: MediaOutputViewModel) :
+    ComposeVolumePanelUiComponent {
 
     @Composable
     override fun VolumePanelComposeScope.Content(modifier: Modifier) {
@@ -82,23 +92,31 @@ constructor(
             viewModel.deviceIconViewModel.collectAsStateWithLifecycle()
         val clickLabel = stringResource(R.string.volume_panel_enter_media_output_settings)
         val enabled: Boolean by viewModel.enabled.collectAsStateWithLifecycle()
+        val style = MediaStreamStyle.style(isExpandedAudioTileDetailsView)
 
         Expandable(
             modifier =
-                Modifier.fillMaxWidth().height(80.dp).semantics {
-                    liveRegion = LiveRegionMode.Polite
-                    this.onClick(label = clickLabel) {
-                        viewModel.onBarClick(null)
-                        true
-                    }
-                },
-            color =
-                if (enabled) {
-                    MaterialTheme.colorScheme.surface
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHighest
-                },
-            shape = RoundedCornerShape(28.dp),
+                modifier
+                    .borderOnFocus(
+                        MaterialTheme.colorScheme.secondary,
+                        CornerSize(TileDetailsEntryTightCornerRadius),
+                    )
+                    .fillMaxWidth()
+                    // In most cases the height is expected to be equal to the height dimension's
+                    // value, but it is set as the minimum here so that the tile can resize if
+                    // necessary for larger font or display sizes.
+                    .heightIn(min = dimensionResource(R.dimen.volume_panel_audio_tile_height))
+                    .semantics {
+                        role = Role.Button
+                        liveRegion = LiveRegionMode.Polite
+                        this.onClick(label = clickLabel) {
+                            viewModel.onBarClick(null)
+                            true
+                        }
+                    },
+            color = style.backgroundColor,
+            shape = RoundedCornerShape(12.dp),
+            useModifierBasedImplementation = true,
             onClick =
                 if (enabled) {
                     { viewModel.onBarClick(it) }
@@ -106,8 +124,17 @@ constructor(
                     null
                 },
         ) { _ ->
-            Row(modifier = Modifier, verticalAlignment = Alignment.CenterVertically) {
-                connectedDeviceViewModel?.let { ConnectedDeviceText(it) }
+            Row(
+                modifier = Modifier.wrapContentHeight(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                connectedDeviceViewModel?.let {
+                    ConnectedDeviceText(
+                        it,
+                        Modifier.weight(1f).padding(start = style.paddingStart),
+                        style,
+                    )
+                }
 
                 deviceIconViewModel?.let { ConnectedDeviceIcon(it) }
             }
@@ -115,15 +142,16 @@ constructor(
     }
 
     @Composable
-    private fun RowScope.ConnectedDeviceText(connectedDeviceViewModel: ConnectedDeviceViewModel) {
-        Column(
-            modifier = Modifier.weight(1f).padding(start = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+    private fun ConnectedDeviceText(
+        connectedDeviceViewModel: ConnectedDeviceViewModel,
+        modifier: Modifier = Modifier,
+        style: MediaStreamStyle,
+    ) {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 modifier = Modifier.basicMarquee(),
                 text = connectedDeviceViewModel.label.toString(),
-                style = MaterialTheme.typography.labelMedium,
+                style = style.labelTextStyle,
                 color = connectedDeviceViewModel.labelColor.toColor(),
                 maxLines = 1,
             )
@@ -131,7 +159,7 @@ constructor(
                 Text(
                     modifier = Modifier.basicMarquee(),
                     text = it.toString(),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = style.deviceNameTextStyle,
                     color = connectedDeviceViewModel.deviceNameColor.toColor(),
                     maxLines = 1,
                 )
@@ -140,11 +168,24 @@ constructor(
     }
 
     @Composable
-    private fun ConnectedDeviceIcon(deviceIconViewModel: DeviceIconViewModel) {
+    private fun ConnectedDeviceIcon(
+        deviceIconViewModel: DeviceIconViewModel,
+        modifier: Modifier = Modifier,
+    ) {
         val transition = updateTransition(deviceIconViewModel, label = "MediaOutputIconTransition")
+        val isTransitionIdle by
+            remember(transition) {
+                derivedStateOf {
+                    transition.currentState == transition.targetState && !transition.isRunning
+                }
+            }
         Box(
-            modifier = Modifier.padding(16.dp).fillMaxHeight().aspectRatio(1f),
-            contentAlignment = Alignment.Center
+            modifier =
+                modifier.size(56.dp).motionTestValues {
+                    isTransitionIdle exportAs
+                        MediaOutputComponentMotionTestKeys.isIconTransitionIdle
+                },
+            contentAlignment = Alignment.Center,
         ) {
             transition.AnimatedContent(
                 contentKey = { it.backgroundColor },
@@ -157,24 +198,29 @@ constructor(
                             fadeOut(animationSpec = snap())
                     } else {
                         fadeIn(animationSpec = snap(delayMillis = 900)) togetherWith
-                            scaleOut(
-                                targetScale = 0.9f,
-                                animationSpec = isPlayingOutSpec(),
-                            ) + fadeOut(animationSpec = isPlayingOutSpec())
+                            scaleOut(targetScale = 0.9f, animationSpec = isPlayingOutSpec()) +
+                                fadeOut(animationSpec = isPlayingOutSpec())
                     }
-                }
+                },
             ) { targetViewModel ->
                 Spacer(
                     modifier =
                         Modifier.fillMaxSize()
                             .background(
                                 color = targetViewModel.backgroundColor.toColor(),
-                                shape = RoundedCornerShape(12.dp),
-                            ),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                            .sysuiResTag(
+                                if (targetViewModel is DeviceIconViewModel.IsPlaying) {
+                                    MediaOutputComponentMotionTestKeys.PLAYING_ICON_BACKGROUND_TAG
+                                } else {
+                                    MediaOutputComponentMotionTestKeys.IDLE_ICON_BACKGROUND_TAG
+                                }
+                            )
                 )
             }
             transition.AnimatedContent(
-                contentKey = { it.icon },
+                contentKey = { Objects.hash(it.icon, it.iconColor) },
                 transitionSpec = {
                     if (targetState is DeviceIconViewModel.IsPlaying) {
                         fadeIn(animationSpec = snap(delayMillis = 700)) togetherWith
@@ -189,12 +235,20 @@ constructor(
                         ) + fadeIn(animationSpec = isNotPlayingInIconSpec()) togetherWith
                             fadeOut(animationSpec = isPlayingOutSpec())
                     }
-                }
-            ) {
+                },
+            ) { targetViewModel ->
                 Icon(
-                    icon = it.icon,
-                    tint = it.iconColor.toColor(),
-                    modifier = Modifier.padding(12.dp).fillMaxSize(),
+                    icon = targetViewModel.icon,
+                    tint = targetViewModel.iconColor.toColor(),
+                    modifier =
+                        Modifier.size(24.dp)
+                            .sysuiResTag(
+                                if (targetViewModel is DeviceIconViewModel.IsPlaying) {
+                                    MediaOutputComponentMotionTestKeys.PLAYING_ICON_TAG
+                                } else {
+                                    MediaOutputComponentMotionTestKeys.IDLE_ICON_TAG
+                                }
+                            ),
                 )
             }
         }
@@ -210,3 +264,15 @@ private fun <T> isPlayingInIconBackgroundSpec() = tween<T>(durationMillis = 400,
 private fun <T> isNotPlayingOutIconSpec() = tween<T>(durationMillis = 400, delayMillis = 300)
 
 private fun <T> isNotPlayingInIconSpec() = tween<T>(durationMillis = 400, delayMillis = 900)
+
+@VisibleForTesting
+object MediaOutputComponentMotionTestKeys {
+
+    const val PLAYING_ICON_TAG = "PlayingIcon"
+    const val PLAYING_ICON_BACKGROUND_TAG = "PlayingIconBackground"
+    const val IDLE_ICON_TAG = "IdleIcon"
+    const val IDLE_ICON_BACKGROUND_TAG = "IdleIconBackground"
+
+    val isIconTransitionIdle: MotionTestValueKey<Boolean> =
+        MotionTestValueKey("is_icon_transition_idle")
+}

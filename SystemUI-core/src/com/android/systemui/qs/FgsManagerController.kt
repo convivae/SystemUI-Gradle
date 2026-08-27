@@ -55,10 +55,10 @@ import com.android.internal.config.sysui.SystemUiDeviceConfigFlags.TASK_MANAGER_
 import com.android.internal.config.sysui.SystemUiDeviceConfigFlags.TASK_MANAGER_SHOW_USER_VISIBLE_JOBS
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.systemui.Dumpable
-import com.android.systemui.Flags
 import com.android.systemui.animation.DialogCuj
 import com.android.systemui.animation.DialogTransitionAnimator
 import com.android.systemui.animation.Expandable
+import com.android.systemui.animation.TransitionAnimator
 import com.android.systemui.broadcast.BroadcastDispatcher
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
@@ -67,6 +67,7 @@ import com.android.systemui.dump.DumpManager
 import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.shade.domain.interactor.ShadeDialogContextInteractor
 import com.android.systemui.shared.system.SysUiStatsLog
 import com.android.systemui.statusbar.phone.SystemUIDialog
 import com.android.systemui.util.DeviceConfigProxy
@@ -154,6 +155,7 @@ constructor(
     private val broadcastDispatcher: BroadcastDispatcher,
     private val dumpManager: DumpManager,
     private val systemUIDialogFactory: SystemUIDialog.Factory,
+    private val shadeDialogContextRepository: ShadeDialogContextInteractor,
 ) : Dumpable, FgsManagerController {
 
     companion object {
@@ -387,7 +389,7 @@ constructor(
     override fun showDialog(expandable: Expandable?) {
         synchronized(lock) {
             if (dialog == null) {
-                val dialog = systemUIDialogFactory.create()
+                val dialog = systemUIDialogFactory.create(shadeDialogContextRepository.context)
                 dialog.setTitle(R.string.fgs_manager_dialog_title)
                 dialog.setMessage(R.string.fgs_manager_dialog_message)
 
@@ -409,6 +411,10 @@ constructor(
                     newChangesSinceDialogWasDismissed = false
                     synchronized(lock) {
                         this.dialog = null
+                        // Adapters keep references to RV they're added to and
+                        // we need to explicitly clear that reference via setAdapter
+                        // to avoid a leak.
+                        recyclerView.adapter = null
                         updateAppItemsLocked()
                     }
                     onDialogDismissedListeners.forEach {
@@ -425,7 +431,15 @@ constructor(
                             )
                         )
                     if (controller != null) {
-                        dialogTransitionAnimator.show(dialog, controller)
+                        if (TransitionAnimator.dynamicTargetResolutionEnabled()) {
+                            dialogTransitionAnimator.show(
+                                dialog,
+                                expandable::dialogTransitionController,
+                                controller.cuj,
+                            )
+                        } else {
+                            dialogTransitionAnimator.show(dialog, controller)
+                        }
                     } else {
                         dialog.show()
                     }
@@ -730,10 +744,10 @@ constructor(
                     PowerExemptionManager.REASON_DEVICE_DEMO_MODE -> UIControl.HIDE_ENTRY
 
                     PowerExemptionManager.REASON_SYSTEM_ALLOW_LISTED,
-                    PowerExemptionManager.REASON_DEVICE_OWNER,
+                    PowerExemptionManager.REASON_DEVICE_DPC,
                     PowerExemptionManager.REASON_DISALLOW_APPS_CONTROL,
                     PowerExemptionManager.REASON_DPO_PROTECTED_APP,
-                    PowerExemptionManager.REASON_PROFILE_OWNER,
+                    PowerExemptionManager.REASON_USER_DPC,
                     PowerExemptionManager.REASON_ACTIVE_DEVICE_ADMIN,
                     PowerExemptionManager.REASON_PROC_STATE_PERSISTENT,
                     PowerExemptionManager.REASON_PROC_STATE_PERSISTENT_UI,
@@ -751,10 +765,8 @@ constructor(
                 }
             // If the app wants to be a good citizen by being stoppable, even if the category it
             // belongs to is exempted for background restriction, let it be stoppable by user.
-            if (Flags.stoppableFgsSystemApp()) {
-                if (isStoppableApp(packageName)) {
-                    uiControl = UIControl.NORMAL
-                }
+            if (isStoppableApp(packageName)) {
+                uiControl = UIControl.NORMAL
             }
 
             uiControlInitialized = true

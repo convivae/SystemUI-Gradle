@@ -48,7 +48,7 @@ import com.android.wm.shell.shared.bubbles.DismissView
  *
  * @note [setup] method should be called after initialisation
  */
-class DragToInteractView(context: Context) : FrameLayout(context) {
+class DragToInteractView(context: Context, windowManager: WindowManager) : FrameLayout(context) {
     /**
      * The configuration is used to provide module specific resource ids
      *
@@ -68,7 +68,7 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
         /** drawable resource id of the dismiss target background */
         @DrawableRes val backgroundResId: Int,
         /** drawable resource id of the icon for the dismiss target */
-        @DrawableRes val iconResId: Int
+        @DrawableRes val iconResId: Int,
     )
 
     companion object {
@@ -83,11 +83,11 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
     // END DragToInteractView modification
     var isShowing = false
     var config: Config? = null
+    private val linearLayout = LinearLayout(context)
 
     private val spring = PhysicsAnimator.SpringConfig(STIFFNESS_LOW, DAMPING_RATIO_LOW_BOUNCY)
     private val INTERACT_SCRIM_FADE_MS = 200L
-    private var wm: WindowManager =
-        context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    private var wm: WindowManager = windowManager
     private var gradientDrawable: GradientDrawable? = null
 
     private val GRADIENT_ALPHA: IntProperty<GradientDrawable> =
@@ -95,6 +95,7 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
             override fun setValue(d: GradientDrawable, percent: Int) {
                 d.alpha = percent
             }
+
             override fun get(d: GradientDrawable): Int {
                 return d.alpha
             }
@@ -115,7 +116,7 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
                 floatingGradientHeightResId = R.dimen.floating_dismiss_gradient_height,
                 floatingGradientColorResId = android.R.color.system_neutral1_900,
                 backgroundResId = R.drawable.dismiss_circle_background,
-                iconResId = R.drawable.pip_ic_close_white
+                iconResId = R.drawable.pip_ic_close_white,
             )
         )
 
@@ -143,7 +144,7 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
             LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 resources.getDimensionPixelSize(config.floatingGradientHeightResId),
-                Gravity.BOTTOM
+                Gravity.BOTTOM,
             )
         updatePadding()
 
@@ -154,29 +155,16 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
         // START DragToInteractView modification
 
         // Setup LinearLayout. Added to organize multiple circles.
-        val linearLayout = LinearLayout(context)
         linearLayout.layoutParams =
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                ViewGroup.LayoutParams.MATCH_PARENT,
             )
         linearLayout.weightSum = 0f
         addView(linearLayout)
 
-        // Setup DismissCircleView. Code block replaced with repeatable functions
+        // Add space before circles
         addSpace(linearLayout)
-        addCircle(
-            config,
-            com.android.systemui.res.R.id.action_remove_menu,
-            R.drawable.pip_ic_close_white,
-            linearLayout
-        )
-        addCircle(
-            config,
-            com.android.systemui.res.R.id.action_edit,
-            com.android.systemui.res.R.drawable.ic_screenshot_edit,
-            linearLayout
-        )
         // END DragToInteractView modification
     }
 
@@ -258,12 +246,12 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
                 alpha.toInt(),
                 Color.red(gradientColor),
                 Color.green(gradientColor),
-                Color.blue(gradientColor)
+                Color.blue(gradientColor),
             )
         val gd =
             GradientDrawable(
                 GradientDrawable.Orientation.BOTTOM_TOP,
-                intArrayOf(gradientColorWithAlpha, Color.TRANSPARENT)
+                intArrayOf(gradientColorWithAlpha, Color.TRANSPARENT),
             )
         gd.setDither(true)
         gd.alpha = 0
@@ -278,7 +266,7 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
             0,
             0,
             0,
-            navInset.bottom + resources.getDimensionPixelSize(config.bottomMarginResId)
+            navInset.bottom + resources.getDimensionPixelSize(config.bottomMarginResId),
         )
     }
 
@@ -301,19 +289,21 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                1f
+                1f,
             )
         parent.addView(space)
         parent.weightSum = parent.weightSum + 1f
     }
 
-    private fun addCircle(config: Config, id: Int, iconResId: Int, parent: LinearLayout) {
+    fun addCircle(id: Int) = config?.let { addCircle(it, id, linearLayout) }
+
+    private fun addCircle(config: Config, id: Int, parent: LinearLayout) {
         val targetSize = resources.getDimensionPixelSize(config.targetSizeResId)
         val circleLayoutParams = LinearLayout.LayoutParams(targetSize, targetSize, 0f)
         circleLayoutParams.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
         val circle = DismissCircleView(context)
         circle.id = id
-        circle.setup(config.backgroundResId, iconResId, config.iconSizeResId)
+        circle.setup(config.backgroundResId, getIconForCircleWithId(id), config.iconSizeResId)
         circle.layoutParams = circleLayoutParams
 
         // Initial position with circle offscreen so it's animated up
@@ -324,5 +314,12 @@ class DragToInteractView(context: Context) : FrameLayout(context) {
         parent.addView(circle)
         addSpace(parent)
     }
+
+    private fun getIconForCircleWithId(id: Int): Int =
+        if (id == com.android.systemui.res.R.id.action_edit) {
+            com.android.systemui.res.R.drawable.ic_screenshot_edit
+        } else {
+            R.drawable.pip_ic_close_white
+        }
     // END DragToInteractView modification
 }

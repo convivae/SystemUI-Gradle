@@ -28,8 +28,8 @@ import android.widget.Button;
 
 import androidx.annotation.Nullable;
 
+import com.android.app.tracing.TraceUtils;
 import com.android.internal.logging.MetricsLogger;
-import com.android.systemui.Flags;
 import com.android.systemui.accessibility.hearingaid.HearingDevicesChecker;
 import com.android.systemui.accessibility.hearingaid.HearingDevicesDialogManager;
 import com.android.systemui.animation.Expandable;
@@ -50,14 +50,12 @@ import javax.inject.Inject;
 
 /** Quick settings tile: Hearing Devices **/
 public class HearingDevicesTile extends QSTileImpl<BooleanState> {
-    //TODO(b/338520598): Transform the current implementation into new QS architecture
-    // and use Kotlin except Tile class.
     public static final String TILE_SPEC = "hearing_devices";
 
     private final HearingDevicesDialogManager mDialogManager;
     private final HearingDevicesChecker mDevicesChecker;
     private final BluetoothController mBluetoothController;
-
+    private Boolean mIsHearingDevicesSupported;
     private final BluetoothController.Callback mCallback = new BluetoothController.Callback() {
         @Override
         public void onBluetoothStateChange(boolean enabled) {
@@ -93,6 +91,17 @@ public class HearingDevicesTile extends QSTileImpl<BooleanState> {
     }
 
     @Override
+    public boolean isAvailable() {
+        if (mIsHearingDevicesSupported == null) {
+            mIsHearingDevicesSupported = TraceUtils.trace(
+                    "HearingDevicesTile#isHearingDeviceSupported",
+                    mDevicesChecker::isHearingDeviceSupported);
+        }
+
+        return mIsHearingDevicesSupported;
+    }
+
+    @Override
     public BooleanState newTileState() {
         return new BooleanState();
     }
@@ -107,12 +116,13 @@ public class HearingDevicesTile extends QSTileImpl<BooleanState> {
         checkIfRestrictionEnforcedByAdminOnly(state, UserManager.DISALLOW_BLUETOOTH);
 
         state.label = mContext.getString(R.string.quick_settings_hearing_devices_label);
+        state.contentDescription = state.label;
         state.icon = maybeLoadResourceIcon(R.drawable.qs_hearing_devices_icon);
         state.forceExpandIcon = true;
+        state.expandedAccessibilityClassName = Button.class.getName();
 
         boolean isBonded = mDevicesChecker.isAnyPairedHearingDevice();
         boolean isActive = mDevicesChecker.isAnyActiveHearingDevice();
-
         if (isActive) {
             state.state = Tile.STATE_ACTIVE;
             state.secondaryLabel = mContext.getString(
@@ -125,7 +135,7 @@ public class HearingDevicesTile extends QSTileImpl<BooleanState> {
             state.state = Tile.STATE_INACTIVE;
             state.secondaryLabel = "";
         }
-        state.expandedAccessibilityClassName = Button.class.getName();
+        state.stateDescription = state.secondaryLabel;
     }
 
     @Nullable
@@ -137,10 +147,5 @@ public class HearingDevicesTile extends QSTileImpl<BooleanState> {
     @Override
     public CharSequence getTileLabel() {
         return mContext.getString(R.string.quick_settings_hearing_devices_label);
-    }
-
-    @Override
-    public boolean isAvailable() {
-        return Flags.hearingAidsQsTileDialog();
     }
 }

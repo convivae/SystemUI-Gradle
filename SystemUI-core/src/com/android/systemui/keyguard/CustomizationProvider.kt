@@ -31,25 +31,27 @@ import android.os.Binder
 import android.os.Bundle
 import android.util.Log
 import com.android.app.tracing.coroutines.runBlockingTraced as runBlocking
-import com.android.systemui.SystemUIAppComponentFactoryBase
-import com.android.systemui.SystemUIAppComponentFactoryBase.ContextAvailableCallback
+import com.android.systemui.application.ContentProviderContextAvailableCallback
+import com.android.systemui.application.ContentProviderContextInitializer
+import com.android.systemui.biometrics.domain.interactor.FingerprintPropertyInteractor
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.domain.interactor.KeyguardQuickAffordanceInteractor
 import com.android.systemui.keyguard.ui.preview.KeyguardRemotePreviewManager
 import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shared.customization.data.content.CustomizationProviderContract as Contract
+import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 
-class CustomizationProvider :
-    ContentProvider(), SystemUIAppComponentFactoryBase.ContextInitializer {
+class CustomizationProvider : ContentProvider(), ContentProviderContextInitializer {
 
-    @Inject lateinit var interactor: KeyguardQuickAffordanceInteractor
-    @Inject lateinit var shadeModeInteractor: ShadeModeInteractor
-    @Inject lateinit var previewManager: KeyguardRemotePreviewManager
+    @Inject lateinit var interactor: Lazy<KeyguardQuickAffordanceInteractor>
+    @Inject lateinit var shadeModeInteractor: Lazy<ShadeModeInteractor>
+    @Inject lateinit var fingerprintPropertyInteractor: Lazy<FingerprintPropertyInteractor>
+    @Inject lateinit var previewManager: Lazy<KeyguardRemotePreviewManager>
     @Inject @Main lateinit var mainDispatcher: CoroutineDispatcher
 
-    private lateinit var contextAvailableCallback: ContextAvailableCallback
+    private var contextAvailableCallback: ContentProviderContextAvailableCallback? = null
 
     private val uriMatcher =
         UriMatcher(UriMatcher.NO_MATCH).apply {
@@ -87,11 +89,11 @@ class CustomizationProvider :
     }
 
     override fun attachInfo(context: Context?, info: ProviderInfo?) {
-        contextAvailableCallback.onContextAvailable(checkNotNull(context))
+        contextAvailableCallback?.onContextAvailable(checkNotNull(context))
         super.attachInfo(context, info)
     }
 
-    override fun setContextAvailableCallback(callback: ContextAvailableCallback) {
+    override fun setContextAvailableCallback(callback: ContentProviderContextAvailableCallback) {
         contextAvailableCallback = callback
     }
 
@@ -189,7 +191,7 @@ class CustomizationProvider :
                     Binder.getCallingUid(),
                 ) == PackageManager.PERMISSION_GRANTED
         ) {
-            previewManager.preview(extras)
+            previewManager.get().preview(extras)
         } else {
             null
         }
@@ -218,7 +220,7 @@ class CustomizationProvider :
             throw IllegalArgumentException(
                 "Cannot insert selection, " +
                     "\"${Contract.LockScreenQuickAffordances
-                        .SelectionTable.Columns.AFFORDANCE_ID}\" not specified!"
+                            .SelectionTable.Columns.AFFORDANCE_ID}\" not specified!"
             )
         }
 
@@ -237,7 +239,7 @@ class CustomizationProvider :
             throw IllegalArgumentException("Cannot insert selection, affordance ID was empty!")
         }
 
-        val success = interactor.select(slotId = slotId, affordanceId = affordanceId)
+        val success = interactor.get().select(slotId = slotId, affordanceId = affordanceId)
 
         return if (success) {
             Log.d(TAG, "Successfully selected $affordanceId for slot $slotId")
@@ -260,7 +262,7 @@ class CustomizationProvider :
                 )
             )
             .apply {
-                val affordanceRepresentationsBySlotId = interactor.getSelections()
+                val affordanceRepresentationsBySlotId = interactor.get().getSelections()
                 affordanceRepresentationsBySlotId.entries.forEach {
                     (slotId, affordanceRepresentations) ->
                     affordanceRepresentations.forEach { affordanceRepresentation ->
@@ -293,9 +295,9 @@ class CustomizationProvider :
                 )
             )
             .apply {
-                interactor.getAffordancePickerRepresentations().forEach { representation ->
+                interactor.get().getAffordancePickerRepresentations().forEach { representation ->
                     addRow(
-                        arrayOf(
+                        arrayOf<Any?>(
                             representation.id,
                             representation.name,
                             representation.iconResourceId,
@@ -318,8 +320,8 @@ class CustomizationProvider :
                 )
             )
             .apply {
-                interactor.getSlotPickerRepresentations().forEach { representation ->
-                    addRow(arrayOf(representation.id, representation.maxSelectedAffordances))
+                interactor.get().getSlotPickerRepresentations().forEach { representation ->
+                    addRow(arrayOf<Any?>(representation.id, representation.maxSelectedAffordances))
                 }
             }
     }
@@ -329,9 +331,9 @@ class CustomizationProvider :
                 arrayOf(Contract.FlagsTable.Columns.NAME, Contract.FlagsTable.Columns.VALUE)
             )
             .apply {
-                interactor.getPickerFlags().forEach { flag ->
+                interactor.get().getPickerFlags().forEach { flag ->
                     addRow(
-                        arrayOf(
+                        arrayOf<Any?>(
                             flag.name,
                             if (flag.value) {
                                 1
@@ -345,6 +347,14 @@ class CustomizationProvider :
     }
 
     private fun queryRuntimeValues(): Cursor {
+        // If not UDFPS, the udfpsLocation will be null
+        val udfpsLocation =
+            if (fingerprintPropertyInteractor.get().isUdfps.value) {
+                fingerprintPropertyInteractor.get().sensorLocation.value
+            } else {
+                null
+            }
+
         return MatrixCursor(
                 arrayOf(
                     Contract.RuntimeValuesTable.Columns.NAME,
@@ -353,10 +363,13 @@ class CustomizationProvider :
             )
             .apply {
                 addRow(
-                    arrayOf(
+                    arrayOf<Any?>(
                         Contract.RuntimeValuesTable.KEY_IS_SHADE_LAYOUT_WIDE,
-                        if (shadeModeInteractor.isShadeLayoutWide.value) 1 else 0,
+                        if (shadeModeInteractor.get().isFullWidthShade.value) 0 else 1,
                     )
+                )
+                addRow(
+                    arrayOf(Contract.RuntimeValuesTable.KEY_UDFPS_LOCATION, udfpsLocation?.encode())
                 )
             }
     }
@@ -379,7 +392,7 @@ class CustomizationProvider :
                     )
             }
 
-        val deleted = interactor.unselect(slotId = slotId, affordanceId = affordanceId)
+        val deleted = interactor.get().unselect(slotId = slotId, affordanceId = affordanceId)
 
         return if (deleted) {
             Log.d(TAG, "Successfully unselected $affordanceId for slot $slotId")

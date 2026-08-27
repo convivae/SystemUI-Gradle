@@ -29,24 +29,21 @@ import android.view.WindowManager.LayoutParams.PRIVATE_FLAG_NO_MOVE_ANIMATION
 import android.view.WindowManager.LayoutParams.PRIVATE_FLAG_TRUSTED_OVERLAY
 import com.airbnb.lottie.model.KeyPath
 import com.android.systemui.biometrics.Utils
-import com.android.systemui.biometrics.domain.interactor.DisplayStateInteractor
 import com.android.systemui.biometrics.domain.interactor.SideFpsSensorInteractor
 import com.android.systemui.biometrics.domain.model.SideFpsSensorLocation
-import com.android.systemui.biometrics.shared.model.DisplayRotation
 import com.android.systemui.biometrics.shared.model.LottieCallback
 import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.display.domain.interactor.DisplayStateInteractor
+import com.android.systemui.display.shared.model.DisplayRotation
 import com.android.systemui.keyguard.domain.interactor.DeviceEntrySideFpsOverlayInteractor
 import com.android.systemui.res.R
-import com.android.systemui.util.kotlin.sample
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 /** Models UI of the side fingerprint sensor indicator view. */
-@OptIn(ExperimentalCoroutinesApi::class)
 class SideFpsOverlayViewModel
 @Inject
 constructor(
@@ -81,7 +78,7 @@ constructor(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL,
                     Utils.FINGERPRINT_OVERLAY_LAYOUT_PARAM_FLAGS,
-                    PixelFormat.TRANSLUCENT
+                    PixelFormat.TRANSLUCENT,
                 )
                 .apply {
                     title = TAG
@@ -121,10 +118,7 @@ constructor(
             .distinctUntilChanged()
 
     private val overlayViewRotation: Flow<Float> =
-        combine(
-                displayRotation,
-                sensorLocation,
-            ) { rotation: DisplayRotation, sensorLocation ->
+        combine(displayRotation, sensorLocation) { rotation: DisplayRotation, sensorLocation ->
                 val yAligned = sensorLocation.isSensorVerticalInDefaultOrientation
                 when (rotation) {
                     DisplayRotation.ROTATION_90 -> if (yAligned) 0f else 180f
@@ -143,12 +137,10 @@ constructor(
 
     /** LayoutParams for placement of overlayView (the side fingerprint sensor indicator view) */
     val overlayViewParams: Flow<WindowManager.LayoutParams> =
-        combine(
-            _lottieBounds,
-            sensorLocation,
-            displayRotation,
-        ) { bounds: Rect?, sensorLocation: SideFpsSensorLocation, displayRotation: DisplayRotation
-            ->
+        combine(_lottieBounds, sensorLocation, displayRotation) {
+            bounds: Rect?,
+            sensorLocation: SideFpsSensorLocation,
+            displayRotation: DisplayRotation ->
             val topLeft = Point(sensorLocation.left, sensorLocation.top)
 
             defaultOverlayViewParams.apply {
@@ -159,44 +151,19 @@ constructor(
 
     /** List of LottieCallbacks use for adding dynamic color to the overlayView */
     val lottieCallbacks: Flow<List<LottieCallback>> =
-        _lottieBounds.sample(deviceEntrySideFpsOverlayInteractor.showIndicatorForDeviceEntry) {
+        combine(_lottieBounds, deviceEntrySideFpsOverlayInteractor.showIndicatorForDeviceEntry) {
             _,
             showIndicatorForDeviceEntry: Boolean ->
             val callbacks = mutableListOf<LottieCallback>()
-            if (showIndicatorForDeviceEntry) {
-                val indicatorColor =
-                    com.android.settingslib.Utils.getColorAttrDefaultColor(
-                        applicationContext,
-                        com.android.internal.R.attr.materialColorPrimaryFixed
-                    )
-                val outerRimColor =
-                    com.android.settingslib.Utils.getColorAttrDefaultColor(
-                        applicationContext,
-                        com.android.internal.R.attr.materialColorPrimaryFixedDim
-                    )
-                val chevronFill =
-                    com.android.settingslib.Utils.getColorAttrDefaultColor(
-                        applicationContext,
-                        com.android.internal.R.attr.materialColorOnPrimaryFixed
-                    )
-                callbacks.add(LottieCallback(KeyPath(".blue600", "**"), indicatorColor))
-                callbacks.add(LottieCallback(KeyPath(".blue400", "**"), outerRimColor))
-                callbacks.add(LottieCallback(KeyPath(".black", "**"), chevronFill))
-            } else {
-                if (!isDarkMode(applicationContext)) {
-                    callbacks.add(LottieCallback(KeyPath(".black", "**"), Color.WHITE))
-                }
-                for (key in listOf(".blue600", ".blue400")) {
-                    callbacks.add(
-                        LottieCallback(
-                            KeyPath(key, "**"),
-                            applicationContext.getColor(
-                                com.android.settingslib.color.R.color.settingslib_color_blue400
-                            ),
-                        )
-                    )
-                }
-            }
+            val indicatorColor =
+                applicationContext.getColor(com.android.internal.R.color.materialColorPrimary)
+            val outerRimColor =
+                applicationContext.getColor(com.android.internal.R.color.materialColorPrimary)
+            val chevronFill =
+                applicationContext.getColor(com.android.internal.R.color.materialColorOnPrimary)
+            callbacks.add(LottieCallback(KeyPath(".blue600", "**"), indicatorColor))
+            callbacks.add(LottieCallback(KeyPath(".blue400", "**"), outerRimColor))
+            callbacks.add(LottieCallback(KeyPath(".black", "**"), chevronFill))
             callbacks
         }
 

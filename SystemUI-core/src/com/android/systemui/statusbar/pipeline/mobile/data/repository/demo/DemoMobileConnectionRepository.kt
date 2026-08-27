@@ -25,7 +25,7 @@ import com.android.systemui.statusbar.pipeline.mobile.data.model.DataConnectionS
 import com.android.systemui.statusbar.pipeline.mobile.data.model.NetworkNameModel
 import com.android.systemui.statusbar.pipeline.mobile.data.model.ResolvedNetworkType
 import com.android.systemui.statusbar.pipeline.mobile.data.repository.MobileConnectionRepository
-import com.android.systemui.statusbar.pipeline.mobile.data.repository.MobileConnectionRepository.Companion.DEFAULT_NUM_LEVELS
+import com.android.systemui.statusbar.pipeline.mobile.data.repository.MobileConnectionRepository.Companion.createNumberOfLevelsFlow
 import com.android.systemui.statusbar.pipeline.mobile.data.repository.demo.model.FakeNetworkEventModel
 import com.android.systemui.statusbar.pipeline.mobile.data.repository.prod.FullMobileConnectionRepository.Companion.COL_CARRIER_ID
 import com.android.systemui.statusbar.pipeline.mobile.data.repository.prod.FullMobileConnectionRepository.Companion.COL_CARRIER_NETWORK_CHANGE
@@ -45,7 +45,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -64,9 +63,8 @@ class DemoMobileConnectionRepository(
         _carrierId
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_CARRIER_ID,
-                _carrierId.value,
+                initialValue = _carrierId.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _carrierId.value)
 
@@ -75,9 +73,8 @@ class DemoMobileConnectionRepository(
         _inflateSignalStrength
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = "inflate",
-                _inflateSignalStrength.value,
+                initialValue = _inflateSignalStrength.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _inflateSignalStrength.value)
 
@@ -89,9 +86,8 @@ class DemoMobileConnectionRepository(
         _isEmergencyOnly
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_EMERGENCY,
-                _isEmergencyOnly.value,
+                initialValue = _isEmergencyOnly.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _isEmergencyOnly.value)
 
@@ -100,9 +96,8 @@ class DemoMobileConnectionRepository(
         _isRoaming
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_ROAMING,
-                _isRoaming.value,
+                initialValue = _isRoaming.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _isRoaming.value)
 
@@ -111,9 +106,8 @@ class DemoMobileConnectionRepository(
         _operatorAlphaShort
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_OPERATOR,
-                _operatorAlphaShort.value,
+                initialValue = _operatorAlphaShort.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _operatorAlphaShort.value)
 
@@ -122,9 +116,8 @@ class DemoMobileConnectionRepository(
         _isInService
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_IS_IN_SERVICE,
-                _isInService.value,
+                initialValue = _isInService.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _isInService.value)
 
@@ -133,21 +126,15 @@ class DemoMobileConnectionRepository(
         _isNonTerrestrial
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_IS_NTN,
-                _isNonTerrestrial.value,
+                initialValue = _isNonTerrestrial.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _isNonTerrestrial.value)
 
     private val _isGsm = MutableStateFlow(false)
     override val isGsm =
         _isGsm
-            .logDiffsForTable(
-                tableLogBuffer,
-                columnPrefix = "",
-                columnName = COL_IS_GSM,
-                _isGsm.value,
-            )
+            .logDiffsForTable(tableLogBuffer, columnName = COL_IS_GSM, initialValue = _isGsm.value)
             .stateIn(scope, SharingStarted.WhileSubscribed(), _isGsm.value)
 
     private val _cdmaLevel = MutableStateFlow(CellSignalStrength.SIGNAL_STRENGTH_NONE_OR_UNKNOWN)
@@ -155,9 +142,8 @@ class DemoMobileConnectionRepository(
         _cdmaLevel
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_CDMA_LEVEL,
-                _cdmaLevel.value,
+                initialValue = _cdmaLevel.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _cdmaLevel.value)
 
@@ -166,9 +152,8 @@ class DemoMobileConnectionRepository(
         _primaryLevel
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_PRIMARY_LEVEL,
-                _primaryLevel.value,
+                initialValue = _primaryLevel.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _primaryLevel.value)
 
@@ -177,23 +162,22 @@ class DemoMobileConnectionRepository(
         _satelliteLevel
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_SATELLITE_LEVEL,
-                _satelliteLevel.value,
+                initialValue = _satelliteLevel.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _satelliteLevel.value)
 
     private val _dataConnectionState = MutableStateFlow(DataConnectionState.Disconnected)
     override val dataConnectionState =
         _dataConnectionState
-            .logDiffsForTable(tableLogBuffer, columnPrefix = "", _dataConnectionState.value)
+            .logDiffsForTable(tableLogBuffer, initialValue = _dataConnectionState.value)
             .stateIn(scope, SharingStarted.WhileSubscribed(), _dataConnectionState.value)
 
     private val _dataActivityDirection =
         MutableStateFlow(DataActivityModel(hasActivityIn = false, hasActivityOut = false))
     override val dataActivityDirection =
         _dataActivityDirection
-            .logDiffsForTable(tableLogBuffer, columnPrefix = "", _dataActivityDirection.value)
+            .logDiffsForTable(tableLogBuffer, initialValue = _dataActivityDirection.value)
             .stateIn(scope, SharingStarted.WhileSubscribed(), _dataActivityDirection.value)
 
     private val _carrierNetworkChangeActive = MutableStateFlow(false)
@@ -201,9 +185,8 @@ class DemoMobileConnectionRepository(
         _carrierNetworkChangeActive
             .logDiffsForTable(
                 tableLogBuffer,
-                columnPrefix = "",
                 columnName = COL_CARRIER_NETWORK_CHANGE,
-                _carrierNetworkChangeActive.value,
+                initialValue = _carrierNetworkChangeActive.value,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), _carrierNetworkChangeActive.value)
 
@@ -211,21 +194,20 @@ class DemoMobileConnectionRepository(
         MutableStateFlow(ResolvedNetworkType.UnknownNetworkType)
     override val resolvedNetworkType =
         _resolvedNetworkType
-            .logDiffsForTable(tableLogBuffer, columnPrefix = "", _resolvedNetworkType.value)
+            .logDiffsForTable(tableLogBuffer, initialValue = _resolvedNetworkType.value)
             .stateIn(scope, SharingStarted.WhileSubscribed(), _resolvedNetworkType.value)
 
+    private val _defaultNumberOfLevels =
+        MutableStateFlow(MobileConnectionRepository.DEFAULT_NUM_LEVELS)
+
     override val numberOfLevels =
-        _inflateSignalStrength
-            .map { shouldInflate ->
-                if (shouldInflate) {
-                    DEFAULT_NUM_LEVELS + 1
-                } else {
-                    DEFAULT_NUM_LEVELS
-                }
-            }
-            .stateIn(scope, SharingStarted.WhileSubscribed(), DEFAULT_NUM_LEVELS)
+        createNumberOfLevelsFlow(scope, _inflateSignalStrength, _defaultNumberOfLevels)
 
     override val dataEnabled = MutableStateFlow(true)
+
+    override fun setDataEnabled(enabled: Boolean) {
+        // Unused.
+    }
 
     override val cdmaRoaming = MutableStateFlow(false)
 
@@ -290,6 +272,8 @@ class DemoMobileConnectionRepository(
         cdmaRoaming.value = false
         _primaryLevel.value = event.level
         _cdmaLevel.value = event.level
+        _defaultNumberOfLevels.value = event.numberOfLevels
+        _inflateSignalStrength.value = event.inflateSignalStrength
         _dataActivityDirection.value = event.activity.toMobileDataActivityModel()
 
         // These fields are always the same for carrier-merged networks

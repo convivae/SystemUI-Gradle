@@ -17,8 +17,10 @@
 package com.android.systemui.statusbar.chips.mediaprojection.ui.view
 
 import android.app.ActivityManager
+import android.content.Context
 import android.content.DialogInterface
 import android.content.pm.PackageManager
+import android.util.Log
 import com.android.systemui.animation.DialogTransitionAnimator
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.mediaprojection.data.model.MediaProjectionState
@@ -30,13 +32,26 @@ import javax.inject.Inject
 class EndMediaProjectionDialogHelper
 @Inject
 constructor(
+    private val applicationContext: Context,
     private val dialogFactory: SystemUIDialog.Factory,
     private val dialogTransitionAnimator: DialogTransitionAnimator,
     private val packageManager: PackageManager,
 ) {
-    /** Creates a new [SystemUIDialog] using the given delegate. */
-    fun createDialog(delegate: SystemUIDialog.Delegate): SystemUIDialog {
-        return dialogFactory.create(delegate)
+    /** Creates a new [SystemUIDialog] using the given [Context] and [SystemUIDialog.Delegate]. */
+    fun createDialog(context: Context, delegate: SystemUIDialog.Delegate): SystemUIDialog {
+        return dialogFactory.create(delegate, getDisplaySpecificContext(context))
+    }
+
+    private fun getDisplaySpecificContext(context: Context): Context {
+        if (context == this.applicationContext) {
+            // Default application context can create dialogs without an issue.
+            return context
+        }
+        // Display specific contexts created with context.createWindowContext(<TYPE>) can only
+        // add windows of the same type specified in <TYPE>.
+        // SystemUIDialog adds a window of TYPE_STATUS_BAR_SUB_PANEL.
+        // We need to create a simple display specific context to create a dialog.
+        return context.createDisplayContext(context.display)
     }
 
     /**
@@ -54,10 +69,6 @@ constructor(
             // dialog to animate back into the chip just for the chip to disappear in a few frames.
             dialogTransitionAnimator.disableAllCurrentDialogsExitAnimations()
             stopAction.invoke()
-            // TODO(b/332662551): If the projection is stopped, there's a brief moment where the
-            // dialog closes and the chip re-shows because the system APIs haven't come back and
-            // told SysUI that the projection has officially stopped. It would be great for the chip
-            // to not re-show at all.
         }
     }
 
@@ -85,8 +96,17 @@ constructor(
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
             appInfo.loadLabel(packageManager)
         } catch (e: PackageManager.NameNotFoundException) {
-            // TODO(b/332662551): Log this error.
+            Log.w(
+                TAG,
+                "Failed to find application info for package: $packageName when creating " +
+                    "end media projection dialog",
+                e,
+            )
             null
         }
+    }
+
+    companion object {
+        private const val TAG = "EndMediaProjectionDialogHelper"
     }
 }

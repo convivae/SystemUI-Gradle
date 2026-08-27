@@ -16,14 +16,19 @@
 
 package com.android.systemui.statusbar.notification.row
 
-import android.app.Flags
 import android.app.Notification
 import android.app.Notification.MessagingStyle
 import android.app.Person
 import android.content.Context
+import android.graphics.Typeface
 import android.graphics.drawable.Icon
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.TextUtils
+import android.text.style.StyleSpan
 import android.util.Log
 import android.view.LayoutInflater
+import androidx.annotation.VisibleForTesting
 import com.android.app.tracing.traceSection
 import com.android.internal.R
 import com.android.internal.widget.MessagingMessage
@@ -32,15 +37,18 @@ import com.android.systemui.statusbar.notification.collection.NotificationEntry
 import com.android.systemui.statusbar.notification.logKey
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_SINGLE_LINE
-import com.android.systemui.statusbar.notification.row.shared.AsyncHybridViewInflation
 import com.android.systemui.statusbar.notification.row.ui.viewmodel.ConversationAvatar
-import com.android.systemui.statusbar.notification.row.ui.viewmodel.ConversationData
 import com.android.systemui.statusbar.notification.row.ui.viewmodel.FacePile
 import com.android.systemui.statusbar.notification.row.ui.viewmodel.SingleIcon
 import com.android.systemui.statusbar.notification.row.ui.viewmodel.SingleLineViewModel
+import com.android.systemui.statusbar.notification.row.ui.viewmodel.SingleLineViewPayload
+import com.android.systemui.statusbar.notification.shared.extractMetrics
+import com.android.systemui.util.annotations.DeprecatedSysuiVisibleForTesting
 
 /** The inflater of SingleLineViewModel and SingleLineViewHolder */
-internal object SingleLineViewInflater {
+@DeprecatedSysuiVisibleForTesting
+@VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+object SingleLineViewInflater {
     const val TAG = "SingleLineViewInflater"
 
     /**
@@ -51,108 +59,159 @@ internal object SingleLineViewInflater {
      *   notification, not for legacy messaging notifications
      * @param builder the recovered Notification Builder
      * @param systemUiContext the context of Android System UI
+     * @param redactText indicates if the text needs to be redacted
      * @return the inflated SingleLineViewModel
      */
     @JvmStatic
     fun inflateSingleLineViewModel(
         notification: Notification,
         messagingStyle: MessagingStyle?,
+        metricStyle: Notification.MetricStyle?,
         builder: Notification.Builder,
         systemUiContext: Context,
+        redactText: Boolean,
+        summarization: CharSequence?,
     ): SingleLineViewModel {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) {
-            return SingleLineViewModel(null, null, null)
-        }
         peopleHelper.init(systemUiContext)
-        var titleText = HybridGroupManager.resolveTitle(notification)
-        var contentText = HybridGroupManager.resolveText(notification)
 
-        if (messagingStyle == null) {
+        var titleText = HybridGroupManager.resolveTitle(notification)
+        var contentText =
+            if (redactText) {
+                systemUiContext.getString(
+                    com.android.systemui.res.R.string.redacted_otp_notification_single_line_text
+                )
+            } else {
+                HybridGroupManager.resolveText(notification)
+            }
+
+        if (metricStyle != null) {
+            return SingleLineViewModel(
+                titleText = titleText,
+                // MetricStyle notifications display metric data instead of content text.
+                contentText = null,
+                summarization = if (redactText) null else summarization,
+                payload =
+                    SingleLineViewPayload.MetricPayload(
+                        metricStyle.extractMetrics(systemUiContext).first()
+                    ),
+            )
+        } else if (messagingStyle != null) {
+
+            val isGroupConversation = messagingStyle.isGroupConversation
+
+            val conversationTextData =
+                loadConversationTextData(systemUiContext, notification, messagingStyle)
+            if (conversationTextData?.conversationTitle?.isNotEmpty() == true) {
+                titleText = conversationTextData.conversationTitle
+            }
+            if (!redactText && conversationTextData?.conversationText?.isNotEmpty() == true) {
+                contentText = conversationTextData.conversationText
+            }
+
+            val conversationAvatar =
+                messagingStyle.loadConversationAvatar(
+                    notification = notification,
+                    isGroupConversation = isGroupConversation,
+                    builder = builder,
+                    systemUiContext = systemUiContext,
+                )
+
+            val conversationData =
+                SingleLineViewPayload.ConversationData(
+                    conversationSenderName =
+                        conversationTextData?.senderName?.takeIf {
+                            // Show sender name for group conversations and replies from this user
+                            //  to prevent the user's reply looking like an incoming message.
+                            // TODO(474648629): It's possible (though unusual) that an app would
+                            //  post the notification with the last message being from the user, in
+                            //  which case we should still probably show the sender name.
+                            isGroupConversation || conversationTextData.isRemoteInputHistory
+                        },
+                    avatar = conversationAvatar,
+                    summarization = summarization,
+                )
+
             return SingleLineViewModel(
                 titleText = titleText,
                 contentText = contentText,
-                conversationData = null,
+                summarization = if (redactText) null else summarization,
+                payload = conversationData,
+            )
+        } else {
+            // If we have no title AND no text (e.g. for some custom view notifications), show a
+            // placeholder string
+            if (TextUtils.isEmpty(titleText) && TextUtils.isEmpty(contentText)) {
+                return SingleLineViewModel(
+                    titleText =
+                        systemUiContext.getString(
+                            com.android.systemui.res.R.string.empty_notification_single_line_title
+                        ),
+                    contentText = null,
+                    summarization = if (redactText) null else summarization,
+                    payload = SingleLineViewPayload.StandardPayload,
+                )
+            }
+            return SingleLineViewModel(
+                titleText = titleText,
+                contentText = contentText,
+                summarization = if (redactText) null else summarization,
+                payload = SingleLineViewPayload.StandardPayload,
             )
         }
-
-        val isGroupConversation = messagingStyle.isGroupConversation
-
-        val conversationTextData = messagingStyle.loadConversationTextData(systemUiContext)
-        if (conversationTextData?.conversationTitle?.isNotEmpty() == true) {
-            titleText = conversationTextData.conversationTitle
-        }
-        if (conversationTextData?.conversationText?.isNotEmpty() == true) {
-            contentText = conversationTextData.conversationText
-        }
-
-        val conversationAvatar =
-            messagingStyle.loadConversationAvatar(
-                notification = notification,
-                isGroupConversation = isGroupConversation,
-                builder = builder,
-                systemUiContext = systemUiContext,
-            )
-
-        val conversationData =
-            ConversationData(
-                // We don't show the sender's name for one-to-one conversation
-                conversationSenderName =
-                    if (isGroupConversation) conversationTextData?.senderName else null,
-                avatar = conversationAvatar,
-            )
-
-        return SingleLineViewModel(
-            titleText = titleText,
-            contentText = contentText,
-            conversationData = conversationData,
-        )
     }
 
     @JvmStatic
-    fun inflateRedactedSingleLineViewModel(
+    fun inflatePublicSingleLineViewModel(
         context: Context,
         isConversation: Boolean = false,
     ): SingleLineViewModel {
-        val conversationData =
+        val payload =
             if (isConversation) {
-                ConversationData(
-                    null,
-                    SingleIcon(
-                        context.getDrawable(
-                            com.android.systemui.res.R.drawable
-                                .ic_redacted_notification_single_line_icon
-                        )
-                    ),
+                SingleLineViewPayload.ConversationData(
+                    conversationSenderName = null,
+                    avatar =
+                        SingleIcon(
+                            context.getDrawable(
+                                com.android.systemui.res.R.drawable
+                                    .ic_public_notification_single_line_icon
+                            )
+                        ),
+                    summarization = null,
                 )
             } else {
-                null
+                SingleLineViewPayload.StandardPayload
             }
         return SingleLineViewModel(
-            context.getString(
-                com.android.systemui.res.R.string.redacted_notification_single_line_title
-            ),
-            context.getString(
-                com.android.systemui.res.R.string.redacted_notification_single_line_text
-            ),
-            conversationData,
+            titleText =
+                context.getString(
+                    com.android.systemui.res.R.string.public_notification_single_line_title
+                ),
+            contentText = null,
+            summarization = null,
+            payload = payload,
         )
     }
 
+    private fun Notification.getLastRemoteInputHistoryMessage(): MessagingStyle.Message? {
+        val remoteInputHistoryItems = getRemoteInputHistoryItems()
+        val text = remoteInputHistoryItems?.lastOrNull()?.text ?: return null
+        return MessagingStyle.Message(text, 0, null, true /* remoteHistory */)
+    }
+
     /** load conversation text data from the MessagingStyle of conversation notifications */
-    private fun MessagingStyle.loadConversationTextData(
-        systemUiContext: Context
+    private fun loadConversationTextData(
+        systemUiContext: Context,
+        notification: Notification,
+        messagingStyle: MessagingStyle,
     ): ConversationTextData? {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) {
-            return null
-        }
         var conversationText: CharSequence?
 
-        if (messages.isEmpty()) {
+        // load the conversation text
+        val lastRemoteInputHistoryMessage = notification.getLastRemoteInputHistoryMessage()
+        val lastMessage = lastRemoteInputHistoryMessage ?: messagingStyle.messages.lastOrNull()
+        if (lastMessage == null) {
             return null
         }
-
-        // load the conversation text
-        val lastMessage = messages[messages.lastIndex]
         conversationText = lastMessage.text
         if (conversationText == null && lastMessage.isImageMessage()) {
             conversationText = findBackUpConversationText(lastMessage, systemUiContext)
@@ -160,20 +219,22 @@ internal object SingleLineViewInflater {
 
         // load the sender's name to display
         // null senderPerson means the current user.
-        val name = lastMessage.senderPerson?.name ?: user.name
+        val name = lastMessage.senderPerson?.name ?: messagingStyle.user.name
 
         val senderName =
             systemUiContext.resources.getString(
                 R.string.conversation_single_line_name_display,
-                if (Flags.cleanUpSpansAndNewLines()) name?.toString() else name,
+                name?.toString(), // Drop any spans
             )
 
         // We need to find back-up values for those texts if they are needed and empty
         return ConversationTextData(
             conversationTitle =
-                conversationTitle ?: findBackUpConversationTitle(senderName, systemUiContext),
+                messagingStyle.conversationTitle
+                    ?: messagingStyle.findBackUpConversationTitle(senderName, systemUiContext),
             conversationText = conversationText,
             senderName = senderName,
+            isRemoteInputHistory = lastMessage.isRemoteInputHistory,
         )
     }
 
@@ -184,9 +245,6 @@ internal object SingleLineViewInflater {
         senderName: CharSequence?,
         systemUiContext: Context,
     ): CharSequence {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) {
-            return ""
-        }
         return if (isGroupConversation) {
             systemUiContext.resources.getString(R.string.conversation_title_fallback_group_chat)
         } else {
@@ -206,14 +264,21 @@ internal object SingleLineViewInflater {
         message: MessagingStyle.Message,
         context: Context,
     ): CharSequence? {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) {
-            return null
-        }
         // If the message is not an image message, just return empty, the back-up text for showing
         // will be SingleLineViewModel.contentText
         if (!message.isImageMessage()) return null
-        // If is image message, return a placeholder
-        return context.resources.getString(R.string.conversation_single_line_image_placeholder)
+        // If is image message, return a placeholder: "sent an image"
+        val unformatted =
+            context.resources.getString(R.string.conversation_single_line_image_placeholder)
+        // Italicize the "sent an image" text
+        val spannableString = SpannableString(unformatted)
+        spannableString.setSpan(
+            StyleSpan(Typeface.ITALIC),
+            0,
+            spannableString.length,
+            Spannable.SPAN_INCLUSIVE_EXCLUSIVE,
+        )
+        return spannableString
     }
 
     /**
@@ -232,20 +297,19 @@ internal object SingleLineViewInflater {
      *   notification's text when conversationText is null
      * @property senderName the sender's name to be shown in the row when needed. senderName can be
      *   null
+     * @property isRemoteInputHistory whether the text content is from the remote input history.
      */
     data class ConversationTextData(
         val conversationTitle: CharSequence,
         val conversationText: CharSequence?,
         val senderName: CharSequence?,
+        val isRemoteInputHistory: Boolean,
     )
 
     private fun groupMessages(
         messages: List<MessagingStyle.Message>,
         historicMessages: List<MessagingStyle.Message>,
     ): List<MutableList<MessagingStyle.Message>> {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) {
-            return listOf()
-        }
         if (messages.isEmpty() && historicMessages.isEmpty()) return listOf()
         var currentGroup: MutableList<MessagingStyle.Message>? = null
         var currentSenderKey: CharSequence? = null
@@ -273,9 +337,6 @@ internal object SingleLineViewInflater {
         isGroupConversation: Boolean,
         systemUiContext: Context,
     ): ConversationAvatar {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) {
-            return SingleIcon(null)
-        }
         val userKey = user.getKeyOrName()
         var conversationIcon: Icon? = shortcutIcon
         var conversationText: CharSequence? = conversationTitle
@@ -367,7 +428,7 @@ internal object SingleLineViewInflater {
 
     @JvmStatic
     fun inflatePublicSingleLineView(
-        isConversation: Boolean,
+        payload: SingleLineViewPayload,
         reinflateFlags: Int,
         entry: NotificationEntry,
         context: Context,
@@ -376,43 +437,41 @@ internal object SingleLineViewInflater {
         return if ((reinflateFlags and FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE) == 0) {
             null
         } else {
-            inflateSingleLineView(isConversation, reinflateFlags, entry, context, logger)
+            inflateSingleLineView(payload, reinflateFlags, entry, context, logger)
         }
     }
 
     @JvmStatic
     fun inflatePrivateSingleLineView(
-        isConversation: Boolean,
+        payload: SingleLineViewPayload,
         reinflateFlags: Int,
         entry: NotificationEntry,
         context: Context,
         logger: NotificationRowContentBinderLogger,
     ): HybridNotificationView? {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) return null
         return if ((reinflateFlags and FLAG_CONTENT_VIEW_SINGLE_LINE) == 0) {
             null
         } else {
-            inflateSingleLineView(isConversation, reinflateFlags, entry, context, logger)
+            inflateSingleLineView(payload, reinflateFlags, entry, context, logger)
         }
     }
 
     private fun inflateSingleLineView(
-        isConversation: Boolean,
+        payload: SingleLineViewPayload,
         reinflateFlags: Int,
         entry: NotificationEntry,
         context: Context,
         logger: NotificationRowContentBinderLogger,
     ): HybridNotificationView? {
-        if (AsyncHybridViewInflation.isUnexpectedlyInLegacyMode()) return null
 
-        logger.logInflateSingleLine(entry, reinflateFlags, isConversation)
-        logger.logAsyncTaskProgress(entry, "inflating single-line content view")
+        logger.logInflateSingleLine(entry.logKey, reinflateFlags, payload.javaClass.simpleName)
+        logger.logAsyncTaskProgress(entry.logKey, "inflating single-line content view")
 
         var view: HybridNotificationView? = null
 
         traceSection("SingleLineViewInflater#inflateSingleLineView") {
             val inflater = LayoutInflater.from(context)
-            val layoutRes: Int = HybridNotificationView.getLayoutResource(isConversation)
+            val layoutRes: Int = HybridNotificationView.getLayoutResource(payload)
             view = inflater.inflate(layoutRes, /* root= */ null) as HybridNotificationView
             if (view == null) {
                 Log.wtf(TAG, "Single-line view inflation result is null for entry: ${entry.logKey}")
@@ -435,7 +494,6 @@ internal object SingleLineViewInflater {
             )
         }
         // If name is null, create default avatar with background color
-        // TODO(b/319829062): Investigate caching default icon for color
         return peopleHelper.createAvatarSymbol(/* name= */ "", /* symbol= */ "", layoutColor)
     }
 

@@ -33,6 +33,7 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.service.notification.StatusBarNotification
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
@@ -51,7 +52,7 @@ import com.android.systemui.statusbar.NotificationUiAdjustment
 import com.android.systemui.statusbar.SmartReplyController
 import com.android.systemui.statusbar.notification.collection.NotificationEntry
 import com.android.systemui.statusbar.notification.headsup.HeadsUpManager
-import com.android.systemui.statusbar.notification.logging.NotificationLogger
+import com.android.systemui.statusbar.notification.stack.shared.getNotificationLocation
 import com.android.systemui.statusbar.phone.KeyguardDismissUtil
 import com.android.systemui.statusbar.policy.InflatedSmartReplyState.SuppressedActions
 import com.android.systemui.statusbar.policy.SmartReplyView.SmartActions
@@ -66,24 +67,24 @@ import kotlin.system.measureTimeMillis
 
 /** Returns whether we should show the smart reply view and its smart suggestions. */
 fun shouldShowSmartReplyView(
-    entry: NotificationEntry,
+    sbn: StatusBarNotification?,
     smartReplyState: InflatedSmartReplyState,
 ): Boolean {
+    if (sbn == null) {
+        return false
+    }
     if (smartReplyState.smartReplies == null && smartReplyState.smartActions == null) {
         // There are no smart replies and no smart actions.
         return false
     }
     // If we are showing the spinner we don't want to add the buttons.
     val showingSpinner =
-        entry.sbn.notification.extras.getBoolean(
-            Notification.EXTRA_SHOW_REMOTE_INPUT_SPINNER,
-            false,
-        )
+        sbn.notification.extras.getBoolean(Notification.EXTRA_SHOW_REMOTE_INPUT_SPINNER, false)
     if (showingSpinner) {
         return false
     }
     // If we are keeping the notification around while sending we don't want to add the buttons.
-    return !entry.sbn.notification.extras.getBoolean(Notification.EXTRA_HIDE_SMART_REPLIES, false)
+    return !sbn.notification.extras.getBoolean(Notification.EXTRA_HIDE_SMART_REPLIES, false)
 }
 
 /** Determines if two [InflatedSmartReplyState] are visually similar. */
@@ -127,6 +128,38 @@ constructor(
     override fun inflateSmartReplyState(entry: NotificationEntry): InflatedSmartReplyState =
         chooseSmartRepliesAndActions(entry)
 
+    private fun Button.getButtonType(): SmartButtonType? {
+        return (this.layoutParams as? SmartReplyView.LayoutParams)?.mButtonType
+    }
+
+    private fun getSortedButtons(
+        smartReplyButtons: List<Button>,
+        smartActionButtons: List<Button>,
+    ): List<Button> {
+        val finalCombinedButtons: List<Button>
+
+        // Order is Animated Replies -> Animated Actions -> Smart Replies -> Smart Actions
+
+        // Filter buttons based on their type for the animated treatment
+        val animatedReplyButtons =
+            smartReplyButtons.filter { it.getButtonType() == SmartButtonType.ANIMATED_REPLY }
+        val regularReplyButtons =
+            smartReplyButtons.filter { it.getButtonType() == SmartButtonType.REPLY }
+
+        val animatedActionButtons =
+            smartActionButtons.filter { it.getButtonType() == SmartButtonType.ANIMATED_ACTION }
+        val regularActionButtons =
+            smartActionButtons.filter { it.getButtonType() == SmartButtonType.ACTION }
+
+        finalCombinedButtons =
+            animatedReplyButtons +
+                animatedActionButtons +
+                regularReplyButtons +
+                regularActionButtons
+
+        return finalCombinedButtons
+    }
+
     override fun inflateSmartReplyViewHolder(
         sysuiContext: Context,
         notifPackageContext: Context,
@@ -134,9 +167,9 @@ constructor(
         existingSmartReplyState: InflatedSmartReplyState?,
         newSmartReplyState: InflatedSmartReplyState,
     ): InflatedSmartReplyViewHolder {
-        if (!shouldShowSmartReplyView(entry, newSmartReplyState)) {
+        if (!shouldShowSmartReplyView(entry.sbn, newSmartReplyState)) {
             return InflatedSmartReplyViewHolder(
-                null /* smartReplyView */,
+                null, /* smartReplyView */
                 null, /* smartSuggestionButtons */
             )
         }
@@ -152,42 +185,46 @@ constructor(
         val smartReplies = newSmartReplyState.smartReplies
         smartReplyView.setSmartRepliesGeneratedByAssistant(smartReplies?.fromAssistant ?: false)
         val smartReplyButtons =
-            smartReplies?.let {
-                smartReplies.choices.asSequence().mapIndexed { index, choice ->
-                    smartRepliesInflater.inflateReplyButton(
-                        smartReplyView,
-                        entry,
-                        smartReplies,
-                        index,
-                        choice,
-                        delayOnClickListener,
-                    )
-                }
-            } ?: emptySequence()
-
-        val smartActionButtons =
-            newSmartReplyState.smartActions?.let { smartActions ->
-                val themedPackageContext =
-                    ContextThemeWrapper(notifPackageContext, sysuiContext.theme)
-                smartActions.actions
-                    .asSequence()
-                    .filter { it.actionIntent != null }
-                    .mapIndexed { index, action ->
-                        smartActionsInflater.inflateActionButton(
+            smartReplies
+                ?.let {
+                    smartReplies.choices.asSequence().mapIndexed { index, choice ->
+                        smartRepliesInflater.inflateReplyButton(
                             smartReplyView,
                             entry,
-                            smartActions,
+                            smartReplies,
                             index,
-                            action,
+                            choice,
                             delayOnClickListener,
-                            themedPackageContext,
                         )
                     }
-            } ?: emptySequence()
+                }
+                ?.toList() ?: emptyList()
+
+        val smartActionButtons =
+            newSmartReplyState.smartActions
+                ?.let { smartActions ->
+                    val themedPackageContext =
+                        ContextThemeWrapper(notifPackageContext, sysuiContext.theme)
+                    smartActions.actions
+                        .asSequence()
+                        .filter { it.actionIntent != null }
+                        .mapIndexed { index, action ->
+                            smartActionsInflater.inflateActionButton(
+                                smartReplyView,
+                                entry,
+                                smartActions,
+                                index,
+                                action,
+                                delayOnClickListener,
+                                themedPackageContext,
+                            )
+                        }
+                }
+                ?.toList() ?: emptyList()
 
         return InflatedSmartReplyViewHolder(
             smartReplyView,
-            (smartReplyButtons + smartActionButtons).toList(),
+            getSortedButtons(smartReplyButtons, smartActionButtons),
         )
     }
 
@@ -271,14 +308,23 @@ constructor(
                 smartActions = SmartActions(systemGeneratedActions, true /* fromAssistant */)
             }
         }
-        val hasPhishingAction =
-            smartActions?.actions?.any {
+
+        val phishingSystemGeneratedActions =
+            entry.smartActions.filter {
                 it.isContextual &&
                     it.semanticAction ==
                         Notification.Action.SEMANTIC_ACTION_CONVERSATION_IS_PHISHING
-            } ?: false
-        var suppressedActions: SuppressedActions? = null
+            }
+        val hasPhishingAction = phishingSystemGeneratedActions.isNotEmpty()
         if (hasPhishingAction) {
+            // If there are system phishing actions, remove all smart replies and other
+            // non-phishing smart actions (regardless whether they are app or system generated).
+            smartReplies = null
+            smartActions = SmartActions(phishingSystemGeneratedActions, true /* fromAssistant */)
+        }
+
+        var suppressedActions: SuppressedActions? = null
+        if (hasPhishingAction && notification.actions != null) {
             // If there is a phishing action, calculate the indices of the actions with RemoteInput
             //  as those need to be hidden from the view.
             val suppressedActionIndices =
@@ -331,11 +377,7 @@ interface SmartActionInflater {
 private const val ICON_TASK_TIMEOUT_MS = 500L
 private val iconTaskThreadPool = ThreadPoolExecutor(0, 25, 1, TimeUnit.MINUTES, SynchronousQueue())
 
-private fun loadIconDrawableWithTimeout(
-    icon: Icon,
-    packageContext: Context,
-    targetSize: Int,
-): Drawable? {
+fun loadIconDrawableWithTimeout(icon: Icon, packageContext: Context, targetSize: Int): Drawable? {
     if (icon.type != Icon.TYPE_URI && icon.type != Icon.TYPE_URI_ADAPTIVE_BITMAP) {
         return icon.loadDrawable(packageContext)
     }
@@ -377,10 +419,10 @@ private fun loadIconDrawableWithTimeout(
     return result
 }
 
-/* internal */ class SmartActionInflaterImpl
+open class SmartActionInflaterImpl
 @Inject
 constructor(
-    private val constants: SmartReplyConstants,
+    protected val constants: SmartReplyConstants,
     private val activityStarter: ActivityStarter,
     private val smartReplyController: SmartReplyController,
     private val headsUpManager: HeadsUpManager,
@@ -394,39 +436,43 @@ constructor(
         action: Notification.Action,
         delayOnClickListener: Boolean,
         packageContext: Context,
-    ): Button =
-        (LayoutInflater.from(parent.context).inflate(R.layout.smart_action_button, parent, false)
-                as Button)
-            .apply {
-                text = action.title
+    ): Button {
+        val button =
+            LayoutInflater.from(parent.context)
+                .inflate(R.layout.notification_2025_smart_action_button, parent, false) as Button
 
-                // We received the Icon from the application - so use the Context of the application
-                // to
-                // reference icon resources.
-                val newIconSize =
-                    context.resources.getDimensionPixelSize(R.dimen.smart_action_button_icon_size)
-                val iconDrawable =
-                    loadIconDrawableWithTimeout(action.getIcon(), packageContext, newIconSize)
-                        ?: GradientDrawable()
-                iconDrawable.setBounds(0, 0, newIconSize, newIconSize)
-                // Add the action icon to the Smart Action button.
-                setCompoundDrawablesRelative(iconDrawable, null, null, null)
+        button.apply {
+            text = action.title
 
-                val onClickListener =
-                    View.OnClickListener {
-                        onSmartActionClick(entry, smartActions, actionIndex, action)
-                    }
-                setOnClickListener(
-                    if (delayOnClickListener)
-                        DelayedOnClickListener(onClickListener, constants.onClickInitDelay)
-                    else onClickListener
+            // We received the Icon from the application - so use the Context of the application
+            // to reference icon resources.
+            val iconSize =
+                context.resources.getDimensionPixelSize(
+                    R.dimen.notification_2025_smart_action_button_icon_size
                 )
+            val iconDrawable =
+                loadIconDrawableWithTimeout(action.getIcon(), packageContext, iconSize)
+                    ?: GradientDrawable()
+            iconDrawable.setBounds(0, 0, iconSize, iconSize)
+            // Add the action icon to the Smart Action button.
+            setCompoundDrawablesRelative(iconDrawable, null, null, null)
 
-                // Mark this as an Action button
-                (layoutParams as SmartReplyView.LayoutParams).mButtonType = SmartButtonType.ACTION
-            }
+            val onClickListener =
+                View.OnClickListener {
+                    onSmartActionClick(entry, smartActions, actionIndex, action)
+                }
+            setOnClickListener(
+                if (delayOnClickListener)
+                    DelayedOnClickListener(onClickListener, constants.onClickInitDelay)
+                else onClickListener
+            )
+            // Mark this as an Action button
+            (layoutParams as SmartReplyView.LayoutParams).mButtonType = SmartButtonType.ACTION
+        }
+        return button
+    }
 
-    private fun onSmartActionClick(
+    fun onSmartActionClick(
         entry: NotificationEntry,
         smartActions: SmartActions,
         actionIndex: Int,
@@ -470,10 +516,10 @@ interface SmartReplyInflater {
     ): Button
 }
 
-class SmartReplyInflaterImpl
+open class SmartReplyInflaterImpl
 @Inject
 constructor(
-    private val constants: SmartReplyConstants,
+    protected val constants: SmartReplyConstants,
     private val keyguardDismissUtil: KeyguardDismissUtil,
     private val remoteInputManager: NotificationRemoteInputManager,
     private val smartReplyController: SmartReplyController,
@@ -487,40 +533,42 @@ constructor(
         replyIndex: Int,
         choice: CharSequence,
         delayOnClickListener: Boolean,
-    ): Button =
-        (LayoutInflater.from(parent.context).inflate(R.layout.smart_reply_button, parent, false)
-                as Button)
-            .apply {
-                text = choice
-                val onClickListener =
-                    View.OnClickListener {
-                        onSmartReplyClick(entry, smartReplies, replyIndex, parent, this, choice)
-                    }
-                setOnClickListener(
-                    if (delayOnClickListener)
-                        DelayedOnClickListener(onClickListener, constants.onClickInitDelay)
-                    else onClickListener
-                )
-                accessibilityDelegate =
-                    object : View.AccessibilityDelegate() {
-                        override fun onInitializeAccessibilityNodeInfo(
-                            host: View,
-                            info: AccessibilityNodeInfo,
-                        ) {
-                            super.onInitializeAccessibilityNodeInfo(host, info)
-                            val label =
-                                parent.resources.getString(R.string.accessibility_send_smart_reply)
-                            val action =
-                                AccessibilityAction(AccessibilityNodeInfo.ACTION_CLICK, label)
-                            info.addAction(action)
-                        }
-                    }
-                // TODO: probably shouldn't do this here, bad API
-                // Mark this as a Reply button
-                (layoutParams as SmartReplyView.LayoutParams).mButtonType = SmartButtonType.REPLY
-            }
+    ): Button {
+        val button =
+            LayoutInflater.from(parent.context)
+                .inflate(R.layout.notification_2025_smart_reply_button, parent, false) as Button
 
-    private fun onSmartReplyClick(
+        button.apply {
+            text = choice
+
+            val onClickListener =
+                View.OnClickListener {
+                    onSmartReplyClick(entry, smartReplies, replyIndex, parent, this, choice)
+                }
+            setOnClickListener(
+                if (delayOnClickListener)
+                    DelayedOnClickListener(onClickListener, constants.onClickInitDelay)
+                else onClickListener
+            )
+            accessibilityDelegate =
+                object : View.AccessibilityDelegate() {
+                    override fun onInitializeAccessibilityNodeInfo(
+                        host: View,
+                        info: AccessibilityNodeInfo,
+                    ) {
+                        super.onInitializeAccessibilityNodeInfo(host, info)
+                        val label =
+                            parent.resources.getString(R.string.accessibility_send_smart_reply)
+                        val action = AccessibilityAction(AccessibilityNodeInfo.ACTION_CLICK, label)
+                        info.addAction(action)
+                    }
+                }
+            (layoutParams as SmartReplyView.LayoutParams).mButtonType = SmartButtonType.REPLY
+        }
+        return button
+    }
+
+    fun onSmartReplyClick(
         entry: NotificationEntry,
         smartReplies: SmartReplies,
         replyIndex: Int,
@@ -545,8 +593,8 @@ constructor(
                 smartReplyController.smartReplySent(
                     entry,
                     replyIndex,
-                    button.text,
-                    NotificationLogger.getNotificationLocation(entry).toMetricsEventEnum(),
+                    choice,
+                    getNotificationLocation(entry).toMetricsEventEnum(),
                     false, /* modifiedBeforeSending */
                 )
                 entry.setHasSentReply()
@@ -573,7 +621,7 @@ constructor(
             false // do not defer
         }
 
-    private fun createRemoteInputIntent(smartReplies: SmartReplies, choice: CharSequence): Intent {
+    internal fun createRemoteInputIntent(smartReplies: SmartReplies, choice: CharSequence): Intent {
         val results = Bundle()
         results.putString(smartReplies.remoteInput.resultKey, choice.toString())
         val intent = Intent().addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
@@ -586,7 +634,7 @@ constructor(
 /**
  * An OnClickListener wrapper that blocks the underlying OnClickListener for a given amount of time.
  */
-private class DelayedOnClickListener(
+class DelayedOnClickListener(
     private val mActualListener: View.OnClickListener,
     private val mInitDelayMs: Long,
 ) : View.OnClickListener {
@@ -608,11 +656,13 @@ private class DelayedOnClickListener(
 private const val TAG = "SmartReplyViewInflater"
 private val DEBUG = Log.isLoggable(TAG, Log.DEBUG)
 
-// convenience function that swaps parameter order so that lambda can be placed at the end
+// Convenience function that swaps parameter order so that lambda can be placed
+// at the end. Execute the dismiss action after the keyguard is gone to ensure the
+// dismissAction has the most updated unlock state of the device.
 private fun KeyguardDismissUtil.executeWhenUnlocked(
     requiresShadeOpen: Boolean,
     onDismissAction: () -> Boolean,
-) = executeWhenUnlocked(onDismissAction, requiresShadeOpen, false)
+) = executeWhenUnlocked(onDismissAction, requiresShadeOpen, /* afterKeyguardGone= */ true)
 
 // convenience function that swaps parameter order so that lambda can be placed at the end
 private fun ActivityStarter.startPendingIntentDismissingKeyguard(

@@ -20,7 +20,6 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.util.MathUtils;
 import android.util.TimeUtils;
 
@@ -30,11 +29,13 @@ import com.android.app.animation.Interpolators;
 import com.android.internal.policy.GestureNavigationSettingsObserver;
 import com.android.systemui.Dumpable;
 import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.shared.system.QuickStepContract;
 import com.android.systemui.statusbar.CommandQueue;
 import com.android.systemui.statusbar.CommandQueue.Callbacks;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
+import com.android.systemui.util.time.SystemClock;
 
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
@@ -84,6 +85,14 @@ public class LightBarTransitionsController implements Dumpable {
         }
 
         @Override
+        public void appTransitionFinished(int displayId) {
+            LightBarTransitionsController self = mSelf.get();
+            if (self != null) {
+                self.appTransitionFinished(displayId);
+            }
+        }
+
+        @Override
         public void onDozeAmountChanged(float linear, float eased) {
             LightBarTransitionsController self = mSelf.get();
             if (self != null) {
@@ -93,8 +102,9 @@ public class LightBarTransitionsController implements Dumpable {
     }
 
     private final Callback mCallback;
+    private final Handler mMainHandler;
+    private final SystemClock mSystemClock;
 
-    private final Handler mHandler;
     private final DarkIntensityApplier mApplier;
     private final KeyguardStateController mKeyguardStateController;
     private final StatusBarStateController mStatusBarStateController;
@@ -125,13 +135,16 @@ public class LightBarTransitionsController implements Dumpable {
     @AssistedInject
     public LightBarTransitionsController(
             Context context,
+            @Main Handler mainHandler,
             @Background Handler bgHandler,
             @Assisted DarkIntensityApplier applier,
+            SystemClock systemClock,
             CommandQueue commandQueue,
             KeyguardStateController keyguardStateController,
             StatusBarStateController statusBarStateController) {
         mApplier = applier;
-        mHandler = new Handler();
+        mMainHandler = mainHandler;
+        mSystemClock = systemClock;
         mKeyguardStateController = keyguardStateController;
         mStatusBarStateController = statusBarStateController;
         mCommandQueue = commandQueue;
@@ -142,9 +155,17 @@ public class LightBarTransitionsController implements Dumpable {
         mContext = context;
         mDisplayId = mContext.getDisplayId();
         mGestureNavigationSettingsObserver = new GestureNavigationSettingsObserver(
-                mHandler, bgHandler, mContext, this::onNavigationSettingsChanged);
+                mMainHandler, bgHandler, mContext, this::onNavigationSettingsChanged);
         mGestureNavigationSettingsObserver.register();
         onNavigationSettingsChanged();
+    }
+
+    boolean isTransitionPending() {
+        return mTransitionPending;
+    }
+
+    boolean isTintChangePending() {
+        return mTintChangePending;
     }
 
     /** Call to cleanup the LightBarTransitionsController when done with it. */
@@ -156,7 +177,7 @@ public class LightBarTransitionsController implements Dumpable {
 
     public void saveState(Bundle outState) {
         float intensity = mTintAnimator != null && mTintAnimator.isRunning()
-                ?  mNextDarkIntensity : mDarkIntensity;
+                ? mNextDarkIntensity : mDarkIntensity;
         outState.putFloat(EXTRA_DARK_INTENSITY, intensity);
     }
 
@@ -172,26 +193,15 @@ public class LightBarTransitionsController implements Dumpable {
         mTransitionPending = true;
     }
 
-    private void appTransitionCancelled(int displayId) {
-        if (mDisplayId != displayId) {
-            return;
-        }
-        if (mTransitionPending && mTintChangePending) {
-            mTintChangePending = false;
-            animateIconTint(mPendingDarkIntensity, 0 /* delay */,
-                    mApplier.getTintAnimationDuration());
-        }
-        mTransitionPending = false;
-    }
-
-    private void appTransitionStarting(int displayId, long startTime, long duration, boolean forced) {
+    private void appTransitionStarting(int displayId, long startTime, long duration,
+            boolean forced) {
         if (mDisplayId != displayId || mKeyguardStateController.isKeyguardGoingAway() && !forced) {
             return;
         }
         if (mTransitionPending && mTintChangePending) {
             mTintChangePending = false;
             animateIconTint(mPendingDarkIntensity,
-                    Math.max(0, startTime - SystemClock.uptimeMillis()),
+                    Math.max(0, startTime - mSystemClock.uptimeMillis()),
                     duration);
 
         } else if (mTransitionPending) {
@@ -201,8 +211,39 @@ public class LightBarTransitionsController implements Dumpable {
             mTransitionDeferring = true;
             mTransitionDeferringStartTime = startTime;
             mTransitionDeferringDuration = duration;
-            mHandler.removeCallbacks(mTransitionDeferringDoneRunnable);
-            mHandler.postAtTime(mTransitionDeferringDoneRunnable, startTime);
+            mMainHandler.removeCallbacks(mTransitionDeferringDoneRunnable);
+            mMainHandler.postAtTime(mTransitionDeferringDoneRunnable, startTime);
+        }
+        mTransitionPending = false;
+    }
+
+    private void appTransitionCancelled(int displayId) {
+        if (mDisplayId != displayId) {
+            return;
+        }
+        checkForPendingTransitions();
+    }
+
+    private void appTransitionFinished(int displayId) {
+        if (mDisplayId != displayId) {
+            return;
+        }
+
+        checkForPendingTransitions();
+    }
+
+    /**
+     * In the case where [appTransitionStarting] returns early (due to the `forced = false`) boolean
+     * and a keyguard transition in progress, we want to check for any pending transitions either
+     * on app transition canceled or finished and make sure we run them
+     *
+     * See b/457816397
+     */
+    private void checkForPendingTransitions() {
+        if (mTransitionPending && mTintChangePending) {
+            mTintChangePending = false;
+            animateIconTint(mPendingDarkIntensity, 0 /* delay */,
+                    mApplier.getTintAnimationDuration());
         }
         mTransitionPending = false;
     }
@@ -214,17 +255,18 @@ public class LightBarTransitionsController implements Dumpable {
     }
 
     public void setIconsDark(boolean dark, boolean animate) {
+        float tint = dark ? 1.0f : 0.0f;
         if (!animate) {
-            setIconTintInternal(dark ? 1.0f : 0.0f);
-            mNextDarkIntensity = dark ? 1.0f : 0.0f;
+            setIconTintInternal(tint);
+            mNextDarkIntensity = tint;
         } else if (mTransitionPending) {
-            deferIconTintChange(dark ? 1.0f : 0.0f);
+            deferIconTintChange(tint);
         } else if (mTransitionDeferring) {
-            animateIconTint(dark ? 1.0f : 0.0f,
-                    Math.max(0, mTransitionDeferringStartTime - SystemClock.uptimeMillis()),
+            animateIconTint(tint,
+                    Math.max(0, mTransitionDeferringStartTime - mSystemClock.uptimeMillis()),
                     mTransitionDeferringDuration);
         } else {
-            animateIconTint(dark ? 1.0f : 0.0f, 0 /* delay */, mApplier.getTintAnimationDuration());
+            animateIconTint(tint, 0 /* delay */, mApplier.getTintAnimationDuration());
         }
     }
 

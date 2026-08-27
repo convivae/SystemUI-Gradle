@@ -19,11 +19,10 @@ package com.android.systemui.statusbar.window
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager
+import android.view.WindowManager
 import com.android.systemui.animation.ActivityTransitionAnimator
-import com.android.systemui.fragments.FragmentHostManager
 import com.android.systemui.statusbar.data.repository.StatusBarConfigurationController
-import com.android.systemui.statusbar.phone.StatusBarContentInsetsProvider
+import com.android.systemui.statusbar.layout.StatusBarContentInsetsProvider
 import java.util.Optional
 
 /** Encapsulates all logic for the status bar window state management. */
@@ -45,9 +44,6 @@ interface StatusBarWindowController {
     /** Returns the status bar window's background view. */
     val backgroundView: View
 
-    /** Returns a fragment host manager for the status bar window view. */
-    val fragmentHostManager: FragmentHostManager
-
     /**
      * Provides an updated animation controller if we're animating a view in the status bar.
      *
@@ -66,8 +62,12 @@ interface StatusBarWindowController {
         animationController: ActivityTransitionAnimator.Controller,
     ): Optional<ActivityTransitionAnimator.Controller>
 
-    /** Set force status bar visible. */
-    fun setForceStatusBarVisible(forceStatusBarVisible: Boolean)
+    /**
+     * Set force status bar visible.
+     *
+     * @param source the class that requested the new visibility, used for logging.
+     */
+    fun setForceStatusBarVisible(forceStatusBarVisible: Boolean, source: String)
 
     /**
      * Sets whether an ongoing process requires the status bar to be forced visible.
@@ -76,17 +76,20 @@ interface StatusBarWindowController {
      * process **takes priority**. For example, if {@link this#setForceStatusBarVisible} is set to
      * false but this method is set to true, then the status bar **will** be visible.
      *
+     * @param source the class that requested the new visibility, used for logging.
+     *
      * TODO(b/195839150): We should likely merge this method and {@link
      *   this#setForceStatusBarVisible} together and use some sort of ranking system instead.
      */
-    fun setOngoingProcessRequiresStatusBarVisible(visible: Boolean)
+    fun setOngoingProcessRequiresStatusBarVisible(visible: Boolean, source: String)
 
     fun interface Factory {
         fun create(
             context: Context,
-            viewCaptureAwareWindowManager: ViewCaptureAwareWindowManager,
+            windowManager: WindowManager,
             statusBarConfigurationController: StatusBarConfigurationController,
             contentInsetsProvider: StatusBarContentInsetsProvider,
+            displayId: Int,
         ): StatusBarWindowController
     }
 }

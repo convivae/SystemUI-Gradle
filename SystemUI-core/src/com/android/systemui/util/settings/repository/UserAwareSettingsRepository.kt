@@ -22,7 +22,6 @@ import com.android.systemui.util.settings.SettingsProxyExt.observerFlow
 import com.android.systemui.util.settings.UserSettingsProxy
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -34,10 +33,9 @@ import kotlinx.coroutines.withContext
 /**
  * Repository for observing values of a [UserSettingsProxy], for the currently active user. That
  * means that when the user is switched and the new user has a different value, the flow will emit
- * the new value.
+ * the new value. For any system that tracks the desired user internally (e.g. the Quick Settings
+ * tiles system), use a [SettingsForUserRepository] instead.
  */
-// TODO: b/377244768 - Make internal when UserAwareSecureSettingsRepository can be made internal.
-@OptIn(ExperimentalCoroutinesApi::class)
 abstract class UserAwareSettingsRepository(
     private val userSettings: UserSettingsProxy,
     private val userRepository: UserRepository,
@@ -66,6 +64,16 @@ abstract class UserAwareSettingsRepository(
             .flowOn(backgroundDispatcher)
     }
 
+    fun stringSetting(name: String, defaultValue: String?): Flow<String?> =
+        userRepository.selectedUserInfo
+            .flatMapLatest { userInfo ->
+                settingObserver(name, userInfo.id) {
+                    userSettings.getStringForUser(name, defaultValue, userInfo.id)
+                }
+            }
+            .distinctUntilChanged()
+            .flowOn(backgroundDispatcher)
+
     private fun <T> settingObserver(name: String, userId: Int, settingsReader: () -> T): Flow<T> {
         return userSettings
             .observerFlow(userId, name)
@@ -88,6 +96,12 @@ abstract class UserAwareSettingsRepository(
     suspend fun setBoolean(name: String, value: Boolean) {
         withContext(bgContext) {
             userSettings.putBoolForUser(name, value, userRepository.getSelectedUserInfo().id)
+        }
+    }
+
+    suspend fun setString(name: String, value: String?) {
+        withContext(bgContext) {
+            userSettings.putStringForUser(name, value, userRepository.getSelectedUserInfo().id)
         }
     }
 

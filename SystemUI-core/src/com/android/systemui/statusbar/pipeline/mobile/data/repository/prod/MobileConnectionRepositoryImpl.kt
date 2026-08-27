@@ -44,8 +44,6 @@ import android.telephony.TelephonyManager.UNKNOWN_CARRIER_ID
 import android.telephony.satellite.NtnSignalStrength
 import com.android.settingslib.Utils
 import com.android.systemui.broadcast.BroadcastDispatcher
-import com.android.systemui.common.coroutine.ConflatedCallbackFlow.conflatedCallbackFlow
-import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.flags.FeatureFlagsClassic
 import com.android.systemui.flags.Flags.ROAMING_INDICATOR_VIA_DISPLAY_INFO
@@ -62,14 +60,15 @@ import com.android.systemui.statusbar.pipeline.mobile.data.model.toDataConnectio
 import com.android.systemui.statusbar.pipeline.mobile.data.model.toNetworkNameModel
 import com.android.systemui.statusbar.pipeline.mobile.data.repository.CarrierConfigRepository
 import com.android.systemui.statusbar.pipeline.mobile.data.repository.MobileConnectionRepository
-import com.android.systemui.statusbar.pipeline.mobile.data.repository.MobileConnectionRepository.Companion.DEFAULT_NUM_LEVELS
+import com.android.systemui.statusbar.pipeline.mobile.data.repository.MobileConnectionRepository.Companion.createNumberOfLevelsFlow
 import com.android.systemui.statusbar.pipeline.mobile.util.MobileMappingsProxy
 import com.android.systemui.statusbar.pipeline.shared.data.model.DataActivityModel
 import com.android.systemui.statusbar.pipeline.shared.data.model.toMobileDataActivityModel
+import com.android.systemui.util.kotlin.mapDirect
+import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -81,7 +80,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.scan
@@ -93,7 +91,6 @@ import kotlinx.coroutines.withContext
  * connection -- see [CarrierMergedConnectionRepository]).
  */
 @Suppress("EXPERIMENTAL_IS_NOT_ENABLED")
-@OptIn(ExperimentalCoroutinesApi::class)
 class MobileConnectionRepositoryImpl(
     override val subId: Int,
     private val context: Context,
@@ -144,7 +141,7 @@ class MobileConnectionRepositoryImpl(
                     object :
                         TelephonyCallback(),
                         TelephonyCallback.CarrierNetworkListener,
-                        TelephonyCallback.CarrierRoamingNtnModeListener,
+                        TelephonyCallback.CarrierRoamingNtnListener,
                         TelephonyCallback.DataActivityListener,
                         TelephonyCallback.DataConnectionStateListener,
                         TelephonyCallback.DataEnabledListener,
@@ -158,7 +155,7 @@ class MobileConnectionRepositoryImpl(
                         }
 
                         override fun onCarrierRoamingNtnModeChanged(active: Boolean) {
-                            logger.logOnCarrierRoamingNtnModeChanged(active)
+                            logger.logOnCarrierRoamingNtnModeChanged(active, subId)
                             trySend(CallbackEvent.OnCarrierRoamingNtnModeChanged(active))
                         }
 
@@ -200,7 +197,7 @@ class MobileConnectionRepositoryImpl(
                         override fun onCarrierRoamingNtnSignalStrengthChanged(
                             signalStrength: NtnSignalStrength
                         ) {
-                            logger.logNtnSignalStrengthChanged(signalStrength)
+                            logger.logNtnSignalStrengthChanged(signalStrength, subId)
                             trySend(
                                 CallbackEvent.OnCarrierRoamingNtnSignalStrengthChanged(
                                     signalStrength
@@ -330,16 +327,7 @@ class MobileConnectionRepositoryImpl(
     override val inflateSignalStrength = systemUiCarrierConfig.shouldInflateSignalStrength
     override val allowNetworkSliceIndicator = systemUiCarrierConfig.allowNetworkSliceIndicator
 
-    override val numberOfLevels =
-        inflateSignalStrength
-            .map { shouldInflate ->
-                if (shouldInflate) {
-                    DEFAULT_NUM_LEVELS + 1
-                } else {
-                    DEFAULT_NUM_LEVELS
-                }
-            }
-            .stateIn(scope, SharingStarted.WhileSubscribed(), DEFAULT_NUM_LEVELS)
+    override val numberOfLevels = createNumberOfLevelsFlow(scope, inflateSignalStrength)
 
     override val carrierName =
         subscriptionModel
@@ -358,7 +346,7 @@ class MobileConnectionRepositoryImpl(
 
     override val cdmaRoaming: StateFlow<Boolean> =
         telephonyPollingEvent
-            .mapLatest {
+            .mapDirect {
                 try {
                     val cdmaEri = telephonyManager.cdmaEnhancedRoamingIndicatorDisplayNumber
                     cdmaEri == ERI_ON || cdmaEri == ERI_FLASH
@@ -400,17 +388,19 @@ class MobileConnectionRepositoryImpl(
                 val receiver =
                     object : BroadcastReceiver() {
                         override fun onReceive(context: Context, intent: Intent) {
-                            if (
+                            val intentSubId =
                                 intent.getIntExtra(
                                     EXTRA_SUBSCRIPTION_INDEX,
                                     INVALID_SUBSCRIPTION_ID,
-                                ) == subId
-                            ) {
+                                )
+                            if (intentSubId == subId) {
                                 logger.logServiceProvidersUpdatedBroadcast(intent)
                                 trySend(
                                     intent.toNetworkNameModel(networkNameSeparator)
                                         ?: defaultNetworkName
                                 )
+                            } else {
+                                logger.logServiceProvidersUpdatedBroadcastSkipped(subId, intent)
                             }
                         }
                     }
@@ -431,6 +421,10 @@ class MobileConnectionRepositoryImpl(
             .mapNotNull { it.onDataEnabledChanged }
             .map { it.enabled }
             .stateIn(scope, SharingStarted.WhileSubscribed(), initial)
+    }
+
+    override fun setDataEnabled(enabled: Boolean) {
+        telephonyManager.setDataEnabledForReason(TelephonyManager.DATA_ENABLED_REASON_USER, enabled)
     }
 
     override suspend fun isInEcmMode(): Boolean =
@@ -489,7 +483,7 @@ class MobileConnectionRepositoryImpl(
         private val mobileMappingsProxy: MobileMappingsProxy,
         private val flags: FeatureFlagsClassic,
         @Background private val bgDispatcher: CoroutineDispatcher,
-        @Application private val scope: CoroutineScope,
+        @Background private val scope: CoroutineScope,
     ) {
         fun build(
             subId: Int,
@@ -545,6 +539,10 @@ sealed interface CallbackEvent {
 
     data class OnCarrierRoamingNtnSignalStrengthChanged(val signalStrength: NtnSignalStrength) :
         CallbackEvent
+
+    data class OnCallBackModeStarted(val type: Int) : CallbackEvent
+
+    data class OnCallBackModeStopped(val type: Int) : CallbackEvent
 }
 
 /**
@@ -563,6 +561,8 @@ data class TelephonyCallbackState(
     val onCarrierRoamingNtnSignalStrengthChanged:
         CallbackEvent.OnCarrierRoamingNtnSignalStrengthChanged? =
         null,
+    val addedCallbackModes: Set<Int> = emptySet(),
+    val removedCallbackModes: Set<Int> = emptySet(),
 ) {
     fun applyEvent(event: CallbackEvent): TelephonyCallbackState {
         return when (event) {
@@ -581,6 +581,37 @@ data class TelephonyCallbackState(
             is CallbackEvent.OnSignalStrengthChanged -> copy(onSignalStrengthChanged = event)
             is CallbackEvent.OnCarrierRoamingNtnSignalStrengthChanged ->
                 copy(onCarrierRoamingNtnSignalStrengthChanged = event)
+            is CallbackEvent.OnCallBackModeStarted -> {
+                copy(
+                    addedCallbackModes =
+                        if (event.type !in removedCallbackModes) {
+                            addedCallbackModes + event.type
+                        } else {
+                            addedCallbackModes
+                        },
+                    removedCallbackModes =
+                        if (event.type !in addedCallbackModes) {
+                            removedCallbackModes - event.type
+                        } else {
+                            removedCallbackModes
+                        },
+                )
+            }
+            is CallbackEvent.OnCallBackModeStopped ->
+                copy(
+                    addedCallbackModes =
+                        if (event.type !in removedCallbackModes) {
+                            addedCallbackModes - event.type
+                        } else {
+                            addedCallbackModes
+                        },
+                    removedCallbackModes =
+                        if (event.type !in addedCallbackModes) {
+                            removedCallbackModes + event.type
+                        } else {
+                            removedCallbackModes
+                        },
+                )
         }
     }
 }

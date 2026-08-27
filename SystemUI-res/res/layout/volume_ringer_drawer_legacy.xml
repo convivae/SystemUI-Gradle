@@ -67,8 +67,8 @@
                     android:layout_width="@dimen/volume_ringer_drawer_icon_size"
                     android:layout_height="@dimen/volume_ringer_drawer_icon_size"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_volume_ringer_vibrate"
-                    android:tint="?android:attr/textColorPrimary" />
+                    android:src="@drawable/ic_legacy_volume_ringer_vibrate"
+                    android:tint="@color/materialColorOnSurface" />
 
             </FrameLayout>
 
@@ -85,8 +85,8 @@
                     android:layout_width="@dimen/volume_ringer_drawer_icon_size"
                     android:layout_height="@dimen/volume_ringer_drawer_icon_size"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_speaker_mute"
-                    android:tint="?android:attr/textColorPrimary" />
+                    android:src="@drawable/ic_legacy_speaker_mute"
+                    android:tint="@color/materialColorOnSurface" />
 
             </FrameLayout>
 
@@ -103,8 +103,8 @@
                     android:layout_width="@dimen/volume_ringer_drawer_icon_size"
                     android:layout_height="@dimen/volume_ringer_drawer_icon_size"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_speaker_on"
-                    android:tint="?android:attr/textColorPrimary" />
+                    android:src="@drawable/ic_legacy_speaker_on"
+                    android:tint="@color/materialColorOnSurface" />
 
             </FrameLayout>
 

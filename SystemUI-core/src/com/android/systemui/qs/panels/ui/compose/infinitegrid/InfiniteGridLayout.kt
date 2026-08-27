@@ -16,35 +16,44 @@
 
 package com.android.systemui.qs.panels.ui.compose.infinitegrid
 
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.util.fastMap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.android.compose.animation.scene.SceneScope
+import com.android.compose.animation.scene.ContentScope
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.grid.ui.compose.VerticalSpannedGrid
-import com.android.systemui.haptics.msdl.qs.TileHapticsViewModelFactoryProvider
+import com.android.systemui.haptics.msdl.qs.TileHapticsViewModel
 import com.android.systemui.lifecycle.rememberViewModel
-import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager.Companion.LOCATION_QS
 import com.android.systemui.qs.panels.shared.model.SizedTileImpl
+import com.android.systemui.qs.panels.ui.compose.EditTileListState
 import com.android.systemui.qs.panels.ui.compose.PaginatableGridLayout
+import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.compose.bounceableInfo
-import com.android.systemui.qs.panels.ui.compose.rememberEditListState
 import com.android.systemui.qs.panels.ui.viewmodel.BounceableTileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.DetailsViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.EditTileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.IconTilesViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.InfiniteGridViewModel
+import com.android.systemui.qs.panels.ui.viewmodel.TextFeedbackContentViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.pipeline.shared.TileSpec
-import com.android.systemui.qs.shared.ui.ElementKeys.toElementKey
+import com.android.systemui.qs.shared.ui.QuickSettings.Elements.toElementKey
 import com.android.systemui.res.R
+import com.android.systemui.shade.shared.flag.DualShadeFlag
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @SysUISingleton
 class InfiniteGridLayout
@@ -52,59 +61,80 @@ class InfiniteGridLayout
 constructor(
     private val detailsViewModel: DetailsViewModel,
     private val iconTilesViewModel: IconTilesViewModel,
-    private val viewModelFactory: InfiniteGridViewModel.Factory,
-    private val tileHapticsViewModelFactoryProvider: TileHapticsViewModelFactoryProvider,
+    override val viewModelFactory: InfiniteGridViewModel.Factory,
+    private val textFeedbackContentViewModelFactory: TextFeedbackContentViewModel.Factory,
+    private val tileHapticsViewModelFactory: TileHapticsViewModel.Factory,
 ) : PaginatableGridLayout {
 
     @Composable
-    override fun SceneScope.TileGrid(tiles: List<TileViewModel>, modifier: Modifier) {
-        DisposableEffect(tiles) {
-            val token = Any()
-            tiles.forEach { it.startListening(token) }
-            onDispose { tiles.forEach { it.stopListening(token) } }
-        }
+    override fun ContentScope.TileGrid(
+        tiles: List<TileViewModel>,
+        modifier: Modifier,
+        listening: () -> Boolean,
+        enableRevealEffect: Boolean,
+    ) {
         val viewModel =
             rememberViewModel(traceName = "InfiniteGridLayout.TileGrid") {
                 viewModelFactory.create()
             }
-        val iconTilesViewModel =
-            rememberViewModel(traceName = "InfiniteGridLayout.TileGrid") {
-                viewModel.dynamicIconTilesViewModelFactory.create()
-            }
-        val columnsWithMediaViewModel =
-            rememberViewModel(traceName = "InfiniteGridLAyout.TileGrid") {
-                viewModel.columnsWithMediaViewModelFactory.create(LOCATION_QS)
+
+        val context = LocalContext.current
+        val textFeedbackViewModel =
+            rememberViewModel(traceName = "InfiniteGridLayout.TileGrid", key = context) {
+                textFeedbackContentViewModelFactory.create(context)
             }
 
-        val columns = columnsWithMediaViewModel.columns
-        val largeTilesSpan by iconTilesViewModel.largeTilesSpanState
-        val sizedTiles = tiles.map { SizedTileImpl(it, it.spec.width(largeTilesSpan)) }
-        val bounceables =
-            remember(sizedTiles) { List(sizedTiles.size) { BounceableTileViewModel() } }
+        val columns = viewModel.columnsWithMediaViewModel.columns
+        val largeTilesSpan = viewModel.columnsWithMediaViewModel.largeSpan
+        val largeTiles by viewModel.iconTilesViewModel.largeTilesState
+        // Tiles or largeTiles may be updated while this is composed, so listen to any changes
+        val sizedTiles =
+            remember(tiles, largeTiles, largeTilesSpan) {
+                tiles.map {
+                    SizedTileImpl(it, if (largeTiles.contains(it.spec)) largeTilesSpan else 1)
+                }
+            }
         val squishiness by viewModel.squishinessViewModel.squishiness.collectAsStateWithLifecycle()
         val scope = rememberCoroutineScope()
-        var cellIndex = 0
 
+        val bounceables =
+            remember(sizedTiles) { List(sizedTiles.size) { BounceableTileViewModel() } }
+        val spans by remember(sizedTiles) { derivedStateOf { sizedTiles.fastMap { it.width } } }
         VerticalSpannedGrid(
             columns = columns,
             columnSpacing = dimensionResource(R.dimen.qs_tile_margin_horizontal),
             rowSpacing = dimensionResource(R.dimen.qs_tile_margin_vertical),
-            spans = sizedTiles.fastMap { it.width },
-        ) { spanIndex ->
+            spans = spans,
+            keys = { sizedTiles[it].tile.spec },
+            modifier = modifier,
+        ) { spanIndex, column, isFirstInColumn, isLastInColumn ->
             val it = sizedTiles[spanIndex]
-            val column = cellIndex % columns
-            cellIndex += it.width
-            Tile(
-                tile = it.tile,
-                iconOnly = iconTilesViewModel.isIconTile(it.tile.spec),
-                modifier = Modifier.element(it.tile.spec.toElementKey(spanIndex)),
-                squishiness = { squishiness },
-                tileHapticsViewModelFactoryProvider = tileHapticsViewModelFactoryProvider,
-                coroutineScope = scope,
-                bounceableInfo = bounceables.bounceableInfo(it, spanIndex, column, columns),
-                detailsViewModel = detailsViewModel,
-            )
+
+            Element(it.tile.spec.toElementKey(), Modifier) {
+                Tile(
+                    tile = it.tile,
+                    iconOnly = iconTilesViewModel.isIconTile(it.tile.spec),
+                    squishiness = { squishiness },
+                    tileHapticsViewModelFactory = tileHapticsViewModelFactory,
+                    coroutineScope = scope,
+                    bounceableInfo =
+                        bounceables.bounceableInfo(
+                            it,
+                            index = spanIndex,
+                            column = column,
+                            columns = columns,
+                            isFirstInRow = isFirstInColumn,
+                            isLastInRow = isLastInColumn,
+                        ),
+                    detailsViewModel = detailsViewModel,
+                    isVisible = listening,
+                    requestToggleTextFeedback = textFeedbackViewModel::requestShowFeedback,
+                    enableRevealEffect = enableRevealEffect,
+                )
+            }
         }
+
+        TileListener(tiles, listening)
     }
 
     @Composable
@@ -120,61 +150,89 @@ constructor(
             rememberViewModel(traceName = "InfiniteGridLayout.EditTileGrid") {
                 viewModelFactory.create()
             }
-        val iconTilesViewModel =
-            rememberViewModel(traceName = "InfiniteGridLayout.EditTileGrid") {
-                viewModel.dynamicIconTilesViewModelFactory.create()
-            }
         val columnsViewModel =
             rememberViewModel(traceName = "InfiniteGridLayout.EditTileGrid") {
                 viewModel.columnsWithMediaViewModelFactory.createWithoutMediaTracking()
             }
-        val columns = columnsViewModel.columns
-        val largeTilesSpan by iconTilesViewModel.largeTilesSpanState
-        val largeTiles by iconTilesViewModel.largeTiles.collectAsStateWithLifecycle()
+        val snapshotViewModel =
+            rememberViewModel("InfiniteGridLayout.EditTileGrid") {
+                viewModel.snapshotViewModelFactory.create()
+            }
+        val topBarActionsViewModel =
+            rememberViewModel("InfiniteGridLayout.EditTileGrid") {
+                viewModel.editTopBarActionsViewModelFactory.create()
+            }
+        val scrollState = rememberScrollState()
+        val coroutineScope = rememberCoroutineScope()
+        val dialogDelegate =
+            rememberViewModel("InfiniteGridLayout.EditTileGrid") {
+                viewModel.resetDialogDelegateFactory.create {
+                    // Clear the stack of snapshots on reset
+                    snapshotViewModel.clearStack()
 
-        // Non-current tiles should always be displayed as icon tiles.
-        val sizedTiles =
-            remember(tiles, largeTiles, largeTilesSpan) {
-                tiles.map {
-                    SizedTileImpl(
-                        it,
-                        if (!it.isCurrent || !largeTiles.contains(it.tileSpec)) 1
-                        else largeTilesSpan,
-                    )
+                    // Automatically scroll to the top on reset
+                    coroutineScope.launch { scrollState.animateScrollTo(0) }
                 }
             }
+        val showDualShadeSetting =
+            DualShadeFlag.isEnabled &&
+                LocalResources.current.getBoolean(
+                    com.android.settingslib.R.bool.config_useDualShadeSetting
+                )
+        val actions =
+            remember(topBarActionsViewModel, showDualShadeSetting) {
+                topBarActionsViewModel.actions(showDualShadeSetting).toMutableStateList()
+            }
+        val columns = columnsViewModel.columns
+        val largeTilesSpan = columnsViewModel.largeSpan
+        val largeTiles by viewModel.iconTilesViewModel.largeTilesState
 
-        val (currentTiles, otherTiles) = sizedTiles.partition { it.tile.isCurrent }
-        val currentListState = rememberEditListState(currentTiles, columns, largeTilesSpan)
+        val currentTiles by rememberUpdatedState(tiles.filter { it.isCurrent })
+        val listState =
+            remember(columns, largeTilesSpan) {
+                EditTileListState(
+                    currentTiles,
+                    largeTiles,
+                    columns = columns,
+                    largeTilesSpan = largeTilesSpan,
+                )
+            }
+        LaunchedEffect(currentTiles, largeTiles) { listState.updateTiles(currentTiles, largeTiles) }
+
         DefaultEditTileGrid(
-            listState = currentListState,
-            otherTiles = otherTiles,
-            columns = columns,
+            listState = listState,
+            allTiles = tiles,
             modifier = modifier,
-            onRemoveTile = onRemoveTile,
-            onSetTiles = onSetTiles,
-            onResize = iconTilesViewModel::resize,
+            scrollState = scrollState,
+            snapshotViewModel = snapshotViewModel,
             onStopEditing = onStopEditing,
-            onReset = viewModel::showResetDialog,
-            largeTilesSpan = largeTilesSpan,
-        )
-    }
+            topBarActions = actions,
+        ) { action ->
+            // Opening the dialog doesn't require a snapshot
+            if (action != EditAction.ResetGrid) {
+                snapshotViewModel.takeSnapshot(currentTiles.map { it.tileSpec }, largeTiles)
+            }
 
-    override fun splitIntoPages(
-        tiles: List<TileViewModel>,
-        rows: Int,
-        columns: Int,
-    ): List<List<TileViewModel>> {
-
-        return PaginatableGridLayout.splitInRows(
-                tiles.map { SizedTileImpl(it, it.spec.width()) },
-                columns,
-            )
-            .chunked(rows)
-            .map { it.flatten().map { it.tile } }
-    }
-
-    private fun TileSpec.width(largeSize: Int = iconTilesViewModel.largeTilesSpan.value): Int {
-        return if (iconTilesViewModel.isIconTile(this)) 1 else largeSize
+            when (action) {
+                is EditAction.AddTile -> {
+                    onAddTile(action.tileSpec, listState.tileSpecs().size)
+                }
+                is EditAction.InsertTile -> {
+                    onAddTile(action.tileSpec, action.position)
+                }
+                is EditAction.RemoveTile -> {
+                    onRemoveTile(action.tileSpec)
+                }
+                EditAction.ResetGrid -> {
+                    dialogDelegate.showDialog()
+                }
+                is EditAction.ResizeTile -> {
+                    iconTilesViewModel.resize(action.tileSpec, action.toIcon)
+                }
+                is EditAction.SetTiles -> {
+                    onSetTiles(action.tileSpecs)
+                }
+            }
+        }
     }
 }

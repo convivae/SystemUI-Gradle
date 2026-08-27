@@ -28,12 +28,15 @@ import android.graphics.Insets;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.view.DisplayCutout;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
 
 import androidx.annotation.DimenRes;
 
+import com.android.internal.annotations.VisibleForTesting;
+import com.android.systemui.Flags;
 import com.android.systemui.res.R;
 
 import java.lang.annotation.Retention;
@@ -42,7 +45,7 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Provides the layout resources information of the {@link MenuView}.
  */
-class MenuViewAppearance {
+public class MenuViewAppearance {
     private final WindowManager mWindowManager;
     private final Resources mRes;
     private final Position mPercentagePosition = new Position(/* percentageX= */
@@ -57,6 +60,8 @@ class MenuViewAppearance {
     private int mLargePadding;
     private int mSmallIconSize;
     private int mLargeIconSize;
+    private int mSmallBadgeSize;
+    private int mLargeBadgeSize;
     private int mSmallSingleRadius;
     private int mSmallMultipleRadius;
     private int mLargeSingleRadius;
@@ -97,6 +102,12 @@ class MenuViewAppearance {
                 mRes.getDimensionPixelSize(R.dimen.accessibility_floating_menu_small_width_height);
         mLargeIconSize =
                 mRes.getDimensionPixelSize(R.dimen.accessibility_floating_menu_large_width_height);
+        mSmallBadgeSize =
+                mRes.getDimensionPixelSize(
+                        R.dimen.accessibility_floating_menu_small_badge_width_height);
+        mLargeBadgeSize =
+                mRes.getDimensionPixelSize(
+                        R.dimen.accessibility_floating_menu_large_badge_width_height);
         mSmallSingleRadius =
                 mRes.getDimensionPixelSize(R.dimen.accessibility_floating_menu_small_single_radius);
         mSmallMultipleRadius = mRes.getDimensionPixelSize(
@@ -211,6 +222,10 @@ class MenuViewAppearance {
         return mSizeType == SMALL ? mSmallIconSize : mLargeIconSize;
     }
 
+    int getBadgeIconSize() {
+        return mSizeType == SMALL ? mSmallBadgeSize : mLargeBadgeSize;
+    }
+
     private int getMenuMargin() {
         return mMargin;
     }
@@ -279,7 +294,7 @@ class MenuViewAppearance {
         final WindowMetrics windowMetrics = mWindowManager.getCurrentWindowMetrics();
         final WindowInsets windowInsets = windowMetrics.getWindowInsets();
         final Insets insets = windowInsets.getInsetsIgnoringVisibility(
-                WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                WindowInsets.Type.systemBars());
 
         final Rect bounds = new Rect(windowMetrics.getBounds());
         bounds.left += insets.left;
@@ -290,11 +305,72 @@ class MenuViewAppearance {
         return bounds;
     }
 
+    DisplayCutout getDisplayCutout() {
+        return mWindowManager.getCurrentWindowMetrics().getWindowInsets().getDisplayCutout();
+    }
+
+    float avoidVerticalDisplayCutout(float y, Rect bounds, Rect cutout) {
+        if (Flags.floatingMenuAdjustCutoutAvoidance() && cutout.isEmpty()) {
+            // Quick return if no cutout
+            return y;
+        }
+        int menuHeight = calculateActualMenuHeight();
+        return avoidVerticalDisplayCutout(y, menuHeight, bounds, cutout);
+    }
+
+    @VisibleForTesting
+    public static float avoidVerticalDisplayCutout(
+            float y, float menuHeight, Rect bounds, Rect cutout) {
+        if (Flags.floatingMenuAdjustCutoutAvoidance()) {
+            if (cutout.top > y + menuHeight * 0.5f || cutout.bottom < y - menuHeight * 0.5f) {
+                return y;
+            }
+        } else {
+            if (cutout.top > y + menuHeight || cutout.bottom < y) {
+                return clampVerticalPosition(y, menuHeight, bounds.top, bounds.bottom);
+            }
+        }
+
+        boolean topAvailable = cutout.top - bounds.top >= menuHeight;
+        boolean bottomAvailable = bounds.bottom - cutout.bottom >= menuHeight;
+        boolean topOrBottom;
+        if (!topAvailable && !bottomAvailable) {
+            return (Flags.floatingMenuAdjustCutoutAvoidance())
+                    ? y
+                    : clampVerticalPosition(y, menuHeight, bounds.top, bounds.bottom);
+        } else if (topAvailable && !bottomAvailable) {
+            topOrBottom = true;
+        } else if (!topAvailable) {
+            topOrBottom = false;
+        } else {
+            topOrBottom = y + menuHeight * 0.5f < cutout.centerY();
+        }
+
+        if (Flags.floatingMenuAdjustCutoutAvoidance()) {
+            return (topOrBottom) ? cutout.top - menuHeight * 0.5f
+                    : cutout.bottom + menuHeight * 0.5f;
+        } else {
+            float finalPosition = (topOrBottom) ? cutout.top - menuHeight : cutout.bottom;
+            return clampVerticalPosition(finalPosition, menuHeight, bounds.top, bounds.bottom);
+        }
+    }
+
+    private static float clampVerticalPosition(
+            float position, float height, float min, float max) {
+        position = Float.max(min + height / 2, position);
+        position = Float.min(max - height / 2, position);
+        return position;
+    }
+
     boolean isMenuOnLeftSide() {
         return mPercentagePosition.getPercentageX() < 0.5f;
     }
 
     private int calculateActualMenuHeight() {
+        if (Flags.floatingMenuUniformPadding()) {
+            return (getMenuPadding() * 2 + getMenuIconSize()) * mTargetFeaturesSize;
+        }
+
         final int menuPadding = getMenuPadding();
 
         return (menuPadding + getMenuIconSize()) * mTargetFeaturesSize + menuPadding;

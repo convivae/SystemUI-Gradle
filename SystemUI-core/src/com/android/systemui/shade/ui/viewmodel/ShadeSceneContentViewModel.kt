@@ -14,37 +14,45 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.android.systemui.shade.ui.viewmodel
 
+import androidx.annotation.FloatRange
 import androidx.lifecycle.LifecycleOwner
+import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.compose.animation.scene.content.state.TransitionState
+import com.android.systemui.Flags
+import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor
-import com.android.systemui.lifecycle.ExclusiveActivatable
+import com.android.systemui.keyguard.ui.transitions.BlurConfig
+import com.android.systemui.lifecycle.HydratedActivatable
 import com.android.systemui.media.controls.domain.pipeline.interactor.MediaCarouselInteractor
+import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager.Companion.LOCATION_QQS
+import com.android.systemui.media.remedia.ui.compose.MediaUiBehavior
+import com.android.systemui.media.remedia.ui.viewmodel.MediaCarouselVisibility
+import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
 import com.android.systemui.qs.FooterActionsController
 import com.android.systemui.qs.footer.ui.viewmodel.FooterActionsViewModel
-import com.android.systemui.qs.ui.adapter.QSSceneAdapter
+import com.android.systemui.qs.panels.domain.interactor.TileSquishinessInteractor
+import com.android.systemui.qs.panels.ui.viewmodel.MediaInRowInLandscapeViewModel
+import com.android.systemui.qs.panels.ui.viewmodel.QuickQuickSettingsViewModel
+import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.scene.domain.interactor.SceneInteractor
+import com.android.systemui.scene.shared.model.Overlays
+import com.android.systemui.scene.shared.model.SceneFamilies
 import com.android.systemui.scene.shared.model.Scenes
-import com.android.systemui.settings.brightness.ui.viewModel.BrightnessMirrorViewModel
-import com.android.systemui.shade.domain.interactor.ShadeInteractor
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
+import com.android.systemui.shade.domain.interactor.ShadeStatusBarComponentsInteractor
 import com.android.systemui.shade.shared.model.ShadeMode
-import com.android.systemui.statusbar.disableflags.domain.interactor.DisableFlagsInteractor
 import com.android.systemui.unfold.domain.interactor.UnfoldTransitionInteractor
+import com.android.systemui.window.domain.interactor.WindowRootViewBlurInteractor
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
 
 /**
  * Models UI state used to render the content of the shade scene.
@@ -55,51 +63,120 @@ import kotlinx.coroutines.flow.onEach
 class ShadeSceneContentViewModel
 @AssistedInject
 constructor(
-    val qsSceneAdapter: QSSceneAdapter,
+    @Main private val mainDispatcher: CoroutineDispatcher,
+    val qsContainerViewModelFactory: QuickSettingsContainerViewModel.Factory,
+    val quickQuickSettingsViewModel: QuickQuickSettingsViewModel.Factory,
     val shadeHeaderViewModelFactory: ShadeHeaderViewModel.Factory,
-    val brightnessMirrorViewModelFactory: BrightnessMirrorViewModel.Factory,
     val mediaCarouselInteractor: MediaCarouselInteractor,
-    shadeInteractor: ShadeInteractor,
-    private val disableFlagsInteractor: DisableFlagsInteractor,
+    private val shadeModeInteractor: ShadeModeInteractor,
+    val mediaViewModelFactory: MediaViewModel.Factory,
     private val footerActionsViewModelFactory: FooterActionsViewModel.Factory,
     private val footerActionsController: FooterActionsController,
-    private val unfoldTransitionInteractor: UnfoldTransitionInteractor,
-    private val deviceEntryInteractor: DeviceEntryInteractor,
+    private val blurConfig: BlurConfig,
+    unfoldTransitionInteractor: UnfoldTransitionInteractor,
+    deviceEntryInteractor: DeviceEntryInteractor,
     private val sceneInteractor: SceneInteractor,
-) : ExclusiveActivatable() {
+    private val tileSquishinessInteractor: TileSquishinessInteractor,
+    windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
+    mediaInRowInLandscapeViewModelFactory: MediaInRowInLandscapeViewModel.Factory,
+    shadeStatusBarComponentsInteractor: ShadeStatusBarComponentsInteractor,
+) : HydratedActivatable() {
 
-    val shadeMode: StateFlow<ShadeMode> = shadeInteractor.shadeMode
+    /**
+     * Whether the shade container transparency effect should be enabled (`true`), or whether to
+     * render a fully-opaque shade container (`false`).
+     */
+    val isTransparencyEnabled: Boolean by
+        if (Flags.notificationShadeBlur()) {
+                windowRootViewBlurInteractor.isBlurCurrentlySupported
+            } else {
+                MutableStateFlow(false)
+            }
+            .hydratedStateOf()
 
-    private val _isEmptySpaceClickable =
-        MutableStateFlow(!deviceEntryInteractor.isDeviceEntered.value)
-    /** Whether clicking on the empty area of the shade does something */
-    val isEmptySpaceClickable: StateFlow<Boolean> = _isEmptySpaceClickable.asStateFlow()
+    val shadeMode: ShadeMode by shadeModeInteractor.shadeMode.hydratedStateOf()
 
-    val isMediaVisible: StateFlow<Boolean> = mediaCarouselInteractor.hasActiveMediaOrRecommendation
+    val isDeviceEntered: Boolean by deviceEntryInteractor.isDeviceEntered.hydratedStateOf()
 
-    private val _isQsEnabled =
-        MutableStateFlow(!disableFlagsInteractor.disableFlags.value.isQuickSettingsEnabled())
-    val isQsEnabled: StateFlow<Boolean> = _isQsEnabled.asStateFlow()
-
-    private val footerActionsControllerInitialized = AtomicBoolean(false)
-
-    override suspend fun onActivated(): Nothing = coroutineScope {
-        deviceEntryInteractor.isDeviceEntered
-            .onEach { isDeviceEntered -> _isEmptySpaceClickable.value = !isDeviceEntered }
-            .launchIn(this)
-        disableFlagsInteractor.disableFlags
-            .map { it.isQuickSettingsEnabled() }
-            .onEach { _isQsEnabled.value = it }
-            .launchIn(this)
-        awaitCancellation()
+    fun isEmptySpaceClickable(transitionState: TransitionState): Boolean {
+        val isTransitioningToQs =
+            transitionState.isTransitioningBetween(Scenes.Shade, Scenes.QuickSettings)
+        return !isDeviceEntered && !isTransitioningToQs
     }
+
+    val showMediaInRow: Boolean
+        get() = qqsMediaInRowViewModel.shouldMediaShowInRow
+
+    val showMedia: Boolean by
+        // mediaCarouselInteractor.hasAnyMedia if in SplitShade.
+        mediaCarouselInteractor.hasActiveMedia.hydratedStateOf()
+
+    val isQsEnabled: Boolean by
+        shadeStatusBarComponentsInteractor.disableFlags
+            .map { it.isQuickSettingsEnabled() }
+            .hydratedStateOf(
+                initialValue =
+                    shadeStatusBarComponentsInteractor.disableFlags.value.isQuickSettingsEnabled()
+            )
 
     /**
      * Amount of X-axis translation to apply to various elements as the unfolded foldable is folded
      * slightly, in pixels.
      */
-    fun unfoldTranslationX(isOnStartSide: Boolean): Flow<Float> {
-        return unfoldTransitionInteractor.unfoldTranslationX(isOnStartSide)
+    val unfoldTranslationXForStartSide: Float by
+        unfoldTransitionInteractor
+            .unfoldTranslationX(isOnStartSide = true)
+            .hydratedStateOf(initialValue = 0f)
+
+    fun onMediaSwipeToDismiss() = mediaCarouselInteractor.onSwipeToDismiss()
+
+    private val footerActionsControllerInitialized = AtomicBoolean(false)
+
+    private val qqsMediaInRowViewModel =
+        mediaInRowInLandscapeViewModelFactory.create(LOCATION_QQS, qqsMediaUiBehavior)
+
+    override suspend fun onActivated() {
+        coroutineScope { launch { qqsMediaInRowViewModel.activate() } }
+    }
+
+    /**
+     * Monitors changes to the shade mode that would make this scene stale, and snaps to the
+     * appropriate scene/overlay instead.
+     *
+     * This function must only run while the scene is shown. Therefore, it shouldn't be part of
+     * [onActivated()] while this scene uses `alwaysCompose`.
+     */
+    suspend fun detectShadeModeChanges(): Nothing {
+        shadeModeInteractor.shadeMode.collect { shadeMode ->
+            withContext(mainDispatcher) {
+                val loggingReason = "Unfold while on notifications shade"
+                when (shadeMode) {
+                    is ShadeMode.Dual -> {
+                        sceneInteractor.snapToScene(SceneFamilies.Home, loggingReason)
+                        sceneInteractor.instantlyShowOverlay(
+                            Overlays.NotificationsShade,
+                            loggingReason,
+                        )
+                    }
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    /**
+     * Calculates the blur radius to apply to the scene UI.
+     *
+     * @param transitionState The current transition state of the scene (from its `ContentScope`)
+     * @return The blur radius to apply to the scene UI, in pixels.
+     */
+    fun calculateBlur(transitionState: TransitionState): Float {
+        return when {
+            !isTransparencyEnabled -> 0f
+            Scenes.Shade != transitionState.currentScene -> 0f
+            Overlays.Bouncer in transitionState.currentOverlays -> blurConfig.maxBlurRadiusPx
+            else -> 0f
+        }
     }
 
     fun getFooterActionsViewModel(lifecycleOwner: LifecycleOwner): FooterActionsViewModel {
@@ -110,12 +187,28 @@ constructor(
     }
 
     /** Notifies that the empty space in the shade has been clicked. */
-    fun onEmptySpaceClicked() {
-        if (!isEmptySpaceClickable.value) {
+    fun onEmptySpaceClicked(transitionState: TransitionState) {
+        if (!isEmptySpaceClickable(transitionState)) {
             return
         }
 
-        sceneInteractor.changeScene(Scenes.Lockscreen, "Shade empty space clicked.")
+        sceneInteractor.changeScene(SceneFamilies.Home, "Shade empty space clicked.")
+    }
+
+    /**
+     * Sets the squishiness for the tiles. The squishiness will be mapped between `[0.1, 1.0]` to
+     * prevent visual artifacts caused by squishiness being too close to 0.
+     */
+    fun setTileSquishiness(@FloatRange(0.0, 1.0) squishiness: Float) {
+        tileSquishinessInteractor.setSquishinessValue(squishiness.constrainSquishiness())
+    }
+
+    companion object {
+        val qqsMediaUiBehavior =
+            MediaUiBehavior(
+                isCarouselDismissible = true,
+                carouselVisibility = MediaCarouselVisibility.WhenAnyCardIsActive,
+            )
     }
 
     @AssistedFactory
@@ -123,3 +216,5 @@ constructor(
         fun create(): ShadeSceneContentViewModel
     }
 }
+
+private fun Float.constrainSquishiness(): Float = (0.1f + this * 0.9f).coerceIn(0f, 1f)

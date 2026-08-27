@@ -23,11 +23,66 @@ import com.android.systemui.log.core.LogLevel
 import com.android.systemui.log.dagger.MediaLog
 import javax.inject.Inject
 
+interface MediaLogger {
+    fun logMediaNotificationEnteredPipeline(packageName: String, title: CharSequence?)
+
+    fun logLoadingMediaDataCanceled(key: String)
+
+    fun logMediaNotificationExitedPipeline(packageName: String, title: CharSequence?)
+
+    fun logMediaLoaded(instanceId: InstanceId, active: Boolean, reason: String)
+
+    fun logMediaRemoved(instanceId: InstanceId, reason: String)
+
+    fun logMediaCarouselSize(size: Int)
+
+    fun logDuplicateMediaNotification(key: String)
+
+    fun logMedia3UnsupportedCommand(command: String)
+
+    fun logCreateFailed(pkg: String, method: String)
+
+    fun logReleaseFailed(pkg: String, cause: String)
+}
+
 /** A buffered log for media loading events. */
 @SysUISingleton
-class MediaLogger @Inject constructor(@MediaLog private val buffer: LogBuffer) {
+class MediaLoggerImpl @Inject constructor(@MediaLog private val buffer: LogBuffer) : MediaLogger {
 
-    fun logMediaLoaded(instanceId: InstanceId, active: Boolean, reason: String) {
+    override fun logMediaNotificationEnteredPipeline(packageName: String, title: CharSequence?) {
+        buffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            {
+                str1 = packageName
+                str2 = title.toString()
+            },
+            { "media notification entered pipeline, packageName: $str1, title: $str2" },
+        )
+    }
+
+    override fun logLoadingMediaDataCanceled(key: String) {
+        buffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            { str1 = key },
+            { "loading media data is canceled, key: $str1" },
+        )
+    }
+
+    override fun logMediaNotificationExitedPipeline(packageName: String, title: CharSequence?) {
+        buffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            {
+                str1 = packageName
+                str2 = title.toString()
+            },
+            { "media notification exited pipeline, packageName: $str1, title: $str2" },
+        )
+    }
+
+    override fun logMediaLoaded(instanceId: InstanceId, active: Boolean, reason: String) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
@@ -40,7 +95,7 @@ class MediaLogger @Inject constructor(@MediaLog private val buffer: LogBuffer) {
         )
     }
 
-    fun logMediaRemoved(instanceId: InstanceId, reason: String) {
+    override fun logMediaRemoved(instanceId: InstanceId, reason: String) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
@@ -52,69 +107,11 @@ class MediaLogger @Inject constructor(@MediaLog private val buffer: LogBuffer) {
         )
     }
 
-    fun logRecommendationLoaded(key: String, isActive: Boolean, reason: String) {
-        buffer.log(
-            TAG,
-            LogLevel.DEBUG,
-            {
-                str1 = key
-                bool1 = isActive
-                str2 = reason
-            },
-            { "add recommendation $str1, active $bool1, reason: $str2" },
-        )
+    override fun logMediaCarouselSize(size: Int) {
+        buffer.log(TAG, LogLevel.DEBUG, { int1 = size }, { "media carousel size: $int1 " })
     }
 
-    fun logRecommendationRemoved(key: String, immediately: Boolean, reason: String) {
-        buffer.log(
-            TAG,
-            LogLevel.DEBUG,
-            {
-                str1 = key
-                bool1 = immediately
-                str2 = reason
-            },
-            { "removing recommendation $str1, immediate=$bool1, reason: $str2" },
-        )
-    }
-
-    fun logMediaCardAdded(instanceId: InstanceId) {
-        buffer.log(
-            TAG,
-            LogLevel.DEBUG,
-            { str1 = instanceId.toString() },
-            { "adding media card $str1 to carousel" },
-        )
-    }
-
-    fun logMediaCardRemoved(instanceId: InstanceId) {
-        buffer.log(
-            TAG,
-            LogLevel.DEBUG,
-            { str1 = instanceId.toString() },
-            { "removing media card $str1 from carousel" },
-        )
-    }
-
-    fun logMediaRecommendationCardAdded(key: String) {
-        buffer.log(
-            TAG,
-            LogLevel.DEBUG,
-            { str1 = key },
-            { "adding recommendation card $str1 to carousel" },
-        )
-    }
-
-    fun logMediaRecommendationCardRemoved(key: String) {
-        buffer.log(
-            TAG,
-            LogLevel.DEBUG,
-            { str1 = key },
-            { "removing recommendation card $str1 from carousel" },
-        )
-    }
-
-    fun logDuplicateMediaNotification(key: String) {
+    override fun logDuplicateMediaNotification(key: String) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
@@ -123,25 +120,32 @@ class MediaLogger @Inject constructor(@MediaLog private val buffer: LogBuffer) {
         )
     }
 
-    fun logMediaControlIsBound(
-        instanceId: InstanceId,
-        artistName: CharSequence,
-        title: CharSequence,
-    ) {
+    override fun logMedia3UnsupportedCommand(command: String) {
+        buffer.log(TAG, LogLevel.DEBUG, { str1 = command }, { "Unsupported media3 command $str1" })
+    }
+
+    override fun logCreateFailed(pkg: String, method: String) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
             {
-                str1 = instanceId.toString()
-                str2 = artistName.toString()
-                str3 = title.toString()
+                str1 = pkg
+                str2 = method
             },
-            { "binding media control, instance id= $str1, artist= $str2, title= $str3" },
+            { "Controller create failed for $str1 ($str2)" },
         )
     }
 
-    fun logMedia3UnsupportedCommand(command: String) {
-        buffer.log(TAG, LogLevel.DEBUG, { str1 = command }, { "Unsupported media3 command $str1" })
+    override fun logReleaseFailed(pkg: String, cause: String) {
+        buffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            {
+                str1 = pkg
+                str2 = cause
+            },
+            { "Controller release failed for $str1 ($str2)" },
+        )
     }
 
     companion object {

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,24 @@
  */
 package com.android.systemui.shade.data.repository
 
+import android.annotation.SuppressLint
+import android.graphics.Rect
+import com.android.systemui.Dumpable
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.dump.DumpManager
+import com.android.systemui.shade.ShadeOverlayBoundsListener
+import java.io.PrintWriter
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /** Data for the shade, mostly related to expansion of the shade and quick settings. */
 interface ShadeRepository {
@@ -36,7 +49,7 @@ interface ShadeRepository {
      * Information about the currently running fling animation, or null if no fling animation is
      * running.
      */
-    val currentFling: StateFlow<FlingInfo?>
+    val currentFling: SharedFlow<FlingInfo?>
 
     /**
      * The amount the lockscreen shade has dragged down by the user, [0-1]. 0 means fully collapsed,
@@ -100,23 +113,14 @@ interface ShadeRepository {
     @Deprecated("Use ShadeInteractor.isQsBypassingShade instead")
     val legacyExpandImmediate: StateFlow<Boolean>
 
-    /**
-     * Whether the shade layout should be wide (true) or narrow (false).
-     *
-     * In a wide layout, notifications and quick settings each take up only half the screen width
-     * (whether they are shown at the same time or not). In a narrow layout, they can each be as
-     * wide as the entire screen.
-     */
-    val isShadeLayoutWide: StateFlow<Boolean>
-
     /** True when QS is taking up the entire screen, i.e. fully expanded on a non-unfolded phone. */
     @Deprecated("Use ShadeInteractor instead") val legacyQsFullscreen: StateFlow<Boolean>
 
     /** NPVC.mClosing as a flow. */
     @Deprecated("Use ShadeAnimationInteractor instead") val legacyIsClosing: StateFlow<Boolean>
 
-    /** Sets whether the shade layout should be wide (true) or narrow (false). */
-    fun setShadeLayoutWide(isShadeLayoutWide: Boolean)
+    /** Sets the bounds of a shade overlay if it is currently visible. */
+    fun setShadeOverlayBounds(bounds: Rect?)
 
     /** Sets whether a closing animation is happening. */
     @Deprecated("Use ShadeAnimationInteractor instead") fun setLegacyIsClosing(isClosing: Boolean)
@@ -176,14 +180,28 @@ interface ShadeRepository {
      */
     @Deprecated("Should only be called by NPVC and tests")
     fun setLegacyShadeExpansion(expandedFraction: Float)
+
+    fun addShadeBoundsListener(listener: ShadeOverlayBoundsListener)
+
+    fun removeShadeBoundsListener(listener: ShadeOverlayBoundsListener)
 }
 
 /** Business logic for shade interactions */
 @SysUISingleton
-class ShadeRepositoryImpl @Inject constructor() : ShadeRepository {
+class ShadeRepositoryImpl
+@Inject
+constructor(@Background val backgroundScope: CoroutineScope, dumpManager: DumpManager) :
+    ShadeRepository, Dumpable {
+    init {
+        dumpManager.registerDumpable("ShadeRepositoryImpl", this)
+    }
+
     private val _qsExpansion = MutableStateFlow(0f)
     @Deprecated("Use ShadeInteractor.qsExpansion instead")
     override val qsExpansion: StateFlow<Float> = _qsExpansion.asStateFlow()
+
+    private var shadeOverlayBounds: Rect? = null
+    private val shadeOverlayBoundsListeners = CopyOnWriteArrayList<ShadeOverlayBoundsListener>()
 
     private val _lockscreenShadeExpansion = MutableStateFlow(0f)
     override val lockscreenShadeExpansion: StateFlow<Float> =
@@ -193,8 +211,13 @@ class ShadeRepositoryImpl @Inject constructor() : ShadeRepository {
     override val udfpsTransitionToFullShadeProgress: StateFlow<Float> =
         _udfpsTransitionToFullShadeProgress.asStateFlow()
 
-    private val _currentFling: MutableStateFlow<FlingInfo?> = MutableStateFlow(null)
-    override val currentFling: StateFlow<FlingInfo?> = _currentFling.asStateFlow()
+    /**
+     * Must be a SharedFlow, since the fling is by definition an event and dropping it has extreme
+     * consequences in some cases (for example, keyguard uses this to decide when to unlock).
+     */
+    @SuppressLint("SharedFlowCreation")
+    override val currentFling: MutableSharedFlow<FlingInfo?> =
+        MutableSharedFlow(replay = 2, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     private val _legacyShadeExpansion = MutableStateFlow(0f)
     @Deprecated("Use ShadeInteractor.shadeExpansion instead")
@@ -228,11 +251,14 @@ class ShadeRepositoryImpl @Inject constructor() : ShadeRepository {
     @Deprecated("Use ShadeInteractor instead")
     override val legacyQsFullscreen: StateFlow<Boolean> = _legacyQsFullscreen.asStateFlow()
 
-    private val _isShadeLayoutWide = MutableStateFlow(false)
-    override val isShadeLayoutWide: StateFlow<Boolean> = _isShadeLayoutWide.asStateFlow()
-
-    override fun setShadeLayoutWide(isShadeLayoutWide: Boolean) {
-        _isShadeLayoutWide.value = isShadeLayoutWide
+    override fun setShadeOverlayBounds(bounds: Rect?) {
+        if (shadeOverlayBounds == bounds) {
+            return
+        }
+        shadeOverlayBounds = bounds
+        shadeOverlayBoundsListeners.forEach { listener ->
+            listener.onShadeOverlayBoundsChanged(shadeOverlayBounds)
+        }
     }
 
     @Deprecated("Use ShadeInteractor instead")
@@ -294,7 +320,7 @@ class ShadeRepositoryImpl @Inject constructor() : ShadeRepository {
     }
 
     override fun setCurrentFling(info: FlingInfo?) {
-        _currentFling.value = info
+        backgroundScope.launch { currentFling.emit(info) }
     }
 
     @Deprecated("Should only be called by NPVC and tests")
@@ -302,7 +328,34 @@ class ShadeRepositoryImpl @Inject constructor() : ShadeRepository {
         _legacyShadeExpansion.value = expandedFraction
     }
 
-    companion object {
-        private const val TAG = "ShadeRepository"
+    override fun addShadeBoundsListener(listener: ShadeOverlayBoundsListener) {
+        listener.onShadeOverlayBoundsChanged(shadeOverlayBounds)
+        shadeOverlayBoundsListeners.add(listener)
+    }
+
+    override fun removeShadeBoundsListener(listener: ShadeOverlayBoundsListener) {
+        shadeOverlayBoundsListeners.remove(listener)
+    }
+
+    override fun dump(pw: PrintWriter, args: Array<String>) {
+        pw.println("currentFling: ${currentFling.replayCache}")
+        pw.println("legacyExpandImmediate: ${_legacyExpandImmediate.value}")
+        pw.println(
+            "legacyExpandedOrAwaitingInputTransfer: ${_legacyExpandedOrAwaitingInputTransfer.value}"
+        )
+        pw.println("legacyIsClosing: ${_legacyIsClosing.value}")
+        pw.println("legacyIsQsExpanded: ${_legacyIsQsExpanded.value}")
+        pw.println("legacyLockscreenShadeTracking: ${legacyLockscreenShadeTracking.value}")
+        pw.println("legacyQsFullscreen: ${_legacyQsFullscreen.value}")
+        pw.println("legacyQsTracking: ${_legacyQsTracking.value}")
+        pw.println("legacyShadeExpansion: ${_legacyShadeExpansion.value}")
+        pw.println("legacyShadeTracking: ${_legacyShadeTracking.value}")
+        pw.println("lockscreenShadeExpansion: ${_lockscreenShadeExpansion.value}")
+        pw.println("qsExpansion: ${_qsExpansion.value}")
+        pw.println("shadeOverlayBounds: $shadeOverlayBounds")
+        pw.println("shadeOverlayBoundsListeners: ${shadeOverlayBoundsListeners.size} listeners")
+        pw.println(
+            "udfpsTransitionToFullShadeProgress: ${_udfpsTransitionToFullShadeProgress.value}"
+        )
     }
 }

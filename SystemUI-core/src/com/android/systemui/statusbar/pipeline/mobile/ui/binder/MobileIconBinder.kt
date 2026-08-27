@@ -29,31 +29,26 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.settingslib.graph.SignalDrawable
-import com.android.systemui.Flags.statusBarStaticInoutIndicators
-import com.android.systemui.common.ui.binder.ContentDescriptionViewBinder
 import com.android.systemui.common.ui.binder.IconViewBinder
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.DarkIconDispatcher
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.StatusBarIconView
 import com.android.systemui.statusbar.StatusBarIconView.STATE_HIDDEN
+import com.android.systemui.statusbar.core.NewStatusBarIcons
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
 import com.android.systemui.statusbar.pipeline.mobile.ui.MobileViewLogger
 import com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.LocationBasedMobileViewModel
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewBinding
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewVisibilityHelper
-import com.android.systemui.statusbar.pipeline.shared.ui.binder.StatusBarViewBinderConstants.ALPHA_ACTIVE
-import com.android.systemui.statusbar.pipeline.shared.ui.binder.StatusBarViewBinderConstants.ALPHA_INACTIVE
+import com.android.systemui.util.kotlin.pairwiseBy
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import com.android.app.tracing.coroutines.launchTraced as launch
 
-private data class Colors(
-    @ColorInt val tint: Int,
-    @ColorInt val contrast: Int,
-)
+data class MobileIconColors(@ColorInt val tint: Int, @ColorInt val contrast: Int)
 
 object MobileIconBinder {
     /** Binds the view to the view-model, continuing to update the former based on the latter */
@@ -74,6 +69,7 @@ object MobileIconBinder {
         val mobileDrawable = SignalDrawable(view.context)
         val roamingView = view.requireViewById<ImageView>(R.id.mobile_roaming)
         val roamingSpace = view.requireViewById<Space>(R.id.mobile_roaming_space)
+        val endSideRoamingView = view.requireViewById<ImageView>(R.id.mobile_roaming_updated)
         val dotView = view.requireViewById<StatusBarIconView>(R.id.status_bar_dot)
 
         view.isVisible = viewModel.isVisible.value
@@ -83,11 +79,11 @@ object MobileIconBinder {
         @StatusBarIconView.VisibleState
         val visibilityState: MutableStateFlow<Int> = MutableStateFlow(initialVisibilityState)
 
-        val iconTint: MutableStateFlow<Colors> =
+        val iconTint: MutableStateFlow<MobileIconColors> =
             MutableStateFlow(
-                Colors(
+                MobileIconColors(
                     tint = DarkIconDispatcher.DEFAULT_ICON_TINT,
-                    contrast = DarkIconDispatcher.DEFAULT_INVERSE_ICON_TINT
+                    contrast = DarkIconDispatcher.DEFAULT_INVERSE_ICON_TINT,
                 )
             )
         val decorTint: MutableStateFlow<Int> = MutableStateFlow(viewModel.defaultColor)
@@ -105,7 +101,7 @@ object MobileIconBinder {
                             viewModel.verboseLogger?.logBinderReceivedVisibility(
                                 view,
                                 viewModel.subscriptionId,
-                                isVisible
+                                isVisible,
                             )
                             view.isVisible = isVisible
                             // [StatusIconContainer] can get out of sync sometimes. Make sure to
@@ -135,24 +131,59 @@ object MobileIconBinder {
 
                     // Set the icon for the triangle
                     launch {
-                        viewModel.icon.distinctUntilChanged().collect { icon ->
-                            viewModel.verboseLogger?.logBinderReceivedSignalIcon(
-                                view,
-                                viewModel.subscriptionId,
-                                icon,
-                            )
-                            if (icon is SignalIconModel.Cellular) {
-                                iconView.setImageDrawable(mobileDrawable)
-                                mobileDrawable.level = icon.toSignalDrawableState()
-                            } else if (icon is SignalIconModel.Satellite) {
-                                IconViewBinder.bind(icon.icon, iconView)
+                        viewModel.icon
+                            .pairwiseBy(initialValue = null) { oldIcon, newIcon ->
+                                // Make sure we requestLayout if the number of levels changes
+                                val shouldRequestLayout =
+                                    when {
+                                        oldIcon == null -> true
+                                        oldIcon::class != newIcon::class &&
+                                            (oldIcon is SignalIconModel.Satellite ||
+                                                newIcon is SignalIconModel.Satellite) -> true
+                                        oldIcon is SignalIconModel.CellularTypeIconModel &&
+                                            newIcon is SignalIconModel.CellularTypeIconModel -> {
+                                            oldIcon.numberOfLevels != newIcon.numberOfLevels
+                                        }
+                                        else -> false
+                                    }
+                                Pair(shouldRequestLayout, newIcon)
                             }
-                        }
+                            .collect { (shouldRequestLayout, newIcon) ->
+                                if (newIcon is SignalIconModel.CellularTypeIconModel) {
+                                    val packedSignalDrawableState = newIcon.toSignalDrawableState()
+                                    viewModel.verboseLogger
+                                        ?.logBinderReceivedSignalCellularTypeIcon(
+                                            parentView = view,
+                                            subId = viewModel.subscriptionId,
+                                            icon = newIcon,
+                                            packedSignalDrawableState = packedSignalDrawableState,
+                                            shouldRequestLayout = shouldRequestLayout,
+                                        )
+                                    iconView.setImageDrawable(mobileDrawable)
+                                    mobileDrawable.level = packedSignalDrawableState
+                                    viewModel.verboseLogger?.logBinderSignalIconResult(
+                                        parentView = view,
+                                        subId = viewModel.subscriptionId,
+                                        unpackedLevel = mobileDrawable.unpackLevel(),
+                                    )
+                                } else if (newIcon is SignalIconModel.Satellite) {
+                                    viewModel.verboseLogger?.logBinderReceivedSignalSatelliteIcon(
+                                        parentView = view,
+                                        subId = viewModel.subscriptionId,
+                                        icon = newIcon,
+                                    )
+                                    IconViewBinder.bind(newIcon.icon, iconView)
+                                }
+
+                                if (shouldRequestLayout) {
+                                    iconView.requestLayout()
+                                }
+                            }
                     }
 
                     launch {
                         viewModel.contentDescription.distinctUntilChanged().collect {
-                            ContentDescriptionViewBinder.bind(it, view)
+                            MobileContentDescriptionViewBinder.bind(it, view)
                         }
                     }
 
@@ -178,10 +209,10 @@ object MobileIconBinder {
                     // Set the network type background
                     launch {
                         viewModel.networkTypeBackground.collect { background ->
-                            networkTypeContainer.setBackgroundResource(background?.res ?: 0)
+                            networkTypeContainer.setBackgroundResource(background?.resId ?: 0)
 
                             // Tint will invert when this bit changes
-                            if (background?.res != null) {
+                            if (background?.resId != null) {
                                 networkTypeContainer.backgroundTintList =
                                     ColorStateList.valueOf(iconTint.value.tint)
                                 networkTypeView.imageTintList =
@@ -196,34 +227,19 @@ object MobileIconBinder {
                     // Set the roaming indicator
                     launch {
                         viewModel.roaming.distinctUntilChanged().collect { isRoaming ->
-                            roamingView.isVisible = isRoaming
-                            roamingSpace.isVisible = isRoaming
+                            if (NewStatusBarIcons.isEnabled) {
+                                endSideRoamingView.isVisible = isRoaming
+                            } else {
+                                roamingView.isVisible = isRoaming
+                                roamingSpace.isVisible = isRoaming
+                            }
                         }
                     }
 
-                    if (statusBarStaticInoutIndicators()) {
-                        // Set the opacity of the activity indicators
-                        launch {
-                            viewModel.activityInVisible.collect { visible ->
-                                activityIn.imageAlpha =
-                                    (if (visible) ALPHA_ACTIVE else ALPHA_INACTIVE)
-                            }
-                        }
+                    // Set the activity indicators
+                    launch { viewModel.activityInVisible.collect { activityIn.isVisible = it } }
 
-                        launch {
-                            viewModel.activityOutVisible.collect { visible ->
-                                activityOut.imageAlpha =
-                                    (if (visible) ALPHA_ACTIVE else ALPHA_INACTIVE)
-                            }
-                        }
-                    } else {
-                        // Set the activity indicators
-                        launch { viewModel.activityInVisible.collect { activityIn.isVisible = it } }
-
-                        launch {
-                            viewModel.activityOutVisible.collect { activityOut.isVisible = it }
-                        }
-                    }
+                    launch { viewModel.activityOutVisible.collect { activityOut.isVisible = it } }
 
                     launch {
                         viewModel.activityContainerVisible.collect {
@@ -248,6 +264,7 @@ object MobileIconBinder {
                             }
 
                             roamingView.imageTintList = tint
+                            endSideRoamingView.imageTintList = tint
                             activityIn.imageTintList = tint
                             activityOut.imageTintList = tint
                             dotView.setDecorColor(colors.tint)
@@ -276,7 +293,7 @@ object MobileIconBinder {
             }
 
             override fun onIconTintChanged(newTint: Int, contrastTint: Int) {
-                iconTint.value = Colors(tint = newTint, contrast = contrastTint)
+                iconTint.value = MobileIconColors(tint = newTint, contrast = contrastTint)
             }
 
             override fun onDecorTintChanged(newTint: Int) {

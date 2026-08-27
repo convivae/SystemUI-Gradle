@@ -19,19 +19,36 @@ import android.content.Context
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.os.Looper
+import android.util.Log
+import androidx.annotation.WorkerThread
 import androidx.concurrent.futures.await
 import androidx.media3.session.MediaController as Media3Controller
 import androidx.media3.session.SessionToken
+import java.util.concurrent.ExecutionException
 import javax.inject.Inject
 
 /** Testable wrapper for media controller construction */
 open class MediaControllerFactory @Inject constructor(private val context: Context) {
+    private val TAG = "MediaControllerFactory"
+
     /**
      * Creates a new [MediaController] from the framework session token.
      *
      * @param token The token for the session. This value must never be null.
      */
+    @WorkerThread
     open fun create(token: MediaSession.Token): MediaController {
+        return MediaController(context, token)
+    }
+
+    /**
+     * Creates a new [MediaController] from the framework session token.
+     *
+     * @param context A context for the session
+     * @param token The token for the session. This value must never be null.
+     */
+    @WorkerThread
+    open fun create(context: Context, token: MediaSession.Token): MediaController {
         return MediaController(context, token)
     }
 
@@ -41,10 +58,18 @@ open class MediaControllerFactory @Inject constructor(private val context: Conte
      * @param token The token for the session
      * @param looper The looper that will be used for this controller's operations
      */
-    open suspend fun create(token: SessionToken, looper: Looper): Media3Controller {
-        return Media3Controller.Builder(context, token)
-            .setApplicationLooper(looper)
-            .buildAsync()
-            .await()
+    open suspend fun create(token: SessionToken, looper: Looper): Media3Controller? {
+        try {
+            return Media3Controller.Builder(context, token)
+                .setApplicationLooper(looper)
+                .buildAsync()
+                .await()
+        } catch (e: ExecutionException) {
+            if (e.cause is SecurityException) {
+                // The session rejected the connection
+                Log.d(TAG, "SecurityException creating media3 controller")
+            }
+            return null
+        }
     }
 }

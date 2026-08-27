@@ -23,10 +23,13 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.statusbar.notification.Roundable;
 import com.android.systemui.statusbar.notification.SourceType;
+import com.android.systemui.statusbar.notification.TopBottomRoundness;
 import com.android.systemui.statusbar.notification.row.ExpandableView;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import javax.inject.Inject;
 
@@ -44,14 +47,13 @@ public class NotificationRoundnessManager implements Dumpable {
     private boolean mRoundForPulsingViews;
     private boolean mIsClearAllInProgress;
 
-    private ExpandableView mSwipedView = null;
-    private Roundable mViewBeforeSwipedView = null;
-    private Roundable mViewAfterSwipedView = null;
+    private List<Roundable> mCurrentRoundables;
 
     @Inject
     NotificationRoundnessManager(DumpManager dumpManager) {
         mDumpManager = dumpManager;
         mDumpManager.registerDumpable(TAG, this);
+        mCurrentRoundables = new ArrayList<>();
     }
 
     @Override
@@ -61,46 +63,75 @@ public class NotificationRoundnessManager implements Dumpable {
     }
 
     public boolean isViewAffectedBySwipe(ExpandableView expandableView) {
-        return expandableView != null
-                && (expandableView == mSwipedView
-                || expandableView == mViewBeforeSwipedView
-                || expandableView == mViewAfterSwipedView);
+        return expandableView != null && mCurrentRoundables.contains(expandableView);
+    }
+
+    void setViewsAffectedBySwipe(List<Roundable> newViews) {
+        // This method caches a new set of current View targets and reset the roundness of the old
+        // View targets (if any) to 0f.
+
+        // Make a copy of the current views
+        List<Roundable> oldViews = new ArrayList<>(mCurrentRoundables);
+
+        // From the old set, mark any view that is also contained in the new set as null. The old
+        // set will be used to reset roundness but we don't want to modify views that are present on
+        // both.
+        for (int i = 0; i < oldViews.size(); i++) {
+            if (newViews.contains(oldViews.get(i))) {
+                oldViews.set(i, null);
+            }
+        }
+
+        // Reset roundness of the remaining old views
+        for (Roundable oldView : oldViews) {
+            if (oldView != null) {
+                oldView.requestRoundnessReset(DISMISS_ANIMATION);
+            }
+        }
+
+        // Replace the current set of views
+        mCurrentRoundables = newViews;
     }
 
     void setViewsAffectedBySwipe(
             Roundable viewBefore,
             ExpandableView viewSwiped,
             Roundable viewAfter) {
-        // This method requires you to change the roundness of the current View targets and reset
-        // the roundness of the old View targets (if any) to 0f.
-        // To avoid conflicts, it generates a set of old Views and removes the current Views
-        // from this set.
-        HashSet<Roundable> oldViews = new HashSet<>();
-        if (mViewBeforeSwipedView != null) oldViews.add(mViewBeforeSwipedView);
-        if (mSwipedView != null) oldViews.add(mSwipedView);
-        if (mViewAfterSwipedView != null) oldViews.add(mViewAfterSwipedView);
+        List<Roundable> newViews = new ArrayList<>();
+        newViews.add(viewBefore);
+        newViews.add(viewSwiped);
+        newViews.add(viewAfter);
+        setViewsAffectedBySwipe(newViews);
+    }
 
-        mViewBeforeSwipedView = viewBefore;
-        if (viewBefore != null) {
-            oldViews.remove(viewBefore);
-            viewBefore.requestRoundness(/* top = */ 0f, /* bottom = */ 1f, DISMISS_ANIMATION);
+    void setRoundnessForAffectedViews(float roundness) {
+        for (Roundable affected : mCurrentRoundables) {
+            if (affected != null) {
+                affected.requestRoundness(roundness, roundness, DISMISS_ANIMATION);
+            }
         }
+    }
 
-        mSwipedView = viewSwiped;
-        if (viewSwiped != null) {
-            oldViews.remove(viewSwiped);
-            viewSwiped.requestRoundness(/* top = */ 1f, /* bottom = */ 1f, DISMISS_ANIMATION);
-        }
+    void setRoundnessForAffectedViews(List<TopBottomRoundness> roundnessSet, boolean animate) {
+        if (roundnessSet.size() != mCurrentRoundables.size()) return;
 
-        mViewAfterSwipedView = viewAfter;
-        if (viewAfter != null) {
-            oldViews.remove(viewAfter);
-            viewAfter.requestRoundness(/* top = */ 1f, /* bottom = */ 0f, DISMISS_ANIMATION);
-        }
-
-        // After setting the current Views, reset the views that are still present in the set.
-        for (Roundable oldView : oldViews) {
-            oldView.requestRoundnessReset(DISMISS_ANIMATION);
+        // In case there are fewer actual roundables than the full set/list allows for (for example,
+        // if the notification is within a group and close to the group header), track which is the
+        // first non-null element to avoid unnecessarily rounding the top corners.
+        boolean seenFirst = false;
+        for (int i = 0; i < roundnessSet.size(); i++) {
+            Roundable roundable = mCurrentRoundables.get(i);
+            TopBottomRoundness roundnessConfig = roundnessSet.get(i);
+            if (roundable != null) {
+                if (!seenFirst) {
+                    seenFirst = true;
+                    roundable.requestBottomRoundness(roundnessConfig.getBottomRoundness(),
+                            DISMISS_ANIMATION, animate);
+                } else {
+                    roundable.requestRoundness(roundnessConfig.getTopRoundness(),
+                            roundnessConfig.getBottomRoundness(), DISMISS_ANIMATION, animate);
+                }
+            }
         }
     }
 
@@ -137,5 +168,10 @@ public class NotificationRoundnessManager implements Dumpable {
 
     public void setShouldRoundPulsingViews(boolean shouldRoundPulsingViews) {
         mRoundForPulsingViews = shouldRoundPulsingViews;
+    }
+
+    public boolean isSwipedViewSet() {
+        return !mCurrentRoundables.isEmpty()
+                && mCurrentRoundables.get(mCurrentRoundables.size() / 2) != null;
     }
 }

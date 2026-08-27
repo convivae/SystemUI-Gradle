@@ -21,26 +21,27 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import androidx.annotation.VisibleForTesting
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.constraintlayout.widget.ConstraintSet.BOTTOM
 import androidx.constraintlayout.widget.ConstraintSet.END
 import androidx.constraintlayout.widget.ConstraintSet.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintSet.START
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import androidx.lifecycle.lifecycleScope
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.systemui.customization.R as customR
+import com.android.systemui.LauncherProxyService
+import com.android.systemui.LauncherProxyService.LauncherProxyListener
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.fragments.FragmentService
-import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.navigationbar.NavigationModeController
 import com.android.systemui.plugins.qs.QS
 import com.android.systemui.plugins.qs.QSContainerController
-import com.android.systemui.recents.OverviewProxyService
-import com.android.systemui.recents.OverviewProxyService.OverviewProxyListener
 import com.android.systemui.res.R
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
+import com.android.systemui.shade.shared.model.ShadeMode
 import com.android.systemui.shared.system.QuickStepContract
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController
 import com.android.systemui.statusbar.policy.SplitShadeStateController
@@ -51,6 +52,8 @@ import dagger.Lazy
 import java.util.function.Consumer
 import javax.inject.Inject
 import kotlin.reflect.KMutableProperty0
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @VisibleForTesting internal const val INSET_DEBOUNCE_MILLIS = 500L
 
@@ -60,20 +63,21 @@ class NotificationsQSContainerController
 constructor(
     view: NotificationsQuickSettingsContainer,
     private val navigationModeController: NavigationModeController,
-    private val overviewProxyService: OverviewProxyService,
+    private val launcherProxyService: LauncherProxyService,
     private val shadeHeaderController: ShadeHeaderController,
     private val shadeInteractor: ShadeInteractor,
     private val fragmentService: FragmentService,
     @Main private val delayableExecutor: DelayableExecutor,
     private val notificationStackScrollLayoutController: NotificationStackScrollLayoutController,
     private val splitShadeStateController: SplitShadeStateController,
+    private val shadeModeInteractor: ShadeModeInteractor,
     private val largeScreenHeaderHelperLazy: Lazy<LargeScreenHeaderHelper>,
+    @Background private val backgroundScope: CoroutineScope,
 ) : ViewController<NotificationsQuickSettingsContainer>(view), QSContainerController {
 
     private var splitShadeEnabled = false
     private var isQSDetailShowing = false
     private var isQSCustomizing = false
-    private var isQSCustomizerAnimating = false
 
     private var shadeHeaderHeight = 0
     private var largeScreenShadeHeaderHeight = 0
@@ -88,8 +92,8 @@ constructor(
 
     private var isGestureNavigation = true
     private var taskbarVisible = false
-    private val taskbarVisibilityListener: OverviewProxyListener =
-        object : OverviewProxyListener {
+    private val taskbarVisibilityListener: LauncherProxyListener =
+        object : LauncherProxyListener {
             override fun onTaskbarStatusUpdated(visible: Boolean, stashed: Boolean) {
                 taskbarVisible = visible
             }
@@ -133,11 +137,27 @@ constructor(
         isGestureNavigation = QuickStepContract.isGesturalMode(currentMode)
 
         mView.setStackScroller(notificationStackScrollLayoutController.getView())
+
+        if (SceneContainerFlag.isEnabled) {
+            observeSplitShadeState()
+        }
+    }
+
+    @VisibleForTesting
+    internal fun observeSplitShadeState() {
+        backgroundScope.launch {
+            shadeModeInteractor.shadeMode.collect { shadeMode ->
+                splitShadeEnabled = shadeMode is ShadeMode.Split
+                updateHeaderMarginsAndConstraints()
+                dimensionsChanged()
+                updateBottomSpacing()
+            }
+        }
     }
 
     public override fun onViewAttached() {
         updateResources()
-        overviewProxyService.addCallback(taskbarVisibilityListener)
+        launcherProxyService.addCallback(taskbarVisibilityListener)
         mView.setInsetsChangedListener(delayedInsetSetter)
         mView.setQSFragmentAttachedListener { qs: QS -> qs.setContainerController(this) }
         mView.setConfigurationChangedListener { updateResources() }
@@ -145,18 +165,14 @@ constructor(
     }
 
     override fun onViewDetached() {
-        overviewProxyService.removeCallback(taskbarVisibilityListener)
+        launcherProxyService.removeCallback(taskbarVisibilityListener)
         mView.removeOnInsetsChangedListener()
         mView.removeQSFragmentAttachedListener()
         mView.setConfigurationChangedListener(null)
         fragmentService.getFragmentHostManager(mView).removeTagListener(QS.TAG, mView)
     }
 
-    fun updateResources() {
-        val newSplitShadeEnabled =
-            splitShadeStateController.shouldUseSplitNotificationShade(resources)
-        val splitShadeEnabledChanged = newSplitShadeEnabled != splitShadeEnabled
-        splitShadeEnabled = newSplitShadeEnabled
+    private fun updateHeaderMarginsAndConstraints() {
         largeScreenShadeHeaderActive = LargeScreenUtils.shouldUseLargeScreenShadeHeader(resources)
         notificationsBottomMargin =
             resources.getDimensionPixelSize(R.dimen.notification_panel_margin_bottom)
@@ -171,7 +187,9 @@ constructor(
                 resources.getDimensionPixelSize(R.dimen.notification_panel_margin_top)
             }
         updateConstraints()
+    }
 
+    private fun dimensionsChanged(): Boolean {
         val scrimMarginChanged =
             ::scrimShadeBottomMargin.setAndReportChange(
                 resources.getDimensionPixelSize(
@@ -183,9 +201,18 @@ constructor(
                 resources.getDimensionPixelSize(R.dimen.qs_footer_action_inset) +
                     resources.getDimensionPixelSize(R.dimen.qs_footer_actions_bottom_padding)
             )
-        val dimensChanged = scrimMarginChanged || footerOffsetChanged
+        return scrimMarginChanged || footerOffsetChanged
+    }
 
-        if (splitShadeEnabledChanged || dimensChanged) {
+    fun updateResources() {
+        val newSplitShadeEnabled =
+            splitShadeStateController.shouldUseSplitNotificationShade(resources)
+        val splitShadeEnabledChanged = newSplitShadeEnabled != splitShadeEnabled
+        if (!SceneContainerFlag.isEnabled) {
+            splitShadeEnabled = newSplitShadeEnabled
+        }
+        updateHeaderMarginsAndConstraints()
+        if (dimensionsChanged() || (!SceneContainerFlag.isEnabled && splitShadeEnabledChanged)) {
             updateBottomSpacing()
         }
     }
@@ -207,13 +234,6 @@ constructor(
         return estimatedHeight.coerceAtLeast(minHeight)
     }
 
-    override fun setCustomizerAnimating(animating: Boolean) {
-        if (isQSCustomizerAnimating != animating) {
-            isQSCustomizerAnimating = animating
-            mView.invalidate()
-        }
-    }
-
     override fun setCustomizerShowing(showing: Boolean, animationDuration: Long) {
         if (showing != isQSCustomizing) {
             isQSCustomizing = showing
@@ -232,6 +252,11 @@ constructor(
         mView.setPadding(0, 0, 0, containerPadding)
         mView.setNotificationsMarginBottom(notificationsMargin)
         mView.setQSContainerPaddingBottom(qsContainerPadding)
+        if (!isQSCustomizing) {
+            // To have complete control, we add negative margin to negate
+            // the padding of the container. That way we can adjust the padding inside compose.
+            mView.setQSNegativeMarginBottom(containerPadding)
+        }
     }
 
     private fun calculateBottomSpacing(): Paddings {
@@ -273,9 +298,7 @@ constructor(
         ensureAllViewsHaveIds(mView)
         val constraintSet = ConstraintSet()
         constraintSet.clone(mView)
-        setKeyguardStatusViewConstraints(constraintSet)
         setQsConstraints(constraintSet)
-        setNotificationsConstraints(constraintSet)
         setLargeScreenShadeHeaderConstraints(constraintSet)
         mView.applyConstraints(constraintSet)
     }
@@ -288,21 +311,6 @@ constructor(
         }
     }
 
-    private fun setNotificationsConstraints(constraintSet: ConstraintSet) {
-        if (MigrateClocksToBlueprint.isEnabled) {
-            return
-        }
-        val startConstraintId = if (splitShadeEnabled) R.id.qs_edge_guideline else PARENT_ID
-        val nsslId = R.id.notification_stack_scroller
-        constraintSet.apply {
-            connect(nsslId, START, startConstraintId, START)
-            setMargin(nsslId, START, if (splitShadeEnabled) 0 else panelMarginHorizontal)
-            setMargin(nsslId, END, panelMarginHorizontal)
-            setMargin(nsslId, TOP, topMargin)
-            setMargin(nsslId, BOTTOM, notificationsBottomMargin)
-        }
-    }
-
     private fun setQsConstraints(constraintSet: ConstraintSet) {
         val endConstraintId = if (splitShadeEnabled) R.id.qs_edge_guideline else PARENT_ID
         constraintSet.apply {
@@ -310,15 +318,6 @@ constructor(
             setMargin(R.id.qs_frame, START, if (splitShadeEnabled) 0 else panelMarginHorizontal)
             setMargin(R.id.qs_frame, END, if (splitShadeEnabled) 0 else panelMarginHorizontal)
             setMargin(R.id.qs_frame, TOP, topMargin)
-        }
-    }
-
-    private fun setKeyguardStatusViewConstraints(constraintSet: ConstraintSet) {
-        val statusViewMarginHorizontal =
-            resources.getDimensionPixelSize(customR.dimen.status_view_margin_horizontal)
-        constraintSet.apply {
-            setMargin(R.id.keyguard_status_view, START, statusViewMarginHorizontal)
-            setMargin(R.id.keyguard_status_view, END, statusViewMarginHorizontal)
         }
     }
 

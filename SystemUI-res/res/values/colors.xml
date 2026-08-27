@@ -24,6 +24,10 @@
     <color name="qs_tile_divider">#29ffffff</color><!-- 16% white -->
     <color name="qs_detail_button_white">#B3FFFFFF</color><!-- 70% white -->
     <color name="status_bar_clock_color">#FFFFFFFF</color>
+    <!-- The main FG tint for shade header items -->
+    <color name="shade_header_text_color">#FF000000</color>
+    <!-- The main BG tint for shade header items -->
+    <color name="shade_header_text_color_bg">#FFFFFFFF</color>
     <color name="qs_tile_disabled_color">#9E9E9E</color> <!-- 38% black -->
     <color name="status_bar_icons_hover_color_light">#38FFFFFF</color> <!-- 22% white -->
     <color name="status_bar_icons_hover_color_dark">#38000000</color> <!-- 22% black -->
@@ -31,18 +35,26 @@
     <!-- The dark background color behind the shade -->
     <color name="shade_scrim_background_dark">@androidprv:color/system_under_surface_light</color>
 
+    <!-- Base colors for notification shade/scrim, the alpha component is adjusted programmatically
+    to match the spec -->
+    <color name="notification_scrim_base">@android:color/system_accent1_100</color>
+
+    <!-- Fallback colors for notification shade/scrim -->
+    <color name="shade_panel_fallback">@android:color/system_accent2_200</color>
+    <color name="notification_scrim_fallback">@android:color/system_surface_dim_light</color>
+
     <!-- The color of the background in the separated list of the Global Actions menu -->
     <color name="global_actions_separated_background">#F5F5F5</color>
 
     <!-- The color of the background in the grid of the Global Actions menu -->
     <color name="global_actions_grid_background">#F1F3F4</color>
+    <color name="global_actions_grid_background_blur">@color/customColorSurfaceEffect0</color>
+    <color name="global_actions_grid_background_blur_fallback">@android:color/system_accent1_200</color>
 
     <!-- Colors for Power Menu Lite -->
-    <color name="global_actions_lite_background">#191C18</color>
-    <color name="global_actions_lite_button_background">#303030</color>
-    <color name="global_actions_lite_text">#F0F0F0</color>
-    <color name="global_actions_lite_emergency_background">#F85D4D</color>
-    <color name="global_actions_lite_emergency_icon">@color/GM2_grey_900</color>
+    <color name="global_actions_lite_button_background_focused">#808080</color>
+    <color name="global_actions_lite_emergency_background">#D8372D</color>
+    <color name="global_actions_lite_emergency_icon">#FFFFFF</color>
 
     <color name="global_actions_shutdown_ui_text">@color/control_primary_text</color>
 
@@ -124,7 +136,7 @@
     <!-- Keyboard shortcuts colors -->
     <color name="ksh_application_group_color">#fff44336</color>
     <color name="ksh_key_item_color">@*android:color/system_on_surface_variant_light</color>
-    <color name="ksh_key_item_background">?androidprv:attr/materialColorSurfaceContainerHighest</color>
+    <color name="ksh_key_item_background">@color/materialColorSurfaceContainerHighest</color>
 
     <color name="instant_apps_color">#ff4d5a64</color>
 
@@ -134,6 +146,11 @@
     <color name="smart_reply_button_text_dark_bg">@*android:color/notification_primary_text_color_dark</color>
     <color name="smart_reply_button_background">#ffffffff</color>
     <color name="smart_reply_button_stroke">@*android:color/accent_device_default</color>
+
+    <!-- Animated Action colors -->
+    <color name="animated_action_button_text_color">@color/materialColorOnSurface</color>
+    <color name="animated_action_button_stroke_color">@color/materialColorOnSurface</color>
+    <color name="animated_action_button_attribution_color">@color/materialColorOnSurfaceVariant</color>
 
     <!-- Biometric dialog colors -->
     <color name="biometric_dialog_gray">#ff757575</color>
@@ -181,19 +198,26 @@
     <!-- Volume dialog colors -->
     <color name="volume_dialog_background_color">@android:color/transparent</color>
     <color name="volume_dialog_background_color_above_blur">@android:color/transparent</color>
+    <color name="volume_dialog_view_background_blur">@color/customColorSurfaceEffect0</color>
+    <color name="volume_dialog_view_background_blur_fallback">@android:color/system_accent1_200</color>
 
     <!-- media -->
     <color name="media_seamless_border">?android:attr/colorAccent</color>
     <color name="media_paging_indicator">@color/material_dynamic_neutral_variant80</color>
+    <color name="media_on_background">#FFFFFF</color>
+    <color name="media_outlined_button_background">#4D000000</color> <!-- 30% -->
 
     <!-- media output dialog-->
-    <color name="media_dialog_background" android:lstar="98">@color/material_dynamic_neutral90</color>
-    <color name="media_dialog_item_main_content">@color/material_dynamic_primary20</color>
-    <color name="media_dialog_item_background">@color/material_dynamic_secondary95</color>
-    <color name="media_dialog_connected_item_background">@color/material_dynamic_primary90</color>
-    <color name="media_dialog_seekbar_progress">@android:color/system_accent1_200</color>
-    <color name="media_dialog_button_background">@color/material_dynamic_primary40</color>
-    <color name="media_dialog_solid_button_text">@color/material_dynamic_neutral95</color>
+    <color name="media_dialog_primary">@android:color/system_primary_light</color>
+    <color name="media_dialog_on_primary">@android:color/system_on_primary_light</color>
+    <color name="media_dialog_secondary">@android:color/system_secondary_light</color>
+    <color name="media_dialog_secondary_container">@android:color/system_secondary_container_light</color>
+    <color name="media_dialog_surface_container">@android:color/system_surface_container_light</color>
+    <color name="media_dialog_surface_container_high">@android:color/system_surface_container_high_light</color>
+    <color name="media_dialog_on_surface">@android:color/system_on_surface_light</color>
+    <color name="media_dialog_on_surface_variant">@android:color/system_on_surface_variant_light</color>
+    <color name="media_dialog_outline">@android:color/system_outline_light</color>
+    <color name="media_dialog_outline_variant">@android:color/system_outline_variant_light</color>
 
     <!-- controls -->
     <color name="control_primary_text">#E6FFFFFF</color>
@@ -221,7 +245,11 @@
     <color name="screenrecord_icon_color">#D93025</color><!-- red 600 -->
 
     <color name="privacy_chip_background">#3ddc84</color>
+    <color name="privacy_chip_location_only_background">#4e8ff8</color>
+    <color name="privacy_chip_location_only_outline">#ffffff</color>
 
+    <color name="av_controls_chip_background">#3ddc84</color>
+    <color name="av_controls_chip_icon_fill">#000000</color>
     <!-- Accessibility floating menu -->
     <color name="accessibility_floating_menu_background">#CCFFFFFF</color> <!-- 80% -->
     <color name="accessibility_floating_menu_stroke_dark">#26FFFFFF</color> <!-- 15% -->
@@ -240,8 +268,6 @@
     <color name="settingslib_track_off_color">@color/settingslib_track_off</color>
     <color name="connected_network_secondary_color">#41493D</color>
 
-    <color name="dream_overlay_camera_mic_off_dot_color">#FCBE03</color>
-
     <!-- Dream overlay text shadows -->
     <color name="dream_overlay_clock_key_text_shadow_color">#4D000000</color>
     <color name="dream_overlay_clock_ambient_text_shadow_color">#4D000000</color>
@@ -251,4 +277,22 @@
     <!-- Rear Display Education -->
     <color name="rear_display_overlay_animation_background_color">#1E1B17</color>
     <color name="rear_display_overlay_dialog_background_color">#1E1B17</color>
+
+    <!-- Low light Dream -->
+    <color name="low_light_clock_background_color">#000000</color>
+    <color name="low_light_clock_text_color">#CCCCCC</color>
+
+    <!-- BG color for confirm and backspace button in non-auto confirm PIN bouncer.   -->
+    <color name="pin_bouncer_action_button_bg">@color/customColorSurfaceEffect0</color>
+    <!-- Bouncer background when blur is not enabled.   -->
+    <color name="bouncer_fallback_bg">@android:color/system_accent2_200</color>
+
+    <array name="screen_record_color_palette">
+        <item>#8E3E92</item>
+        <item>#232D67</item>
+        <item>#F55E57</item>
+        <item>#4E8FF8</item>
+        <item>#1AA64A</item>
+        <item>#D37B00</item>
+    </array>
 </resources>

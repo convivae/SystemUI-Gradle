@@ -16,14 +16,14 @@
 
 package com.android.systemui.dreams.ui.viewmodel
 
-import com.android.compose.animation.scene.Swipe
+import android.content.res.Resources
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
-import com.android.systemui.communal.domain.interactor.CommunalInteractor
-import com.android.systemui.deviceentry.domain.interactor.DeviceUnlockedInteractor
-import com.android.systemui.scene.shared.model.Scenes
+import com.android.systemui.res.R
 import com.android.systemui.scene.ui.viewmodel.UserActionsViewModel
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shade.shared.model.ShadeMode
 import com.android.systemui.shade.ui.viewmodel.dualShadeActions
 import com.android.systemui.shade.ui.viewmodel.singleShadeActions
@@ -31,7 +31,6 @@ import com.android.systemui.shade.ui.viewmodel.splitShadeActions
 import com.android.systemui.utils.coroutines.flow.flatMapLatestConflated
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
@@ -39,36 +38,30 @@ import kotlinx.coroutines.flow.map
 class DreamUserActionsViewModel
 @AssistedInject
 constructor(
-    private val communalInteractor: CommunalInteractor,
-    private val deviceUnlockedInteractor: DeviceUnlockedInteractor,
     private val shadeInteractor: ShadeInteractor,
+    private val shadeModeInteractor: ShadeModeInteractor,
+    @ShadeDisplayAware private val resources: Resources,
 ) : UserActionsViewModel() {
 
     override suspend fun hydrateActions(setActions: (Map<UserAction, UserActionResult>) -> Unit) {
+        val twoFingerSwipeEnabled =
+            resources.getBoolean(R.bool.config_enableTwoFingerSwipeDownShade)
         shadeInteractor.isShadeTouchable
             .flatMapLatestConflated { isShadeTouchable ->
                 if (!isShadeTouchable) {
                     flowOf(emptyMap())
                 } else {
-                    combine(
-                        deviceUnlockedInteractor.deviceUnlockStatus.map { it.isUnlocked },
-                        communalInteractor.isCommunalAvailable,
-                        shadeInteractor.shadeMode,
-                    ) { isDeviceUnlocked, isCommunalAvailable, shadeMode ->
+                    shadeModeInteractor.shadeMode.map { shadeMode ->
                         buildList {
-                                if (isCommunalAvailable) {
-                                    add(Swipe.Start to Scenes.Communal)
-                                }
-
-                                val bouncerOrGone =
-                                    if (isDeviceUnlocked) Scenes.Gone else Scenes.Bouncer
-                                add(Swipe.Up to bouncerOrGone)
-
                                 addAll(
                                     when (shadeMode) {
-                                        ShadeMode.Single -> singleShadeActions()
+                                        ShadeMode.Single ->
+                                            singleShadeActions(isDownFromTopEdgeEnabled = false)
                                         ShadeMode.Split -> splitShadeActions()
-                                        ShadeMode.Dual -> dualShadeActions()
+                                        ShadeMode.Dual ->
+                                            dualShadeActions(
+                                                twoFingerSwipeEnabled = twoFingerSwipeEnabled
+                                            )
                                     }
                                 )
                             }

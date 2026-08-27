@@ -19,6 +19,7 @@ package com.android.systemui.deviceentry.domain.interactor
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.deviceentry.shared.model.FaceAuthenticationStatus
 import com.android.systemui.deviceentry.shared.model.FaceDetectionStatus
+import com.android.systemui.log.table.TableLogBuffer
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,10 +40,13 @@ class NoopDeviceEntryFaceAuthInteractor @Inject constructor() : DeviceEntryFaceA
     override val isLockedOut: StateFlow<Boolean> = MutableStateFlow(false)
     override val isAuthenticated: StateFlow<Boolean> = MutableStateFlow(false)
     override val isBypassEnabled: Flow<Boolean> = flowOf(false)
+    override val isCameraPrivacyInterfering: StateFlow<Boolean> = MutableStateFlow(false)
 
     override fun canFaceAuthRun(): Boolean = false
 
-    override fun isRunning(): Boolean = false
+    override fun isAuthRunning(): Boolean = false
+
+    override fun isDetectRunning(): Boolean = false
 
     override fun isFaceAuthEnabledAndEnrolled(): Boolean = false
 
@@ -66,6 +70,14 @@ class NoopDeviceEntryFaceAuthInteractor @Inject constructor() : DeviceEntryFaceA
 
     override fun onSwipeUpOnBouncer() {}
 
+    override fun onSecureLockDeviceBiometricAuthRequested() {}
+
+    override fun onSecureLockDeviceBiometricAuthHidden() {}
+
+    override fun onSecureLockDeviceConfirmButtonShowingChanged(isShowingConfirmButton: Boolean) {}
+
+    override fun onSecureLockDeviceTryAgainButtonShowingChanged(isShowingTryAgainButton: Boolean) {}
+
     override fun onPrimaryBouncerUserInput() {}
 
     override fun onAccessibilityAction() {}
@@ -73,4 +85,6 @@ class NoopDeviceEntryFaceAuthInteractor @Inject constructor() : DeviceEntryFaceA
     override fun onWalletLaunched() = Unit
 
     override fun onDeviceUnfolded() {}
+
+    override suspend fun hydrateTableLogBuffer(tableLogBuffer: TableLogBuffer) {}
 }

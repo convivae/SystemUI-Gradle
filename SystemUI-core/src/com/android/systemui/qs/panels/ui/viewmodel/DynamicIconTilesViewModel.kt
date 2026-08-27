@@ -35,11 +35,8 @@ constructor(
     private val hydrator = Hydrator("DynamicIconTilesViewModel")
     private val interactor = interactorFactory.create()
 
-    val largeTilesSpanState =
-        hydrator.hydratedStateOf(
-            traceName = "largeTilesSpan",
-            source = iconTilesViewModel.largeTilesSpan,
-        )
+    val largeTilesState =
+        hydrator.hydratedStateOf(traceName = "largeTiles", source = iconTilesViewModel.largeTiles)
 
     override suspend fun onActivated(): Nothing {
         coroutineScope {

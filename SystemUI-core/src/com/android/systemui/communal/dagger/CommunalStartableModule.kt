@@ -19,9 +19,13 @@ package com.android.systemui.communal.dagger
 import com.android.systemui.CoreStartable
 import com.android.systemui.communal.CommunalBackupRestoreStartable
 import com.android.systemui.communal.CommunalDreamStartable
+import com.android.systemui.communal.CommunalMediaStartable
 import com.android.systemui.communal.CommunalMetricsStartable
 import com.android.systemui.communal.CommunalOngoingContentStartable
 import com.android.systemui.communal.CommunalSceneStartable
+import com.android.systemui.communal.CommunalSuppressionStartable
+import com.android.systemui.communal.ContextualSetupCoordinator
+import com.android.systemui.communal.DevicePosturingListener
 import com.android.systemui.communal.log.CommunalLoggerStartable
 import com.android.systemui.communal.widgets.CommunalAppWidgetHostStartable
 import com.android.systemui.dagger.qualifiers.PerUser
@@ -49,6 +53,11 @@ interface CommunalStartableModule {
 
     @Binds
     @IntoMap
+    @ClassKey(CommunalMediaStartable::class)
+    fun bindCommunalMediaStartable(impl: CommunalMediaStartable): CoreStartable
+
+    @Binds
+    @IntoMap
     @PerUser
     @ClassKey(CommunalAppWidgetHostStartable::class)
     fun bindCommunalAppWidgetHostStartable(impl: CommunalAppWidgetHostStartable): CoreStartable
@@ -67,4 +76,19 @@ interface CommunalStartableModule {
     @IntoMap
     @ClassKey(CommunalMetricsStartable::class)
     fun bindCommunalMetricsStartable(impl: CommunalMetricsStartable): CoreStartable
+
+    @Binds
+    @IntoMap
+    @ClassKey(DevicePosturingListener::class)
+    fun bindDevicePosturingistener(impl: DevicePosturingListener): CoreStartable
+
+    @Binds
+    @IntoMap
+    @ClassKey(CommunalSuppressionStartable::class)
+    fun bindCommunalSuppressionStartable(impl: CommunalSuppressionStartable): CoreStartable
+
+    @Binds
+    @IntoMap
+    @ClassKey(ContextualSetupCoordinator::class)
+    fun bindContextualSetupCoordinator(impl: ContextualSetupCoordinator): CoreStartable
 }

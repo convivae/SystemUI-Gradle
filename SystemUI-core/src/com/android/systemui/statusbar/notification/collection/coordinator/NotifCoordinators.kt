@@ -15,17 +15,16 @@
  */
 package com.android.systemui.statusbar.notification.collection.coordinator
 
+import android.multiuser.Flags
+import android.os.UserManager
+import com.android.systemui.notifications.intelligence.rules.shared.NmContextualDisplayLaunch
 import com.android.systemui.statusbar.notification.collection.NotifPipeline
-import com.android.systemui.statusbar.notification.collection.NotificationClassificationFlag
 import com.android.systemui.statusbar.notification.collection.PipelineDumpable
 import com.android.systemui.statusbar.notification.collection.PipelineDumper
-import com.android.systemui.statusbar.notification.collection.SortBySectionTimeFlag
 import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
 import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifSectioner
 import com.android.systemui.statusbar.notification.collection.provider.SectionStyleProvider
 import com.android.systemui.statusbar.notification.shared.NotificationMinimalism
-import com.android.systemui.statusbar.notification.shared.NotificationsLiveDataStoreRefactor
-import com.android.systemui.statusbar.notification.shared.PriorityPeopleSection
 import javax.inject.Inject
 
 /**
@@ -39,7 +38,6 @@ class NotifCoordinatorsImpl
 @Inject
 constructor(
     sectionStyleProvider: SectionStyleProvider,
-    dataStoreCoordinator: DataStoreCoordinator,
     hideLocallyDismissedNotifsCoordinator: HideLocallyDismissedNotifsCoordinator,
     hideNotifsForOtherUsersCoordinator: HideNotifsForOtherUsersCoordinator,
     keyguardCoordinator: KeyguardCoordinator,
@@ -69,6 +67,9 @@ constructor(
     dismissibilityCoordinator: DismissibilityCoordinator,
     statsLoggerCoordinator: NotificationStatsLoggerCoordinator,
     bundleCoordinator: BundleCoordinator,
+    summarizationCoordinator: SummarizationCoordinator,
+    highlightsCoordinator: HighlightsCoordinator,
+    hsuCoordinator: HsuCoordinator,
 ) : NotifCoordinators {
 
     private val mCoreCoordinators: MutableList<CoreCoordinator> = ArrayList()
@@ -77,9 +78,6 @@ constructor(
 
     /** Creates all the coordinators. */
     init {
-        // Attach core coordinators.
-        mCoreCoordinators.add(dataStoreCoordinator)
-
         // Attach normal coordinators.
         mCoordinators.add(hideLocallyDismissedNotifsCoordinator)
         mCoordinators.add(hideNotifsForOtherUsersCoordinator)
@@ -110,9 +108,17 @@ constructor(
         mCoordinators.add(preparationCoordinator)
         mCoordinators.add(remoteInputCoordinator)
         mCoordinators.add(dismissibilityCoordinator)
-
-        if (NotificationsLiveDataStoreRefactor.isEnabled) {
-            mCoordinators.add(statsLoggerCoordinator)
+        mCoordinators.add(bundleCoordinator)
+        mCoordinators.add(summarizationCoordinator)
+        mCoordinators.add(statsLoggerCoordinator)
+        if (NmContextualDisplayLaunch.isEnabled) {
+            mCoordinators.add(highlightsCoordinator)
+        }
+        if (
+            (Flags.hsuDisableNotifications() || Flags.hsuAllowlistNotifications()) &&
+                UserManager.isHeadlessSystemUserMode()
+        ) {
+            mCoordinators.add(hsuCoordinator)
         }
 
         // Manually add Ordered Sections
@@ -124,37 +130,19 @@ constructor(
             mOrderedSections.add(lockScreenMinimalismCoordinator.topUnseenSectioner) // Top Unseen
         }
         mOrderedSections.add(colorizedFgsCoordinator.sectioner) // ForegroundService
-        if (PriorityPeopleSection.isEnabled) {
-            mOrderedSections.add(conversationCoordinator.priorityPeopleSectioner) // Priority People
+        if (NmContextualDisplayLaunch.isEnabled) {
+            mOrderedSections.add(highlightsCoordinator.highlightsSectioner) // Highlights
         }
+        mOrderedSections.add(conversationCoordinator.priorityPeopleSectioner) // Priority People
         mOrderedSections.add(conversationCoordinator.peopleAlertingSectioner) // People Alerting
-        if (!SortBySectionTimeFlag.isEnabled) {
-            mOrderedSections.add(conversationCoordinator.peopleSilentSectioner) // People Silent
-        }
         mOrderedSections.add(rankingCoordinator.alertingSectioner) // Alerting
-        if (NotificationClassificationFlag.isEnabled) {
-            mOrderedSections.add(bundleCoordinator.newsSectioner)
-            mOrderedSections.add(bundleCoordinator.socialSectioner)
-            mOrderedSections.add(bundleCoordinator.recsSectioner)
-            mOrderedSections.add(bundleCoordinator.promoSectioner)
-        }
         mOrderedSections.add(rankingCoordinator.silentSectioner) // Silent
         mOrderedSections.add(rankingCoordinator.minimizedSectioner) // Minimized
 
         sectionStyleProvider.setMinimizedSections(setOf(rankingCoordinator.minimizedSectioner))
-        if (SortBySectionTimeFlag.isEnabled) {
-            sectionStyleProvider.setSilentSections(
-                listOf(rankingCoordinator.silentSectioner, rankingCoordinator.minimizedSectioner)
-            )
-        } else {
-            sectionStyleProvider.setSilentSections(
-                listOf(
-                    conversationCoordinator.peopleSilentSectioner,
-                    rankingCoordinator.silentSectioner,
-                    rankingCoordinator.minimizedSectioner,
-                )
-            )
-        }
+        sectionStyleProvider.setSilentSections(
+            listOf(rankingCoordinator.silentSectioner, rankingCoordinator.minimizedSectioner)
+        )
     }
 
     /**

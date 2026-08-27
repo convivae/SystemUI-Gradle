@@ -16,16 +16,36 @@
 
 package com.android.systemui.statusbar.phone
 
+import android.app.ActivityOptions
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
 import android.os.UserHandle
 import android.view.View
 import com.android.systemui.ActivityIntentHelper
 import com.android.systemui.animation.ActivityTransitionAnimator
+import com.android.systemui.plugins.ActivityStartOptions
 import com.android.systemui.plugins.ActivityStarter
+import kotlinx.coroutines.CoroutineScope
 
 interface ActivityStarterInternal {
+    /**
+     * Registers the given [controllerFactory] for launching and closing transitions matching the
+     * [cookie] and the [ComponentName] that it contains, within the given [scope].
+     */
+    fun registerTransition(
+        cookie: ActivityTransitionAnimator.TransitionCookie,
+        controllerFactory: ActivityTransitionAnimator.ControllerFactory,
+        scope: CoroutineScope,
+    )
+
+    /**
+     * Unregisters the [ActivityTransitionAnimator.Controller] previously registered containing the
+     * given [cookie]. If no such registration exists, this is a no-op.
+     */
+    fun unregisterTransition(cookie: ActivityTransitionAnimator.TransitionCookie)
+
     /**
      * Starts a pending intent after dismissing keyguard.
      *
@@ -46,6 +66,7 @@ interface ActivityStarterInternal {
     )
 
     /** Starts an activity after dismissing keyguard. */
+    @Deprecated("Use startActivityDismissingKeyguard(options: ActivityStartOptions) instead")
     fun startActivityDismissingKeyguard(
         intent: Intent,
         dismissShade: Boolean,
@@ -56,7 +77,11 @@ interface ActivityStarterInternal {
         customMessage: String? = null,
         disallowEnterPictureInPictureWhileLaunching: Boolean = false,
         userHandle: UserHandle? = null,
+        activityOptions: ActivityOptions? = null,
     )
+
+    /** Starts an activity after dismissing keyguard. */
+    fun startActivityDismissingKeyguard(options: ActivityStartOptions)
 
     /** Starts an Activity. */
     fun startActivity(

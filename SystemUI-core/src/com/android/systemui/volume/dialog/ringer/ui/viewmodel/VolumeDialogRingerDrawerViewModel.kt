@@ -25,6 +25,7 @@ import android.media.AudioManager.STREAM_RING
 import android.os.VibrationEffect
 import android.widget.Toast
 import com.android.internal.R as internalR
+import com.android.internal.logging.UiEventLogger
 import com.android.settingslib.Utils
 import com.android.settingslib.notification.domain.interactor.NotificationsSoundPolicyInteractor
 import com.android.settingslib.volume.shared.model.AudioStream
@@ -32,14 +33,20 @@ import com.android.settingslib.volume.shared.model.RingerMode
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.res.R
+import com.android.systemui.shared.system.BlurUtils.isVolumeAndPowerBlurEnabled
 import com.android.systemui.statusbar.VibratorHelper
+import com.android.systemui.statusbar.policy.ConfigurationController
+import com.android.systemui.statusbar.policy.onConfigChanged
+import com.android.systemui.util.time.SystemClock
 import com.android.systemui.volume.Events
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
+import com.android.systemui.volume.dialog.domain.interactor.ExpandedAudioTileDetailsFeatureInteractor
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogVisibilityInteractor
 import com.android.systemui.volume.dialog.ringer.domain.VolumeDialogRingerInteractor
 import com.android.systemui.volume.dialog.ringer.shared.model.VolumeDialogRingerModel
 import com.android.systemui.volume.dialog.shared.VolumeDialogLogger
+import com.android.systemui.volume.dialog.ui.VolumeDialogUiEvent
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -48,9 +55,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+private const val DRAWER_STATE_ANIMATION_DURATION = 400L
 private const val SHOW_RINGER_TOAST_COUNT = 12
 
 @VolumeDialogScope
@@ -65,19 +76,38 @@ constructor(
     private val vibrator: VibratorHelper,
     private val volumeDialogLogger: VolumeDialogLogger,
     private val visibilityInteractor: VolumeDialogVisibilityInteractor,
+    configurationController: ConfigurationController,
+    private val uiEventLogger: UiEventLogger,
+    private val systemClock: SystemClock,
+    private val expandedAudioTileDetailsFeatureInteractor: ExpandedAudioTileDetailsFeatureInteractor,
 ) {
 
+    // Use horizontal volume dialog if the audio tile details view is enabled
+    val isVolumeDialogVertical = !expandedAudioTileDetailsFeatureInteractor.isEnabled()
+
+    // Show blur if the flag is enabled and the volume dialog is vertical
+    val showBlur = isVolumeAndPowerBlurEnabled() && isVolumeDialogVertical
+
     private val drawerState = MutableStateFlow<RingerDrawerState>(RingerDrawerState.Initial)
+    private val orientation: StateFlow<Int> =
+        configurationController.onConfigChanged
+            .map { it.orientation }
+            .stateIn(
+                coroutineScope,
+                SharingStarted.Eagerly,
+                applicationContext.resources.configuration.orientation,
+            )
 
     val ringerViewModel: StateFlow<RingerViewModelState> =
         combine(
                 soundPolicyInteractor.isZenMuted(AudioStream(STREAM_RING)),
                 ringerInteractor.ringerModel,
                 drawerState,
-            ) { isZenMuted, ringerModel, state ->
+                orientation,
+            ) { isZenMuted, ringerModel, state, orientation ->
                 level = ringerModel.level
                 levelMax = ringerModel.levelMax
-                ringerModel.toViewModel(state, isZenMuted)
+                ringerModel.toViewModel(state, isZenMuted, orientation)
             }
             .flowOn(backgroundDispatcher)
             .stateIn(coroutineScope, SharingStarted.Eagerly, RingerViewModelState.Unavailable)
@@ -93,12 +123,34 @@ constructor(
             .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
             .build()
 
+    private var lastClickTime = 0L
+
+    init {
+        ringerViewModel
+            .onEach { viewModelState ->
+                when (viewModelState) {
+                    is RingerViewModelState.Available ->
+                        volumeDialogLogger.onRingerDrawerAvailable(
+                            viewModelState.uiModel.availableButtons.map { it.ringerMode }
+                        )
+                    is RingerViewModelState.Unavailable ->
+                        volumeDialogLogger.onRingerDrawerUnavailable()
+                }
+            }
+            .launchIn(coroutineScope)
+    }
+
     fun onRingerButtonClicked(ringerMode: RingerMode, isSelectedButton: Boolean = false) {
+        val currentTime = systemClock.currentTimeMillis()
+        if (currentTime - lastClickTime < DRAWER_STATE_ANIMATION_DURATION) return
+        lastClickTime = currentTime
         if (drawerState.value is RingerDrawerState.Open && !isSelectedButton) {
             Events.writeEvent(Events.EVENT_RINGER_TOGGLE, ringerMode.value)
+            volumeDialogLogger.onRingerModeChanged(ringerMode)
             provideTouchFeedback(ringerMode)
             maybeShowToast(ringerMode)
             ringerInteractor.setRingerMode(ringerMode)
+            ringerMode.toVolumeDialogUiEvent()?.let(uiEventLogger::log)
         }
         visibilityInteractor.resetDismissTimeout()
         drawerState.value =
@@ -133,6 +185,7 @@ constructor(
     private fun VolumeDialogRingerModel.toViewModel(
         drawerState: RingerDrawerState,
         isZenMuted: Boolean,
+        orientation: Int,
     ): RingerViewModelState {
         val currentIndex = availableModes.indexOf(currentRingerMode)
         if (currentIndex == -1) {
@@ -145,11 +198,14 @@ constructor(
                 RingerViewModelState.Available(
                     RingerViewModel(
                         availableButtons =
-                            availableModes.map { mode -> toButtonViewModel(mode, isZenMuted) },
+                            availableModes.mapNotNull { mode ->
+                                toButtonViewModel(mode, isZenMuted)
+                            },
                         currentButtonIndex = currentIndex,
                         selectedButton = it,
                         drawerState = drawerState,
-                    )
+                    ),
+                    orientation,
                 )
             } ?: RingerViewModelState.Unavailable
         }
@@ -163,7 +219,7 @@ constructor(
         return when (ringerMode.value) {
             RINGER_MODE_SILENT ->
                 RingerButtonViewModel(
-                    imageResId = R.drawable.ic_speaker_mute,
+                    imageResId = R.drawable.ic_notifications_off,
                     contentDescriptionResId =
                         if (isSelectedButton) {
                             R.string.volume_ringer_status_silent
@@ -175,7 +231,7 @@ constructor(
                 )
             RINGER_MODE_VIBRATE ->
                 RingerButtonViewModel(
-                    imageResId = R.drawable.ic_volume_ringer_vibrate,
+                    imageResId = R.drawable.ic_mobile_vibrate,
                     contentDescriptionResId =
                         if (isSelectedButton) {
                             R.string.volume_ringer_status_vibrate
@@ -191,9 +247,9 @@ constructor(
                         RingerButtonViewModel(
                             imageResId =
                                 if (isSelectedButton) {
-                                    R.drawable.ic_speaker_mute
+                                    R.drawable.ic_notifications_off
                                 } else {
-                                    R.drawable.ic_speaker_on
+                                    R.drawable.ic_notifications_active
                                 },
                             contentDescriptionResId =
                                 if (isSelectedButton) {
@@ -204,10 +260,9 @@ constructor(
                             hintLabelResId = R.string.volume_ringer_hint_unmute,
                             ringerMode = ringerMode,
                         )
-
                     availableModes.contains(RingerMode(RINGER_MODE_VIBRATE)) ->
                         RingerButtonViewModel(
-                            imageResId = R.drawable.ic_speaker_on,
+                            imageResId = R.drawable.ic_notifications_active,
                             contentDescriptionResId =
                                 if (isSelectedButton) {
                                     R.string.volume_ringer_status_normal
@@ -217,10 +272,9 @@ constructor(
                             hintLabelResId = R.string.volume_ringer_hint_vibrate,
                             ringerMode = ringerMode,
                         )
-
                     else ->
                         RingerButtonViewModel(
-                            imageResId = R.drawable.ic_speaker_on,
+                            imageResId = R.drawable.ic_notifications_active,
                             contentDescriptionResId =
                                 if (isSelectedButton) {
                                     R.string.volume_ringer_status_normal
@@ -254,17 +308,14 @@ constructor(
                             null
                         }
                     }
-
                     RINGER_MODE_SILENT ->
                         applicationContext.getString(
                             internalR.string.volume_dialog_ringer_guidance_silent
                         )
-
                     RINGER_MODE_VIBRATE ->
                         applicationContext.getString(
                             internalR.string.volume_dialog_ringer_guidance_vibrate
                         )
-
                     else ->
                         applicationContext.getString(
                             internalR.string.volume_dialog_ringer_guidance_vibrate
@@ -273,5 +324,14 @@ constructor(
             toastText?.let { Toast.makeText(applicationContext, it, Toast.LENGTH_SHORT).show() }
             ringerInteractor.updateToastCount(seenToastCount)
         }
+    }
+}
+
+private fun RingerMode.toVolumeDialogUiEvent(): VolumeDialogUiEvent? {
+    return when (value) {
+        RINGER_MODE_NORMAL -> VolumeDialogUiEvent.RINGER_MODE_NORMAL
+        RINGER_MODE_VIBRATE -> VolumeDialogUiEvent.RINGER_MODE_VIBRATE
+        RINGER_MODE_SILENT -> VolumeDialogUiEvent.RINGER_MODE_SILENT
+        else -> null
     }
 }

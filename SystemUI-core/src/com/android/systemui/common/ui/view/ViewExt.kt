@@ -17,6 +17,11 @@
 package com.android.systemui.common.ui.view
 
 import android.view.View
+import android.view.ViewGroup.MarginLayoutParams
+import androidx.core.view.marginBottom
+import androidx.core.view.marginLeft
+import androidx.core.view.marginRight
+import androidx.core.view.marginTop
 import kotlinx.coroutines.DisposableHandle
 
 /**
@@ -67,4 +72,28 @@ fun View.onApplyWindowInsets(listener: View.OnApplyWindowInsetsListener): Dispos
 fun View.onTouchListener(listener: View.OnTouchListener): DisposableHandle {
     setOnTouchListener(listener)
     return DisposableHandle { setOnTouchListener(null) }
+}
+
+/** A null listener should also set the longClickable property to false */
+fun View.updateLongClickListener(listener: View.OnLongClickListener?) {
+    setOnLongClickListener(listener)
+    if (listener == null) {
+        setLongClickable(false)
+    }
+}
+
+/** Sets [View] margins if its [View.getLayoutParams] is a [MarginLayoutParams]. */
+fun View.updateMargin(
+    left: Int = marginLeft,
+    top: Int = marginTop,
+    right: Int = marginRight,
+    bottom: Int = marginBottom,
+) {
+    layoutParams =
+        (layoutParams as? MarginLayoutParams)?.also {
+            it.leftMargin = left
+            it.topMargin = top
+            it.rightMargin = right
+            it.bottomMargin = bottom
+        }
 }

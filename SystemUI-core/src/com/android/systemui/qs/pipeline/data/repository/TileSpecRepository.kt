@@ -19,18 +19,26 @@ package com.android.systemui.qs.pipeline.data.repository
 import android.annotation.UserIdInt
 import android.content.res.Resources
 import android.util.SparseArray
+import androidx.annotation.GuardedBy
+import com.android.app.tracing.coroutines.launchTraced
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.qs.pipeline.data.model.RestoreData
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.pipeline.shared.TilesUpgradePath
 import com.android.systemui.qs.pipeline.shared.logging.QSPipelineLogger
 import com.android.systemui.res.R
 import com.android.systemui.retail.data.repository.RetailModeRepository
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Repository that tracks the current tiles. */
 interface TileSpecRepository {
@@ -72,7 +80,11 @@ interface TileSpecRepository {
     suspend fun prependDefault(@UserIdInt userId: Int)
 
     /** Reset the current set of tiles to the default list of tiles */
-    suspend fun resetToDefault(userId: Int)
+    suspend fun resetToDefault(userId: Int): List<TileSpec>
+
+    suspend fun removePackage(packageName: String, @UserIdInt userId: Int)
+
+    val tilesUpgradePath: ReceiveChannel<Pair<TilesUpgradePath, Int>>
 
     companion object {
         /** Position to indicate the end of the list */
@@ -87,7 +99,6 @@ interface TileSpecRepository {
  * If the device is in retail mode, the tiles are fixed to the value of
  * [R.string.quick_settings_tiles_retail_mode].
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class TileSpecSettingsRepository
 @Inject
@@ -96,6 +107,7 @@ constructor(
     private val logger: QSPipelineLogger,
     private val retailModeRepository: RetailModeRepository,
     private val userTileSpecRepositoryFactory: UserTileSpecRepository.Factory,
+    @Background private val applicationScope: CoroutineScope,
 ) : TileSpecRepository {
 
     private val retailModeTiles by lazy {
@@ -106,14 +118,16 @@ constructor(
             .filter { it !is TileSpec.Invalid }
     }
 
+    private val _tilesUpgradePath = Channel<Pair<TilesUpgradePath, Int>>(capacity = 5)
+    override val tilesUpgradePath = _tilesUpgradePath
+
+    private val sparseArrayMutex = Mutex()
+
+    @GuardedBy("sparseArrayMutex")
     private val userTileRepositories = SparseArray<UserTileSpecRepository>()
 
     override suspend fun tilesSpecs(userId: Int): Flow<List<TileSpec>> {
-        if (userId !in userTileRepositories) {
-            val userTileRepository = userTileSpecRepositoryFactory.create(userId)
-            userTileRepositories.put(userId, userTileRepository)
-        }
-        val realTiles = userTileRepositories.get(userId).tiles()
+        val realTiles = getTileRepositoryForUser(userId).tiles()
 
         return retailModeRepository.retailMode.flatMapLatest { inRetailMode ->
             if (inRetailMode) {
@@ -132,29 +146,28 @@ constructor(
         if (tile is TileSpec.Invalid) {
             return
         }
-        userTileRepositories.get(userId)?.addTile(tile, position)
+        maybeGetTileRepositoryForUser(userId)?.addTile(tile, position)
     }
 
     override suspend fun removeTiles(userId: Int, tiles: Collection<TileSpec>) {
         if (retailModeRepository.inRetailMode) {
             return
         }
-        userTileRepositories.get(userId)?.removeTiles(tiles)
+        maybeGetTileRepositoryForUser(userId)?.removeTiles(tiles)
     }
 
     override suspend fun setTiles(userId: Int, tiles: List<TileSpec>) {
         if (retailModeRepository.inRetailMode) {
             return
         }
-        userTileRepositories.get(userId)?.setTiles(tiles)
+        maybeGetTileRepositoryForUser(userId)?.setTiles(tiles)
     }
 
     override suspend fun reconcileRestore(
         restoreData: RestoreData,
         currentAutoAdded: Set<TileSpec>,
     ) {
-        userTileRepositories
-            .get(restoreData.userId)
+        maybeGetTileRepositoryForUser(restoreData.userId)
             ?.reconcileRestore(restoreData, currentAutoAdded)
     }
 
@@ -162,11 +175,41 @@ constructor(
         if (retailModeRepository.inRetailMode) {
             return
         }
-        userTileRepositories.get(userId)?.prependDefault()
+        maybeGetTileRepositoryForUser(userId)?.prependDefault()
     }
 
-    override suspend fun resetToDefault(userId: Int) {
-        userTileRepositories.get(userId)?.resetToDefault()
+    override suspend fun resetToDefault(userId: Int): List<TileSpec> {
+        return maybeGetTileRepositoryForUser(userId)?.resetToDefault() ?: emptyList()
+    }
+
+    override suspend fun removePackage(packageName: String, userId: Int) {
+        maybeGetTileRepositoryForUser(userId)?.onPackageRemoved(packageName)
+    }
+
+    private suspend fun getTileRepositoryForUser(userId: Int): UserTileSpecRepository {
+        return if (userId !in userTileRepositories) {
+            sparseArrayMutex.withLock {
+                if (userId !in userTileRepositories) {
+                    val userTileRepository = userTileSpecRepositoryFactory.create(userId)
+                    userTileRepositories.put(userId, userTileRepository)
+                    logger.logTileSpecRespoitoryCreatedForUser(userId)
+                    applicationScope.launchTraced("TileSpecRepository.aggregateTilesPerUser") {
+                        for (tileUpgrade in userTileRepository.tilesUpgradePath) {
+                            _tilesUpgradePath.send(tileUpgrade to userId)
+                        }
+                    }
+                    userTileRepository
+                } else {
+                    userTileRepositories.get(userId)
+                }
+            }
+        } else {
+            sparseArrayMutex.withLock { userTileRepositories.get(userId) }
+        }
+    }
+
+    private suspend fun maybeGetTileRepositoryForUser(userId: Int): UserTileSpecRepository? {
+        return sparseArrayMutex.withLock { userTileRepositories.get(userId) }
     }
 
     companion object {

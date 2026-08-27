@@ -51,10 +51,11 @@ public class AmbientStatusBarView extends ConstraintLayout {
             STATUS_ICON_ALARM_SET,
             STATUS_ICON_CAMERA_DISABLED,
             STATUS_ICON_MIC_DISABLED,
-            STATUS_ICON_MIC_CAMERA_DISABLED,
             STATUS_ICON_PRIORITY_MODE_ON,
             STATUS_ICON_ASSISTANT_ATTENTION_ACTIVE,
             STATUS_ICON_LOCATION_ACTIVE,
+            STATUS_ICON_MIC_PRIVACY_ON,
+            STATUS_ICON_CAMERA_PRIVACY_ON,
     })
     public @interface StatusIconType {}
     public static final int STATUS_ICON_NOTIFICATIONS = 0;
@@ -62,10 +63,11 @@ public class AmbientStatusBarView extends ConstraintLayout {
     public static final int STATUS_ICON_ALARM_SET = 2;
     public static final int STATUS_ICON_CAMERA_DISABLED = 3;
     public static final int STATUS_ICON_MIC_DISABLED = 4;
-    public static final int STATUS_ICON_MIC_CAMERA_DISABLED = 5;
-    public static final int STATUS_ICON_PRIORITY_MODE_ON = 6;
-    public static final int STATUS_ICON_ASSISTANT_ATTENTION_ACTIVE = 7;
-    public static final int STATUS_ICON_LOCATION_ACTIVE = 8;
+    public static final int STATUS_ICON_PRIORITY_MODE_ON = 5;
+    public static final int STATUS_ICON_ASSISTANT_ATTENTION_ACTIVE = 6;
+    public static final int STATUS_ICON_LOCATION_ACTIVE = 7;
+    public static final int STATUS_ICON_MIC_PRIVACY_ON = 8;
+    public static final int STATUS_ICON_CAMERA_PRIVACY_ON = 9;
 
     private final Map<Integer, View> mStatusIcons = new HashMap<>();
     private Context mContext;
@@ -75,8 +77,8 @@ public class AmbientStatusBarView extends ConstraintLayout {
     private ShadowInfo mAmbientShadowInfo;
     private int mDrawableSize;
     private int mDrawableInsetSize;
-    private static final float KEY_SHADOW_ALPHA = 0.35f;
-    private static final float AMBIENT_SHADOW_ALPHA = 0.4f;
+    private static final float KEY_SHADOW_ALPHA = 0.9f;
+    private static final float AMBIENT_SHADOW_ALPHA = 0.7f;
 
     public AmbientStatusBarView(Context context) {
         this(context, null);
@@ -102,14 +104,14 @@ public class AmbientStatusBarView extends ConstraintLayout {
         super.onFinishInflate();
 
         mKeyShadowInfo = createShadowInfo(
-            R.dimen.dream_overlay_status_bar_key_text_shadow_radius,
+            R.dimen.dream_overlay_icon_shadow_radius,
             R.dimen.dream_overlay_status_bar_key_text_shadow_dx,
             R.dimen.dream_overlay_status_bar_key_text_shadow_dy,
             KEY_SHADOW_ALPHA
         );
 
         mAmbientShadowInfo = createShadowInfo(
-            R.dimen.dream_overlay_status_bar_ambient_text_shadow_radius,
+            R.dimen.dream_overlay_icon_ambient_shadow_radius,
             R.dimen.dream_overlay_status_bar_ambient_text_shadow_dx,
             R.dimen.dream_overlay_status_bar_ambient_text_shadow_dy,
             AMBIENT_SHADOW_ALPHA
@@ -127,19 +129,23 @@ public class AmbientStatusBarView extends ConstraintLayout {
         mStatusIcons.put(STATUS_ICON_ALARM_SET,
                 addDoubleShadow(fetchStatusIconForResId(R.id.dream_overlay_alarm_set)));
         mStatusIcons.put(STATUS_ICON_CAMERA_DISABLED,
-                fetchStatusIconForResId(R.id.dream_overlay_camera_off));
+                addDoubleShadow(fetchStatusIconForResId(R.id.dream_overlay_camera_off)));
         mStatusIcons.put(STATUS_ICON_MIC_DISABLED,
-                fetchStatusIconForResId(R.id.dream_overlay_mic_off));
-        mStatusIcons.put(STATUS_ICON_MIC_CAMERA_DISABLED,
-                fetchStatusIconForResId(R.id.dream_overlay_camera_mic_off));
+                addDoubleShadow(fetchStatusIconForResId(R.id.dream_overlay_mic_off)));
         mStatusIcons.put(STATUS_ICON_NOTIFICATIONS,
-                fetchStatusIconForResId(R.id.dream_overlay_notification_indicator));
+                addDoubleShadow(
+                        fetchStatusIconForResId(R.id.dream_overlay_notification_indicator)));
         mStatusIcons.put(STATUS_ICON_PRIORITY_MODE_ON,
                 addDoubleShadow(fetchStatusIconForResId(R.id.dream_overlay_priority_mode)));
         mStatusIcons.put(STATUS_ICON_ASSISTANT_ATTENTION_ACTIVE,
-                fetchStatusIconForResId(R.id.dream_overlay_assistant_attention_indicator));
+                addDoubleShadow(
+                        fetchStatusIconForResId(R.id.dream_overlay_assistant_attention_indicator)));
         mStatusIcons.put(STATUS_ICON_LOCATION_ACTIVE,
-                fetchStatusIconForResId(R.id.dream_overlay_location_active));
+                addDoubleShadow(fetchStatusIconForResId(R.id.dream_overlay_location_active)));
+        mStatusIcons.put(STATUS_ICON_MIC_PRIVACY_ON,
+                addDoubleShadow(fetchStatusIconForResId(R.id.dream_overlay_mic_privacy)));
+        mStatusIcons.put(STATUS_ICON_CAMERA_PRIVACY_ON,
+                addDoubleShadow(fetchStatusIconForResId(R.id.dream_overlay_camera_privacy)));
 
         mSystemStatusViewGroup = findViewById(R.id.dream_overlay_system_status);
         mExtraSystemStatusViewGroup = findViewById(R.id.dream_overlay_extra_items);
@@ -152,10 +158,11 @@ public class AmbientStatusBarView extends ConstraintLayout {
             case STATUS_ICON_ALARM_SET -> "alarm_set";
             case STATUS_ICON_CAMERA_DISABLED -> "camera_disabled";
             case STATUS_ICON_MIC_DISABLED -> "mic_disabled";
-            case STATUS_ICON_MIC_CAMERA_DISABLED -> "mic_camera_disabled";
             case STATUS_ICON_PRIORITY_MODE_ON -> "priority_mode_on";
             case STATUS_ICON_ASSISTANT_ATTENTION_ACTIVE -> "assistant_attention_active";
             case STATUS_ICON_LOCATION_ACTIVE -> "location_active";
+            case STATUS_ICON_MIC_PRIVACY_ON -> "mic_privacy_on";
+            case STATUS_ICON_CAMERA_PRIVACY_ON -> "camera_privacy_on";
             default -> type + "(unknown)";
         };
     }

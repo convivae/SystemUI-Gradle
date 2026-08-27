@@ -49,7 +49,6 @@
     <item type="id" name="height_animator_start_value_tag"/>
     <item type="id" name="x_animator_tag_start_value"/>
     <item type="id" name="y_animator_tag_start_value"/>
-    <item type="id" name="qs_icon_tag"/>
     <item type="id" name="scrim"/>
     <item type="id" name="scrim_alpha_start"/>
     <item type="id" name="scrim_alpha_end"/>
@@ -162,9 +161,6 @@
     <item type="id" name="accessibility_action_controls_move_before" />
     <item type="id" name="accessibility_action_controls_move_after" />
 
-    <item type="id" name="accessibility_action_qs_move_to_position" />
-    <item type="id" name="accessibility_action_qs_add_to_position" />
-
     <!-- Accessibility actions for window magnification. -->
     <item type="id" name="accessibility_action_zoom_in"/>
     <item type="id" name="accessibility_action_zoom_out"/>
@@ -198,8 +194,6 @@
     <!-- face scanning view id -->
     <item type="id" name="face_scanning_anim"/>
 
-    <item type="id" name="qqs_tile_layout"/>
-
     <!-- The buttons in the Quick Settings footer actions.-->
     <item type="id" name="multi_user_switch"/>
     <item type="id" name="pm_lite"/>
@@ -215,27 +209,31 @@
     <item type="id" name="backlight_icon" />
 
     <!-- IDs for use in the keyguard/lockscreen scene -->
-    <item type="id" name="keyguard_root_view" />
-    <item type="id" name="keyguard_indication_area" />
-    <item type="id" name="keyguard_indication_text" />
-    <item type="id" name="keyguard_indication_text_bottom" />
-    <item type="id" name="nssl_guideline" />
-    <item type="id" name="nssl_placeholder" />
+    <item type="id" name="accessibility_actions_view" />
+    <item type="id" name="ambient_indication_container" />
     <item type="id" name="aod_notification_icon_container" />
-    <item type="id" name="split_shade_guideline" />
-    <item type="id" name="lock_icon" />
-    <item type="id" name="lock_icon_bg" />
+    <item type="id" name="aod_promoted_notification_frame" />
     <item type="id" name="burn_in_layer" />
     <item type="id" name="burn_in_layer_empty_view" />
     <item type="id" name="communal_tutorial_indicator" />
+    <item type="id" name="end_button" />
+    <item type="id" name="lock_icon" />
+    <item type="id" name="lock_icon_bg" />
+    <item type="id" name="keyguard_indication_area" />
+    <item type="id" name="keyguard_indication_text" />
+    <item type="id" name="keyguard_indication_text_bottom" />
+    <item type="id" name="keyguard_root_view" />
+    <item type="id" name="keyguard_settings_button" />
+    <item type="id" name="nssl_guideline" />
+    <item type="id" name="nssl_placeholder" />
     <item type="id" name="nssl_placeholder_barrier_bottom" />
-    <item type="id" name="ambient_indication_container" />
-    <item type="id" name="status_view_media_container" />
-    <item type="id" name="smart_space_barrier_bottom" />
     <item type="id" name="small_clock_guideline_top" />
-    <item type="id" name="weather_clock_date_and_icons_barrier_bottom" />
+    <item type="id" name="smart_space_barrier_top" />
+    <item type="id" name="smart_space_barrier_bottom" />
+    <item type="id" name="split_shade_guideline" />
+    <item type="id" name="start_button" />
+    <item type="id" name="status_view_media_container" />
     <item type="id" name="weather_clock_bc_smartspace_bottom" />
-    <item type="id" name="accessibility_actions_view" />
 
     <!-- Privacy dialog -->
     <item type="id" name="privacy_dialog_close_app_button" />
@@ -275,12 +273,18 @@
     <item type="id" name="alternate_bouncer_udfps_icon_view" />
     <item type="id" name="alternate_bouncer_udfps_accessibility_overlay" />
 
+    <!--Id for the biometric prompt UDFPS accessibility overlay. -->
+    <item type="id" name="biometric_prompt_udfps_accessibility_overlay" />
+
+    <!--Id for the secure lock device biometric auth composable. -->
+    <item type="id" name="secure_lock_device_biometric_auth_content" />
+
     <!-- Id for the udfps accessibility overlay -->
     <item type="id" name="udfps_accessibility_overlay" />
     <item type="id" name="udfps_accessibility_overlay_top_guideline" />
 
     <!-- Ids for communal hub widgets -->
-    <item type="id" name="communal_widget_disposable_tag"/>
+    <item type="id" name="communal_widget_listener_tag"/>
 
     <!-- snapshot view-binding IDs -->
     <item type="id" name="snapshot_view_binding" />
@@ -288,4 +292,22 @@
 
     <item type="id" name="brightness_dialog_slider" />
 
+    <item type="id" name="aod_promoted_notification_view_updater_tag" />
+    <item type="id" name="aod_promoted_notification_inflation_identity" />
+
+    <!-- id for the composable battery meter (see UnifiedBattery.kt) -->
+    <item type="id" name="battery_meter_composable_view" />
+
+    <!-- Used for animation guard tag to throttle number of reported logs. -->
+    <item type="id" name="screen_off_animation_guard_set" />
+    <item type="id" name="screen_off_animation_guard_reported_wtf" />
+    <item type="id" name="screen_off_animation_guard_screen_off_updates" />
+
+    <!-- Used in nodes inside QSFragmentCompose -->
+    <item type="id" name="quick_settings_container" />
+    <item type="id" name="quick_settings_panel" />
+    <item type="id" name="qs_footer_actions" />
+
+    <!-- Identifier for the phishing animated smart action. -->
+    <item type="id" name="is_phishing_animated_action" />
 </resources>

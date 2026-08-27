@@ -18,7 +18,9 @@
 package com.android.systemui.keyguard.ui.binder
 
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.graphics.drawable.Animatable2
+import android.graphics.drawable.LayerDrawable
 import android.util.Size
 import android.view.View
 import android.view.ViewGroup
@@ -31,27 +33,29 @@ import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.internal.graphics.drawable.BackgroundBlurDrawable
 import com.android.keyguard.logging.KeyguardQuickAffordancesLogger
-import com.android.settingslib.Utils
+import com.android.systemui.Flags.enableLockscreenBlur
 import com.android.systemui.animation.Expandable
 import com.android.systemui.animation.view.LaunchableImageView
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.common.ui.binder.IconViewBinder
+import com.android.systemui.common.ui.view.updateLongClickListener
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceHapticViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.util.doOnEnd
+import com.android.systemui.window.domain.interactor.WindowRootViewBlurInteractor
+import com.google.android.msdl.domain.MSDLPlayer
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 /** This is only for a SINGLE Quick affordance */
 @SysUISingleton
@@ -60,8 +64,10 @@ class KeyguardQuickAffordanceViewBinder
 constructor(
     private val falsingManager: FalsingManager?,
     private val vibratorHelper: VibratorHelper?,
+    private val msdlPlayer: MSDLPlayer,
     private val logger: KeyguardQuickAffordancesLogger,
-    @Main private val mainImmediateDispatcher: CoroutineDispatcher,
+    private val hapticsViewModelFactory: KeyguardQuickAffordanceHapticViewModel.Factory,
+    private val windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
 ) {
 
     private val EXIT_DOZE_BUTTON_REVEAL_ANIMATION_DURATION_MS = 250L
@@ -71,9 +77,6 @@ constructor(
 
     /**
      * Defines interface for an object that acts as the binding between the view and its view-model.
-     *
-     * Users of the [KeyguardBottomAreaViewBinder] class should use this to control the binder after
-     * it is bound.
      */
     interface Binding {
         /** Notifies that device configuration has changed. */
@@ -91,25 +94,37 @@ constructor(
     ): Binding {
         val button = view as ImageView
         val configurationBasedDimensions = MutableStateFlow(loadFromResources(view))
+        val hapticsViewModel = hapticsViewModelFactory.create()
+        val cornerRadius = view.resources.getDimension(R.dimen.keyguard_affordance_fixed_radius)
+        val blurRadius =
+            view.resources.getDimensionPixelSize(R.dimen.keyguard_shortcuts_blur_radius)
+
         val disposableHandle =
             view.repeatWhenAttached {
+                if (enableLockscreenBlur() && view.background !is LayerDrawable) {
+                    val blurDrawable =
+                        view.viewRootImpl.createBackgroundBlurDrawable().apply {
+                            setCornerRadius(cornerRadius)
+                            setBlurRadius(blurRadius)
+                            setVisible(false, false)
+                        }
+                    val surfaceDrawable = view.background
+                    view.background = LayerDrawable(arrayOf(blurDrawable, surfaceDrawable))
+                }
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     launch {
                         viewModel.collect { buttonModel ->
                             updateButton(
                                 view = button,
                                 viewModel = buttonModel,
+                                hapticsViewModel,
                                 messageDisplayer = messageDisplayer,
                             )
                         }
                     }
 
                     launch {
-                        updateButtonAlpha(
-                            view = button,
-                            viewModel = viewModel,
-                            alphaFlow = alpha,
-                        )
+                        updateButtonAlpha(view = button, viewModel = viewModel, alphaFlow = alpha)
                     }
 
                     launch {
@@ -118,6 +133,18 @@ constructor(
                                 width = dimensions.buttonSizePx.width
                                 height = dimensions.buttonSizePx.height
                             }
+                        }
+                    }
+
+                    if (enableLockscreenBlur()) {
+                        launch {
+                            combine(
+                                windowRootViewBlurInteractor.isBlurCurrentlySupported,
+                                viewModel,
+                                { isSupported, viewModel ->
+                                    updateBackground(viewModel, view, isSupported)
+                                },
+                            )
                         }
                     }
                 }
@@ -135,12 +162,34 @@ constructor(
         }
     }
 
+    private fun updateBackground(
+        viewModel: KeyguardQuickAffordanceViewModel,
+        view: View,
+        isBlurSupported: Boolean,
+    ) {
+        if (enableLockscreenBlur() && view.background is LayerDrawable) {
+            val blurDrawable =
+                (view.background as LayerDrawable).getDrawable(0) as BackgroundBlurDrawable
+            blurDrawable.setVisible(
+                isBlurSupported && viewModel.isSelected && !viewModel.isActivated,
+                false,
+            )
+            (view.background as LayerDrawable)
+                .getDrawable(1)
+                .setTintList(getBackgroundTintList(viewModel, view, isBlurSupported))
+        } else {
+            view.backgroundTintList = getBackgroundTintList(viewModel, view, isBlurSupported)
+        }
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun updateButton(
         view: ImageView,
         viewModel: KeyguardQuickAffordanceViewModel,
+        hapticsViewModel: KeyguardQuickAffordanceHapticViewModel,
         messageDisplayer: (Int) -> Unit,
     ) {
+        hapticsViewModel.updateActivatedHistory(viewModel.isActivated)
         logger.logUpdate(viewModel)
         if (!viewModel.isVisible) {
             view.isInvisible = true
@@ -154,7 +203,7 @@ constructor(
         IconViewBinder.bind(viewModel.icon, view)
 
         (view.drawable as? Animatable2)?.let { animatable ->
-            (viewModel.icon as? Icon.Resource)?.res?.let { iconResourceId ->
+            (viewModel.icon as? Icon.Resource)?.resId?.let { iconResourceId ->
                 // Always start the animation (we do call stop() below, if we need to skip it).
                 animatable.start()
 
@@ -176,29 +225,20 @@ constructor(
 
         view.isActivated = viewModel.isActivated
         view.drawable.setTint(
-            Utils.getColorAttrDefaultColor(
-                view.context,
+            view.context.getColor(
                 if (viewModel.isActivated) {
-                    com.android.internal.R.attr.materialColorOnPrimaryFixed
+                    com.android.internal.R.color.materialColorOnPrimaryFixed
                 } else {
-                    com.android.internal.R.attr.materialColorOnSurface
-                },
+                    com.android.internal.R.color.materialColorOnSurface
+                }
             )
         )
+        updateBackground(
+            viewModel,
+            view,
+            windowRootViewBlurInteractor.isBlurCurrentlySupported.value,
+        )
 
-        view.backgroundTintList =
-            if (!viewModel.isSelected) {
-                Utils.getColorAttr(
-                    view.context,
-                    if (viewModel.isActivated) {
-                        com.android.internal.R.attr.materialColorPrimaryFixed
-                    } else {
-                        com.android.internal.R.attr.materialColorSurfaceContainerHigh
-                    }
-                )
-            } else {
-                null
-            }
         view
             .animate()
             .scaleX(if (viewModel.isSelected) SCALE_SELECTED_BUTTON else 1f)
@@ -224,12 +264,7 @@ constructor(
                             .getDimensionPixelSize(R.dimen.keyguard_affordance_shake_amplitude)
                             .toFloat()
                     val shakeAnimator =
-                        ObjectAnimator.ofFloat(
-                            view,
-                            "translationX",
-                            -amplitude / 2,
-                            amplitude / 2,
-                        )
+                        ObjectAnimator.ofFloat(view, "translationX", -amplitude / 2, amplitude / 2)
                     shakeAnimator.duration =
                         KeyguardBottomAreaVibrations.ShakeAnimationDuration.inWholeMilliseconds
                     shakeAnimator.interpolator =
@@ -237,13 +272,19 @@ constructor(
                     shakeAnimator.doOnEnd { view.translationX = 0f }
                     shakeAnimator.start()
 
-                    vibratorHelper?.vibrate(KeyguardBottomAreaVibrations.Shake)
+                    hapticsViewModel.onQuickAffordanceClick()
                     logger.logQuickAffordanceTapped(viewModel.configKey)
                 }
                 view.onLongClickListener =
-                    OnLongClickListener(falsingManager, viewModel, vibratorHelper, onTouchListener)
+                    OnLongClickListener(
+                        falsingManager,
+                        viewModel,
+                        hapticsViewModel,
+                        onTouchListener,
+                    )
             } else {
                 view.setOnClickListener(OnClickListener(viewModel, checkNotNull(falsingManager)))
+                view.updateLongClickListener(null)
             }
         } else {
             view.onLongClickListener = null
@@ -262,7 +303,34 @@ constructor(
         combine(viewModel.map { it.isDimmed }, alphaFlow) { isDimmed, alpha ->
                 if (isDimmed) DIM_ALPHA else alpha
             }
-            .collect { view.alpha = it }
+            .collect {
+                if (enableLockscreenBlur() && view.background is LayerDrawable) {
+                    (view.background as LayerDrawable).getDrawable(0).alpha = (it * 255).toInt()
+                }
+                view.alpha = it
+            }
+    }
+
+    private fun getBackgroundTintList(
+        viewModel: KeyguardQuickAffordanceViewModel,
+        view: View,
+        isBlurSupported: Boolean,
+    ): ColorStateList? {
+        return if (!viewModel.isSelected) {
+            ColorStateList.valueOf(
+                view.context.getColor(
+                    if (viewModel.isActivated) {
+                        com.android.internal.R.color.materialColorPrimaryFixed
+                    } else if (enableLockscreenBlur() && isBlurSupported) {
+                        com.android.internal.R.color.customColorSurfaceEffect1
+                    } else {
+                        com.android.internal.R.color.materialColorSurfaceContainerHigh
+                    }
+                )
+            )
+        } else {
+            null
+        }
     }
 
     private fun loadFromResources(view: View): ConfigurationBasedDimensions {
@@ -271,7 +339,7 @@ constructor(
                 Size(
                     view.resources.getDimensionPixelSize(R.dimen.keyguard_affordance_fixed_width),
                     view.resources.getDimensionPixelSize(R.dimen.keyguard_affordance_fixed_height),
-                ),
+                )
         )
     }
 
@@ -299,8 +367,8 @@ constructor(
     private class OnLongClickListener(
         private val falsingManager: FalsingManager?,
         private val viewModel: KeyguardQuickAffordanceViewModel,
-        private val vibratorHelper: VibratorHelper?,
-        private val onTouchListener: KeyguardQuickAffordanceOnTouchListener
+        private val hapticsViewModel: KeyguardQuickAffordanceHapticViewModel,
+        private val onTouchListener: KeyguardQuickAffordanceOnTouchListener,
     ) : View.OnLongClickListener {
         override fun onLongClick(view: View): Boolean {
             if (falsingManager?.isFalseLongTap(FalsingManager.MODERATE_PENALTY) == true) {
@@ -308,19 +376,13 @@ constructor(
             }
 
             if (viewModel.configKey != null) {
+                hapticsViewModel.onQuickAffordanceLongPress(viewModel.isActivated)
                 viewModel.onClicked(
                     KeyguardQuickAffordanceViewModel.OnClickedParameters(
                         configKey = viewModel.configKey,
                         expandable = Expandable.fromView(view),
                         slotId = viewModel.slotId,
                     )
-                )
-                vibratorHelper?.vibrate(
-                    if (viewModel.isActivated) {
-                        KeyguardBottomAreaVibrations.Activated
-                    } else {
-                        KeyguardBottomAreaVibrations.Deactivated
-                    }
                 )
             }
 
@@ -331,7 +393,5 @@ constructor(
         override fun onLongClickUseDefaultHapticFeedback(view: View) = false
     }
 
-    private data class ConfigurationBasedDimensions(
-        val buttonSizePx: Size,
-    )
+    private data class ConfigurationBasedDimensions(val buttonSizePx: Size)
 }

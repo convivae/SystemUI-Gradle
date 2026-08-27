@@ -23,7 +23,7 @@
     <string name="keyguard_enter_your_pin" msgid="5429932527814874032">"Unesite PIN"</string>
     <string name="keyguard_enter_pin" msgid="8114529922480276834">"Unesite PIN"</string>
     <string name="keyguard_enter_your_pattern" msgid="351503370332324745">"Unesite uzorak"</string>
-    <string name="keyguard_enter_pattern" msgid="7616595160901084119">"Nacrtajte uzorak"</string>
+    <string name="keyguard_enter_pattern" msgid="7616595160901084119">"Iscrtajte uzorak"</string>
     <string name="keyguard_enter_your_password" msgid="7225626204122735501">"Unesite zaporku"</string>
     <string name="keyguard_enter_password" msgid="6483623792371009758">"Unesite zaporku"</string>
     <string name="keyguard_sim_error_message_short" msgid="633630844240494070">"Nevažeća kartica."</string>
@@ -45,6 +45,7 @@
     <string name="keyguard_accessibility_password" msgid="3524161948484801450">"Zaporka uređaja"</string>
     <string name="keyguard_accessibility_sim_pin_area" msgid="6272116591533888062">"Područje PIN-a za SIM"</string>
     <string name="keyguard_accessibility_sim_puk_area" msgid="5537294043180237374">"Područje PUK-a za SIM"</string>
+    <string name="keyguard_accessibility_pin_delete_long_click" msgid="1530074796041838525">"dugi pritisak za brisanje svega"</string>
     <string name="keyboardview_keycode_delete" msgid="8489719929424895174">"Izbriši"</string>
     <string name="disable_carrier_button_text" msgid="7153361131709275746">"Onemogući eSIM"</string>
     <string name="error_disable_esim_title" msgid="3802652622784813119">"Nije moguće onemogućiti eSIM"</string>
@@ -61,7 +62,7 @@
     <string name="bouncer_face_not_recognized" msgid="1666128054475597485">"Lice nije prepoznato"</string>
     <string name="kg_bio_try_again_or_pin" msgid="4752168242723808390">"Pokušajte ponovno ili unesite PIN"</string>
     <string name="kg_bio_try_again_or_password" msgid="1473132729225398039">"Pokušajte ponovno ili unesite zaporku"</string>
-    <string name="kg_bio_try_again_or_pattern" msgid="4867893307468801501">"Pokušajte ponovno ili nacrtajte uzorak"</string>
+    <string name="kg_bio_try_again_or_pattern" msgid="4867893307468801501">"Pokušajte ponovno ili iscrtajte uzorak"</string>
     <string name="kg_bio_too_many_attempts_pin" msgid="5850845723433047605">"PIN je obavezan nakon previše pokušaja"</string>
     <string name="kg_bio_too_many_attempts_password" msgid="5551690347827728042">"Zaporka je obavezna nakon previše pokušaja"</string>
     <string name="kg_bio_too_many_attempts_pattern" msgid="736884689355181602">"Uzorak je obavezan nakon previše pokušaja"</string>
@@ -69,6 +70,10 @@
     <string name="kg_unlock_with_password_or_fp" msgid="2251295907826814237">"Otključajte zaporkom ili otiskom prsta"</string>
     <string name="kg_unlock_with_pattern_or_fp" msgid="2391870539909135046">"Otključajte uzorkom ili otiskom prsta"</string>
     <string name="kg_prompt_after_dpm_lock" msgid="6002804765868345917">"Za više sigurnosti uređaj je zaključan prema pravilima za poslovne uređaje"</string>
+    <string name="kg_prompt_title_after_secure_lock_device" msgid="2646423690908627259">"Potvrda u dva koraka"</string>
+    <string name="kg_prompt_subtitle_for_secure_lock_device_biometric_auth_fingerprint" msgid="6596633555720510932">"Upotreba otključavanja otiskom prsta"</string>
+    <string name="kg_prompt_subtitle_for_secure_lock_device_biometric_auth_face" msgid="4550701327607935441">"Upotreba otključavanja licem"</string>
+    <string name="kg_prompt_subtitle_for_secure_lock_device_biometric_auth_coex" msgid="2093026058274456330">"Upotreba otključavanja otiskom prsta ili licem"</string>
     <string name="kg_prompt_after_user_lockdown_pin" msgid="5374732179740050373">"PIN je obavezan nakon zaključavanja"</string>
     <string name="kg_prompt_after_user_lockdown_password" msgid="9097968458291129795">"Zaporka je obavezna nakon zaključavanja"</string>
     <string name="kg_prompt_after_user_lockdown_pattern" msgid="215072203613597906">"Uzorak je obavezan nakon zaključavanja"</string>
@@ -81,9 +86,20 @@
     <string name="kg_fp_locked_out" msgid="6228277682396768830">"Nije moguće otključati otiskom prsta. Previše pokušaja."</string>
     <string name="kg_trust_agent_disabled" msgid="5400691179958727891">"Agent za pouzdanost nije pouzdan"</string>
     <string name="kg_primary_auth_locked_out_pin" msgid="5492230176361601475">"Previše pokušaja s netočnim PIN-om"</string>
+    <string name="kg_primary_auth_duplicate_guess_pin" msgid="5834891656916692329">"Već ste isprobali taj PIN. Pokušajte s drugim."</string>
+    <string name="kg_primary_auth_duplicate_guess_pattern" msgid="3827593245962385968">"Već ste isprobali taj uzorak. Pokušajte s drugim."</string>
+    <string name="kg_primary_auth_duplicate_guess_password" msgid="3153406042812407458">"Već ste isprobali tu zaporku. Pokušajte s drugom."</string>
     <string name="kg_primary_auth_locked_out_pattern" msgid="8266214607346180952">"Previše pokušaja s netočnim uzorkom"</string>
     <string name="kg_primary_auth_locked_out_password" msgid="6170245108400198659">"Previše pokušaja s netočnom zaporkom"</string>
+    <string name="kg_primary_auth_locked_out_pin_shortlink" msgid="1294871994741389848">"Previše pokušaja s netočnim PIN-om\nSaznajte više na stranici <xliff:g id="SHORTLINK">{shortlink}</xliff:g>"</string>
+    <string name="kg_primary_auth_locked_out_pattern_shortlink" msgid="5998598232858156495">"Previše pokušaja s netočnim uzorkom\nSaznajte više na stranici <xliff:g id="SHORTLINK">{shortlink}</xliff:g>"</string>
+    <string name="kg_primary_auth_locked_out_password_shortlink" msgid="7035847891707609104">"Previše pokušaja s netočnom zaporkom\nSaznajte više na web-lokaciji <xliff:g id="SHORTLINK">{shortlink}</xliff:g>"</string>
     <string name="kg_too_many_failed_attempts_countdown" msgid="2038195171919795529">"{count,plural, =1{Pokušajte ponovo za # s.}one{Pokušajte ponovo za # s.}few{Pokušajte ponovo za # s.}other{Pokušajte ponovo za # s.}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_seconds" msgid="5869847493314053274">"{count,plural, =1{Pokušajte ponovno za # s}one{Pokušajte ponovno za # s}few{Pokušajte ponovno za # s}other{Pokušajte ponovno za # s}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_minutes" msgid="6688071439818994316">"{count,plural, =1{Pokušajte ponovno za # min}one{Pokušajte ponovno za # min}few{Pokušajte ponovno za # min}other{Pokušajte ponovno za # min}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_hours" msgid="4895375498917738857">"{count,plural, =1{Pokušajte ponovno za # h}one{Pokušajte ponovno za # h}few{Pokušajte ponovno za # h}other{Pokušajte ponovno za # h}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_days" msgid="5427787465019979593">"{count,plural, =1{Pokušajte ponovno za # dan}one{Pokušajte ponovno za # dan}few{Pokušajte ponovno za # dana}other{Pokušajte ponovno za # dana}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_years" msgid="7115333753941425268">"{count,plural, =1{Pokušajte ponovno za # godinu}one{Pokušajte ponovno za # godinu}few{Pokušajte ponovno za # godine}other{Pokušajte ponovno za # godina}}"</string>
     <string name="kg_sim_pin_instructions" msgid="1942424305184242951">"Unesite PIN za SIM"</string>
     <string name="kg_sim_pin_instructions_multi" msgid="3639863309953109649">"Unesite PIN za SIM mobilnog operatera \"<xliff:g id="CARRIER">%1$s</xliff:g>\"."</string>
     <string name="kg_sim_lock_esim_instructions" msgid="5577169988158738030">"<xliff:g id="PREVIOUS_MSG">%1$s</xliff:g> Onemogućite eSIM kako biste uređaj upotrebljavali bez mobilne usluge."</string>
@@ -108,6 +124,9 @@
     <string name="kg_prompt_reason_restart_pattern" msgid="3321211830602827742">"Uzorak je obavezan nakon ponovnog pokretanja uređaja"</string>
     <string name="kg_prompt_reason_restart_pin" msgid="2672166323886110512">"PIN je obavezan nakon ponovnog pokretanja uređaja"</string>
     <string name="kg_prompt_reason_restart_password" msgid="3967993994418885887">"Zaporka je obavezna nakon ponovnog pokretanja uređaja"</string>
+    <string name="kg_prompt_reason_signin_pattern" msgid="1650886553162854395">"Za prijavu je potreban uzorak"</string>
+    <string name="kg_prompt_reason_signin_pin" msgid="636031498838532631">"Za prijavu je potreban PIN"</string>
+    <string name="kg_prompt_reason_signin_password" msgid="1020939174735616114">"Za prijavu je potrebna zaporka"</string>
     <string name="kg_prompt_reason_timeout_pattern" msgid="5514969660010197363">"Za dodatnu sigurnost upotrijebite uzorak"</string>
     <string name="kg_prompt_reason_timeout_pin" msgid="4227962059353859376">"Za dodatnu sigurnost upotrijebite PIN"</string>
     <string name="kg_prompt_reason_timeout_password" msgid="8810879144143933690">"Za dodatnu sigurnost upotrijebite zaporku"</string>
@@ -126,7 +145,7 @@
     <string name="keyguard_unlock_to_continue" msgid="7509503484250597743">"Otključajte uređaj da biste nastavili"</string>
     <string name="kg_prompt_unattended_update_pin" msgid="5979434876768801873">"Unesite PIN da biste ažuriranje instalirali kasnije"</string>
     <string name="kg_prompt_unattended_update_password" msgid="8805664437604967210">"Unesite zaporku da biste ažuriranje instalirali kasnije"</string>
-    <string name="kg_prompt_unattended_update_pattern" msgid="8580479377489546091">"Nacrtajte uzorak da biste ažuriranje instalirali kasnije"</string>
+    <string name="kg_prompt_unattended_update_pattern" msgid="8580479377489546091">"Iscrtajte uzorak da biste ažuriranje instalirali kasnije"</string>
     <string name="kg_prompt_after_update_pin" msgid="7051709651908643013">"Uređaj je ažuriran. Unesite PIN da biste nastavili."</string>
     <string name="kg_prompt_after_update_password" msgid="153703052501352094">"Uređaj je ažuriran. Unesite zaporku da biste nastavili."</string>
     <string name="kg_prompt_after_update_pattern" msgid="1484084551298241992">"Uređaj je ažuriran. Nacrtajte uzorak da biste nastavili."</string>

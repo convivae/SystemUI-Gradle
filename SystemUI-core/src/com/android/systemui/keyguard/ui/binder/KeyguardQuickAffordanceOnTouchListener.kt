@@ -38,7 +38,10 @@ class KeyguardQuickAffordanceOnTouchListener(
     private val falsingManager: FalsingManager?,
 ) : View.OnTouchListener {
 
-    private val longPressDurationMs = ViewConfiguration.getLongPressTimeout().toLong()
+    private val longPressDurationMs =
+        if (android.companion.virtualdevice.flags.Flags.viewconfigurationApis())
+            ViewConfiguration.get(view.context).longPressTimeoutMillis.toLong()
+        else ViewConfiguration.getLongPressTimeout().toLong()
     private var longPressAnimator: ViewPropertyAnimator? = null
     private val downDisplayCoords: PointF by lazy { PointF() }
 
@@ -70,10 +73,8 @@ class KeyguardQuickAffordanceOnTouchListener(
                     // Moving too far while performing a long-press gesture cancels that
                     // gesture.
                     if (
-                        event.rawDistanceFrom(
-                            downDisplayCoords.x,
-                            downDisplayCoords.y,
-                        ) > ViewConfiguration.getTouchSlop()
+                        event.rawDistanceFrom(downDisplayCoords.x, downDisplayCoords.y) >
+                            ViewConfiguration.getTouchSlop()
                     ) {
                         cancel()
                     }
@@ -81,6 +82,9 @@ class KeyguardQuickAffordanceOnTouchListener(
                 false
             }
             MotionEvent.ACTION_UP -> {
+                if (falsingManager?.isFalseTap(FalsingManager.NO_PENALTY) == true) {
+                    return false
+                }
                 if (isUsingAccurateTool(event)) {
                     // When using an accurate tool type (stylus, mouse, etc.), we don't require
                     // a long-press gesture to activate the quick affordance. Therefore, lifting
@@ -88,8 +92,7 @@ class KeyguardQuickAffordanceOnTouchListener(
                     if (
                         viewModel.configKey != null &&
                             event.rawDistanceFrom(downDisplayCoords.x, downDisplayCoords.y) <=
-                                ViewConfiguration.getTouchSlop() &&
-                            falsingManager?.isFalseTap(FalsingManager.NO_PENALTY) == false
+                                ViewConfiguration.getTouchSlop()
                     ) {
                         dispatchClick(viewModel.configKey)
                     }
@@ -109,10 +112,11 @@ class KeyguardQuickAffordanceOnTouchListener(
         }
     }
 
-    private fun dispatchClick(
-        configKey: String,
-    ) {
+    private fun dispatchClick(configKey: String) {
         view.setOnClickListener {
+            if (falsingManager?.isFalseTap(FalsingManager.LOW_PENALTY) == true) {
+                return@setOnClickListener
+            }
             vibratorHelper?.vibrate(
                 if (viewModel.isActivated) {
                     KeyguardBottomAreaVibrations.Activated
@@ -145,10 +149,7 @@ class KeyguardQuickAffordanceOnTouchListener(
          * Returns `true` if the tool type at the given pointer index is an accurate tool (like
          * stylus or mouse), which means we can trust it to not be a false click; `false` otherwise.
          */
-        private fun isUsingAccurateTool(
-            event: MotionEvent,
-            pointerIndex: Int = 0,
-        ): Boolean {
+        private fun isUsingAccurateTool(event: MotionEvent, pointerIndex: Int = 0): Boolean {
             return if (Flags.nonTouchscreenDevicesBypassFalsing()) {
                 event.device?.supportsSource(InputDevice.SOURCE_TOUCHSCREEN) == false
             } else {

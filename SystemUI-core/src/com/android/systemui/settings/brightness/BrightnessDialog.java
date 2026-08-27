@@ -16,20 +16,24 @@
 
 package com.android.systemui.settings.brightness;
 
+import static android.app.WindowConfiguration.WINDOWING_MODE_FREEFORM;
+import static android.app.WindowConfiguration.WINDOWING_MODE_MULTI_WINDOW;
 import static android.content.Intent.EXTRA_BRIGHTNESS_DIALOG_IS_FULL_WIDTH;
-import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 import static android.view.WindowManagerPolicyConstants.EXTRA_FROM_BRIGHTNESS_KEY;
 
+import static com.android.systemui.shared.Flags.brightnessDialogOnSystemUser;
 import static com.android.systemui.util.kotlin.JavaAdapterKt.collectFlow;
 
-import android.app.Activity;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Insets;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.os.UserHandle;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -37,101 +41,130 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
 import android.view.accessibility.AccessibilityManager;
-import android.widget.FrameLayout;
 
-import androidx.annotation.NonNull;
+import androidx.activity.ComponentActivity;
 import androidx.compose.ui.platform.ComposeView;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.brightness.ui.viewmodel.BrightnessSliderViewModel;
-import com.android.systemui.compose.ComposeInitializer;
+import com.android.systemui.broadcast.BroadcastSender;
 import com.android.systemui.dagger.qualifiers.Main;
-import com.android.systemui.qs.flags.QsInCompose;
 import com.android.systemui.res.R;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.statusbar.policy.AccessibilityManagerWrapper;
 import com.android.systemui.util.concurrency.DelayableExecutor;
+import com.android.systemui.volume.dialog.domain.interactor.ExpandedAudioTileDetailsFeatureInteractor;
+
+import dagger.Lazy;
 
 import java.util.List;
 
 import javax.inject.Inject;
 
-/** A dialog that provides controls for adjusting the screen brightness. */
-public class BrightnessDialog extends Activity {
+/**
+ * A dialog that provides controls for adjusting the screen brightness.
+ *
+ * This class extends `ComponentActivity` instead of the base `android.app.Activity` to support
+ * hosting Jetpack Compose content. `ComponentActivity` provides the necessary
+ * `LifecycleOwner`and `SavedStateRegistryOwner` that Compose requires to function correctly,
+ * preventing crashes and simplifying lifecycle management. See b/417544544.
+ */
+public class BrightnessDialog extends ComponentActivity {
+
+    public static final String ACTION_BRIGHTNESS_DIALOG_SHOWING =
+            "com.android.systemui.settings.brightness.BRIGHTNESS_DIALOG_SHOWING";
+    public static final String PERMISSION_SELF = "com.android.systemui.permission.SELF";
 
     @VisibleForTesting
     static final int DIALOG_TIMEOUT_MILLIS = 3000;
 
-    private BrightnessController mBrightnessController;
-    private final BrightnessSliderController.Factory mToggleSliderFactory;
-    private final BrightnessController.Factory mBrightnessControllerFactory;
     private final DelayableExecutor mMainExecutor;
     private final AccessibilityManagerWrapper mAccessibilityMgr;
     private Runnable mCancelTimeoutRunnable;
-    private final ShadeInteractor mShadeInteractor;
+    private final Lazy<ShadeInteractor> mShadeInteractorLazy;
     private final BrightnessSliderViewModel.Factory mBrightnessSliderViewModelFactory;
+    private final BroadcastSender mBroadcastSender;
+    private final boolean mIsExpandedAudioTileDetailsEnabled;
 
     @Inject
     public BrightnessDialog(
-            BrightnessSliderController.Factory brightnessSliderfactory,
-            BrightnessController.Factory brightnessControllerFactory,
             @Main DelayableExecutor mainExecutor,
             AccessibilityManagerWrapper accessibilityMgr,
-            ShadeInteractor shadeInteractor,
-            BrightnessSliderViewModel.Factory brightnessSliderViewModelFactory
+            Lazy<ShadeInteractor> shadeInteractorLazy,
+            BrightnessSliderViewModel.Factory brightnessSliderViewModelFactory,
+            BroadcastSender broadcastSender,
+            ExpandedAudioTileDetailsFeatureInteractor expandedAudioTileDetailsFeatureInteractor
     ) {
-        mToggleSliderFactory = brightnessSliderfactory;
-        mBrightnessControllerFactory = brightnessControllerFactory;
         mMainExecutor = mainExecutor;
         mAccessibilityMgr = accessibilityMgr;
-        mShadeInteractor = shadeInteractor;
+        mShadeInteractorLazy = shadeInteractorLazy;
         mBrightnessSliderViewModelFactory = brightnessSliderViewModelFactory;
+        mBroadcastSender = broadcastSender;
+        mIsExpandedAudioTileDetailsEnabled = expandedAudioTileDetailsFeatureInteractor.isEnabled();
     }
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setWindowAttributes();
-        View view;
-        if (!QsInCompose.isEnabled()) {
-            setContentView(R.layout.brightness_mirror_container);
-            view = findViewById(R.id.brightness_mirror_container);
-            setDialogContent((FrameLayout) view);
+        if (brightnessDialogOnSystemUser() && getUserId() != UserHandle.USER_SYSTEM) {
+            requestFinish();
+            return;
+        }
+
+        boolean isShadeExpanded = mIsExpandedAudioTileDetailsEnabled
+                ? mShadeInteractorLazy.get().isAnyExpanded().getValue()
+                : mShadeInteractorLazy.get().isQsExpanded().getValue();
+
+        if (isShadeExpanded) {
+            requestFinish();
         } else {
-            ComposeView composeView = new ComposeView(this);
-            ComposeDialogComposableProvider.INSTANCE.setComposableBrightness(
-                    composeView,
-                    new ComposableProvider(mBrightnessSliderViewModelFactory)
-            );
-            composeView.setId(R.id.brightness_dialog_slider);
-            setContentView(composeView);
-            ((ViewGroup) composeView.getParent()).setClipChildren(false);
-            view = composeView;
-        }
-        setBrightnessDialogViewAttributes(view);
-
-        if (mShadeInteractor.isQsExpanded().getValue()) {
-            finish();
-        }
-
-        if (view != null) {
-            collectFlow(view, mShadeInteractor.isQsExpanded(), this::onShadeStateChange);
+            initializeDialog();
         }
     }
 
-    private void onShadeStateChange(boolean isQsExpanded) {
-        if (isQsExpanded) {
+    private void initializeDialog() {
+        setWindowAttributes();
+        ComposeView composeView = new ComposeView(this);
+        ComposeDialogComposableProvider.INSTANCE.setComposableBrightness(
+                composeView,
+                new ComposableProvider(
+                        mBrightnessSliderViewModelFactory,
+                        mIsExpandedAudioTileDetailsEnabled)
+
+        );
+        composeView.setId(R.id.brightness_dialog_slider);
+        setContentView(composeView);
+        ((ViewGroup) composeView.getParent()).setClipChildren(false);
+        setBrightnessDialogViewAttributes(composeView);
+
+        collectFlow(
+                composeView,
+                mIsExpandedAudioTileDetailsEnabled ? mShadeInteractorLazy.get().isAnyExpanded()
+                        : mShadeInteractorLazy.get().isQsExpanded(),
+                this::onShadeStateChange
+        );
+    }
+
+    private void onShadeStateChange(boolean isExpanded) {
+        if (isExpanded) {
             requestFinish();
         }
     }
 
     private void setWindowAttributes() {
         final Window window = getWindow();
+        if (brightnessDialogOnSystemUser()) {
+            window.addPrivateFlags(WindowManager.LayoutParams.SYSTEM_FLAG_SHOW_FOR_ALL_USERS);
+        }
 
-        window.setGravity(Gravity.TOP | Gravity.START);
+        if (mIsExpandedAudioTileDetailsEnabled) {
+            window.setGravity(Gravity.TOP | Gravity.END);
+        } else {
+            window.setGravity(Gravity.TOP | Gravity.START);
+        }
         window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         window.requestFeature(Window.FEATURE_NO_TITLE);
 
@@ -140,49 +173,68 @@ public class BrightnessDialog extends Activity {
         window.getDecorView();
         window.setLayout(WRAP_CONTENT, WRAP_CONTENT);
         getTheme().applyStyle(R.style.Theme_SystemUI_QuickSettings, false);
-        if (QsInCompose.isEnabled()) {
-            window.getDecorView().addOnAttachStateChangeListener(
-                    new View.OnAttachStateChangeListener() {
-                        @Override
-                        public void onViewAttachedToWindow(@NonNull View v) {
-                            ComposeInitializer.INSTANCE.onAttachedToWindow(v);
-                        }
-
-                        @Override
-                        public void onViewDetachedFromWindow(@NonNull View v) {
-                            ComposeInitializer.INSTANCE.onDetachedFromWindow(v);
-                        }
-                    });
-        }
     }
 
     void setBrightnessDialogViewAttributes(View container) {
+        Configuration configuration = getResources().getConfiguration();
         // The brightness mirror container is INVISIBLE by default.
         container.setVisibility(View.VISIBLE);
         ViewGroup.MarginLayoutParams lp =
                 (ViewGroup.MarginLayoutParams) container.getLayoutParams();
-        int horizontalMargin =
-                getResources().getDimensionPixelSize(R.dimen.notification_side_paddings);
-        lp.leftMargin = horizontalMargin;
-        lp.rightMargin = horizontalMargin;
+        // Remove the margin. Have the container take all the space. Instead, insert padding.
+        // This allows for the background to be visible around the slider.
+        int margin = 0;
+        lp.topMargin = margin;
+        lp.bottomMargin = margin;
+        lp.leftMargin = margin;
+        lp.rightMargin = margin;
+        if (mIsExpandedAudioTileDetailsEnabled) {
+            int padding = getResources().getDimensionPixelSize(
+                    R.dimen.rounded_slider_horizontal_padding
+            );
+            container.setPadding(padding, 0, padding, 0);
+        } else {
+            int padding = getResources().getDimensionPixelSize(
+                    R.dimen.rounded_slider_background_padding
+            );
+            container.setPadding(padding, padding, padding, padding);
+        }
+        // If in multi-window or freeform, increase the top margin so the brightness dialog
+        // doesn't get cut off.
+        final int windowingMode = configuration.windowConfiguration.getWindowingMode();
+        if (windowingMode == WINDOWING_MODE_MULTI_WINDOW
+                || windowingMode == WINDOWING_MODE_FREEFORM) {
+            lp.topMargin += 50;
+        }
 
-        int verticalMargin =
-                getResources().getDimensionPixelSize(
-                        R.dimen.notification_guts_option_vertical_padding);
+        /*
+          If ExpandedAudioDetailedView is enabled, then we need to set some dimensions manually.
+          This aligns the slider size and positioning with the volume dialog
+          1. Dialog width at 364dpn
+          2. End margin at 24dp
+          3. Top margin at 0dp
+         */
+        if (mIsExpandedAudioTileDetailsEnabled) {
+            lp.width = getResources().getDimensionPixelSize(
+                    R.dimen.brightness_dialog_expanded_width
+            );
 
-        lp.topMargin = verticalMargin;
-        lp.bottomMargin = verticalMargin;
+            lp.setMarginEnd(getResources().getDimensionPixelSize(
+                    R.dimen.brightness_dialog_margin_end));
 
-        Configuration configuration = getResources().getConfiguration();
-        int orientation = configuration.orientation;
-        int windowWidth = getWindowAvailableWidth();
+            lp.topMargin = getResources().getDimensionPixelSize(
+                    R.dimen.brightness_dialog_margin_top);
+        } else {
+            int orientation = configuration.orientation;
+            int windowWidth = getWindowAvailableWidth();
 
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            boolean shouldBeFullWidth = getIntent()
-                    .getBooleanExtra(EXTRA_BRIGHTNESS_DIALOG_IS_FULL_WIDTH, false);
-            lp.width = (shouldBeFullWidth ? windowWidth : windowWidth / 2) - horizontalMargin * 2;
-        } else if (orientation == Configuration.ORIENTATION_PORTRAIT) {
-            lp.width = windowWidth - horizontalMargin * 2;
+            if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                boolean shouldBeFullWidth = getIntent()
+                        .getBooleanExtra(EXTRA_BRIGHTNESS_DIALOG_IS_FULL_WIDTH, false);
+                lp.width = shouldBeFullWidth ? windowWidth : windowWidth / 2;
+            } else if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+                lp.width = windowWidth;
+            }
         }
 
         container.setLayoutParams(lp);
@@ -192,16 +244,9 @@ public class BrightnessDialog extends Activity {
                     // Exclude this view (and its horizontal margins) from triggering gestures.
                     // This prevents back gesture from being triggered by dragging close to the
                     // edge of the slider (0% or 100%).
-                    bounds.set(-horizontalMargin, 0, right - left + horizontalMargin, bottom - top);
+                    bounds.set(0, 0, right - left, bottom - top);
                     v.setSystemGestureExclusionRects(List.of(bounds));
                 });
-    }
-
-    private void setDialogContent(FrameLayout frame) {
-        BrightnessSliderController controller = mToggleSliderFactory.create(this, frame);
-        controller.init();
-        frame.addView(controller.getRootView(), MATCH_PARENT, WRAP_CONTENT);
-        mBrightnessController = mBrightnessControllerFactory.create(controller);
     }
 
     private int getWindowAvailableWidth() {
@@ -217,10 +262,13 @@ public class BrightnessDialog extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (!QsInCompose.isEnabled()) {
-            mBrightnessController.registerCallbacks();
+        if (mIsExpandedAudioTileDetailsEnabled) {
+            mBroadcastSender.sendBroadcastAsUser(
+                    new Intent(ACTION_BRIGHTNESS_DIALOG_SHOWING),
+                    UserHandle.SYSTEM,
+                    PERMISSION_SELF);
+            MetricsLogger.visible(this, MetricsEvent.BRIGHTNESS_DIALOG);
         }
-        MetricsLogger.visible(this, MetricsEvent.BRIGHTNESS_DIALOG);
     }
 
     @Override
@@ -241,9 +289,6 @@ public class BrightnessDialog extends Activity {
     protected void onStop() {
         super.onStop();
         MetricsLogger.hidden(this, MetricsEvent.BRIGHTNESS_DIALOG);
-        if (!QsInCompose.isEnabled()) {
-            mBrightnessController.unregisterCallbacks();
-        }
     }
 
     @Override
@@ -258,6 +303,24 @@ public class BrightnessDialog extends Activity {
         }
 
         return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (triggeredByBrightnessKey()) {
+            final int action = ev.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                // Cancel timeout if active
+                if (mCancelTimeoutRunnable != null) {
+                    mCancelTimeoutRunnable.run();
+                    mCancelTimeoutRunnable = null;
+                }
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                // Schedule timeout when done
+                scheduleTimeout();
+            }
+        }
+        return super.dispatchTouchEvent(ev);
     }
 
     protected void requestFinish() {

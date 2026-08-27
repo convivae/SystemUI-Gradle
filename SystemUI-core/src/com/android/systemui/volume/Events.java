@@ -37,16 +37,16 @@ import java.util.Arrays;
 public class Events {
     private static final String TAG = Util.logTag(Events.class);
 
-    public static final int EVENT_SHOW_DIALOG = 0;  // (reason|int) (keyguard|bool)
-    public static final int EVENT_DISMISS_DIALOG = 1; // (reason|int)
+    @Deprecated public static final int EVENT_SHOW_DIALOG = 0;  // (reason|int) (keyguard|bool)
+    @Deprecated public static final int EVENT_DISMISS_DIALOG = 1; // (reason|int)
     public static final int EVENT_ACTIVE_STREAM_CHANGED = 2; // (stream|int)
     public static final int EVENT_EXPAND = 3; // (expand|bool)
     public static final int EVENT_KEY = 4; // (stream|int) (lastAudibleStreamVolume)
     public static final int EVENT_COLLECTION_STARTED = 5;
     public static final int EVENT_COLLECTION_STOPPED = 6;
-    public static final int EVENT_ICON_CLICK = 7; // (stream|int) (icon_state|int)
-    public static final int EVENT_SETTINGS_CLICK = 8;
-    public static final int EVENT_TOUCH_LEVEL_CHANGED = 9; // (stream|int) (level|int)
+    @Deprecated public static final int EVENT_ICON_CLICK = 7; // (stream|int) (icon_state|int)
+    @Deprecated public static final int EVENT_SETTINGS_CLICK = 8;
+    @Deprecated public static final int EVENT_TOUCH_LEVEL_CHANGED = 9; // (stream|int) (level|int)
     public static final int EVENT_LEVEL_CHANGED = 10; // (stream|int) (level|int)
     public static final int EVENT_INTERNAL_RINGER_MODE_CHANGED = 11; // (mode|int)
     public static final int EVENT_EXTERNAL_RINGER_MODE_CHANGED = 12; // (mode|int)
@@ -55,12 +55,12 @@ public class Events {
     public static final int EVENT_MUTE_CHANGED = 15;  // (stream|int) (muted|bool)
     public static final int EVENT_TOUCH_LEVEL_DONE = 16;  // (stream|int) (level|int)
     public static final int EVENT_ZEN_CONFIG_CHANGED = 17; // (allow/disallow|string)
-    public static final int EVENT_RINGER_TOGGLE = 18; // (ringer_mode)
+    @Deprecated  public static final int EVENT_RINGER_TOGGLE = 18; // (ringer_mode)
     public static final int EVENT_SHOW_USB_OVERHEAT_ALARM = 19; // (reason|int) (keyguard|bool)
     public static final int EVENT_DISMISS_USB_OVERHEAT_ALARM = 20; // (reason|int) (keyguard|bool)
     public static final int EVENT_ODI_CAPTIONS_CLICK = 21;
     public static final int EVENT_ODI_CAPTIONS_TOOLTIP_CLICK = 22;
-    public static final int EVENT_SLIDER_TOUCH_TRACKING = 23; // (tracking|bool)
+    @Deprecated public static final int EVENT_SLIDER_TOUCH_TRACKING = 23; // (tracking|bool)
 
     private static final String[] EVENT_TAGS = {
             "show_dialog",
@@ -89,6 +89,7 @@ public class Events {
             "slider_touch_tracking"
     };
 
+    // LINT.IfChange(dismiss_reasons)
     public static final int DISMISS_REASON_UNKNOWN = 0;
     public static final int DISMISS_REASON_TOUCH_OUTSIDE = 1;
     public static final int DISMISS_REASON_VOLUME_CONTROLLER = 2;
@@ -101,7 +102,11 @@ public class Events {
     public static final int DISMISS_REASON_USB_OVERHEAD_ALARM_CHANGED = 9;
     public static final int DISMISS_REASON_CSD_WARNING_TIMEOUT = 10;
     public static final int DISMISS_REASON_POSTURE_CHANGED = 11;
+    public static final int DISMISS_REASON_QUICK_SETTINGS_EXPANDED = 12;
+    public static final int DISMISS_REASON_BRIGHTNESS_DIALOG_SHOWING = 13;
+    // LINT.ThenChange(:dismiss_reasons_array)
 
+    // LINT.IfChange(dismiss_reasons_array)
     public static final String[] DISMISS_REASONS = {
             "unknown",
             "touch_outside",
@@ -114,19 +119,27 @@ public class Events {
             "output_chooser",
             "usb_temperature_below_threshold",
             "csd_warning_timeout",
-            "posture_changed"
+            "posture_changed",
+            "quick_settings_expanded",
+            "brightness_dialog_showing"
     };
+    // LINT.ThenChange(:dismiss_reasons)
 
+    // LINT.IfChange(show_reasons)
     public static final int SHOW_REASON_UNKNOWN = 0;
     public static final int SHOW_REASON_VOLUME_CHANGED = 1;
     public static final int SHOW_REASON_REMOTE_VOLUME_CHANGED = 2;
     public static final int SHOW_REASON_USB_OVERHEAD_ALARM_CHANGED = 3;
+    // LINT.ThenChange(:show_reasons_array)
+
+    // LINT.IfChange(show_reasons_array)
     public static final String[] SHOW_REASONS = {
         "unknown",
         "volume_changed",
         "remote_volume_changed",
         "usb_temperature_above_threshold"
     };
+    // LINT.ThenChange(:show_reasons)
 
     public static final int ICON_STATE_UNKNOWN = 0;
     public static final int ICON_STATE_UNMUTE = 1;
@@ -184,7 +197,12 @@ public class Events {
         // reserving 141 for DISMISS_REASON_OUTPUT_CHOOSER which is currently unused
         @UiEvent(doc = "The volume dialog was dismissed because the usb high temperature alarm "
                  + "changed")
-        VOLUME_DIALOG_DISMISS_USB_TEMP_ALARM_CHANGED(142);
+        VOLUME_DIALOG_DISMISS_USB_TEMP_ALARM_CHANGED(142),
+        @UiEvent(doc = "The volume dialog was dismissed because the quick settings shade was "
+                + "expanded")
+        VOLUME_DIALOG_DISMISS_QUICK_SETTINGS(2345),
+        @UiEvent(doc = "The volume dialog was dismissed because the brightness dialog was shown")
+        VOLUME_DIALOG_DISMISS_BRIGHTNESS_DIALOG_SHOWING(2663);
 
         private final int mId;
         VolumeDialogCloseEvent(int id) {
@@ -210,6 +228,10 @@ public class Events {
                     return VOLUME_DIALOG_DISMISS_STREAM_GONE;
                 case DISMISS_REASON_USB_OVERHEAD_ALARM_CHANGED:
                     return VOLUME_DIALOG_DISMISS_USB_TEMP_ALARM_CHANGED;
+                case DISMISS_REASON_QUICK_SETTINGS_EXPANDED:
+                    return VOLUME_DIALOG_DISMISS_QUICK_SETTINGS;
+                case DISMISS_REASON_BRIGHTNESS_DIALOG_SHOWING:
+                    return VOLUME_DIALOG_DISMISS_BRIGHTNESS_DIALOG_SHOWING;
             }
             return INVALID;
         }
@@ -389,7 +411,8 @@ public class Events {
                     final Boolean keyguard = (Boolean) list[1];
                     sLegacyLogger.histogram("volume_from_keyguard", keyguard ? 1 : 0);
                     sUiEventLogger.log(VolumeDialogOpenEvent.fromReasons(reason));
-                    sb.append(SHOW_REASONS[reason]).append(" keyguard=").append(keyguard);
+                    sb.append(getReason(SHOW_REASONS, reason))
+                            .append(" keyguard=").append(keyguard);
                 }
                 break;
             case EVENT_EXPAND: {
@@ -404,7 +427,7 @@ public class Events {
                 sLegacyLogger.hidden(MetricsEvent.VOLUME_DIALOG);
                 final Integer reason = (Integer) list[0];
                 sUiEventLogger.log(VolumeDialogCloseEvent.fromReason(reason));
-                sb.append(DISMISS_REASONS[reason]);
+                sb.append(getReason(DISMISS_REASONS, reason));
                 break;
             }
             case EVENT_ACTIVE_STREAM_CHANGED: {
@@ -483,7 +506,8 @@ public class Events {
                     final Boolean keyguard = (Boolean) list[1];
                     sLegacyLogger.histogram("show_usb_overheat_alarm", keyguard ? 1 : 0);
                     final Integer reason = (Integer) list[0];
-                    sb.append(SHOW_REASONS[reason]).append(" keyguard=").append(keyguard);
+                    sb.append(getReason(SHOW_REASONS, reason))
+                            .append(" keyguard=").append(keyguard);
                 }
                 break;
             case EVENT_DISMISS_USB_OVERHEAT_ALARM:
@@ -493,7 +517,7 @@ public class Events {
                     final Boolean keyguard = (Boolean) list[1];
                     sLegacyLogger.histogram("dismiss_usb_overheat_alarm", keyguard ? 1 : 0);
                     final Integer reason = (Integer) list[0];
-                    sb.append(DISMISS_REASONS[reason])
+                    sb.append(getReason(DISMISS_REASONS, reason))
                             .append(" keyguard=").append(keyguard);
                 }
                 break;
@@ -517,6 +541,10 @@ public class Events {
         if (sCallback != null) {
             sCallback.writeState(time, state);
         }
+    }
+
+    private static String getReason(String[] reasons, int reason) {
+        return reason >= 0 && reason < reasons.length ? reasons[reason] : "unknown_" + reason;
     }
 
     private static String iconStateToString(int iconState) {

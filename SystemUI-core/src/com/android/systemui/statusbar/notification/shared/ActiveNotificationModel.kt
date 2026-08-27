@@ -17,16 +17,30 @@ package com.android.systemui.statusbar.notification.shared
 
 import android.app.PendingIntent
 import android.graphics.drawable.Icon
-import android.util.Log
+import com.android.internal.logging.InstanceId
 import com.android.systemui.statusbar.StatusBarIconView
-import com.android.systemui.statusbar.notification.promoted.shared.model.PromotedNotificationContentModel
+import com.android.systemui.statusbar.notification.promoted.shared.model.PromotedNotificationContentModels
 import com.android.systemui.statusbar.notification.stack.PriorityBucket
 
 /**
  * Model for a top-level "entry" in the notification list, either an
+ * [individual notification][ActiveNotificationModel], a [group][ActiveNotificationGroupModel], or a
+ * [bundle][ActiveBundleModel].
+ */
+sealed class ActivePipelineEntryModel
+
+/** Model for a bundle of notifications. */
+data class ActiveBundleModel(
+    val key: String,
+    val icon: Icon,
+    val children: List<ActiveNotificationEntryModel>,
+) : ActivePipelineEntryModel()
+
+/**
+ * Model for a notification-backed "entry" in the notification list, either an
  * [individual notification][ActiveNotificationModel], or a [group][ActiveNotificationGroupModel].
  */
-sealed class ActiveNotificationEntryModel
+sealed class ActiveNotificationEntryModel : ActivePipelineEntryModel()
 
 /**
  * Model for an individual notification in the notification list. These can appear as either an
@@ -38,6 +52,10 @@ data class ActiveNotificationModel(
     val groupKey: String?,
     /** When this notification was posted. */
     val whenTime: Long,
+    /** True if this is a foreground service notification. */
+    val isForegroundService: Boolean,
+    /** True if this notification is for an ongoing event. */
+    val isOngoingEvent: Boolean,
     /** Is this entry in the ambient / minimized section (lowest priority)? */
     val isAmbient: Boolean,
     /**
@@ -68,10 +86,12 @@ data class ActiveNotificationModel(
     val uid: Int,
     /** The notifying app's packageName. */
     val packageName: String,
+    /** The notifying app's display name. */
+    val appName: String,
     /** The intent to execute if UI related to this notification is clicked. */
     val contentIntent: PendingIntent?,
     /** A small per-notification ID, used for statsd logging. */
-    val instanceId: Int?,
+    val instanceId: InstanceId?,
     /** If this notification is the group summary for a group of notifications. */
     val isGroupSummary: Boolean,
     /** Indicates in which section the notification is displayed in. @see [PriorityBucket]. */
@@ -82,16 +102,14 @@ data class ActiveNotificationModel(
      * The content needed to render this as a promoted notification on various surfaces, or null if
      * this notification cannot be rendered as a promoted notification.
      */
-    val promotedContent: PromotedNotificationContentModel?,
+    val promotedContent: PromotedNotificationContentModels?,
+    /** True if this notification set the "requested promotion?" extra and false otherwise. */
+    val requestedPromotion: Boolean,
+    /** True if this notification set the "is screen share" extra and false otherwise. */
+    val isScreenShareNotification: Boolean,
+    /** The visual style of the notification, containing additional data relevant to that style. */
+    val style: NotifStyle?,
 ) : ActiveNotificationEntryModel() {
-    init {
-        if (!PromotedNotificationContentModel.featureFlagEnabled()) {
-            if (promotedContent != null) {
-                Log.wtf(TAG, "passing non-null promoted content without feature flag enabled")
-            }
-        }
-    }
-
     companion object {
         private const val TAG = "ActiveNotificationEntryModel"
     }
@@ -116,4 +134,12 @@ enum class CallType {
     Screening,
     /** See [android.app.Notification.CallStyle.CALL_TYPE_UNKNOWN]. */
     Unknown,
+}
+
+/** Style-specific data for [ActiveNotificationModel] */
+sealed class NotifStyle {
+    /**
+     * Data pertaining to [messaging style][android.app.Notification.MessagingStyle] notifications.
+     */
+    class Messaging : NotifStyle()
 }

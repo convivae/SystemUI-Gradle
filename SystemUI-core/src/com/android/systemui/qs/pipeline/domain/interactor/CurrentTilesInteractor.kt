@@ -20,8 +20,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.UserHandle
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.Dumpable
+import com.android.systemui.Flags.hsuQsChanges
 import com.android.systemui.ProtoDumpable
+import com.android.systemui.animation.Expandable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
@@ -34,6 +37,7 @@ import com.android.systemui.qs.external.CustomTileStatePersister
 import com.android.systemui.qs.external.TileLifecycleManager
 import com.android.systemui.qs.external.TileServiceKey
 import com.android.systemui.qs.pipeline.data.repository.CustomTileAddedRepository
+import com.android.systemui.qs.pipeline.data.repository.HsuTilesRepository
 import com.android.systemui.qs.pipeline.data.repository.InstalledTilesComponentRepository
 import com.android.systemui.qs.pipeline.data.repository.MinimumTilesRepository
 import com.android.systemui.qs.pipeline.data.repository.TileSpecRepository
@@ -41,18 +45,19 @@ import com.android.systemui.qs.pipeline.domain.model.TileModel
 import com.android.systemui.qs.pipeline.shared.QSPipelineFlagsRepository
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.pipeline.shared.logging.QSPipelineLogger
-import com.android.systemui.qs.tiles.di.NewQSTileFactory
+import com.android.systemui.qs.tiles.base.ui.model.NewQSTileFactory
 import com.android.systemui.qs.toProto
 import com.android.systemui.retail.data.repository.RetailModeRepository
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.user.data.repository.UserRepository
+import com.android.systemui.user.domain.interactor.HeadlessSystemUserMode
 import com.android.systemui.util.kotlin.pairwiseBy
 import dagger.Lazy
 import java.io.PrintWriter
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,7 +68,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
-import com.android.app.tracing.coroutines.launchTraced as launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -80,6 +84,12 @@ interface CurrentTilesInteractor : ProtoDumpable {
 
     /** [Context] corresponding to [userId] */
     val userContext: StateFlow<Context>
+
+    /** Current user with the corresponding tiles. */
+    val userAndTiles: Flow<DataWithUserChange>
+
+    /** Whether the current user is a headless system user. */
+    val isCurrentUserHeadlessSystemUser: StateFlow<Boolean>
 
     /** List of specs corresponding to the last value of [currentTiles] */
     val currentTilesSpecs: List<TileSpec>
@@ -133,7 +143,6 @@ interface CurrentTilesInteractor : ProtoDumpable {
  * * Platform tiles will be kept between users, with a call to [QSTile.userSwitch]
  * * [CustomTile]s will only be destroyed if the user changes.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class CurrentTilesInteractorImpl
 @Inject
@@ -149,6 +158,8 @@ constructor(
     private val customTileAddedRepository: CustomTileAddedRepository,
     private val tileLifecycleManagerFactory: TileLifecycleManager.Factory,
     private val userTracker: UserTracker,
+    private val hsum: HeadlessSystemUserMode,
+    private val hsuTilesRepository: HsuTilesRepository,
     @Main private val mainDispatcher: CoroutineDispatcher,
     @Background private val backgroundDispatcher: CoroutineDispatcher,
     @Application private val scope: CoroutineScope,
@@ -166,11 +177,12 @@ constructor(
 
     private val currentUser = MutableStateFlow(userTracker.userId)
     override val userId = currentUser.asStateFlow()
+    override val isCurrentUserHeadlessSystemUser = userRepository.isCurrentUserHeadlessSystemUser
 
     private val _userContext = MutableStateFlow(userTracker.userContext)
     override val userContext = _userContext.asStateFlow()
 
-    private val userAndTiles =
+    override val userAndTiles =
         currentUser
             .flatMapLatest { userId ->
                 val currentTiles = tileSpecRepository.tilesSpecs(userId)
@@ -247,7 +259,6 @@ constructor(
                                         processExistingTile(
                                             tileSpec,
                                             specsToTiles.getValue(tileSpec),
-                                            userChanged,
                                             newUser,
                                         ) ?: createTile(tileSpec)
                                     } else {
@@ -266,7 +277,14 @@ constructor(
                     val newResolvedTiles =
                         newTileMap
                             .filter { it.value is TileOrNotInstalled.Tile }
-                            .map { TileModel(it.key, (it.value as TileOrNotInstalled.Tile).tile) }
+                            .map {
+                                val tileExpandable = Expandable()
+                                TileModel(
+                                    it.key,
+                                    (it.value as TileOrNotInstalled.Tile).tile,
+                                    tileExpandable,
+                                )
+                            }
 
                     _currentSpecsAndTiles.value = newResolvedTiles
                     logger.logTilesNotInstalled(
@@ -321,7 +339,13 @@ constructor(
     }
 
     override fun resetTiles() {
-        scope.launch { tileSpecRepository.resetToDefault(currentUser.value) }
+        scope.launch {
+            val currentSpecCopy = currentTilesSpecs
+            val user = currentUser.value
+            val default = tileSpecRepository.resetToDefault(user)
+            val toFree = currentSpecCopy.minus(default).filterIsInstance<TileSpec.CustomTileSpec>()
+            toFree.forEach { onCustomTileRemoved(it.componentName, user) }
+        }
     }
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
@@ -358,6 +382,14 @@ constructor(
     }
 
     private suspend fun createTile(spec: TileSpec): QSTile? {
+        if (
+            hsuQsChanges() &&
+                hsum.isHeadlessSystemUser(userRepository.getSelectedUserInfo().id) &&
+                !hsuTilesRepository.isTileAllowed(spec)
+        ) {
+            return null
+        }
+
         val tile = withContext(mainDispatcher) { createTileSync(spec) }
         if (tile == null) {
             logger.logTileNotFoundInFactory(spec)
@@ -380,14 +412,26 @@ constructor(
     private fun processExistingTile(
         tileSpec: TileSpec,
         tileOrNotInstalled: TileOrNotInstalled,
-        userChanged: Boolean,
         user: Int,
     ): QSTile? {
         return when (tileOrNotInstalled) {
             is TileOrNotInstalled.NotInstalled -> null
             is TileOrNotInstalled.Tile -> {
                 val qsTile = tileOrNotInstalled.tile
+
                 when {
+                    qsTile.isDestroyed -> {
+                        logger.logTileDestroyedIgnored(tileSpec)
+                        null
+                    }
+                    !hsuTilesRepository.isTileAllowed(tileSpec) -> {
+                        logger.logTileDestroyed(
+                            tileSpec,
+                            QSPipelineLogger.TileDestroyedReason.TILE_NOT_ALLOWED_FOR_HSU,
+                        )
+                        qsTile.destroy()
+                        null
+                    }
                     !qsTile.isAvailable -> {
                         logger.logTileDestroyed(
                             tileSpec,
@@ -401,10 +445,11 @@ constructor(
                     qsTile !is CustomTile -> {
                         // The tile is not a custom tile. Make sure they are reset to the correct
                         // user
-                        if (userChanged) {
+                        if (qsTile.currentTileUser != user) {
                             qsTile.userSwitch(user)
                             logger.logTileUserChanged(tileSpec, user)
                         }
+
                         qsTile
                     }
                     qsTile.user == user -> {
@@ -438,7 +483,7 @@ private data class UserTilesAndComponents(
     val installedComponents: Set<ComponentName>,
 )
 
-private data class DataWithUserChange(
+data class DataWithUserChange(
     val userId: Int,
     val tiles: List<TileSpec>,
     val installedComponents: Set<ComponentName>,

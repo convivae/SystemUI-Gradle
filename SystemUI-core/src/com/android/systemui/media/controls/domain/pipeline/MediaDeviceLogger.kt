@@ -36,7 +36,7 @@ class MediaDeviceLogger @Inject constructor(@MediaDeviceLog private val buffer: 
                 int1 = reason
                 int2 = broadcastId
             },
-            { "$str1, reason = $int1, broadcastId = $int2" }
+            { "$str1, reason = $int1, broadcastId = $int2" },
         )
     }
 
@@ -48,7 +48,7 @@ class MediaDeviceLogger @Inject constructor(@MediaDeviceLog private val buffer: 
                 str1 = event
                 int1 = reason
             },
-            { "$str1, reason = $int1" }
+            { "$str1, reason = $int1" },
         )
     }
 
@@ -60,7 +60,7 @@ class MediaDeviceLogger @Inject constructor(@MediaDeviceLog private val buffer: 
                 int1 = broadcastId
                 str1 = metadata
             },
-            { "onBroadcastMetadataChanged, broadcastId = $int1, metadata = $str1" }
+            { "onBroadcastMetadataChanged, broadcastId = $int1, metadata = $str1" },
         )
     }
 
@@ -68,15 +68,20 @@ class MediaDeviceLogger @Inject constructor(@MediaDeviceLog private val buffer: 
         buffer.log(TAG, LogLevel.DEBUG, { str1 = name }, { "New device name $str1" })
     }
 
-    fun logLocalDevice(sassDevice: MediaDeviceData?, connectedDevice: MediaDeviceData?) {
+    fun logLocalDevice(
+        broadcastDevice: MediaDeviceData?,
+        sassDevice: MediaDeviceData?,
+        connectedDevice: MediaDeviceData?,
+    ) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
             {
-                str1 = sassDevice?.name?.toString()
-                str2 = connectedDevice?.name?.toString()
+                str1 = broadcastDevice?.name?.toString()
+                str2 = sassDevice?.name?.toString()
+                str3 = connectedDevice?.name?.toString()
             },
-            { "Local device: $str1 or $str2" }
+            { "Local device: $str1 or $str2 or $str3" },
         )
     }
 
@@ -88,7 +93,7 @@ class MediaDeviceLogger @Inject constructor(@MediaDeviceLog private val buffer: 
                 str1 = routingSessionName?.toString()
                 str2 = connectedDevice?.name?.toString()
             },
-            { "Remote device: $str1 or $str2 or unknown" }
+            { "Remote device: $str1 or $str2 or unknown" },
         )
     }
 
@@ -96,7 +101,7 @@ class MediaDeviceLogger @Inject constructor(@MediaDeviceLog private val buffer: 
         device: MediaDevice?,
         controller: MediaController?,
         routingSessionName: CharSequence?,
-        selectedRouteName: CharSequence?
+        selectedRouteName: CharSequence?,
     ) {
         buffer.log(
             TAG,
@@ -106,7 +111,19 @@ class MediaDeviceLogger @Inject constructor(@MediaDeviceLog private val buffer: 
                 str2 = routingSessionName?.toString()
                 str3 = selectedRouteName?.toString()
             },
-            { "$str1, routingSession $str2 or selected route $str3" }
+            { "$str1, routingSession $str2 or selected route $str3" },
+        )
+    }
+
+    fun logMediaNotificationEnteredDeviceManager(packageName: String, title: CharSequence?) {
+        buffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            {
+                str1 = packageName
+                str2 = title.toString()
+            },
+            { "media notification entered MediaDeviceManager, packageName: $str1, title: $str2" },
         )
     }
 

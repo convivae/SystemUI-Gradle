@@ -16,29 +16,47 @@
 
 package com.android.systemui.communal.ui.compose
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Measurable
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import com.android.compose.animation.scene.SceneScope
+import androidx.compose.ui.unit.toSize
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.compose.animation.scene.ContentScope
+import com.android.compose.modifiers.thenIf
+import com.android.systemui.Flags
+import com.android.systemui.communal.domain.interactor.CommunalSettingsInteractor
 import com.android.systemui.communal.smartspace.SmartspaceInteractionHandler
-import com.android.systemui.communal.ui.compose.section.AmbientStatusBarSection
+import com.android.systemui.communal.ui.compose.extensions.consumeHorizontalDragGestures
 import com.android.systemui.communal.ui.compose.section.CommunalPopupSection
-import com.android.systemui.communal.ui.compose.section.CommunalToDreamButtonSection
+import com.android.systemui.communal.ui.compose.section.HubOnboardingSection
 import com.android.systemui.communal.ui.view.layout.sections.CommunalAppWidgetSection
 import com.android.systemui.communal.ui.viewmodel.CommunalViewModel
-import com.android.systemui.keyguard.ui.composable.blueprint.BlueprintAlignmentLines
-import com.android.systemui.keyguard.ui.composable.section.BottomAreaSection
-import com.android.systemui.keyguard.ui.composable.section.LockSection
+import com.android.systemui.keyguard.ui.composable.elements.IndicationAreaElementProvider
+import com.android.systemui.keyguard.ui.composable.elements.LockIconAlignmentLines
+import com.android.systemui.keyguard.ui.composable.elements.LockIconElementProvider
+import com.android.systemui.keyguard.ui.composable.elements.LockscreenElements
+import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
+import com.android.systemui.res.R
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.statusbar.phone.SystemUIDialogFactory
 import javax.inject.Inject
 
@@ -48,100 +66,145 @@ class CommunalContent
 constructor(
     private val viewModel: CommunalViewModel,
     private val interactionHandler: SmartspaceInteractionHandler,
+    private val communalSettingsInteractor: CommunalSettingsInteractor,
     private val dialogFactory: SystemUIDialogFactory,
-    private val lockSection: LockSection,
-    private val bottomAreaSection: BottomAreaSection,
-    private val ambientStatusBarSection: AmbientStatusBarSection,
+    private val lockElement: LockIconElementProvider,
+    private val indicationAreaElement: IndicationAreaElementProvider,
     private val communalPopupSection: CommunalPopupSection,
     private val widgetSection: CommunalAppWidgetSection,
-    private val communalToDreamButtonSection: CommunalToDreamButtonSection,
+    private val hubOnboardingSection: HubOnboardingSection,
+    private val lockscreenElements: LockscreenElements,
 ) {
-
     @Composable
-    fun SceneScope.Content(modifier: Modifier = Modifier) {
+    fun ContentScope.Content(modifier: Modifier = Modifier) {
+        val showLockIconAndChargingStatus = !communalSettingsInteractor.isV2FlagEnabled()
+
         CommunalTouchableSurface(viewModel = viewModel, modifier = modifier) {
+            var gridRegion by remember { mutableStateOf<Rect?>(null) }
+            val showBackgroundForEditModeTransition by
+                viewModel.showBackgroundForEditModeTransition.collectAsStateWithLifecycle(
+                    initialValue = false
+                )
+            val empty by viewModel.isEmptyState.collectAsStateWithLifecycle(initialValue = false)
+
+            // The animated background here matches the color scheme of the edit mode activity and
+            // facilitates the transition to and from edit mode.
+            AnimatedVisibility(
+                visible = showBackgroundForEditModeTransition,
+                enter = fadeIn(tween(TransitionDuration.EDIT_MODE_BACKGROUND_ANIM_DURATION_MS)),
+                exit = fadeOut(tween(TransitionDuration.EDIT_MODE_BACKGROUND_ANIM_DURATION_MS)),
+            ) {
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceDim))
+            }
+
+            if (SceneContainerFlag.isEnabled) {
+                with(lockscreenElements) { LockscreenElement(LockscreenElementKeys.StatusBar) }
+            }
+
             Layout(
-                modifier = Modifier.fillMaxSize(),
+                modifier =
+                    Modifier.fillMaxSize().thenIf(
+                        communalSettingsInteractor.isV2FlagEnabled() && !empty
+                    ) {
+                        Modifier.consumeHorizontalDragGestures(gridRegion)
+                    },
                 content = {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize().onGloballyPositioned {
+                                gridRegion =
+                                    Rect(offset = it.positionInWindow(), size = it.size.toSize())
+                            }
+                    ) {
                         with(communalPopupSection) { Popup() }
-                        with(ambientStatusBarSection) {
-                            AmbientStatusBar(modifier = Modifier.fillMaxWidth().zIndex(1f))
-                        }
                         CommunalHub(
                             viewModel = viewModel,
                             interactionHandler = interactionHandler,
                             dialogFactory = dialogFactory,
                             widgetSection = widgetSection,
                             modifier = Modifier.element(Communal.Elements.Grid),
-                            sceneScope = this@Content,
+                            contentScope = this@Content,
                         )
+                        with(hubOnboardingSection) { BottomSheet() }
                     }
-                    with(lockSection) {
-                        LockIcon(
-                            overrideColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.element(Communal.Elements.LockIcon),
-                        )
+                    if (showLockIconAndChargingStatus) {
+                        with(lockElement) {
+                            LockIcon(
+                                overrideColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.element(Communal.Elements.LockIcon),
+                            )
+                        }
+
+                        with(indicationAreaElement) {
+                            IndicationArea(
+                                Modifier.element(Communal.Elements.IndicationArea)
+                                    .fillMaxWidth()
+                                    .padding(
+                                        bottom =
+                                            dimensionResource(
+                                                R.dimen.keyguard_indication_margin_bottom
+                                            )
+                                    )
+                            )
+                        }
                     }
-                    with(bottomAreaSection) {
-                        IndicationArea(
-                            Modifier.element(Communal.Elements.IndicationArea).fillMaxWidth()
-                        )
-                    }
-                    with(communalToDreamButtonSection) { Button() }
                 },
             ) { measurables, constraints ->
                 val communalGridMeasurable = measurables[0]
-                val lockIconMeasurable = measurables[1]
-                val bottomAreaMeasurable = measurables[2]
-                val screensaverButtonMeasurable: Measurable? = measurables.getOrNull(3)
+                val lockIconMeasurable = if (showLockIconAndChargingStatus) measurables[1] else null
+                val bottomAreaMeasurable =
+                    if (showLockIconAndChargingStatus) measurables[2] else null
 
                 val noMinConstraints = constraints.copy(minWidth = 0, minHeight = 0)
 
-                val lockIconPlaceable = lockIconMeasurable.measure(noMinConstraints)
+                val lockIconPlaceable = lockIconMeasurable?.measure(noMinConstraints)
                 val lockIconBounds =
-                    IntRect(
-                        left = lockIconPlaceable[BlueprintAlignmentLines.LockIcon.Left],
-                        top = lockIconPlaceable[BlueprintAlignmentLines.LockIcon.Top],
-                        right = lockIconPlaceable[BlueprintAlignmentLines.LockIcon.Right],
-                        bottom = lockIconPlaceable[BlueprintAlignmentLines.LockIcon.Bottom],
-                    )
-
-                val bottomAreaPlaceable = bottomAreaMeasurable.measure(noMinConstraints)
-
-                val screensaverButtonSizeInt = screensaverButtonSize.roundToPx()
-                val screensaverButtonPlaceable =
-                    screensaverButtonMeasurable?.measure(
-                        Constraints.fixed(
-                            width = screensaverButtonSizeInt,
-                            height = screensaverButtonSizeInt,
+                    if (lockIconPlaceable == null) {
+                        null
+                    } else {
+                        IntRect(
+                            left = lockIconPlaceable[LockIconAlignmentLines.Left],
+                            top = lockIconPlaceable[LockIconAlignmentLines.Top],
+                            right = lockIconPlaceable[LockIconAlignmentLines.Right],
+                            bottom = lockIconPlaceable[LockIconAlignmentLines.Bottom],
                         )
-                    )
+                    }
 
+                val bottomAreaPlaceable = bottomAreaMeasurable?.measure(noMinConstraints)
+
+                val communalGridMaxHeight: Int
+                val communalGridPositionY: Int
+                if (Flags.communalResponsiveGrid()) {
+                    val communalGridVerticalMargin =
+                        if (lockIconBounds == null) {
+                            0
+                        } else {
+                            constraints.maxHeight - lockIconBounds.top
+                        }
+                    // Use even top and bottom margin for grid to be centered in maxHeight (window)
+                    communalGridMaxHeight = constraints.maxHeight - communalGridVerticalMargin * 2
+                    communalGridPositionY = communalGridVerticalMargin
+                } else {
+                    communalGridMaxHeight = lockIconBounds?.top ?: constraints.maxHeight
+                    communalGridPositionY = 0
+                }
                 val communalGridPlaceable =
                     communalGridMeasurable.measure(
-                        noMinConstraints.copy(maxHeight = lockIconBounds.top)
+                        noMinConstraints.copy(maxHeight = communalGridMaxHeight)
                     )
 
                 layout(constraints.maxWidth, constraints.maxHeight) {
-                    communalGridPlaceable.place(x = 0, y = 0)
-                    lockIconPlaceable.place(x = lockIconBounds.left, y = lockIconBounds.top)
+                    communalGridPlaceable.place(x = 0, y = communalGridPositionY)
+                    if (lockIconBounds != null) {
+                        lockIconPlaceable!!.place(x = lockIconBounds.left, y = lockIconBounds.top)
+                    }
 
-                    val bottomAreaTop = constraints.maxHeight - bottomAreaPlaceable.height
-                    bottomAreaPlaceable.place(x = 0, y = bottomAreaTop)
-                    screensaverButtonPlaceable?.place(
-                        x =
-                            constraints.maxWidth -
-                                screensaverButtonSizeInt -
-                                Dimensions.ItemSpacing.roundToPx(),
-                        y = lockIconBounds.top,
-                    )
+                    if (bottomAreaPlaceable != null) {
+                        val bottomAreaTop = constraints.maxHeight - bottomAreaPlaceable.height
+                        bottomAreaPlaceable.place(x = 0, y = bottomAreaTop)
+                    }
                 }
             }
         }
-    }
-
-    companion object {
-        val screensaverButtonSize: Dp = 64.dp
     }
 }

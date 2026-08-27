@@ -16,6 +16,8 @@
 
 package com.android.keyguard;
 
+import static android.security.Flags.lockscreenTimeoutDeactivatePinPad;
+
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_ADAPTIVE_AUTH_REQUEST;
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_DEVICE_ADMIN;
 import static com.android.keyguard.KeyguardSecurityView.PROMPT_REASON_NONE;
@@ -36,11 +38,15 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.View.AccessibilityDelegate;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction;
 
 import androidx.annotation.CallSuper;
 
 import com.android.app.animation.Interpolators;
 import com.android.internal.widget.LockscreenCredential;
+import com.android.systemui.Flags;
 import com.android.systemui.res.R;
 
 import java.util.ArrayList;
@@ -77,7 +83,11 @@ public abstract class KeyguardPinBasedInputView extends KeyguardAbsKeyInputView 
     @Override
     protected void setPasswordEntryEnabled(boolean enabled) {
         mPasswordEntry.setEnabled(enabled);
-        mOkButton.setEnabled(enabled);
+        if (lockscreenTimeoutDeactivatePinPad()) {
+            setNumPadButtonsEnabled(enabled);
+        } else {
+            mOkButton.setEnabled(enabled);
+        }
         if (enabled && !mPasswordEntry.hasFocus()) {
             mPasswordEntry.requestFocus();
         }
@@ -86,11 +96,30 @@ public abstract class KeyguardPinBasedInputView extends KeyguardAbsKeyInputView 
     @Override
     protected void setPasswordEntryInputEnabled(boolean enabled) {
         mPasswordEntry.setEnabled(enabled);
-        mOkButton.setEnabled(enabled);
+        if (lockscreenTimeoutDeactivatePinPad()) {
+            setNumPadButtonsEnabled(enabled);
+        } else {
+            mOkButton.setEnabled(enabled);
+        }
         if (enabled) {
             mPasswordEntry.requestFocus();
         }
     }
+
+    private void setNumPadButtonsEnabled(boolean enabled) {
+        setButtonState(mOkButton, enabled);
+        setButtonState(mDeleteButton, enabled);
+        for (NumPadKey button : mButtons) {
+            setButtonState(button, enabled);
+        }
+    }
+
+    private void setButtonState(View button, boolean enabled) {
+        button.setEnabled(enabled);
+        button.setClickable(enabled);
+        button.setFocusable(enabled);
+    }
+
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -178,8 +207,29 @@ public abstract class KeyguardPinBasedInputView extends KeyguardAbsKeyInputView 
 
         mOkButton = findViewById(R.id.key_enter);
 
+        if (Flags.bouncerUiRevamp2()) {
+            mOkButton.setImageResource(R.drawable.pin_bouncer_confirm);
+        }
         mDeleteButton = findViewById(R.id.delete_button);
+        if (Flags.bouncerUiRevamp2()) {
+            mDeleteButton.setDrawableForTransparentMode(R.drawable.pin_bouncer_delete_filled);
+            mDeleteButton.setDefaultDrawable(R.drawable.pin_bouncer_delete_outline);
+            mDeleteButton.setImageResource(R.drawable.pin_bouncer_delete_outline);
+        }
         mDeleteButton.setVisibility(View.VISIBLE);
+        mDeleteButton.setAccessibilityDelegate(
+                new AccessibilityDelegate() {
+                    public void onInitializeAccessibilityNodeInfo(View host,
+                            AccessibilityNodeInfo info) {
+                        super.onInitializeAccessibilityNodeInfo(host, info);
+                        final AccessibilityAction longClick = new AccessibilityAction(
+                                AccessibilityAction.ACTION_LONG_CLICK.getId(),
+                                getContext().getResources().getString(
+                                        R.string.keyguard_accessibility_pin_delete_long_click));
+                        info.addAction(longClick);
+                        info.setTextEntryKey(true);
+                    }
+                });
 
         mButtons[0] = findViewById(R.id.key0);
         mButtons[1] = findViewById(R.id.key1);

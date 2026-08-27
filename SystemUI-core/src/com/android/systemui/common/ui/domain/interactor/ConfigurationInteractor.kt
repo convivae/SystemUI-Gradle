@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-@file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.android.systemui.common.ui.domain.interactor
 
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.view.Surface
 import com.android.systemui.common.ui.data.repository.ConfigurationRepository
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -53,6 +51,12 @@ interface ConfigurationInteractor {
      */
     val layoutDirection: Flow<Int>
 
+    /**
+     * Display rotation, one of [Surface.ROTATION_0], [Surface.ROTATION_90], [Surface.ROTATION_180],
+     * [Surface.ROTATION_270]
+     */
+    val displayRotation: Flow<Int>
+
     /** Emit an event on any config change */
     val onAnyConfigurationChange: Flow<Unit>
 
@@ -60,7 +64,7 @@ interface ConfigurationInteractor {
     val configurationValues: Flow<Configuration>
 
     /** Emits the current resolution scaling factor */
-    val scaleForResolution: Flow<Float>
+    val scaleForResolution: StateFlow<Float>
 
     /** Given [resourceId], emit the dimension pixel size on config change */
     fun dimensionPixelSize(resourceId: Int): Flow<Int>
@@ -70,6 +74,8 @@ interface ConfigurationInteractor {
 
     /** Given a set of [resourceId]s, emit Map<ResourceId, DimensionPixelSize> on config change */
     fun dimensionPixelSize(resourceIds: Set<Int>): Flow<Map<Int, Int>>
+
+    fun getScaleForResolution(): Float
 }
 
 class ConfigurationInteractorImpl(private val repository: ConfigurationRepository) :
@@ -97,6 +103,11 @@ class ConfigurationInteractorImpl(private val repository: ConfigurationRepositor
     override val layoutDirection: Flow<Int> =
         repository.configurationValues.map { it.layoutDirection }.distinctUntilChanged()
 
+    override val displayRotation: Flow<Int> =
+        repository.configurationValues
+            .map { it.windowConfiguration.displayRotation }
+            .distinctUntilChanged()
+
     override fun dimensionPixelSize(resourceId: Int): Flow<Int> {
         return onAnyConfigurationChange.mapLatest { repository.getDimensionPixelSize(resourceId) }
     }
@@ -121,5 +132,9 @@ class ConfigurationInteractorImpl(private val repository: ConfigurationRepositor
 
     override val configurationValues: Flow<Configuration> = repository.configurationValues
 
-    override val scaleForResolution: Flow<Float> = repository.scaleForResolution
+    override val scaleForResolution: StateFlow<Float> = repository.scaleForResolution
+
+    override fun getScaleForResolution(): Float {
+        return repository.getResolutionScale()
+    }
 }

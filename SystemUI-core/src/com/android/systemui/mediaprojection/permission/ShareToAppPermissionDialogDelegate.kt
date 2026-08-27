@@ -15,12 +15,15 @@
  */
 package com.android.systemui.mediaprojection.permission
 
-import android.app.AlertDialog
 import android.content.Context
+import android.hardware.display.DisplayManager
 import android.media.projection.MediaProjectionConfig
+import android.os.Build
 import android.os.Bundle
+import android.view.Display
 import com.android.systemui.mediaprojection.MediaProjectionMetricsLogger
 import com.android.systemui.res.R
+import com.android.systemui.statusbar.phone.SystemUIDialog
 import java.util.function.Consumer
 
 /**
@@ -30,15 +33,16 @@ import java.util.function.Consumer
 class ShareToAppPermissionDialogDelegate(
     context: Context,
     mediaProjectionConfig: MediaProjectionConfig?,
-    private val onStartRecordingClicked:
-        Consumer<BaseMediaProjectionPermissionDialogDelegate<AlertDialog>>,
+    private val onStartRecordingClicked: Consumer<BaseMediaProjectionPermissionDialogDelegate>,
     private val onCancelClicked: Runnable,
     appName: String,
     forceShowPartialScreenshare: Boolean,
     hostUid: Int,
     mediaProjectionMetricsLogger: MediaProjectionMetricsLogger,
+    systemUIDialogFactory: SystemUIDialog.Factory,
 ) :
-    BaseMediaProjectionPermissionDialogDelegate<AlertDialog>(
+    BaseMediaProjectionPermissionDialogDelegate(
+        context,
         createOptionList(
             context,
             appName,
@@ -49,8 +53,9 @@ class ShareToAppPermissionDialogDelegate(
         hostUid,
         mediaProjectionMetricsLogger,
         dialogIconDrawable = R.drawable.ic_present_to_all,
+        systemUIDialogFactory = systemUIDialogFactory,
     ) {
-    override fun onCreate(dialog: AlertDialog, savedInstanceState: Bundle?) {
+    override fun onCreate(dialog: SystemUIDialog, savedInstanceState: Bundle?) {
         super.onCreate(dialog, savedInstanceState)
         // TODO(b/270018943): Handle the case of System sharing (not recording nor casting)
         setDialogTitle(R.string.media_projection_entry_app_permission_dialog_title)
@@ -80,40 +85,71 @@ class ShareToAppPermissionDialogDelegate(
                     mediaProjectionConfig,
                     overrideDisableSingleAppOption,
                 )
+
+            val displayManager = context.getSystemService(DisplayManager::class.java)
+            val connectedDisplays: List<Display> =
+                MediaProjectionPermissionUtils.getConnectedDisplays(displayManager)
+
             val options =
-                listOf(
-                    ScreenShareOption(
-                        mode = SINGLE_APP,
-                        spinnerText =
-                            R.string
-                                .media_projection_entry_app_permission_dialog_option_text_single_app,
-                        warningText =
-                            R.string
-                                .media_projection_entry_app_permission_dialog_warning_single_app,
-                        startButtonText =
-                            R.string
-                                .media_projection_entry_generic_permission_dialog_continue_single_app,
-                        spinnerDisabledText = singleAppDisabledText,
-                    ),
+                mutableListOf(
                     ScreenShareOption(
                         mode = ENTIRE_SCREEN,
                         spinnerText =
-                            R.string
-                                .media_projection_entry_app_permission_dialog_option_text_entire_screen,
+                            if (connectedDisplays.isEmpty()) {
+                                R.string
+                                    .media_projection_entry_app_permission_dialog_option_text_entire_screen
+                            } else {
+                                R.string
+                                    .screen_share_permission_dialog_option_text_entire_screen_for_display
+                            },
                         warningText =
                             R.string
                                 .media_projection_entry_app_permission_dialog_warning_entire_screen,
                         startButtonText =
                             R.string
                                 .media_projection_entry_app_permission_dialog_continue_entire_screen,
+                        displayName = Build.MODEL,
                     )
                 )
-            return if (singleAppDisabledText != null) {
+
+            // New entries will be added only if the flag is enabled and there are displays to add
+            options +=
+                connectedDisplays.map {
+                    ScreenShareOption(
+                        ENTIRE_SCREEN_EXTERNAL,
+                        R.string
+                            .screen_share_permission_dialog_option_text_entire_screen_for_display,
+                        warningText =
+                            R.string
+                                .media_projection_entry_app_permission_dialog_warning_entire_screen,
+                        startButtonText =
+                            R.string
+                                .media_projection_entry_app_permission_dialog_continue_entire_screen,
+                        displayId = it.displayId,
+                        displayName = it.name,
+                    )
+                }
+
+            val singleAppOption =
+                ScreenShareOption(
+                    mode = SINGLE_APP,
+                    spinnerText =
+                        R.string
+                            .media_projection_entry_app_permission_dialog_option_text_single_app,
+                    warningText =
+                        R.string.media_projection_entry_app_permission_dialog_warning_single_app,
+                    startButtonText =
+                        R.string
+                            .media_projection_entry_generic_permission_dialog_continue_single_app,
+                    spinnerDisabledText = singleAppDisabledText,
+                )
+            if (singleAppDisabledText != null) {
                 // Make sure "Entire screen" is the first option when "Single App" is disabled.
-                options.reversed()
+                options.add(singleAppOption)
             } else {
-                options
+                options.add(0, singleAppOption)
             }
+            return options
         }
     }
 }

@@ -18,9 +18,9 @@ package com.android.systemui.keyevent.data.repository
 
 import android.view.KeyEvent
 import com.android.systemui.common.coroutine.ChannelExt.trySendWithFailureLogging
-import com.android.systemui.common.coroutine.ConflatedCallbackFlow.conflatedCallbackFlow
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.statusbar.CommandQueue
+import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
 import javax.inject.Inject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -32,11 +32,8 @@ interface KeyEventRepository {
 }
 
 @SysUISingleton
-class KeyEventRepositoryImpl
-@Inject
-constructor(
-    private val commandQueue: CommandQueue,
-) : KeyEventRepository {
+class KeyEventRepositoryImpl @Inject constructor(private val commandQueue: CommandQueue) :
+    KeyEventRepository {
     override val isPowerButtonDown: Flow<Boolean> = conflatedCallbackFlow {
         val callback =
             object : CommandQueue.Callbacks {

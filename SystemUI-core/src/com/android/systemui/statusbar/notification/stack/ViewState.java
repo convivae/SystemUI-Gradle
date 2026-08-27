@@ -16,6 +16,10 @@
 
 package com.android.systemui.statusbar.notification.stack;
 
+import static com.android.systemui.Flags.physicalNotificationMovement;
+import static com.android.systemui.statusbar.notification.PhysicsPropertyAnimator.TAG_ANIMATOR_TRANSLATION_Y;
+import static com.android.systemui.statusbar.notification.PhysicsPropertyAnimator.Y_TRANSLATION;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
@@ -27,13 +31,21 @@ import android.view.View;
 import android.view.animation.Interpolator;
 
 import com.android.app.animation.Interpolators;
+import com.android.internal.dynamicanimation.animation.DynamicAnimation;
+import com.android.internal.dynamicanimation.animation.SpringAnimation;
 import com.android.systemui.Dumpable;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.AnimatableProperty;
 import com.android.systemui.statusbar.notification.NotificationFadeAware.FadeOptimizedNotification;
+import com.android.systemui.statusbar.notification.PhysicsProperty;
+import com.android.systemui.statusbar.notification.PhysicsPropertyAnimator;
 import com.android.systemui.statusbar.notification.PropertyAnimator;
-import com.android.systemui.statusbar.notification.row.ExpandableView;
+import com.android.systemui.statusbar.notification.PropertyData;
 import com.android.systemui.statusbar.notification.headsup.HeadsUpUtil;
+import com.android.systemui.statusbar.notification.row.ExpandableView;
+
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
@@ -45,6 +57,14 @@ import java.lang.reflect.Modifier;
  * animations with {@link com.android.systemui.statusbar.notification.stack.StackStateAnimator}.
  */
 public class ViewState implements Dumpable {
+
+    public ViewState() {
+        this(physicalNotificationMovement());
+    }
+
+    public ViewState(boolean usePhysicsForMovement) {
+        setUsePhysicsForMovement(usePhysicsForMovement);
+    }
 
     /**
      * Some animation properties that can be used to update running animations but not creating
@@ -59,7 +79,6 @@ public class ViewState implements Dumpable {
         }
     };
     private static final int TAG_ANIMATOR_TRANSLATION_X = R.id.translation_x_animator_tag;
-    private static final int TAG_ANIMATOR_TRANSLATION_Y = R.id.translation_y_animator_tag;
     private static final int TAG_ANIMATOR_TRANSLATION_Z = R.id.translation_z_animator_tag;
     private static final int TAG_ANIMATOR_ALPHA = R.id.alpha_animator_tag;
     private static final int TAG_END_TRANSLATION_X = R.id.translation_x_animator_end_value_tag;
@@ -72,8 +91,7 @@ public class ViewState implements Dumpable {
     private static final int TAG_START_ALPHA = R.id.alpha_animator_start_value_tag;
     private static final String LOG_TAG = "StackViewState";
 
-    private static final AnimatableProperty SCALE_X_PROPERTY
-            = new AnimatableProperty() {
+    private static final AnimatableProperty SCALE_X_PROPERTY = new AnimatableProperty() {
 
         @Override
         public int getAnimationStartTag() {
@@ -96,8 +114,7 @@ public class ViewState implements Dumpable {
         }
     };
 
-    private static final AnimatableProperty SCALE_Y_PROPERTY
-            = new AnimatableProperty() {
+    private static final AnimatableProperty SCALE_Y_PROPERTY = new AnimatableProperty() {
 
         @Override
         public int getAnimationStartTag() {
@@ -122,6 +139,8 @@ public class ViewState implements Dumpable {
 
     public boolean gone;
     public boolean hidden;
+    public String mAlphaReason;
+    public String mYTranslationSource;
 
     private float mAlpha;
     private float mXTranslation;
@@ -129,17 +148,27 @@ public class ViewState implements Dumpable {
     private float mZTranslation;
     private float mScaleX = 1.0f;
     private float mScaleY = 1.0f;
+    protected boolean mUsePhysicsForMovement = false;
 
     public float getAlpha() {
         return mAlpha;
     }
 
+    public String getAlphaReason() {
+        return mAlphaReason;
+    }
+
+    public void setUsePhysicsForMovement(boolean usePhysicsForMovement) {
+        this.mUsePhysicsForMovement = usePhysicsForMovement;
+    }
+
     /**
      * @param alpha View transparency.
      */
-    public void setAlpha(float alpha) {
+    public void setAlpha(float alpha, String reason) {
         if (isValidFloat(alpha, "alpha")) {
             this.mAlpha = alpha;
+            this.mAlphaReason = reason;
         }
     }
 
@@ -162,17 +191,18 @@ public class ViewState implements Dumpable {
 
     /**
      * @param yTranslation y-axis translation value for the animation.
+     * @param source A string literal that identifies the caller.
      */
-    public void setYTranslation(float yTranslation) {
+    public void setYTranslation(float yTranslation, String source) {
         if (isValidFloat(yTranslation, "yTranslation")) {
             this.mYTranslation = yTranslation;
+            this.mYTranslationSource = source;
         }
     }
 
     public float getZTranslation() {
         return mZTranslation;
     }
-
 
     /**
      * @param zTranslation z-axis translation value for the animation.
@@ -223,19 +253,24 @@ public class ViewState implements Dumpable {
 
     public void copyFrom(ViewState viewState) {
         mAlpha = viewState.mAlpha;
+        mAlphaReason = viewState.mAlphaReason;
         mXTranslation = viewState.mXTranslation;
         mYTranslation = viewState.mYTranslation;
+        mYTranslationSource = viewState.mYTranslationSource;
         mZTranslation = viewState.mZTranslation;
         gone = viewState.gone;
         hidden = viewState.hidden;
         mScaleX = viewState.mScaleX;
         mScaleY = viewState.mScaleY;
+        mUsePhysicsForMovement = viewState.mUsePhysicsForMovement;
     }
 
     public void initFrom(View view) {
         mAlpha = view.getAlpha();
+        mAlphaReason = "initFrom";
         mXTranslation = view.getTranslationX();
         mYTranslation = view.getTranslationY();
+        mYTranslationSource = "ViewState.initFrom";
         mZTranslation = view.getTranslationZ();
         gone = view.getVisibility() == View.GONE;
         hidden = view.getVisibility() == View.INVISIBLE;
@@ -261,11 +296,18 @@ public class ViewState implements Dumpable {
         }
 
         // apply yTranslation
-        boolean animatingY = isAnimating(view, TAG_ANIMATOR_TRANSLATION_Y);
-        if (animatingY) {
-            updateAnimationY(view);
-        } else if (view.getTranslationY() != this.mYTranslation) {
-            view.setTranslationY(this.mYTranslation);
+        if (mUsePhysicsForMovement) {
+            PhysicsPropertyAnimator.setProperty(view, Y_TRANSLATION, this.mYTranslation);
+        } else {
+            boolean animatingY = isAnimating(view, TAG_ANIMATOR_TRANSLATION_Y);
+            if (animatingY) {
+                updateAnimationY(view);
+            } else if (view.getTranslationY() != this.mYTranslation) {
+                view.setTranslationY(this.mYTranslation);
+            }
+        }
+        if (view instanceof ExpandableView) {
+            ((ExpandableView) view).setYTranslationSource(this.mYTranslationSource);
         }
 
         // apply zTranslation
@@ -293,8 +335,8 @@ public class ViewState implements Dumpable {
         }
 
         int oldVisibility = view.getVisibility();
-        boolean becomesInvisible = this.mAlpha == 0.0f
-                || (this.hidden && (!isAnimating(view) || oldVisibility != View.VISIBLE));
+        boolean becomesInvisible = this.mAlpha == 0.0f || (this.hidden && (!isAnimating(view)
+                || oldVisibility != View.VISIBLE));
         boolean animatingAlpha = isAnimating(view, TAG_ANIMATOR_ALPHA);
         if (animatingAlpha) {
             updateAlphaAnimation(view);
@@ -315,9 +357,8 @@ public class ViewState implements Dumpable {
             } else {
                 boolean newLayerTypeIsHardware = becomesFaded && view.hasOverlappingRendering();
                 int layerType = view.getLayerType();
-                int newLayerType = newLayerTypeIsHardware
-                        ? View.LAYER_TYPE_HARDWARE
-                        : View.LAYER_TYPE_NONE;
+                int newLayerType =
+                        newLayerTypeIsHardware ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE;
                 if (layerType != newLayerType) {
                     view.setLayerType(newLayerType, null);
                 }
@@ -360,11 +401,27 @@ public class ViewState implements Dumpable {
     }
 
     private static boolean isAnimating(View view, int tag) {
-        return getChildTag(view, tag) != null;
+        Object childTag = getChildTag(view, tag);
+        if (childTag instanceof PropertyData propertyData) {
+            return propertyData.getAnimator() != null;
+        }
+        return childTag != null;
     }
 
     public static boolean isAnimating(View view, AnimatableProperty property) {
-        return getChildTag(view, property.getAnimatorTag()) != null;
+        Object childTag = getChildTag(view, property.getAnimatorTag());
+        if (childTag instanceof PropertyData propertyData) {
+            return propertyData.getAnimator() != null;
+        }
+        return childTag != null;
+    }
+
+    public static boolean isAnimating(View view, PhysicsProperty property) {
+        Object childTag = getChildTag(view, property.getTag());
+        if (childTag instanceof PropertyData propertyData) {
+            return propertyData.getAnimator() != null;
+        }
+        return childTag != null;
     }
 
     /**
@@ -376,8 +433,7 @@ public class ViewState implements Dumpable {
     public void animateTo(View child, AnimationProperties animationProperties) {
         boolean wasVisible = child.getVisibility() == View.VISIBLE;
         final float alpha = this.mAlpha;
-        if (!wasVisible && (alpha != 0 || child.getAlpha() != 0)
-                && !this.gone && !this.hidden) {
+        if (!wasVisible && (alpha != 0 || child.getAlpha() != 0) && !this.gone && !this.hidden) {
             child.setVisibility(View.VISIBLE);
         }
         float childAlpha = child.getAlpha();
@@ -386,7 +442,6 @@ public class ViewState implements Dumpable {
             // We don't want views to change visibility when they are animating to GONE
             alphaChanging &= !((ExpandableView) child).willBeGone();
         }
-
         // start translationX animation
         if (child.getTranslationX() != this.mXTranslation) {
             startXTranslationAnimation(child, animationProperties);
@@ -465,8 +520,8 @@ public class ViewState implements Dumpable {
             }
         }
 
-        ObjectAnimator animator = ObjectAnimator.ofFloat(child, View.ALPHA,
-                child.getAlpha(), newEndValue);
+        ObjectAnimator animator = ObjectAnimator.ofFloat(child, View.ALPHA, child.getAlpha(),
+                newEndValue);
         animator.setInterpolator(Interpolators.FAST_OUT_SLOW_IN);
         // Handle layer type
         child.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -516,8 +571,7 @@ public class ViewState implements Dumpable {
         startZTranslationAnimation(view, NO_NEW_ANIMATIONS);
     }
 
-    private void updateAnimation(View view, AnimatableProperty property,
-            float endValue) {
+    private void updateAnimation(View view, AnimatableProperty property, float endValue) {
         PropertyAnimator.startAnimation(view, property, endValue, NO_NEW_ANIMATIONS);
     }
 
@@ -615,8 +669,8 @@ public class ViewState implements Dumpable {
                 child.getTranslationX(), newEndValue);
         Interpolator customInterpolator = properties.getCustomInterpolator(child,
                 View.TRANSLATION_X);
-        Interpolator interpolator = customInterpolator != null ? customInterpolator
-                : Interpolators.FAST_OUT_SLOW_IN;
+        Interpolator interpolator =
+                customInterpolator != null ? customInterpolator : Interpolators.FAST_OUT_SLOW_IN;
         animator.setInterpolator(interpolator);
         long newDuration = cancelAnimatorAndGetNewDuration(properties.duration, previousAnimator);
         animator.setDuration(newDuration);
@@ -649,6 +703,29 @@ public class ViewState implements Dumpable {
     }
 
     private void startYTranslationAnimation(final View child, AnimationProperties properties) {
+        if (mUsePhysicsForMovement) {
+            // Y Translation does some extra calls when it ends, so lets add a listener
+            DynamicAnimation.OnAnimationEndListener endListener = null;
+            if (!isAnimatingY(child)) {
+                // Only add a listener if we're not animating yet
+                endListener =
+                        (animation, canceled, value, velocity) -> {
+                            if (!canceled) {
+                                HeadsUpUtil.setNeedsHeadsUpDisappearAnimationAfterClick(child,
+                                        false);
+                                onYTranslationAnimationFinished(child);
+                            }
+                        };
+            }
+            PhysicsPropertyAnimator.setProperty(child, Y_TRANSLATION, this.mYTranslation,
+                    properties, properties.getAnimationFilter().animateY, endListener);
+        } else {
+            startYTranslationInterpolatorAnimation(child, properties);
+        }
+    }
+
+    private void startYTranslationInterpolatorAnimation(View child,
+            AnimationProperties properties) {
         Float previousStartValue = getChildTag(child, TAG_START_TRANSLATION_Y);
         Float previousEndValue = getChildTag(child, TAG_END_TRANSLATION_Y);
         float newEndValue = this.mYTranslation;
@@ -673,6 +750,9 @@ public class ViewState implements Dumpable {
             } else {
                 // no new animation needed, let's just apply the value
                 child.setTranslationY(newEndValue);
+                if (child instanceof ExpandableView) {
+                    ((ExpandableView) child).setYTranslationSource(this.mYTranslationSource);
+                }
                 return;
             }
         }
@@ -681,8 +761,8 @@ public class ViewState implements Dumpable {
                 child.getTranslationY(), newEndValue);
         Interpolator customInterpolator = properties.getCustomInterpolator(child,
                 View.TRANSLATION_Y);
-        Interpolator interpolator = customInterpolator != null ? customInterpolator
-                : Interpolators.FAST_OUT_SLOW_IN;
+        Interpolator interpolator =
+                customInterpolator != null ? customInterpolator : Interpolators.FAST_OUT_SLOW_IN;
         animator.setInterpolator(interpolator);
         long newDuration = cancelAnimatorAndGetNewDuration(properties.duration, previousAnimator);
         animator.setDuration(newDuration);
@@ -731,9 +811,58 @@ public class ViewState implements Dumpable {
     }
 
     protected void abortAnimation(View child, int animatorTag) {
-        Animator previousAnimator = getChildTag(child, animatorTag);
-        if (previousAnimator != null) {
-            previousAnimator.cancel();
+        Object storedTag = getChildTag(child, animatorTag);
+        if (storedTag != null) {
+            if (storedTag instanceof Animator animator) {
+                animator.cancel();
+            } else if (storedTag instanceof PropertyData propertyData) {
+                // Physics based animation!
+                Runnable delayRunnable = propertyData.getDelayRunnable();
+                child.removeCallbacks(delayRunnable);
+                SpringAnimation animator = propertyData.getAnimator();
+                if (animator != null) {
+                    boolean wasRunning = animator.isRunning();
+                    animator.cancel();
+                    if (!wasRunning) {
+                        // The animation was never started, so the cancel above doesn't do much.
+                        // We need to notify the endListeners manually that the animation has ended
+                        // since they need to reset some state.
+                        Function1<Boolean, Unit> listener =
+                                propertyData.getEndedBeforeStartingCleanupHandler();
+                        if (listener != null) {
+                            listener.invoke(true /* cancelled */);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    protected void skipAnimationToEnd(View child, int animatorTag) {
+        Object storedTag = getChildTag(child, animatorTag);
+        if (storedTag != null) {
+            if (storedTag instanceof Animator animator) {
+                animator.end();
+            } else if (storedTag instanceof PropertyData propertyData) {
+                // Physics based animation!
+                Runnable delayRunnable = propertyData.getDelayRunnable();
+                child.removeCallbacks(delayRunnable);
+                SpringAnimation animator = propertyData.getAnimator();
+                if (animator != null) {
+                    boolean wasRunning = animator.isRunning();
+                    animator.skipToEnd();
+                    if (!wasRunning) {
+                        // The animation was ever started, so the skipToEnd above doesn't do much.
+                        // We need to notify the endListeners manually that the animation has ended
+                        // since they need to reset some state.
+                        Function1<Boolean, Unit> listener =
+                                propertyData.getEndedBeforeStartingCleanupHandler();
+                        if (listener != null) {
+                            listener.invoke(false /* cancelled */);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -750,43 +879,12 @@ public class ViewState implements Dumpable {
         if (previousAnimator != null) {
             // We take either the desired length of the new animation or the remaining time of
             // the previous animator, whichever is longer.
-            newDuration = Math.max(previousAnimator.getDuration()
-                    - previousAnimator.getCurrentPlayTime(), newDuration);
+            newDuration = Math.max(
+                    previousAnimator.getDuration() - previousAnimator.getCurrentPlayTime(),
+                    newDuration);
             previousAnimator.cancel();
         }
         return newDuration;
-    }
-
-    /**
-     * Get the end value of the xTranslation animation running on a view or the xTranslation
-     * if no animation is running.
-     */
-    public static float getFinalTranslationX(View view) {
-        if (view == null) {
-            return 0;
-        }
-        ValueAnimator xAnimator = getChildTag(view, TAG_ANIMATOR_TRANSLATION_X);
-        if (xAnimator == null) {
-            return view.getTranslationX();
-        } else {
-            return getChildTag(view, TAG_END_TRANSLATION_X);
-        }
-    }
-
-    /**
-     * Get the end value of the yTranslation animation running on a view or the yTranslation
-     * if no animation is running.
-     */
-    public static float getFinalTranslationY(View view) {
-        if (view == null) {
-            return 0;
-        }
-        ValueAnimator yAnimator = getChildTag(view, TAG_ANIMATOR_TRANSLATION_Y);
-        if (yAnimator == null) {
-            return view.getTranslationY();
-        } else {
-            return getChildTag(view, TAG_END_TRANSLATION_Y);
-        }
     }
 
     /**
@@ -806,26 +904,29 @@ public class ViewState implements Dumpable {
     }
 
     public static boolean isAnimatingY(View child) {
-        return getChildTag(child, TAG_ANIMATOR_TRANSLATION_Y) != null;
+        return isAnimating(child, TAG_ANIMATOR_TRANSLATION_Y);
     }
 
+    /**
+     * Abort the animations. Unlike {@link #finishAnimations(View)} this causes the animators
+     * to stop in their tracks.
+     */
     public void cancelAnimations(View view) {
-        Animator animator = getChildTag(view, TAG_ANIMATOR_TRANSLATION_X);
-        if (animator != null) {
-            animator.cancel();
-        }
-        animator = getChildTag(view, TAG_ANIMATOR_TRANSLATION_Y);
-        if (animator != null) {
-            animator.cancel();
-        }
-        animator = getChildTag(view, TAG_ANIMATOR_TRANSLATION_Z);
-        if (animator != null) {
-            animator.cancel();
-        }
-        animator = getChildTag(view, TAG_ANIMATOR_ALPHA);
-        if (animator != null) {
-            animator.cancel();
-        }
+        abortAnimation(view, TAG_ANIMATOR_TRANSLATION_X);
+        abortAnimation(view, TAG_ANIMATOR_TRANSLATION_Y);
+        abortAnimation(view, TAG_ANIMATOR_TRANSLATION_Z);
+        abortAnimation(view, TAG_ANIMATOR_ALPHA);
+    }
+
+    /**
+     * Finish the animations. This causes any currently running animators to jump to the end
+     * value of the property being animated, and to trigger any animation end listeners.
+     */
+    public void finishAnimations(View view) {
+        skipAnimationToEnd(view, TAG_ANIMATOR_TRANSLATION_X);
+        skipAnimationToEnd(view, TAG_ANIMATOR_TRANSLATION_Y);
+        skipAnimationToEnd(view, TAG_ANIMATOR_TRANSLATION_Z);
+        skipAnimationToEnd(view, TAG_ANIMATOR_ALPHA);
     }
 
     @Override
@@ -840,8 +941,8 @@ public class ViewState implements Dumpable {
             // Print field names paired with their values
             for (Field field : fields) {
                 int modifiers = field.getModifiers();
-                if (Modifier.isStatic(modifiers) || field.isSynthetic()
-                        || Modifier.isTransient(modifiers)) {
+                if (Modifier.isStatic(modifiers) || field.isSynthetic() || Modifier.isTransient(
+                        modifiers)) {
                     continue;
                 }
                 if (!first) {

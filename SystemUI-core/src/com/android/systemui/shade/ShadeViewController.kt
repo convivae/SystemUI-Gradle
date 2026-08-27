@@ -16,12 +16,12 @@
 package com.android.systemui.shade
 
 import android.view.MotionEvent
-import android.view.ViewGroup
 import com.android.systemui.power.shared.model.WakefulnessModel
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow
 import com.android.systemui.statusbar.phone.HeadsUpAppearanceController
 import com.android.systemui.statusbar.phone.KeyguardStatusBarView
 import com.android.systemui.statusbar.phone.KeyguardStatusBarViewController
+import java.util.function.BiConsumer
 import java.util.function.Consumer
 
 /**
@@ -52,10 +52,6 @@ interface ShadeViewController {
     /** Sets Qs ScrimEnabled and updates QS state. */
     @Deprecated("Does nothing when scene container is enabled.")
     fun setQsScrimEnabled(qsScrimEnabled: Boolean)
-
-    /** Sets the top spacing for the ambient indicator. */
-    @Deprecated("Does nothing when scene container is enabled.")
-    fun setAmbientIndicationTop(ambientIndicationTop: Int, ambientTextVisible: Boolean)
 
     /** Updates notification panel-specific flags on [SysUiState]. */
     @Deprecated("Does nothing when scene container is enabled.") fun updateSystemUiStateFlags()
@@ -137,10 +133,10 @@ interface ShadeViewController {
 /** Manages listeners for when users begin expanding the shade from a HUN. */
 interface ShadeHeadsUpTracker {
     /** Add a listener for when the user starts expanding the shade from a HUN. */
-    fun addTrackingHeadsUpListener(listener: Consumer<ExpandableNotificationRow>)
+    fun addTrackingHeadsUpListener(listener: BiConsumer<ExpandableNotificationRow, String>)
 
     /** Remove a listener for when the user starts expanding the shade from a HUN. */
-    fun removeTrackingHeadsUpListener(listener: Consumer<ExpandableNotificationRow>)
+    fun removeTrackingHeadsUpListener(listener: BiConsumer<ExpandableNotificationRow, String>)
 
     /** Set the controller for the appearance of HUNs in the icon area and the header itself. */
     fun setHeadsUpAppearanceController(headsUpAppearanceController: HeadsUpAppearanceController?)
@@ -169,9 +165,6 @@ interface ShadeFoldAnimator {
     /** Cancels fold to AOD transition and resets view state. */
     @Deprecated("Used by the Keyguard Fold Transition. Needs flexiglass equivalent.")
     fun cancelFoldToAodAnimation()
-
-    /** Returns the main view of the shade. */
-    @Deprecated("Not used when migrateClocksToBlueprint enabled.") val view: ViewGroup?
 }
 
 /**
@@ -182,9 +175,6 @@ interface ShadeFoldAnimator {
 interface ShadeViewStateProvider {
     /** Returns the expanded height of the panel view. */
     @Deprecated("deprecated by SceneContainerFlag.isEnabled") val panelViewExpandedHeight: Float
-
-    /** Returns true if heads up should be visible. */
-    @Deprecated("deprecated by SceneContainerFlag.isEnabled.") fun shouldHeadsUpBeVisible(): Boolean
 
     /** Return the fraction of the shade that's expanded, when in lockscreen. */
     @Deprecated("deprecated by SceneContainerFlag.isEnabled") val lockscreenShadeDragProgress: Float

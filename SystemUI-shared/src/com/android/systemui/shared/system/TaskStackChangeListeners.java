@@ -27,6 +27,8 @@ import android.os.Message;
 import android.os.Trace;
 import android.util.Log;
 import android.window.TaskSnapshot;
+import android.window.TaskSnapshotListener;
+import android.window.TaskSnapshotManager;
 
 import androidx.annotation.VisibleForTesting;
 
@@ -141,7 +143,8 @@ public class TaskStackChangeListeners {
         private static final int ON_TASK_DESCRIPTION_CHANGED = 21;
         private static final int ON_ACTIVITY_ROTATION = 22;
         private static final int ON_LOCK_TASK_MODE_CHANGED = 23;
-        private static final int ON_TASK_SNAPSHOT_INVALIDATED = 24;
+        private static final int ON_TASK_SNAPSHOT_RELEASED = 24;
+        private static final int ON_RECENTS_TASK_REMOVED_FOR_ADD_TASK = 25;
 
         /**
          * List of {@link TaskStackChangeListener} registered from {@link #addListener}.
@@ -151,6 +154,21 @@ public class TaskStackChangeListeners {
 
         private final Handler mHandler;
         private boolean mRegistered;
+        private final TaskSnapshotListenerImpl mTaskSnapshotListener =
+                new TaskSnapshotListenerImpl();
+        private class TaskSnapshotListenerImpl extends TaskSnapshotListener {
+            @Override
+            protected void onTaskSnapshotChanged(int taskId, TaskSnapshot snapshot) {
+                mHandler.obtainMessage(ON_TASK_SNAPSHOT_CHANGED, taskId, 0, snapshot)
+                        .sendToTarget();
+            }
+
+            @Override
+            protected void onTaskSnapshotReleased(int taskId) {
+                mHandler.obtainMessage(ON_TASK_SNAPSHOT_RELEASED, taskId, 0 /* unused */)
+                        .sendToTarget();
+            }
+        }
 
         private Impl(Looper looper) {
             mHandler = new Handler(looper, this);
@@ -172,6 +190,8 @@ public class TaskStackChangeListeners {
                 } catch (Exception e) {
                     Log.w(TAG, "Failed to call registerTaskStackListener", e);
                 }
+                TaskSnapshotManager.getInstance()
+                        .registerTaskSnapshotListener(mTaskSnapshotListener);
             }
         }
 
@@ -189,6 +209,8 @@ public class TaskStackChangeListeners {
                 } catch (Exception e) {
                     Log.w(TAG, "Failed to call unregisterTaskStackListener", e);
                 }
+                TaskSnapshotManager.getInstance()
+                        .unregisterTaskSnapshotListener(mTaskSnapshotListener);
             }
         }
 
@@ -268,19 +290,13 @@ public class TaskStackChangeListeners {
         }
 
         @Override
-        public void onTaskSnapshotChanged(int taskId, TaskSnapshot snapshot) {
-            mHandler.obtainMessage(ON_TASK_SNAPSHOT_CHANGED, taskId, 0, snapshot).sendToTarget();
-        }
-
-        @Override
-        public void onTaskSnapshotInvalidated(int taskId) {
-            mHandler.obtainMessage(ON_TASK_SNAPSHOT_INVALIDATED, taskId, 0 /* unused */)
-                    .sendToTarget();
-        }
-
-        @Override
         public void onTaskCreated(int taskId, ComponentName componentName) {
             mHandler.obtainMessage(ON_TASK_CREATED, taskId, 0, componentName).sendToTarget();
+        }
+
+        @Override
+        public void onRecentTaskRemovedForAddTask(int taskId) {
+            mHandler.obtainMessage(ON_RECENTS_TASK_REMOVED_FOR_ADD_TASK, taskId, 0).sendToTarget();
         }
 
         @Override
@@ -360,9 +376,6 @@ public class TaskStackChangeListeners {
                         }
                         if (!snapshotConsumed) {
                             thumbnail.recycleBitmap();
-                            if (snapshot.getHardwareBuffer() != null) {
-                                snapshot.getHardwareBuffer().close();
-                            }
                         }
                         Trace.endSection();
                         break;
@@ -503,13 +516,19 @@ public class TaskStackChangeListeners {
                         }
                         break;
                     }
-                    case ON_TASK_SNAPSHOT_INVALIDATED: {
-                        Trace.beginSection("onTaskSnapshotInvalidated");
+                    case ON_TASK_SNAPSHOT_RELEASED: {
+                        Trace.beginSection("onTaskSnapshotReleased");
                         final ThumbnailData thumbnail = new ThumbnailData();
                         for (int i = mTaskStackListeners.size() - 1; i >= 0; i--) {
                             mTaskStackListeners.get(i).onTaskSnapshotChanged(msg.arg1, thumbnail);
                         }
                         Trace.endSection();
+                        break;
+                    }
+                    case ON_RECENTS_TASK_REMOVED_FOR_ADD_TASK: {
+                        for (int i = mTaskStackListeners.size() - 1; i >= 0; i--) {
+                            mTaskStackListeners.get(i).onRecentTaskRemovedForAddTask(msg.arg1);
+                        }
                         break;
                     }
                 }

@@ -26,27 +26,18 @@ import com.android.systemui.keyguard.ui.transitions.DeviceEntryIconTransition
 import com.android.systemui.scene.shared.model.Scenes
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 
 /** Breaks down DOZING->GONE transition into discrete steps for corresponding views to consume. */
-@ExperimentalCoroutinesApi
 @SysUISingleton
 class DozingToGoneTransitionViewModel
 @Inject
-constructor(
-    animationFlow: KeyguardTransitionAnimationFlow,
-) : DeviceEntryIconTransition {
+constructor(animationFlow: KeyguardTransitionAnimationFlow) : DeviceEntryIconTransition {
 
     private val transitionAnimation =
         animationFlow
-            .setup(
-                duration = TO_GONE_DURATION,
-                edge = Edge.create(from = DOZING, to = Scenes.Gone),
-            )
-            .setupWithoutSceneContainer(
-                edge = Edge.create(from = DOZING, to = GONE),
-            )
+            .setup(duration = TO_GONE_DURATION, edge = Edge.create(from = DOZING, to = Scenes.Gone))
+            .setupWithoutSceneContainer(edge = Edge.create(from = DOZING, to = GONE))
 
     fun lockscreenAlpha(viewState: ViewStateAccessor): Flow<Float> {
         return transitionAnimation.sharedFlow(
@@ -55,6 +46,14 @@ constructor(
             onStep = { 0f },
         )
     }
+
+    val nonAuthUIAlpha: Flow<Float> =
+        transitionAnimation.sharedFlow(
+            duration = TO_GONE_DURATION,
+            onStep = { null },
+            onCancel = { 1f },
+            onFinish = { 1f },
+        )
 
     override val deviceEntryParentViewAlpha: Flow<Float> =
         transitionAnimation.immediatelyTransitionTo(0f)

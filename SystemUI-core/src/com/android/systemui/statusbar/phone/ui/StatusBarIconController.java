@@ -26,7 +26,6 @@ import androidx.annotation.DrawableRes;
 
 import com.android.internal.statusbar.StatusBarIcon;
 import com.android.systemui.res.R;
-import com.android.systemui.statusbar.phone.StatusBarSignalPolicy.CallIndicatorIconState;
 
 import java.util.List;
 
@@ -46,6 +45,12 @@ public interface StatusBarIconController {
 
     /** Refresh the state of an IconManager by recreating the views */
     void refreshIconGroup(IconManager iconManager);
+
+    /** A lightweight refresh of an IconManager that only updates view layouts. */
+    void reloadIconGroupLayoutParams(IconManager iconManager);
+
+    /** Refreshes icon groups for a specific display. */
+    void refreshIconGroups(int displayId);
 
     /**
      * Adds or updates an icon that comes from an active tile service.
@@ -85,27 +90,9 @@ public interface StatusBarIconController {
      * {@link com.android.systemui.statusbar.pipeline.mobile.ui.binder.MobileIconBinder}.
      */
     void setNewMobileIconSubIds(List<Integer> subIds);
-    /**
-     * Display the no calling & SMS icons.
-     */
-    void setCallStrengthIcons(String slot, List<CallIndicatorIconState> states);
-
-    /**
-     * Display the no calling & SMS icons.
-     */
-    void setNoCallingIcons(String slot, List<CallIndicatorIconState> states);
 
     /** Sets whether the icon in the given slot should be visible or not. */
     void setIconVisibility(String slot, boolean b);
-
-    /**
-     * Sets the live region mode for the icon
-     *
-     * @param slot                    Icon slot to set region for
-     * @param accessibilityLiveRegion live region mode for the icon
-     * @see android.view.View#setAccessibilityLiveRegion(int)
-     */
-    void setIconAccessibilityLiveRegion(String slot, int accessibilityLiveRegion);
 
     /**
      * If you don't know what to pass for `tag`, either remove all icons for slot, or use

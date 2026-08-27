@@ -20,10 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.android.compose.animation.scene.SceneScope
+import com.android.compose.animation.scene.ContentScope
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
 import com.android.systemui.communal.shared.model.CommunalBackgroundType
+import com.android.systemui.communal.ui.compose.section.AmbientStatusBarSection
 import com.android.systemui.communal.ui.viewmodel.CommunalUserActionsViewModel
 import com.android.systemui.communal.ui.viewmodel.CommunalViewModel
 import com.android.systemui.communal.util.CommunalColors
@@ -43,6 +44,7 @@ constructor(
     actionsViewModelFactory: CommunalUserActionsViewModel.Factory,
     private val communalColors: CommunalColors,
     private val communalContent: CommunalContent,
+    private val ambientStatusBarSection: AmbientStatusBarSection,
 ) : ExclusiveActivatable(), Scene {
     override val key = Scenes.Communal
 
@@ -50,12 +52,14 @@ constructor(
 
     override val userActions: Flow<Map<UserAction, UserActionResult>> = actionsViewModel.actions
 
-    override suspend fun onActivated(): Nothing {
+    override val alwaysCompose: Boolean = false
+
+    override suspend fun onActivated() {
         actionsViewModel.activate()
     }
 
     @Composable
-    override fun SceneScope.Content(modifier: Modifier) {
+    override fun ContentScope.Content(modifier: Modifier) {
         val backgroundType by
             contentViewModel.communalBackground.collectAsStateWithLifecycle(
                 initialValue = CommunalBackgroundType.ANIMATED
@@ -65,8 +69,8 @@ constructor(
             backgroundType = backgroundType,
             colors = communalColors,
             content = communalContent,
+            ambientStatusBarSection = ambientStatusBarSection,
             viewModel = contentViewModel,
-            modifier = modifier.horizontalNestedScrollToScene(),
         )
     }
 }

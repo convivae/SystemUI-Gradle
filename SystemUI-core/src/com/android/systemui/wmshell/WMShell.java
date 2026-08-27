@@ -37,11 +37,11 @@ import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.InputMethodService.BackDispositionMode;
 import android.inputmethodservice.InputMethodService.ImeWindowVisibility;
 import android.util.Log;
-import android.view.Display;
 import android.view.KeyEvent;
 
 import androidx.annotation.NonNull;
 
+import com.android.app.displaylib.PerDisplayRepository;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardUpdateMonitorCallback;
@@ -56,12 +56,14 @@ import com.android.systemui.notetask.NoteTaskInitializer;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.CommandQueue;
+import com.android.systemui.statusbar.commandline.Command;
+import com.android.systemui.statusbar.commandline.CommandRegistry;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.util.kotlin.JavaAdapter;
 import com.android.wm.shell.dagger.WMComponent;
-import com.android.wm.shell.desktopmode.DesktopMode;
-import com.android.wm.shell.desktopmode.DesktopRepository;
+import com.android.wm.shell.desktopmode.api.DesktopMode;
+import com.android.wm.shell.desktopmode.data.DesktopRepository;
 import com.android.wm.shell.onehanded.OneHanded;
 import com.android.wm.shell.onehanded.OneHandedEventCallback;
 import com.android.wm.shell.onehanded.OneHandedTransitionCallback;
@@ -74,6 +76,7 @@ import com.android.wm.shell.splitscreen.SplitScreen;
 import com.android.wm.shell.sysui.ShellInterface;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -101,7 +104,8 @@ import javax.inject.Inject;
 public final class WMShell implements
         CoreStartable,
         CommandQueue.Callbacks {
-    private static final String TAG = WMShell.class.getName();
+    private static final String TAG = WMShell.class.getSimpleName();
+    private static final boolean DEBUG = false;
     private static final long INVALID_SYSUI_STATE_MASK =
             SYSUI_STATE_DIALOG_SHOWING
                     | SYSUI_STATE_STATUS_BAR_KEYGUARD_SHOWING
@@ -122,6 +126,7 @@ public final class WMShell implements
     private final Optional<RecentTasks> mRecentTasksOptional;
 
     private final CommandQueue mCommandQueue;
+    private final CommandRegistry mCommandRegistry;
     private final ConfigurationController mConfigurationController;
     private final KeyguardStateController mKeyguardStateController;
     private final KeyguardUpdateMonitor mKeyguardUpdateMonitor;
@@ -134,6 +139,7 @@ public final class WMShell implements
     private final CommunalTransitionViewModel mCommunalTransitionViewModel;
     private final JavaAdapter mJavaAdapter;
     private final Executor mSysUiMainExecutor;
+    private final PerDisplayRepository<SysUiState> mPerDisplaySysUiStateRepository;
 
     // Listeners and callbacks. Note that we prefer member variable over anonymous class here to
     // avoid the situation that some implementations, like KeyguardUpdateMonitor, use WeakReference
@@ -177,6 +183,23 @@ public final class WMShell implements
     private boolean mIsSysUiStateValid;
     private WakefulnessLifecycle.Observer mWakefulnessObserver;
 
+    private final Command mShellCommand = new Command() {
+        @Override
+        public void execute(@NonNull PrintWriter pw, @NonNull List<String> args) {
+            final ArrayList<String> shellArgs = new ArrayList<>(args);
+            shellArgs.add(0, "WMShell");
+            Log.d(TAG, "Command with args: " + String.join(", ", shellArgs));
+            if (!mShell.handleCommand(shellArgs.toArray(new String[0]), pw)) {
+                pw.println("Invalid wm shell command: " + String.join(", ", args));
+            }
+        }
+
+        @Override
+        public void help(@NonNull PrintWriter pw) {
+            mShell.handleCommand(new String[] { "WMShell", "help" }, pw);
+        }
+    };
+
     @Inject
     public WMShell(
             Context context,
@@ -187,6 +210,7 @@ public final class WMShell implements
             Optional<DesktopMode> desktopMode,
             Optional<RecentTasks> recentTasks,
             CommandQueue commandQueue,
+            CommandRegistry commandRegistry,
             ConfigurationController configurationController,
             KeyguardStateController keyguardStateController,
             KeyguardUpdateMonitor keyguardUpdateMonitor,
@@ -198,10 +222,13 @@ public final class WMShell implements
             NoteTaskInitializer noteTaskInitializer,
             CommunalTransitionViewModel communalTransitionViewModel,
             JavaAdapter javaAdapter,
-            @Main Executor sysUiMainExecutor) {
+            @Main Executor sysUiMainExecutor,
+            PerDisplayRepository<SysUiState> perDisplayRepository
+    ) {
         mContext = context;
         mShell = shell;
         mCommandQueue = commandQueue;
+        mCommandRegistry = commandRegistry;
         mConfigurationController = configurationController;
         mKeyguardStateController = keyguardStateController;
         mKeyguardUpdateMonitor = keyguardUpdateMonitor;
@@ -219,6 +246,7 @@ public final class WMShell implements
         mCommunalTransitionViewModel = communalTransitionViewModel;
         mJavaAdapter = javaAdapter;
         mSysUiMainExecutor = sysUiMainExecutor;
+        mPerDisplaySysUiStateRepository = perDisplayRepository;
     }
 
     @Override
@@ -233,8 +261,13 @@ public final class WMShell implements
 
         // Subscribe to user changes
         mUserTracker.addCallback(mUserChangedCallback, mContext.getMainExecutor());
+        mUserChangedCallback.onUserChanged(mUserTracker.getUserId(),
+                mContext.createContextAsUser(mUserTracker.getUserHandle(), 0 /* flags */));
+        mUserChangedCallback.onProfilesChanged(mUserTracker.getUserProfiles());
 
         mCommandQueue.addCallback(this);
+        mCommandRegistry.registerCommand("wmshell-passthrough", () -> mShellCommand);
+
         mPipOptional.ifPresent(this::initPip);
         mSplitScreenOptional.ifPresent(this::initSplitScreen);
         mOneHandedOptional.ifPresent(this::initOneHanded);
@@ -256,14 +289,16 @@ public final class WMShell implements
                 new PipTransitionController.PipTransitionCallback() {
                     @Override
                     public void onPipTransitionStarted(int direction, Rect pipBounds) {
+                        Log.d(TAG, "Set disable_gesture_pip_animating on transition start");
                         mSysUiState.setFlag(SYSUI_STATE_DISABLE_GESTURE_PIP_ANIMATING, true)
-                                .commitUpdate(mDisplayTracker.getDefaultDisplayId());
+                                .commitUpdate();
                     }
 
                     @Override
                     public void onPipTransitionFinished(int direction) {
+                        Log.d(TAG, "Reset disable_gesture_pip_animating on transition finish");
                         mSysUiState.setFlag(SYSUI_STATE_DISABLE_GESTURE_PIP_ANIMATING, false)
-                                .commitUpdate(mDisplayTracker.getDefaultDisplayId());
+                                .commitUpdate();
                     }
 
                     @Override
@@ -271,13 +306,14 @@ public final class WMShell implements
                         // No op.
                     }
                 }, mSysUiMainExecutor);
-        pip.addOnIsInPipStateChangedListener((isInPip) -> {
+        pip.addOnIsInPipStateChangedListener(mSysUiMainExecutor, isInPip -> {
             if (!isInPip) {
+                Log.d(TAG, "Reset disable_gesture_pip_animating on pip exit");
                 mSysUiState.setFlag(SYSUI_STATE_DISABLE_GESTURE_PIP_ANIMATING, false)
-                        .commitUpdate(mDisplayTracker.getDefaultDisplayId());
+                        .commitUpdate();
             }
         });
-        mSysUiState.addCallback(sysUiStateFlag -> {
+        mSysUiState.addCallback((sysUiStateFlag, displayId) -> {
             mIsSysUiStateValid = (sysUiStateFlag & INVALID_SYSUI_STATE_MASK) == 0;
             pip.onSystemUiStateChanged(mIsSysUiStateValid, sysUiStateFlag);
         });
@@ -387,7 +423,7 @@ public final class WMShell implements
 
             @Override
             public void setImeWindowStatus(int displayId, @ImeWindowVisibility int vis,
-                    @BackDispositionMode int backDisposition, boolean showImeSwitcher) {
+                    @BackDispositionMode int backDisposition, boolean showImeSwitcherButton) {
                 if (displayId == mDisplayTracker.getDefaultDisplayId()
                         && (vis & InputMethodService.IME_VISIBLE) != 0) {
                     oneHanded.stopOneHanded(
@@ -398,18 +434,67 @@ public final class WMShell implements
     }
 
     void initDesktopMode(DesktopMode desktopMode) {
-        desktopMode.addVisibleTasksListener(
-                new DesktopRepository.VisibleTasksListener() {
-                    @Override
-                    public void onTasksVisibilityChanged(int displayId, int visibleTasksCount) {
-                        if (displayId == Display.DEFAULT_DISPLAY) {
-                            mSysUiState.setFlag(SYSUI_STATE_FREEFORM_ACTIVE_IN_DESKTOP_MODE,
-                                            visibleTasksCount > 0)
-                                    .commitUpdate(mDisplayTracker.getDefaultDisplayId());
-                        }
-                        // TODO(b/278084491): update sysui state for changes on other displays
+        desktopMode.addDeskChangeListener(new DesktopRepository.DeskChangeListener() {
+            @Override
+            public void onDeskAdded(int displayId, int deskId) {
+
+            }
+
+            @Override
+            public void onDeskRemoved(int displayId, int deskId) {
+
+            }
+
+            @Override
+            public void onActiveDeskChanged(int displayId, int newActiveDeskId,
+                    int oldActiveDeskId) {
+                if (DEBUG) {
+                    Log.d(TAG, "onActiveDeskChanged: displayId=" + displayId
+                            + ", newActiveDeskId=" + newActiveDeskId
+                            + ", oldActiveDeskId=" + oldActiveDeskId);
+                }
+                SysUiState sysUiState = mPerDisplaySysUiStateRepository.get(displayId);
+                if (sysUiState == null) {
+                    if (DEBUG) {
+                        Log.d(TAG, "onActiveDeskChanged: sysUiState is null for displayId="
+                                + displayId);
                     }
-                }, mSysUiMainExecutor);
+                    return;
+                }
+                boolean enterFreeform = newActiveDeskId != DesktopRepository.INVALID_DESK_ID
+                        && oldActiveDeskId == DesktopRepository.INVALID_DESK_ID;
+                boolean exitFreeform = newActiveDeskId == DesktopRepository.INVALID_DESK_ID
+                        && oldActiveDeskId != DesktopRepository.INVALID_DESK_ID;
+                if (enterFreeform) {
+                    if (DEBUG) {
+                        Log.d(TAG, "onActiveDeskChanged displayId=" + displayId
+                                + ": enter freeform:  FREEFORM_ACTIVE_IN_DESKTOP_MODE -> true");
+                    }
+                    sysUiState.setFlag(SYSUI_STATE_FREEFORM_ACTIVE_IN_DESKTOP_MODE,
+                            true).commitUpdate();
+                } else if (exitFreeform) {
+                    if (DEBUG) {
+                        Log.d(TAG, "onActiveDeskChanged displayId=" + displayId
+                                + ": exit freeform:  FREEFORM_ACTIVE_IN_DESKTOP_MODE -> false");
+                    }
+                    sysUiState.setFlag(SYSUI_STATE_FREEFORM_ACTIVE_IN_DESKTOP_MODE,
+                            false).commitUpdate();
+                } else {
+                    if (DEBUG) {
+                        Log.d(TAG, "onActiveDeskChanged displayId=" + displayId
+                                + ": No state change required");
+                    }
+                }
+            }
+
+            @Override
+            public void onCanCreateDesksChanged(boolean canCreateDesks) {
+
+            }
+
+            @Override
+            public void onTaskAppearingInDesk(int displayId, int deskId, int taskId) {}
+        }, mSysUiMainExecutor);
         mCommandQueue.addCallback(new CommandQueue.Callbacks() {
             @Override
             public void moveFocusedTaskToDesktop(int displayId) {
@@ -429,6 +514,7 @@ public final class WMShell implements
     }
 
     @VisibleForTesting
+    // TODO(b/461749621): Adjust for scene container or deprecate
     void initRecentTasks(RecentTasks recentTasks) {
         recentTasks.addAnimationStateListener(mSysUiMainExecutor,
                 mCommandQueue::onRecentsAnimationStateChanged);

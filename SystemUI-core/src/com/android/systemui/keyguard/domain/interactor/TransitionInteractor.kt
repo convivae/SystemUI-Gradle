@@ -27,13 +27,11 @@ import com.android.systemui.keyguard.shared.model.TransitionModeOnCanceled
 import com.android.systemui.keyguard.shared.model.TransitionStep
 import com.android.systemui.power.domain.interactor.PowerInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
-import com.android.systemui.util.kotlin.sample
 import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 
 /**
  * Each TransitionInteractor is responsible for determining under which conditions to notify
@@ -118,20 +116,32 @@ sealed class TransitionInteractor(
             if (!maybeHandleInsecurePowerGesture()) {
                 // Otherwise, the double tap gesture occurred while not GONE and not dismissable,
                 // which means we will launch the secure camera, which OCCLUDES the keyguard.
-                startTransition(KeyguardState.OCCLUDED, "Power button gesture on lockscreen")
+                if (!SceneContainerFlag.isEnabled) {
+                    startTransition(KeyguardState.OCCLUDED, "Power button gesture on lockscreen")
+                }
             }
 
             return true
-        } else if (keyguardOcclusionInteractor.showWhenLockedActivityInfo.value.isOnTop) {
+        } else if (isOccluded()) {
             // A SHOW_WHEN_LOCKED activity is on top of the task stack. Transition to OCCLUDED so
             // it's visible.
             // TODO(b/307976454) - Centralize transition to DREAMING here.
-            startTransition(KeyguardState.OCCLUDED, "SHOW_WHEN_LOCKED activity on top")
-
+            if (!SceneContainerFlag.isEnabled) {
+                startTransition(KeyguardState.OCCLUDED, "SHOW_WHEN_LOCKED activity on top")
+            }
             return true
         } else {
             // No transition needed, let the interactor figure out where to go.
             return false
+        }
+    }
+
+    /**
+     * Whether we are occluded by an activity. In flexiglass, we don't consider dreams as occluding.
+     */
+    private fun isOccluded(): Boolean {
+        return keyguardOcclusionInteractor.showWhenLockedActivityInfo.value.let { activityInfo ->
+            activityInfo.isOnTop && (!SceneContainerFlag.isEnabled || !activityInfo.isDream())
         }
     }
 
@@ -184,9 +194,12 @@ sealed class TransitionInteractor(
         powerInteractor.isAsleep
             .filter { isAsleep -> isAsleep }
             .filterRelevantKeyguardState()
-            .sample(transitionInteractor.startedKeyguardTransitionStep)
-            .map(modeOnCanceledFromStartedStep)
-            .collect { modeOnCanceled ->
+            .collect {
+                val modeOnCanceled =
+                    modeOnCanceledFromStartedStep(
+                        transitionInteractor.startedKeyguardTransitionStep.value
+                    )
+
                 startTransitionTo(
                     toState = keyguardInteractor.asleepKeyguardState.value,
                     modeOnCanceled = modeOnCanceled,

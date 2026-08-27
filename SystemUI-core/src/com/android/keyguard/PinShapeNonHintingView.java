@@ -39,7 +39,8 @@ import android.widget.LinearLayout;
 import androidx.core.graphics.drawable.DrawableCompat;
 
 import com.android.app.animation.Interpolators;
-import com.android.settingslib.Utils;
+import com.android.systemui.Flags;
+import com.android.systemui.bouncer.shared.constants.PinBouncerConstants.Color;
 import com.android.systemui.res.R;
 
 /**
@@ -49,11 +50,13 @@ import com.android.systemui.res.R;
 public class PinShapeNonHintingView extends LinearLayout implements PinShapeInput {
     private static final int RESET_STAGGER_DELAY = 40;
     private static final int RESET_MAX_DELAY = 200;
-    private int mColor = Utils.getColorAttr(getContext(), PIN_SHAPES).getDefaultColor();
+    @Deprecated
+    private int mColor = getContext().getColor(PIN_SHAPES);
     private int mPosition = 0;
     private boolean mIsAnimatingReset = false;
+    private int mDelayedAppend = 0;
     private final PinShapeAdapter mPinShapeAdapter;
-    private ValueAnimator mValueAnimator = ValueAnimator.ofFloat(1f, 0f);
+    private ValueAnimator mValueAnimator;
     private Rect mFirstChildVisibleRect = new Rect();
     public PinShapeNonHintingView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -81,6 +84,9 @@ public class PinShapeNonHintingView extends LinearLayout implements PinShapeInpu
     @Override
     public void append() {
         if (mIsAnimatingReset) {
+            // If the user is quickly typing in their PIN while the reset animation is playing,
+            // make sure to visibly show the added symbols after reset is complete
+            mDelayedAppend++;
             return;
         }
         int size = getResources().getDimensionPixelSize(R.dimen.password_shape_size);
@@ -89,7 +95,7 @@ public class PinShapeNonHintingView extends LinearLayout implements PinShapeInpu
         pinDot.setImageResource(mPinShapeAdapter.getShape(mPosition));
         if (pinDot.getDrawable() != null) {
             Drawable wrappedDrawable = DrawableCompat.wrap(pinDot.getDrawable());
-            DrawableCompat.setTint(wrappedDrawable, mColor);
+            DrawableCompat.setTint(wrappedDrawable, getPinShapeColor());
         }
         if (pinDot.getDrawable() instanceof AnimatedVectorDrawable) {
             ((AnimatedVectorDrawable) pinDot.getDrawable()).start();
@@ -99,17 +105,26 @@ public class PinShapeNonHintingView extends LinearLayout implements PinShapeInpu
         mPosition++;
     }
 
+    private void appendAnyNewDigits() {
+        mIsAnimatingReset = false;
+        for (int i = 0; i < mDelayedAppend; i++) {
+            append();
+        }
+        mDelayedAppend = 0;
+    }
+
     @Override
     public void delete() {
         if (mPosition == 0) {
             Log.e(getClass().getName(), "Trying to delete a non-existent char");
             return;
         }
-        if (mValueAnimator.isRunning()) {
+        if (mValueAnimator != null && mValueAnimator.isRunning()) {
             mValueAnimator.end();
         }
         mPosition--;
         ImageView pinDot = (ImageView) getChildAt(mPosition);
+        mValueAnimator = ValueAnimator.ofFloat(1f, 0f);
         mValueAnimator.addUpdateListener(valueAnimator -> {
             float value = (float) valueAnimator.getAnimatedValue();
             pinDot.setScaleX(value);
@@ -148,7 +163,7 @@ public class PinShapeNonHintingView extends LinearLayout implements PinShapeInpu
             // When we reach the last index, we want to send a signal that the animation is
             // complete.
             if (i == position - 1) {
-                postDelayed(() -> mIsAnimatingReset = false, delayMillis);
+                postDelayed(() -> appendAnyNewDigits(), delayMillis);
             }
         }
     }
@@ -215,6 +230,14 @@ public class PinShapeNonHintingView extends LinearLayout implements PinShapeInpu
             });
             animator.start();
             return animator;
+        }
+    }
+
+    private int getPinShapeColor() {
+        if (Flags.bouncerUiRevamp2()) {
+            return mContext.getColor(Color.shape);
+        } else {
+            return mColor;
         }
     }
 }

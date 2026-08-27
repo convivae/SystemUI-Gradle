@@ -18,11 +18,12 @@ package com.android.systemui.statusbar.lockscreen
 
 import android.app.ActivityOptions
 import android.app.PendingIntent
+import android.app.WallpaperManager
 import android.app.smartspace.SmartspaceConfig
 import android.app.smartspace.SmartspaceManager
 import android.app.smartspace.SmartspaceSession
 import android.app.smartspace.SmartspaceTarget
-import android.content.ContentResolver
+import android.app.smartspace.SmartspaceTargetEvent
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
@@ -36,20 +37,19 @@ import android.provider.Settings.Secure.LOCK_SCREEN_WEATHER_ENABLED
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.View
-import android.view.ViewGroup
 import androidx.annotation.VisibleForTesting
+import com.android.internal.colorextraction.ColorExtractor
 import com.android.keyguard.KeyguardUpdateMonitor
 import com.android.keyguard.KeyguardUpdateMonitorCallback
 import com.android.settingslib.Utils
 import com.android.systemui.Dumpable
-import com.android.systemui.Flags.smartspaceLockscreenViewmodel
+import com.android.systemui.colorextraction.SysuiColorExtractor
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.flags.FeatureFlags
 import com.android.systemui.flags.Flags
-import com.android.systemui.keyguard.WakefulnessLifecycle
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.BcSmartspaceConfigPlugin
 import com.android.systemui.plugins.BcSmartspaceDataPlugin
@@ -57,10 +57,12 @@ import com.android.systemui.plugins.BcSmartspaceDataPlugin.SmartspaceTargetListe
 import com.android.systemui.plugins.BcSmartspaceDataPlugin.SmartspaceView
 import com.android.systemui.plugins.BcSmartspaceDataPlugin.TimeChangedDelegate
 import com.android.systemui.plugins.FalsingManager
-import com.android.systemui.plugins.clocks.WeatherData
+import com.android.systemui.plugins.keyguard.data.model.WeatherData
 import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.res.R
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.settings.UserTracker
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.regionsampling.RegionSampler
 import com.android.systemui.smartspace.dagger.SmartspaceModule.Companion.DATE_SMARTSPACE_DATA_PLUGIN
 import com.android.systemui.smartspace.dagger.SmartspaceModule.Companion.WEATHER_SMARTSPACE_DATA_PLUGIN
@@ -88,22 +90,21 @@ import javax.inject.Named
 class LockscreenSmartspaceController
 @Inject
 constructor(
-    private val context: Context,
-    private val featureFlags: FeatureFlags,
+    @ShadeDisplayAware private val context: Context,
+    featureFlags: FeatureFlags,
     private val activityStarter: ActivityStarter,
     private val falsingManager: FalsingManager,
     private val systemClock: SystemClock,
     private val secureSettings: SecureSettings,
     private val userTracker: UserTracker,
-    private val contentResolver: ContentResolver,
-    private val configurationController: ConfigurationController,
+    private val sysuiColorExtractor: SysuiColorExtractor,
+    @ShadeDisplayAware private val configurationController: ConfigurationController,
     private val statusBarStateController: StatusBarStateController,
     private val deviceProvisionedController: DeviceProvisionedController,
     private val bypassController: KeyguardBypassController,
     private val keyguardUpdateMonitor: KeyguardUpdateMonitor,
-    private val wakefulnessLifecycle: WakefulnessLifecycle,
     private val smartspaceViewModelFactory: SmartspaceViewModel.Factory,
-    private val dumpManager: DumpManager,
+    dumpManager: DumpManager,
     private val execution: Execution,
     @Main private val uiExecutor: Executor,
     @Background private val bgExecutor: Executor,
@@ -133,14 +134,18 @@ constructor(
     // Smartspace can be used on multiple displays, such as when the user casts their screen
     @VisibleForTesting var smartspaceViews = mutableSetOf<SmartspaceView>()
     private var regionSamplers = mutableMapOf<SmartspaceView, RegionSampler>()
+    private var dataListeners = mutableSetOf<SmartspaceTargetListener>()
 
     private val regionSamplingEnabled = featureFlags.isEnabled(Flags.REGION_SAMPLING)
-    private var isRegionSamplersCreated = false
     private var showNotifications = false
     private var showSensitiveContentForCurrentUser = false
     private var showSensitiveContentForManagedUser = false
     private var managedUserHandle: UserHandle? = null
     private var mSplitShadeEnabled = false
+    var mediaTarget: SmartspaceTarget? = null
+        private set
+
+    private val refreshInvoker: () -> Unit = { session?.requestSmartspaceUpdate() }
 
     var suppressDisconnects = false
         set(value) {
@@ -156,10 +161,12 @@ constructor(
         object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
                 (v as SmartspaceView).setSplitShadeEnabled(mSplitShadeEnabled)
+                (v as SmartspaceView).setMediaTarget(mediaTarget)
                 smartspaceViews.add(v as SmartspaceView)
 
                 connectSession()
 
+                updateBackgroundColorFromWallpaper()
                 updateTextColorFromWallpaper()
                 statusBarStateListener.onDozeAmountChanged(0f, statusBarStateController.dozeAmount)
 
@@ -252,6 +259,9 @@ constructor(
         object : ContentObserver(handler) {
             override fun onChange(selfChange: Boolean, uri: Uri?) {
                 execution.assertIsMainThread()
+                if (session == null) {
+                    return
+                }
                 reloadSmartspace()
             }
         }
@@ -295,15 +305,10 @@ constructor(
             }
         }
 
-    // TODO(b/331451011): Refactor to viewmodel and use interactor pattern.
-    private val wakefulnessLifecycleObserver =
-        object : WakefulnessLifecycle.Observer {
-            override fun onStartedWakingUp() {
-                smartspaceViews.forEach { it.setScreenOn(true) }
-            }
-
-            override fun onFinishedGoingToSleep() {
-                smartspaceViews.forEach { it.setScreenOn(false) }
+    private val onColorsChangedListener =
+        ColorExtractor.OnColorsChangedListener { _, which ->
+            if (which == WallpaperManager.FLAG_LOCK) {
+                updateBackgroundColorFromWallpaper()
             }
         }
 
@@ -313,8 +318,6 @@ constructor(
     }
 
     val isEnabled: Boolean = plugin != null
-
-    val isDateWeatherDecoupled: Boolean = datePlugin != null && weatherPlugin != null
 
     val isWeatherEnabled: Boolean
         get() {
@@ -330,21 +333,19 @@ constructor(
     }
 
     /** Constructs the date view and connects it to the smartspace service. */
-    fun buildAndConnectDateView(parent: ViewGroup): View? {
+    fun buildAndConnectDateView(context: Context?, isLargeClock: Boolean): View? {
         execution.assertIsMainThread()
 
         if (!isEnabled) {
             throw RuntimeException("Cannot build view when not enabled")
         }
-        if (!isDateWeatherDecoupled) {
-            throw RuntimeException("Cannot build date view when not decoupled")
-        }
 
         val view =
             buildView(
                 surfaceName = SmartspaceViewModel.SURFACE_DATE_VIEW,
-                parent = parent,
+                context = context,
                 plugin = datePlugin,
+                isLargeClock = isLargeClock,
             )
         connectSession()
 
@@ -352,21 +353,19 @@ constructor(
     }
 
     /** Constructs the weather view and connects it to the smartspace service. */
-    fun buildAndConnectWeatherView(parent: ViewGroup): View? {
+    fun buildAndConnectWeatherView(context: Context?, isLargeClock: Boolean): View? {
         execution.assertIsMainThread()
 
         if (!isEnabled) {
             throw RuntimeException("Cannot build view when not enabled")
         }
-        if (!isDateWeatherDecoupled) {
-            throw RuntimeException("Cannot build weather view when not decoupled")
-        }
 
         val view =
             buildView(
                 surfaceName = SmartspaceViewModel.SURFACE_WEATHER_VIEW,
-                parent = parent,
+                context = context,
                 plugin = weatherPlugin,
+                isLargeClock = isLargeClock,
             )
         connectSession()
 
@@ -374,21 +373,20 @@ constructor(
     }
 
     /** Constructs the smartspace view and connects it to the smartspace service. */
-    fun buildAndConnectView(parent: ViewGroup): View? {
+    fun buildAndConnectView(context: Context?): View? {
         execution.assertIsMainThread()
 
         if (!isEnabled) {
             throw RuntimeException("Cannot build view when not enabled")
         }
 
-        configPlugin?.let { plugin?.registerConfigProvider(it) }
-
         val view =
             buildView(
                 surfaceName = SmartspaceViewModel.SURFACE_GENERAL_VIEW,
-                parent = parent,
+                context = context,
                 plugin = plugin,
                 configPlugin = configPlugin,
+                isLargeClock = false,
             )
         connectSession()
 
@@ -397,22 +395,22 @@ constructor(
 
     private fun buildView(
         surfaceName: String,
-        parent: ViewGroup,
+        context: Context?,
         plugin: BcSmartspaceDataPlugin?,
         configPlugin: BcSmartspaceConfigPlugin? = null,
+        isLargeClock: Boolean,
     ): View? {
         if (plugin == null) {
             return null
         }
 
-        val ssView = plugin.getView(parent)
+        val ctx = context ?: this.context
+        val ssView = if (isLargeClock) plugin.getLargeClockView(ctx) else plugin.getView(ctx)
         configPlugin?.let { ssView.registerConfigProvider(it) }
         ssView.setBgHandler(bgHandler)
         ssView.setUiSurface(BcSmartspaceDataPlugin.UI_SURFACE_LOCK_SCREEN_AOD)
         ssView.setTimeChangedDelegate(SmartspaceTimeChangedDelegate(keyguardUpdateMonitor))
-        ssView.registerDataProvider(plugin)
-
-        ssView.setIntentStarter(
+        plugin.setIntentStarter(
             object : BcSmartspaceDataPlugin.IntentStarter {
                 override fun startIntent(view: View, intent: Intent, showOnLockscreen: Boolean) {
                     if (showOnLockscreen) {
@@ -447,16 +445,20 @@ constructor(
                 }
             }
         )
+
+        ssView.registerDataProvider(plugin)
         ssView.setFalsingManager(falsingManager)
         ssView.setKeyguardBypassEnabled(bypassController.bypassEnabled)
         return (ssView as View).apply {
             setTag(R.id.tag_smartspace_view, Any())
             addOnAttachStateChangeListener(stateChangeListener)
 
-            if (smartspaceLockscreenViewmodel()) {
-                val viewModel = smartspaceViewModelFactory.create(surfaceName)
-                SmartspaceViewBinder.bind(smartspaceView = ssView, viewModel = viewModel)
-            }
+            val viewModel = smartspaceViewModelFactory.create(surfaceName)
+            SmartspaceViewBinder.bind(
+                smartspaceView = ssView,
+                refreshInvoker = refreshInvoker,
+                viewModel = viewModel,
+            )
         }
     }
 
@@ -467,7 +469,7 @@ constructor(
         }
         if (userSmartspaceManager == null) return
         if (datePlugin == null && weatherPlugin == null && plugin == null) return
-        if (session != null || smartspaceViews.isEmpty()) {
+        if (session != null || (smartspaceViews.isEmpty() && dataListeners.isEmpty())) {
             return
         }
 
@@ -497,36 +499,35 @@ constructor(
 
         deviceProvisionedController.removeCallback(deviceProvisionedListener)
         userTracker.addCallback(userTrackerCallback, uiExecutor)
-        contentResolver.registerContentObserver(
+        secureSettings.registerContentObserverForUserAsync(
             secureSettings.getUriFor(LOCK_SCREEN_ALLOW_PRIVATE_NOTIFICATIONS),
             true,
             settingsObserver,
             UserHandle.USER_ALL,
         )
-        contentResolver.registerContentObserver(
+        secureSettings.registerContentObserverForUserAsync(
             secureSettings.getUriFor(LOCK_SCREEN_SHOW_NOTIFICATIONS),
             true,
             settingsObserver,
             UserHandle.USER_ALL,
         )
+        sysuiColorExtractor.addOnColorsChangedListener(onColorsChangedListener)
         configurationController.addCallback(configChangeListener)
         statusBarStateController.addCallback(statusBarStateListener)
         bypassController.registerOnBypassStateChangedListener(bypassStateChangedListener)
-        if (!smartspaceLockscreenViewmodel()) {
-            wakefulnessLifecycle.addObserver(wakefulnessLifecycleObserver)
-        }
 
-        datePlugin?.registerSmartspaceEventNotifier { e -> session?.notifySmartspaceEvent(e) }
-        weatherPlugin?.registerSmartspaceEventNotifier { e -> session?.notifySmartspaceEvent(e) }
-        plugin?.registerSmartspaceEventNotifier { e -> session?.notifySmartspaceEvent(e) }
+        datePlugin?.setEventDispatcher { e -> notifySmartspaceEvent(e) }
+        weatherPlugin?.setEventDispatcher { e -> notifySmartspaceEvent(e) }
+        plugin?.setEventDispatcher { e -> notifySmartspaceEvent(e) }
 
         updateBypassEnabled()
         reloadSmartspace()
     }
 
-    fun setSplitShadeEnabled(enabled: Boolean) {
-        mSplitShadeEnabled = enabled
-        smartspaceViews.forEach { it.setSplitShadeEnabled(enabled) }
+    /** Pushes a given SmartspaceTargetEvent to the SmartspaceSession. */
+    private fun notifySmartspaceEvent(targetEvent: SmartspaceTargetEvent) {
+        Log.d(TAG, "notifySmartspaceEvent: $targetEvent")
+        session?.notifySmartspaceEvent(targetEvent)
     }
 
     /** Requests the smartspace session for an update. */
@@ -534,9 +535,14 @@ constructor(
         session?.requestSmartspaceUpdate()
     }
 
+    fun setMediaTarget(target: SmartspaceTarget?) {
+        mediaTarget = target
+        smartspaceViews.forEach { it.setMediaTarget(target) }
+    }
+
     /** Disconnects the smartspace view from the smartspace service and cleans up any resources. */
     fun disconnect() {
-        if (!smartspaceViews.isEmpty()) return
+        if (!smartspaceViews.isEmpty() || !dataListeners.isEmpty()) return
         if (suppressDisconnects) return
 
         execution.assertIsMainThread()
@@ -550,22 +556,24 @@ constructor(
             it.close()
         }
         userTracker.removeCallback(userTrackerCallback)
-        contentResolver.unregisterContentObserver(settingsObserver)
+        secureSettings.unregisterContentObserverAsync(settingsObserver)
+        sysuiColorExtractor.removeOnColorsChangedListener(onColorsChangedListener)
         configurationController.removeCallback(configChangeListener)
         statusBarStateController.removeCallback(statusBarStateListener)
         bypassController.unregisterOnBypassStateChangedListener(bypassStateChangedListener)
-        if (!smartspaceLockscreenViewmodel()) {
-            wakefulnessLifecycle.removeObserver(wakefulnessLifecycleObserver)
-        }
         session = null
 
-        datePlugin?.registerSmartspaceEventNotifier(null)
+        datePlugin?.setEventDispatcher(null)
 
-        weatherPlugin?.registerSmartspaceEventNotifier(null)
-        weatherPlugin?.onTargetsAvailable(emptyList())
+        weatherPlugin?.setEventDispatcher(null)
+        if (!SceneContainerFlag.isEnabled) {
+            weatherPlugin?.onTargetsAvailable(emptyList())
+        }
 
-        plugin?.registerSmartspaceEventNotifier(null)
-        plugin?.onTargetsAvailable(emptyList())
+        plugin?.setEventDispatcher(null)
+        if (!SceneContainerFlag.isEnabled) {
+            plugin?.onTargetsAvailable(emptyList())
+        }
 
         Log.d(TAG, "Ended smartspace session for lockscreen")
     }
@@ -573,11 +581,19 @@ constructor(
     fun addListener(listener: SmartspaceTargetListener) {
         execution.assertIsMainThread()
         plugin?.registerListener(listener)
+        if (SceneContainerFlag.isEnabled) {
+            dataListeners.add(listener)
+            connectSession()
+        }
     }
 
     fun removeListener(listener: SmartspaceTargetListener) {
         execution.assertIsMainThread()
         plugin?.unregisterListener(listener)
+        if (SceneContainerFlag.isEnabled) {
+            dataListeners.remove(listener)
+            disconnect()
+        }
     }
 
     fun isWithinSmartspaceBounds(x: Int, y: Int): Boolean {
@@ -595,7 +611,7 @@ constructor(
     }
 
     private fun filterSmartspaceTarget(t: SmartspaceTarget): Boolean {
-        if (isDateWeatherDecoupled && t.featureType == SmartspaceTarget.FEATURE_WEATHER) {
+        if (t.featureType == SmartspaceTarget.FEATURE_WEATHER) {
             return false
         }
         if (!showNotifications) {
@@ -605,6 +621,7 @@ constructor(
             userTracker.userHandle -> {
                 !t.isSensitive || showSensitiveContentForCurrentUser
             }
+
             managedUserHandle -> {
                 // Really, this should be "if this managed profile is associated with the current
                 // active user", but we don't have a good way to check that, so instead we cheat:
@@ -613,6 +630,7 @@ constructor(
                 userTracker.userHandle.identifier == UserHandle.USER_SYSTEM &&
                     (!t.isSensitive || showSensitiveContentForManagedUser)
             }
+
             else -> {
                 false
             }
@@ -636,6 +654,12 @@ constructor(
                 view.setPrimaryTextColor(textColor)
             }
         }
+    }
+
+    private fun updateBackgroundColorFromWallpaper() {
+        val wallpaperColors =
+            sysuiColorExtractor.getWallpaperColors(WallpaperManager.FLAG_LOCK) ?: return
+        smartspaceViews.forEach { it.setHighContrastBackgroundColor(wallpaperColors.colorHints) }
     }
 
     private fun updateTextColorFromWallpaper() {

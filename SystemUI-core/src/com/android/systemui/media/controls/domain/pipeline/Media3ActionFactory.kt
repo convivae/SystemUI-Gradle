@@ -31,6 +31,8 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaController as Media3Controller
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
+import com.android.app.tracing.coroutines.runBlockingTraced as runBlocking
+import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
@@ -43,10 +45,12 @@ import com.android.systemui.media.controls.util.MediaControllerFactory
 import com.android.systemui.media.controls.util.SessionTokenFactory
 import com.android.systemui.res.R
 import com.android.systemui.util.concurrency.Execution
+import java.util.concurrent.ExecutionException
 import javax.inject.Inject
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 private const val TAG = "Media3ActionFactory"
@@ -71,7 +75,7 @@ constructor(
      *
      * @param packageName Package name for the media app
      * @param controller The framework [MediaController] for the session
-     * @return The media action buttons, or null if the session token is null
+     * @return The media action buttons, or null if cannot be created for this session
      */
     suspend fun createActionsFromSession(
         packageName: String,
@@ -80,23 +84,28 @@ constructor(
         // Get the Media3 controller using the legacy token
         val token = tokenFactory.createTokenFromLegacy(sessionToken)
         val m3controller = controllerFactory.create(token, looper)
+        if (m3controller == null) {
+            logger.logCreateFailed(packageName, "createActionsFromSession")
+            return null
+        }
 
         // Build button info
         val buttons = suspendCancellableCoroutine { continuation ->
-            // Media3Controller methods must always be called from a specific looper
-            val runnable = Runnable {
-                try {
-                    val result = getMedia3Actions(packageName, m3controller, token)
-                    continuation.resumeWith(Result.success(result))
-                } finally {
-                    m3controller.release()
+            val job =
+                bgScope.launch {
+                    try {
+                        val result = getMedia3Actions(packageName, m3controller, token)
+                        continuation.resume(result)
+                    } catch (e: Exception) {
+                        continuation.resumeWithException(e)
+                    } finally {
+                        m3controller.tryRelease(packageName, logger)
+                    }
                 }
-            }
-            handler.post(runnable)
             continuation.invokeOnCancellation {
+                job.cancel()
                 // Ensure controller is released, even if loading was cancelled partway through
-                handler.post(m3controller::release)
-                handler.removeCallbacks(runnable)
+                bgScope.launch { m3controller.tryRelease(packageName, logger) }
             }
         }
         return buttons
@@ -104,7 +113,7 @@ constructor(
 
     /** This method must be called on the Media3 looper! */
     @WorkerThread
-    private fun getMedia3Actions(
+    private suspend fun getMedia3Actions(
         packageName: String,
         m3controller: Media3Controller,
         token: SessionToken,
@@ -122,16 +131,17 @@ constructor(
                     drawable,
                     null, // no action to perform when clicked
                     context.getString(R.string.controls_media_button_connecting),
-                    context.getDrawable(R.drawable.ic_media_connecting_container),
+                    context.getDrawable(R.drawable.ic_media_connecting_button_container),
                     // Specify a rebind id to prevent the spinner from restarting on later binds.
                     com.android.internal.R.drawable.progress_small_material,
                 )
             } else {
-                getStandardAction(m3controller, token, Player.COMMAND_PLAY_PAUSE)
+                getStandardAction(packageName, m3controller, token, Player.COMMAND_PLAY_PAUSE)
             }
 
         val prevButton =
             getStandardAction(
+                packageName,
                 m3controller,
                 token,
                 Player.COMMAND_SEEK_TO_PREVIOUS,
@@ -139,6 +149,7 @@ constructor(
             )
         val nextButton =
             getStandardAction(
+                packageName,
                 m3controller,
                 token,
                 Player.COMMAND_SEEK_TO_NEXT,
@@ -146,16 +157,13 @@ constructor(
             )
 
         // Then, get custom actions
-        var customActions =
-            m3controller.customLayout
-                .asSequence()
-                .filter {
-                    it.isEnabled &&
-                        it.sessionCommand?.commandCode == SessionCommand.COMMAND_CODE_CUSTOM &&
-                        m3controller.isSessionCommandAvailable(it.sessionCommand!!)
-                }
-                .map { getCustomAction(packageName, token, it) }
-                .iterator()
+        val customActions =
+            if (Flags.doNotUseRunBlocking()) {
+                createCustomActionsIterator(m3controller, packageName, token)
+            } else {
+                createCustomActionsIteratorBlocking(m3controller, packageName, token)
+            }
+
         fun nextCustomAction() = if (customActions.hasNext()) customActions.next() else null
 
         // Finally, assign the remaining button slots: play/pause A B C D
@@ -201,6 +209,51 @@ constructor(
     }
 
     /**
+     * Creates an [Iterator] of [MediaAction]s from the controller's custom layout. Each
+     * [MediaAction] represents a [CommandButton]
+     */
+    private suspend fun createCustomActionsIterator(
+        m3controller: androidx.media3.session.MediaController,
+        packageName: String,
+        token: SessionToken,
+    ): Iterator<MediaAction> {
+        return m3controller.customLayout
+            .asSequence()
+            .filter {
+                it.isEnabled &&
+                    it.sessionCommand?.commandCode == SessionCommand.COMMAND_CODE_CUSTOM &&
+                    m3controller.isSessionCommandAvailable(it.sessionCommand!!)
+            }
+            .toList()
+            .map { button -> getCustomAction(packageName, token, button) }
+            .iterator()
+    }
+
+    /**
+     * Creates an [Iterator] of [MediaAction]s from the controller's custom layout. Each
+     * [MediaAction] represents a [CommandButton]
+     */
+    @Deprecated(
+        message = "Avoid using runBlocking in production code. Consider asynchronous alternatives.",
+        replaceWith = ReplaceWith("createCustomActionsIterator()"),
+    )
+    private fun createCustomActionsIteratorBlocking(
+        m3controller: androidx.media3.session.MediaController,
+        packageName: String,
+        token: SessionToken,
+    ): Iterator<MediaAction> {
+        return m3controller.customLayout
+            .asSequence()
+            .filter {
+                it.isEnabled &&
+                    it.sessionCommand?.commandCode == SessionCommand.COMMAND_CODE_CUSTOM &&
+                    m3controller.isSessionCommandAvailable(it.sessionCommand!!)
+            }
+            .map { getCustomActionBlocking(packageName, token, it) }
+            .iterator()
+    }
+
+    /**
      * Create a [MediaAction] for a given command, if supported
      *
      * @param controller Media3 controller for the session
@@ -208,6 +261,7 @@ constructor(
      * @return A [MediaAction] representing the first supported command, or null if not supported
      */
     private fun getStandardAction(
+        packageName: String,
         controller: Media3Controller,
         token: SessionToken,
         vararg commands: @Player.Command Int,
@@ -221,24 +275,24 @@ constructor(
                 Player.COMMAND_PLAY_PAUSE -> {
                     if (!controller.isPlaying) {
                         MediaAction(
-                            context.getDrawable(R.drawable.ic_media_play),
-                            { executeAction(token, Player.COMMAND_PLAY_PAUSE) },
+                            context.getDrawable(R.drawable.ic_media_play_button),
+                            { executeAction(packageName, token, Player.COMMAND_PLAY_PAUSE) },
                             context.getString(R.string.controls_media_button_play),
-                            context.getDrawable(R.drawable.ic_media_play_container),
+                            context.getDrawable(R.drawable.ic_media_play_button_container),
                         )
                     } else {
                         MediaAction(
-                            context.getDrawable(R.drawable.ic_media_pause),
-                            { executeAction(token, Player.COMMAND_PLAY_PAUSE) },
+                            context.getDrawable(R.drawable.ic_media_pause_button),
+                            { executeAction(packageName, token, Player.COMMAND_PLAY_PAUSE) },
                             context.getString(R.string.controls_media_button_pause),
-                            context.getDrawable(R.drawable.ic_media_pause_container),
+                            context.getDrawable(R.drawable.ic_media_pause_button_container),
                         )
                     }
                 }
                 else -> {
                     MediaAction(
                         icon = getIconForAction(command),
-                        action = { executeAction(token, command) },
+                        action = { executeAction(packageName, token, command) },
                         contentDescription = getDescriptionForAction(command),
                         background = null,
                     )
@@ -249,14 +303,32 @@ constructor(
     }
 
     /** Get a [MediaAction] representing a [CommandButton] */
-    private fun getCustomAction(
+    private suspend fun getCustomAction(
         packageName: String,
         token: SessionToken,
         customAction: CommandButton,
     ): MediaAction {
         return MediaAction(
             getIconForAction(customAction, packageName),
-            { executeAction(token, Player.COMMAND_INVALID, customAction) },
+            { executeAction(packageName, token, Player.COMMAND_INVALID, customAction) },
+            customAction.displayName,
+            null,
+        )
+    }
+
+    /** Get a [MediaAction] representing a [CommandButton] */
+    @Deprecated(
+        message = "Avoid using runBlocking in production code. Consider asynchronous alternatives.",
+        replaceWith = ReplaceWith("getCustomAction()"),
+    )
+    private fun getCustomActionBlocking(
+        packageName: String,
+        token: SessionToken,
+        customAction: CommandButton,
+    ): MediaAction {
+        return MediaAction(
+            getIconForActionBlocking(customAction, packageName),
+            { executeAction(packageName, token, Player.COMMAND_INVALID, customAction) },
             customAction.displayName,
             null,
         )
@@ -275,7 +347,33 @@ constructor(
         }
     }
 
-    private fun getIconForAction(customAction: CommandButton, packageName: String): Drawable? {
+    private suspend fun getIconForAction(
+        customAction: CommandButton,
+        packageName: String,
+    ): Drawable? {
+        val size = context.resources.getDimensionPixelSize(R.dimen.min_clickable_item_size)
+        // TODO(b/360196209): check customAction.icon field to use platform icons
+        if (customAction.iconResId != 0) {
+            val packageContext = context.createPackageContext(packageName, 0)
+            val source = ImageLoader.Res(customAction.iconResId, packageContext)
+            return imageLoader.loadDrawable(source, size, size)
+        }
+
+        if (customAction.iconUri != null) {
+            val source = ImageLoader.Uri(customAction.iconUri!!)
+            return imageLoader.loadDrawable(source, size, size)
+        }
+        return null
+    }
+
+    @Deprecated(
+        message = "Avoid using runBlocking in production code. Consider asynchronous alternatives.",
+        replaceWith = ReplaceWith("getIconForAction()"),
+    )
+    private fun getIconForActionBlocking(
+        customAction: CommandButton,
+        packageName: String,
+    ): Drawable? {
         val size = context.resources.getDimensionPixelSize(R.dimen.min_clickable_item_size)
         // TODO(b/360196209): check customAction.icon field to use platform icons
         if (customAction.iconResId != 0) {
@@ -308,12 +406,17 @@ constructor(
     }
 
     private fun executeAction(
+        packageName: String,
         token: SessionToken,
         command: Int,
         customAction: CommandButton? = null,
     ) {
         bgScope.launch {
             val controller = controllerFactory.create(token, looper)
+            if (controller == null) {
+                logger.logCreateFailed(packageName, "executeAction")
+                return@launch
+            }
             handler.post {
                 try {
                     when (command) {
@@ -347,9 +450,17 @@ constructor(
                         else -> logger.logMedia3UnsupportedCommand(command.toString())
                     }
                 } finally {
-                    controller.release()
+                    controller.tryRelease(packageName, logger)
                 }
             }
         }
+    }
+}
+
+private fun Media3Controller.tryRelease(packageName: String, logger: MediaLogger) {
+    try {
+        this.release()
+    } catch (e: ExecutionException) {
+        logger.logReleaseFailed(packageName, e.cause.toString())
     }
 }

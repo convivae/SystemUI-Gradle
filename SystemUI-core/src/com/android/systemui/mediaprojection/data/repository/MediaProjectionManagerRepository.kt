@@ -18,11 +18,13 @@ package com.android.systemui.mediaprojection.data.repository
 
 import android.app.ActivityManager.RunningTaskInfo
 import android.hardware.display.DisplayManager
+import android.media.projection.MediaProjectionEvent
 import android.media.projection.MediaProjectionInfo
 import android.media.projection.MediaProjectionManager
 import android.media.projection.StopReason
 import android.os.Handler
 import android.view.ContentRecordingSession
+import android.view.ContentRecordingSession.RECORD_CONTENT_BELOW_OVERLAY
 import android.view.ContentRecordingSession.RECORD_CONTENT_DISPLAY
 import com.android.systemui.Flags
 import com.android.systemui.common.coroutine.ChannelExt.trySendWithFailureLogging
@@ -40,16 +42,17 @@ import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNot
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 
 @SysUISingleton
-@OptIn(ExperimentalCoroutinesApi::class)
 class MediaProjectionManagerRepository
 @Inject
 constructor(
@@ -85,48 +88,59 @@ constructor(
         }
     }
 
-    override val mediaProjectionState: Flow<MediaProjectionState> =
-        conflatedCallbackFlow {
-                val callback =
-                    object : MediaProjectionManager.Callback() {
-                        override fun onStart(info: MediaProjectionInfo?) {
-                            logger.log(
-                                TAG,
-                                LogLevel.DEBUG,
-                                {},
-                                { "MediaProjectionManager.Callback#onStart" },
-                            )
-                            trySendWithFailureLogging(CallbackEvent.OnStart(info), TAG)
-                        }
+    private val callbackEventsFlow = conflatedCallbackFlow {
+        val callback =
+            object : MediaProjectionManager.Callback() {
+                override fun onStart(info: MediaProjectionInfo?) {
+                    logger.log(TAG, LogLevel.DEBUG, {}, { "Callback#onStart" })
+                    trySendWithFailureLogging(CallbackEvent.OnStart(info), TAG)
+                }
 
-                        override fun onStop(info: MediaProjectionInfo?) {
-                            logger.log(
-                                TAG,
-                                LogLevel.DEBUG,
-                                {},
-                                { "MediaProjectionManager.Callback#onStop" },
-                            )
-                            trySendWithFailureLogging(CallbackEvent.OnStop, TAG)
-                        }
+                override fun onStop(info: MediaProjectionInfo?) {
+                    logger.log(TAG, LogLevel.DEBUG, {}, { "Callback#onStop" })
+                    trySendWithFailureLogging(CallbackEvent.OnStop, TAG)
+                }
 
-                        override fun onRecordingSessionSet(
-                            info: MediaProjectionInfo,
-                            session: ContentRecordingSession?,
-                        ) {
-                            logger.log(
-                                TAG,
-                                LogLevel.DEBUG,
-                                { str1 = session.toString() },
-                                { "MediaProjectionManager.Callback#onSessionStarted: $str1" },
-                            )
-                            trySendWithFailureLogging(
-                                CallbackEvent.OnRecordingSessionSet(info, session),
-                                TAG,
-                            )
-                        }
+                override fun onRecordingSessionSet(
+                    info: MediaProjectionInfo,
+                    session: ContentRecordingSession?,
+                ) {
+                    logger.log(
+                        TAG,
+                        LogLevel.DEBUG,
+                        { str1 = session.toString() },
+                        { "Callback#onSessionSet: $str1" },
+                    )
+                    trySendWithFailureLogging(
+                        CallbackEvent.OnRecordingSessionSet(info, session),
+                        TAG,
+                    )
+                }
+
+                override fun onMediaProjectionEvent(
+                    event: MediaProjectionEvent,
+                    info: MediaProjectionInfo?,
+                    session: ContentRecordingSession?,
+                ) {
+                    if (com.android.media.projection.flags.Flags.showStopDialogPostCallEnd()) {
+                        logger.log(
+                            TAG,
+                            LogLevel.DEBUG,
+                            { str1 = event.toString() },
+                            { "Callback#onMediaProjectionEvent : $str1" },
+                        )
+                        trySendWithFailureLogging(CallbackEvent.OnMediaProjectionEvent(event), TAG)
                     }
-                mediaProjectionManager.addCallback(callback, handler)
-                awaitClose { mediaProjectionManager.removeCallback(callback) }
+                }
+            }
+        mediaProjectionManager.addCallback(callback, handler)
+        awaitClose { mediaProjectionManager.removeCallback(callback) }
+    }
+
+    override val mediaProjectionState: Flow<MediaProjectionState> =
+        callbackEventsFlow
+            .filterNot {
+                it is CallbackEvent.OnMediaProjectionEvent // Exclude OnMediaProjectionEvent
             }
             // When we get an #onRecordingSessionSet event, we need to do some work in the
             // background before emitting the right state value. But when we get an #onStop
@@ -145,22 +159,30 @@ constructor(
             .mapLatest {
                 when (it) {
                     is CallbackEvent.OnStart -> {
-                        if (!Flags.statusBarShowAudioOnlyProjectionChip()) {
-                            return@mapLatest MediaProjectionState.NotProjecting
-                        }
                         // It's possible for a projection to be audio-only, in which case `OnStart`
                         // will occur but `OnRecordingSessionSet` will not. We should still consider
                         // us to be projecting even if only audio is projecting. See b/373308507.
                         if (it.info != null) {
-                            MediaProjectionState.Projecting.NoScreen(
-                                hostPackage = it.info.packageName
-                            )
+                            if (it.info.type == MediaProjectionManager.TYPE_APP_CONTENT) {
+                                MediaProjectionState.Projecting.AppContent(
+                                    hostPackage = it.info.packageName
+                                )
+                            } else {
+                                MediaProjectionState.Projecting.NoScreen(
+                                    hostPackage = it.info.packageName
+                                )
+                            }
                         } else {
                             MediaProjectionState.NotProjecting
                         }
                     }
                     is CallbackEvent.OnStop -> MediaProjectionState.NotProjecting
                     is CallbackEvent.OnRecordingSessionSet -> stateForSession(it.info, it.session)
+                    is CallbackEvent.OnMediaProjectionEvent ->
+                        throw IllegalStateException(
+                            "Unexpected OnMediaProjectionEvent in mediaProjectionState flow. It " +
+                                "should have been filtered out."
+                        )
                 }
             }
             .stateIn(
@@ -168,6 +190,16 @@ constructor(
                 started = SharingStarted.Lazily,
                 initialValue = MediaProjectionState.NotProjecting,
             )
+
+    override val projectionStartedDuringCallAndActivePostCallEvent: Flow<Unit> =
+        callbackEventsFlow
+            .filter {
+                com.android.media.projection.flags.Flags.showStopDialogPostCallEnd() &&
+                    it is CallbackEvent.OnMediaProjectionEvent &&
+                    it.event.eventType ==
+                        MediaProjectionEvent.PROJECTION_STARTED_DURING_CALL_AND_ACTIVE_POST_CALL
+            }
+            .map {}
 
     private suspend fun stateForSession(
         info: MediaProjectionInfo,
@@ -185,7 +217,11 @@ constructor(
                 displayManager.getDisplay(session.virtualDisplayId)?.name
             }
 
-        if (session.contentToRecord == RECORD_CONTENT_DISPLAY || session.tokenToRecord == null) {
+        if (
+            session.contentToRecord == RECORD_CONTENT_DISPLAY ||
+                session.contentToRecord == RECORD_CONTENT_BELOW_OVERLAY ||
+                session.tokenToRecord == null
+        ) {
             return MediaProjectionState.Projecting.EntireScreen(hostPackage, hostDeviceName)
         }
         val matchingTask =
@@ -208,6 +244,8 @@ constructor(
             val info: MediaProjectionInfo,
             val session: ContentRecordingSession?,
         ) : CallbackEvent
+
+        data class OnMediaProjectionEvent(val event: MediaProjectionEvent) : CallbackEvent
     }
 
     companion object {

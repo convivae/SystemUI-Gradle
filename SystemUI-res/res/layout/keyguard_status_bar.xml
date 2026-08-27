@@ -34,6 +34,13 @@
         android:layout_alignParentEnd="true"
         android:gravity="center_vertical|end" >
 
+        <FrameLayout
+            android:id="@+id/sign_out_button_container"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical|end">
+        </FrameLayout>
+
         <include
             android:id="@+id/user_switcher_container"
             android:layout_width="wrap_content"
@@ -76,7 +83,7 @@
         android:gravity="center_vertical"
         android:ellipsize="marquee"
         android:textDirection="locale"
-        android:textAppearance="@style/TextAppearance.StatusBar.Clock"
+        android:textAppearance="@style/TextAppearance.StatusBar.Default"
         android:textColor="?attr/wallpaperTextColorSecondary"
         android:singleLine="true"
         systemui:showMissingSim="true"

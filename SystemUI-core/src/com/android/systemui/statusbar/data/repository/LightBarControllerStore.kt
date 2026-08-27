@@ -16,13 +16,13 @@
 
 package com.android.systemui.statusbar.data.repository
 
+import com.android.app.displaylib.PerDisplayRepository
 import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent
 import com.android.systemui.display.data.repository.DisplayRepository
-import com.android.systemui.display.data.repository.DisplayScopeRepository
 import com.android.systemui.display.data.repository.PerDisplayStore
-import com.android.systemui.display.data.repository.PerDisplayStoreImpl
 import com.android.systemui.statusbar.phone.LightBarController
 import com.android.systemui.statusbar.phone.LightBarControllerImpl
 import dagger.Binds
@@ -42,21 +42,22 @@ constructor(
     @Background backgroundApplicationScope: CoroutineScope,
     displayRepository: DisplayRepository,
     private val factory: LightBarControllerImpl.Factory,
-    private val displayScopeRepository: DisplayScopeRepository,
-    private val statusBarModeRepositoryStore: StatusBarModeRepositoryStore,
-    private val darkIconDispatcherStore: DarkIconDispatcherStore,
+    private val displayScopeRepository: PerDisplayRepository<CoroutineScope>,
+    private val displaySubComponentRepository: PerDisplayRepository<SystemUIDisplaySubcomponent>,
 ) :
     LightBarControllerStore,
-    PerDisplayStoreImpl<LightBarController>(backgroundApplicationScope, displayRepository) {
+    StatusBarPerDisplayStoreImpl<LightBarController>(
+        backgroundApplicationScope,
+        displayRepository,
+    ) {
 
-    override fun createInstanceForDisplay(displayId: Int): LightBarController {
+    override fun createInstanceForDisplay(displayId: Int): LightBarController? {
+        val displaySubComponent = displaySubComponentRepository[displayId] ?: return null
+        val darkIconDispatcher = displaySubComponent.darkIconDispatcher
+        val statusBarModePerDisplayRepository = displaySubComponent.statusBarModeRepo
+        val displayScope = displayScopeRepository[displayId] ?: return null
         return factory
-            .create(
-                displayId,
-                displayScopeRepository.scopeForDisplay(displayId),
-                darkIconDispatcherStore.forDisplay(displayId),
-                statusBarModeRepositoryStore.forDisplay(displayId),
-            )
+            .create(displayId, displayScope, darkIconDispatcher, statusBarModePerDisplayRepository)
             .also { it.start() }
     }
 

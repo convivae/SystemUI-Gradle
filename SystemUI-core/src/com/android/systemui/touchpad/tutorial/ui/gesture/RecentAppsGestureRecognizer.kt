@@ -18,6 +18,8 @@ package com.android.systemui.touchpad.tutorial.ui.gesture
 
 import android.util.MathUtils
 import android.view.MotionEvent
+import com.android.systemui.Flags
+import com.android.systemui.touchpad.tutorial.ui.gesture.GestureState.InProgress
 import kotlin.math.abs
 
 /**
@@ -43,7 +45,13 @@ class RecentAppsGestureRecognizer(
     }
 
     override fun accept(event: MotionEvent) {
-        if (!isThreeFingerTouchpadSwipe(event)) return
+        if (!isMultifingerTouchpadSwipe(event)) return
+        if (!isThreeFingerTouchpadSwipe(event)) {
+            if (event.actionMasked == MotionEvent.ACTION_UP) {
+                gestureStateChangedCallback(GestureState.Error)
+            }
+            return
+        }
         val gestureState = distanceTracker.processEvent(event)
         velocityTracker.accept(event)
 
@@ -51,12 +59,14 @@ class RecentAppsGestureRecognizer(
             gestureStateChangedCallback,
             gestureState,
             isFinished = { state ->
-                -state.deltaY >= gestureDistanceThresholdPx &&
-                    abs(velocityTracker.calculateVelocity().value) <= velocityThresholdPxPerMs
+                val distanceThresholdPassed = -state.deltaY >= gestureDistanceThresholdPx
+                val velocityThresholdPassed =
+                    if (Flags.touchpadGestureTutorialBugFixes())
+                        abs(velocityTracker.calculateVelocity().value) >= velocityThresholdPxPerMs
+                    else abs(velocityTracker.calculateVelocity().value) <= velocityThresholdPxPerMs
+                distanceThresholdPassed && velocityThresholdPassed
             },
-            progress = {
-                GestureState.InProgress(MathUtils.saturate(-it.deltaY / gestureDistanceThresholdPx))
-            },
+            progress = { InProgress(MathUtils.saturate(-it.deltaY / gestureDistanceThresholdPx)) },
         )
     }
 }

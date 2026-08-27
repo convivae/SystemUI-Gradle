@@ -16,23 +16,27 @@
 
 package com.android.systemui.scene
 
-import androidx.compose.ui.unit.dp
+import android.app.ActivityManager
+import android.content.Context
+import com.android.compose.animation.scene.SceneKey
+import com.android.internal.widget.LockPatternUtils
 import com.android.systemui.CoreStartable
+import com.android.systemui.Flags.startOnGoneSceneIfNoLockscreen
 import com.android.systemui.notifications.ui.composable.NotificationsShadeSessionModule
+import com.android.systemui.res.R
 import com.android.systemui.scene.domain.SceneDomainModule
+import com.android.systemui.scene.domain.interactor.DualShadeEducationInteractorModule
 import com.android.systemui.scene.domain.interactor.WindowRootViewVisibilityInteractor
 import com.android.systemui.scene.domain.resolver.HomeSceneFamilyResolverModule
 import com.android.systemui.scene.domain.startable.KeyguardStateCallbackStartable
 import com.android.systemui.scene.domain.startable.SceneContainerStartable
-import com.android.systemui.scene.domain.startable.ScrimStartable
 import com.android.systemui.scene.domain.startable.StatusBarStartable
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.SceneContainerConfig
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.scene.ui.composable.SceneContainerTransitions
-import com.android.systemui.scene.ui.viewmodel.SplitEdgeDetector
-import com.android.systemui.shade.domain.interactor.ShadeInteractor
-import com.android.systemui.shade.shared.flag.DualShade
+import com.android.systemui.shade.shared.flag.DualShadeFlag
+import com.android.systemui.statusbar.quickactions.popups.StatusBarPopupChips
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -43,14 +47,17 @@ import dagger.multibindings.IntoMap
 @Module(
     includes =
         [
-            BouncerSceneModule::class,
+            BouncerOverlayModule::class,
             CommunalSceneModule::class,
             DreamSceneModule::class,
+            DualShadeEducationInteractorModule::class,
             EmptySceneModule::class,
             GoneSceneModule::class,
             LockscreenSceneModule::class,
+            OccludedSceneModule::class,
             QuickSettingsSceneModule::class,
             ShadeSceneModule::class,
+            QuickActionsOverlayModule::class,
             QuickSettingsShadeOverlayModule::class,
             NotificationsShadeOverlayModule::class,
             NotificationsShadeSessionModule::class,
@@ -66,11 +73,6 @@ interface SceneContainerFrameworkModule {
     @IntoMap
     @ClassKey(SceneContainerStartable::class)
     fun containerStartable(impl: SceneContainerStartable): CoreStartable
-
-    @Binds
-    @IntoMap
-    @ClassKey(ScrimStartable::class)
-    fun scrimStartable(impl: ScrimStartable): CoreStartable
 
     @Binds
     @IntoMap
@@ -91,8 +93,39 @@ interface SceneContainerFrameworkModule {
 
     companion object {
 
+        private fun determineInitialScene(lockPatternUtils: LockPatternUtils): SceneKey {
+            if (!startOnGoneSceneIfNoLockscreen()) {
+                return Scenes.Lockscreen
+            }
+
+            val userId = ActivityManager.getCurrentUser()
+            if (lockPatternUtils.isLockScreenDisabled(userId)) {
+                return Scenes.Gone
+            }
+
+            return Scenes.Lockscreen
+        }
+
         @Provides
-        fun containerConfig(): SceneContainerConfig {
+        fun containerConfig(
+            context: Context,
+            lockPatternUtils: LockPatternUtils,
+        ): SceneContainerConfig {
+            // Include the shade and quick settings scenes if:
+            // 1. Dual Shade is disabled, or
+            // 2. The config explicitly requires them.
+            // It helps to improve SysUI performance when Dual Shade is active, as Dual Shade uses
+            // two overlays instead of these two scenes and those two scenes are set up with
+            // alwaysCompose=true which makes their content compose even when they're not visible
+            // (which is a separate performance improvement).
+            // TODO(b/485637607): We currently lack a way to determine Dual Shade status purely via
+            // config. As a workaround, we set `config_includeQSAndShadeScenes` to false to manually
+            // disable these scenes on specific large-screen form factors (like desktop).
+            // Revisit once a robust configuration check is available.
+            val includeShadeAndQSScenes =
+                !DualShadeFlag.isEnabled ||
+                    context.resources.getBoolean(R.bool.config_includeQSAndShadeScenes)
+
             return SceneContainerConfig(
                 // Note that this list is in z-order. The first one is the bottom-most and the last
                 // one is top-most.
@@ -101,40 +134,36 @@ interface SceneContainerFrameworkModule {
                         Scenes.Gone,
                         Scenes.Communal,
                         Scenes.Dream,
+                        Scenes.Occluded,
                         Scenes.Lockscreen,
-                        Scenes.Bouncer,
-                        Scenes.QuickSettings.takeUnless { DualShade.isEnabled },
-                        Scenes.Shade.takeUnless { DualShade.isEnabled },
+                        Scenes.QuickSettings.takeIf { includeShadeAndQSScenes },
+                        Scenes.Shade.takeIf { includeShadeAndQSScenes },
                     ),
-                initialSceneKey = Scenes.Lockscreen,
-                transitions = SceneContainerTransitions,
+                initialSceneKey = determineInitialScene(lockPatternUtils),
                 overlayKeys =
                     listOfNotNull(
-                        Overlays.NotificationsShade.takeIf { DualShade.isEnabled },
-                        Overlays.QuickSettingsShade.takeIf { DualShade.isEnabled },
+                        Overlays.NotificationsShade,
+                        Overlays.QuickSettingsShade,
+                        Overlays.QuickActions.takeIf { StatusBarPopupChips.isEnabled },
+                        Overlays.Bouncer,
                     ),
                 navigationDistances =
-                    mapOf(
-                            Scenes.Gone to 0,
-                            Scenes.Lockscreen to 0,
-                            Scenes.Communal to 1,
-                            Scenes.Dream to 2,
-                            Scenes.Shade to 3.takeUnless { DualShade.isEnabled },
-                            Scenes.QuickSettings to 4.takeUnless { DualShade.isEnabled },
-                            Scenes.Bouncer to 5,
+                    buildMap {
+                        putAll(
+                            arrayOf(
+                                Scenes.Gone to 0,
+                                Scenes.Lockscreen to 0,
+                                Scenes.Communal to 1,
+                                Scenes.Dream to 2,
+                                Scenes.Occluded to 3,
+                            )
                         )
-                        .filterValues { it != null }
-                        .mapValues { checkNotNull(it.value) },
-            )
-        }
 
-        @Provides
-        fun splitEdgeDetector(shadeInteractor: ShadeInteractor): SplitEdgeDetector {
-            return SplitEdgeDetector(
-                topEdgeSplitFraction = shadeInteractor::getTopEdgeSplitFraction,
-                // TODO(b/338577208): This should be 60dp at the top in the dual-shade UI. Better to
-                //  replace this constant with dynamic window insets.
-                edgeSize = 40.dp,
+                        if (includeShadeAndQSScenes) {
+                            putAll(arrayOf(Scenes.Shade to 4, Scenes.QuickSettings to 5))
+                        }
+                    },
+                transitionsBuilder = SceneContainerTransitions(),
             )
         }
     }

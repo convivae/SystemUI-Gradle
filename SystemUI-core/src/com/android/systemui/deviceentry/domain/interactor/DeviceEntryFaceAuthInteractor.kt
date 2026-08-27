@@ -19,6 +19,7 @@ package com.android.systemui.deviceentry.domain.interactor
 import com.android.systemui.CoreStartable
 import com.android.systemui.deviceentry.shared.model.FaceAuthenticationStatus
 import com.android.systemui.deviceentry.shared.model.FaceDetectionStatus
+import com.android.systemui.log.table.TableLogBuffer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -41,11 +42,20 @@ interface DeviceEntryFaceAuthInteractor : CoreStartable {
     /** Whether bypass is enabled. If enabled, face unlock dismisses the lock screen. */
     val isBypassEnabled: Flow<Boolean>
 
+    /**
+     * Whether the privacy setting for camera sensors is enabled and interfering with face
+     * authentication usage.
+     */
+    val isCameraPrivacyInterfering: StateFlow<Boolean>
+
     /** Can face auth be run right now */
     fun canFaceAuthRun(): Boolean
 
     /** Whether face auth is currently running or not. */
-    fun isRunning(): Boolean
+    fun isAuthRunning(): Boolean
+
+    /** Whether face detect is currently running or not. */
+    fun isDetectRunning(): Boolean
 
     /** Whether face auth is enrolled and enabled for the current user */
     fun isFaceAuthEnabledAndEnrolled(): Boolean
@@ -79,8 +89,18 @@ interface DeviceEntryFaceAuthInteractor : CoreStartable {
 
     fun onDeviceUnfolded()
 
+    fun onSecureLockDeviceBiometricAuthRequested()
+
+    fun onSecureLockDeviceBiometricAuthHidden()
+
+    fun onSecureLockDeviceConfirmButtonShowingChanged(isShowingConfirmButton: Boolean)
+
+    fun onSecureLockDeviceTryAgainButtonShowingChanged(isShowingTryAgainButton: Boolean)
+
     /** Whether face auth is considered class 3 */
     fun isFaceAuthStrong(): Boolean
+
+    suspend fun hydrateTableLogBuffer(tableLogBuffer: TableLogBuffer)
 }
 
 /**
@@ -93,17 +113,17 @@ interface DeviceEntryFaceAuthInteractor : CoreStartable {
  */
 interface FaceAuthenticationListener {
     /** Receive face isAuthenticated updates */
-    fun onAuthenticatedChanged(isAuthenticated: Boolean)
+    fun onAuthenticatedChanged(isAuthenticated: Boolean) = Unit
 
     /** Receive face authentication status updates */
-    fun onAuthenticationStatusChanged(status: FaceAuthenticationStatus)
+    fun onAuthenticationStatusChanged(status: FaceAuthenticationStatus) = Unit
 
     /** Receive status updates whenever face detection runs */
-    fun onDetectionStatusChanged(status: FaceDetectionStatus)
+    fun onDetectionStatusChanged(status: FaceDetectionStatus) = Unit
 
-    fun onLockoutStateChanged(isLockedOut: Boolean)
+    fun onLockoutStateChanged(isLockedOut: Boolean) = Unit
 
-    fun onRunningStateChanged(isRunning: Boolean)
+    fun onRunningStateChanged(isRunning: Boolean) = Unit
 
-    fun onAuthEnrollmentStateChanged(enrolled: Boolean)
+    fun onAuthEnrollmentStateChanged(enrolled: Boolean) = Unit
 }

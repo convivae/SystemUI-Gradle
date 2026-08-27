@@ -16,14 +16,18 @@
 
 package com.android.systemui.statusbar.notification.row;
 
+import android.app.Flags;
 import android.app.INotificationManager;
 import android.app.NotificationChannel;
 import android.app.NotificationChannelGroup;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.RemoteException;
+import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -35,7 +39,7 @@ import android.widget.TextView;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.res.R;
-import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.collection.EntryAdapter;
 
 /**
  * The guts of a conversation notification that doesn't use valid shortcuts that is revealed when
@@ -53,6 +57,7 @@ public class PartialConversationInfo extends LinearLayout implements
     private String mDelegatePkg;
     private NotificationChannel mNotificationChannel;
     private StatusBarNotification mSbn;
+    private NotificationListenerService.Ranking mRanking;
     private boolean mIsDeviceProvisioned;
     private boolean mIsNonBlockable;
     private Drawable mPkgIcon;
@@ -62,6 +67,7 @@ public class PartialConversationInfo extends LinearLayout implements
     private NotificationInfo.OnSettingsClickListener mOnSettingsClickListener;
     private NotificationGuts mGutsContainer;
     private ChannelEditorDialogController mChannelEditorDialogController;
+    private NotificationInfo.OnFeedbackClickListener mFeedbackClickListener;
 
     @VisibleForTesting
     boolean mSkipPost = false;
@@ -79,23 +85,26 @@ public class PartialConversationInfo extends LinearLayout implements
             INotificationManager iNotificationManager,
             ChannelEditorDialogController channelEditorDialogController,
             String pkg,
-            NotificationChannel notificationChannel,
-            NotificationEntry entry,
+            NotificationListenerService.Ranking ranking,
+            StatusBarNotification sbn,
             NotificationInfo.OnSettingsClickListener onSettingsClick,
+            NotificationInfo.OnFeedbackClickListener onFeedbackClickListener,
             boolean isDeviceProvisioned,
             boolean isNonBlockable) {
         mINotificationManager = iNotificationManager;
         mPackageName = pkg;
-        mSbn = entry.getSbn();
+        mSbn = sbn;
         mPm = pm;
         mAppName = mPackageName;
         mOnSettingsClickListener = onSettingsClick;
-        mNotificationChannel = notificationChannel;
+        mRanking = ranking;
+        mNotificationChannel = ranking.getChannel();
         mAppUid = mSbn.getUid();
         mDelegatePkg = mSbn.getOpPkg();
         mIsDeviceProvisioned = isDeviceProvisioned;
         mIsNonBlockable = isNonBlockable;
         mChannelEditorDialogController = channelEditorDialogController;
+        mFeedbackClickListener = onFeedbackClickListener;
 
         bindHeader();
         bindActions();
@@ -118,6 +127,8 @@ public class PartialConversationInfo extends LinearLayout implements
 
         findViewById(R.id.settings_link).setOnClickListener(settingsOnClickListener);
 
+        bindFeedback();
+
         TextView msg = findViewById(R.id.non_configurable_text);
         msg.setText(getResources().getString(R.string.no_shortcut, mAppName));
     }
@@ -126,6 +137,7 @@ public class PartialConversationInfo extends LinearLayout implements
         bindPackage();
         // Delegate
         bindDelegate();
+        bindSummarizer();
     }
 
     private OnClickListener getSettingsOnClickListener() {
@@ -187,26 +199,17 @@ public class PartialConversationInfo extends LinearLayout implements
         }
     }
 
-    private void bindGroup() {
-        // Set group information if this channel has an associated group.
-        CharSequence groupName = null;
-        if (mNotificationChannel != null && mNotificationChannel.getGroup() != null) {
-            try {
-                final NotificationChannelGroup notificationChannelGroup =
-                        mINotificationManager.getNotificationChannelGroupForPackage(
-                                mNotificationChannel.getGroup(), mPackageName, mAppUid);
-                if (notificationChannelGroup != null) {
-                    groupName = notificationChannelGroup.getName();
-                }
-            } catch (RemoteException e) {
+    private void bindSummarizer() {
+        if (android.app.Flags.nmSummarizationAll()) {
+            TextView summarized = findViewById(R.id.summarized_by);
+            if (!TextUtils.isEmpty(mSbn.getNotification().getSummarizedContent())) {
+                summarized.setVisibility(VISIBLE);
+                summarized.setText(
+                        mContext.getString(R.string.notification_summarization_header, mAppName));
+                summarized.setTypeface(Typeface.create("variable-body-medium", Typeface.ITALIC));
+            } else {
+                summarized.setVisibility(GONE);
             }
-        }
-        TextView groupNameView = findViewById(R.id.group_name);
-        if (groupName != null) {
-            groupNameView.setText(groupName);
-            groupNameView.setVisibility(VISIBLE);
-        } else {
-            groupNameView.setVisibility(GONE);
         }
     }
 
@@ -283,5 +286,19 @@ public class PartialConversationInfo extends LinearLayout implements
     @VisibleForTesting
     public boolean isAnimating() {
         return false;
+    }
+
+    private void bindFeedback() {
+        View feedbackButton = findViewById(R.id.feedback);
+        Intent intent = NotificationInfo.getAssistantFeedbackIntent(
+                mINotificationManager, mPm, mSbn.getKey(), mRanking);
+        if (intent == null) {
+            feedbackButton.setVisibility(GONE);
+        } else {
+            feedbackButton.setVisibility(VISIBLE);
+            feedbackButton.setOnClickListener((View v) -> {
+                mFeedbackClickListener.onClick(v, intent);
+            });
+        }
     }
 }

@@ -16,14 +16,24 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewmodel
 
+import android.annotation.SuppressLint
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.compose.animation.scene.ContentKey
 import com.android.compose.animation.scene.ObservableTransitionState
+import com.android.compose.animation.scene.Scale
+import com.android.systemui.Flags
 import com.android.systemui.dump.DumpManager
-import com.android.systemui.flags.FeatureFlagsClassic
-import com.android.systemui.flags.Flags
-import com.android.systemui.lifecycle.ExclusiveActivatable
+import com.android.systemui.lifecycle.HydratedActivatable
+import com.android.systemui.notifications.ui.NotificationPlaceholderStateStorage
+import com.android.systemui.notifications.ui.YSpace
 import com.android.systemui.scene.domain.interactor.SceneInteractor
-import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.scene.shared.model.Overlays
+import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
+import com.android.systemui.shade.shared.model.ShadeMode
 import com.android.systemui.statusbar.domain.interactor.RemoteInputInteractor
 import com.android.systemui.statusbar.notification.domain.interactor.HeadsUpNotificationInteractor
 import com.android.systemui.statusbar.notification.stack.domain.interactor.NotificationStackAppearanceInteractor
@@ -33,6 +43,8 @@ import com.android.systemui.statusbar.notification.stack.shared.model.ShadeScrim
 import com.android.systemui.statusbar.notification.stack.shared.model.ShadeScrollState
 import com.android.systemui.util.kotlin.ActivatableFlowDumper
 import com.android.systemui.util.kotlin.ActivatableFlowDumperImpl
+import com.android.systemui.wallpapers.domain.interactor.WallpaperFocalAreaInteractor
+import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import java.util.function.Consumer
@@ -40,7 +52,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 /**
  * ViewModel used by the Notification placeholders inside the scene container to update the
@@ -49,47 +60,103 @@ import com.android.app.tracing.coroutines.launchTraced as launch
 class NotificationsPlaceholderViewModel
 @AssistedInject
 constructor(
+    @param:Assisted private val contentKey: ContentKey,
+    private val placeholderStateStorage: NotificationPlaceholderStateStorage,
     private val interactor: NotificationStackAppearanceInteractor,
     private val sceneInteractor: SceneInteractor,
-    private val shadeInteractor: ShadeInteractor,
+    shadeInteractor: ShadeInteractor,
+    shadeModeInteractor: ShadeModeInteractor,
     private val headsUpNotificationInteractor: HeadsUpNotificationInteractor,
     remoteInputInteractor: RemoteInputInteractor,
-    featureFlags: FeatureFlagsClassic,
     dumpManager: DumpManager,
+    private val wallpaperFocalAreaInteractor: WallpaperFocalAreaInteractor,
 ) :
-    ExclusiveActivatable(),
+    HydratedActivatable(),
     ActivatableFlowDumper by ActivatableFlowDumperImpl(
         dumpManager = dumpManager,
         tag = "NotificationsPlaceholderViewModel",
     ) {
 
+    fun setStackScrollTop(value: Float) {
+        placeholderStateStorage.setStackScrollTop(contentKey, value)
+    }
+
+    fun resetStackScrollTop() {
+        placeholderStateStorage.resetStackScrollTop(contentKey)
+    }
+
+    fun setStackBounds(space: YSpace) {
+        placeholderStateStorage.setStackBounds(contentKey, space)
+    }
+
+    fun resetStackBounds() {
+        placeholderStateStorage.resetStackBounds(contentKey)
+    }
+
+    fun setHeadsUpBounds(space: YSpace) {
+        placeholderStateStorage.setHunBounds(contentKey, space)
+    }
+
+    fun resetHeadsUpBounds() {
+        placeholderStateStorage.resetHunBounds(contentKey)
+    }
+
+    fun setStackAlpha(value: Float?) {
+        placeholderStateStorage.setStackAlpha(contentKey, value)
+    }
+
+    fun resetStackAlpha() {
+        placeholderStateStorage.resetStackAlpha(contentKey)
+    }
+
+    fun setStackScale(value: Scale?) {
+        placeholderStateStorage.setStackScale(contentKey, value)
+    }
+
+    fun resetStackScale() {
+        placeholderStateStorage.resetStackScale(contentKey)
+    }
+
+    /** The content key to use for the notification shade. */
+    val notificationsShadeContentKey: ContentKey by
+        shadeModeInteractor.shadeMode
+            .map { getNotificationsShadeContentKey(it) }
+            .hydratedStateOf(
+                initialValue = getNotificationsShadeContentKey(shadeModeInteractor.shadeMode.value)
+            )
+
+    /** @see NotificationStackAppearanceInteractor.notificationStackHorizontalAlignment */
+    val horizontalAlignment: Alignment.Horizontal by
+        shadeModeInteractor.notificationStackHorizontalAlignment.hydratedStateOf()
+
+    /**
+     * Whether the current gesture is expanding a Notification. If true, the NSSL has already
+     * consumed the swipe amount to increase the Notification's size.
+     */
+    val isCurrentGestureExpandingNotification: Boolean by
+        interactor.isCurrentGestureExpandingNotif.hydratedStateOf(initialValue = false)
+
     /** DEBUG: whether the placeholder should be made slightly visible for positional debugging. */
-    val isVisualDebuggingEnabled: Boolean = featureFlags.isEnabled(Flags.NSSL_DEBUG_LINES)
+    val isVisualDebuggingEnabled: Boolean = Flags.notificationDebugDrawing()
 
     /** DEBUG: whether the debug logging should be output. */
-    val isDebugLoggingEnabled: Boolean = SceneContainerFlag.isEnabled
+    val isDebugLoggingEnabled: Boolean = Flags.notificationDeveloperLogging()
 
-    override suspend fun onActivated(): Nothing {
+    override suspend fun onActivated() {
         coroutineScope {
-            launch {
-                shadeInteractor.isAnyExpanded
-                    .filter { it }
-                    .collect { headsUpNotificationInteractor.unpinAll(true) }
-            }
+            launch { activateFlowDumper() }
 
             launch {
-                sceneInteractor.transitionState
-                    .map { state -> state is ObservableTransitionState.Idle }
-                    .filter { it }
+                sceneInteractor.transitionStateFlow
+                    .filter { it is ObservableTransitionState.Idle }
                     .collect { headsUpNotificationInteractor.onTransitionIdle() }
             }
         }
-        activateFlowDumper()
     }
 
     /** Notifies that the bounds of the notification scrim have changed. */
     fun onScrimBoundsChanged(bounds: ShadeScrimBounds?) {
-        interactor.setShadeScrimBounds(bounds)
+        interactor.setNotificationShadeScrimBounds(bounds)
     }
 
     /** Sets the available space */
@@ -123,19 +190,16 @@ constructor(
     val shadeToQsFraction: Flow<Float> = shadeInteractor.qsExpansion.dumpValue("shadeToQsFraction")
 
     /**
+     * TODO(b/412986215) fix and wire in syntheticScroll updates
+     *
      * The amount in px that the notification stack should scroll due to internal expansion. This
      * should only happen when a notification expansion hits the bottom of the screen, so it is
      * necessary to scroll up to keep expanding the notification.
      */
+    @Suppress("unused")
+    @SuppressLint("FlowExposedFromViewModel")
     val syntheticScroll: Flow<Float> =
         interactor.syntheticScroll.dumpWhileCollecting("syntheticScroll")
-
-    /**
-     * Whether the current touch gesture is overscroll. If true, it means the NSSL has already
-     * consumed part of the gesture.
-     */
-    val isCurrentGestureOverscroll: Flow<Boolean> =
-        interactor.isCurrentGestureOverscroll.dumpWhileCollecting("isCurrentGestureOverScroll")
 
     /** Whether remote input is currently active for any notification. */
     val isRemoteInputActive = remoteInputInteractor.isRemoteInputActive
@@ -163,9 +227,17 @@ constructor(
         interactor.setAccessibilityScrollEventConsumer(consumer)
     }
 
+    fun onLockScreenStackBottomChanged(bottom: Float) {
+        wallpaperFocalAreaInteractor.setNotificationStackAbsoluteBottom(bottom)
+    }
+
+    private fun getNotificationsShadeContentKey(shadeMode: ShadeMode): ContentKey {
+        return if (shadeMode is ShadeMode.Dual) Overlays.NotificationsShade else Scenes.Shade
+    }
+
     @AssistedFactory
     interface Factory {
-        fun create(): NotificationsPlaceholderViewModel
+        fun create(contentKey: ContentKey): NotificationsPlaceholderViewModel
     }
 }
 

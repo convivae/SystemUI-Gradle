@@ -25,6 +25,7 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.KeyguardWmStateRefactor
 import com.android.systemui.keyguard.data.repository.KeyguardTransitionRepository
+import com.android.systemui.keyguard.shared.model.DozeStateModel.Companion.isDozeOff
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.keyguard.shared.model.TransitionModeOnCanceled
 import com.android.systemui.power.domain.interactor.PowerInteractor
@@ -34,9 +35,6 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 @SysUISingleton
 class FromGoneTransitionInteractor
@@ -52,7 +50,7 @@ constructor(
     powerInteractor: PowerInteractor,
     private val communalSceneInteractor: CommunalSceneInteractor,
     keyguardOcclusionInteractor: KeyguardOcclusionInteractor,
-    private val keyguardLockWhileAwakeInteractor: KeyguardLockWhileAwakeInteractor,
+    private val keyguardShowWhileAwakeInteractor: KeyguardShowWhileAwakeInteractor,
 ) :
     TransitionInteractor(
         fromState = KeyguardState.GONE,
@@ -74,6 +72,7 @@ constructor(
     }
 
     fun showKeyguard() {
+        if (SceneContainerFlag.isEnabled) return
         scope.launch("$TAG#showKeyguard") {
             startTransitionTo(KeyguardState.LOCKSCREEN, ownerReason = "showKeyguard()")
         }
@@ -101,7 +100,7 @@ constructor(
     private fun listenForGoneToLockscreenOrHubOrOccluded() {
         if (KeyguardWmStateRefactor.isEnabled) {
             scope.launch {
-                keyguardLockWhileAwakeInteractor.lockWhileAwakeEvents
+                keyguardShowWhileAwakeInteractor.showWhileAwakeEvents
                     .filterRelevantKeyguardState()
                     .sample(communalSceneInteractor.isIdleOnCommunalNotEditMode, ::Pair)
                     .collect { (lockReason, idleOnCommunal) ->
@@ -139,8 +138,10 @@ constructor(
 
     private fun listenForGoneToDreaming() {
         scope.launch("$TAG#listenForGoneToDreaming") {
-            keyguardInteractor.isAbleToDream
-                .filterRelevantKeyguardStateAnd { isAbleToDream -> isAbleToDream }
+            keyguardInteractor.isDreaming
+                .filterRelevantKeyguardStateAnd { isDreaming ->
+                    isDreaming && isDozeOff(keyguardInteractor.dozeTransitionModel.value.to)
+                }
                 .collect { startTransitionTo(KeyguardState.DREAMING) }
         }
     }

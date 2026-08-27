@@ -80,13 +80,6 @@ interface CustomizationProviderClient {
     fun observeFlags(): Flow<List<Flag>>
 
     /**
-     * Returns [Flow] for observing the variables from the System UI.
-     *
-     * @see [queryRuntimeValues]
-     */
-    fun observeRuntimeValues(): Flow<Bundle>
-
-    /**
      * Returns all available affordances supported by the device, regardless of current slot
      * placement.
      */
@@ -98,6 +91,9 @@ interface CustomizationProviderClient {
      * @see [queryAffordances]
      */
     fun observeAffordances(): Flow<List<Affordance>>
+
+    /** Triggers a refresh of the affordances by notifying the content resolver. */
+    fun refreshAffordances()
 
     /** Returns the current slot-affordance selections. */
     suspend fun querySelections(): List<Selection>
@@ -291,6 +287,9 @@ class CustomizationProviderClientImpl(
                                     Contract.RuntimeValuesTable.KEY_IS_SHADE_LAYOUT_WIDE -> {
                                         putBoolean(name, cursor.getInt(valueColumnIndex) == 1)
                                     }
+                                    Contract.RuntimeValuesTable.KEY_UDFPS_LOCATION -> {
+                                        putString(name, cursor.getString(valueColumnIndex))
+                                    }
                                 }
                             }
                         }
@@ -305,10 +304,6 @@ class CustomizationProviderClientImpl(
 
     override fun observeFlags(): Flow<List<CustomizationProviderClient.Flag>> {
         return observeUri(Contract.FlagsTable.URI).map { queryFlags() }
-    }
-
-    override fun observeRuntimeValues(): Flow<Bundle> {
-        return observeUri(Contract.RuntimeValuesTable.URI).map { queryRuntimeValues() }
     }
 
     override suspend fun queryAffordances(): List<CustomizationProviderClient.Affordance> {
@@ -405,6 +400,13 @@ class CustomizationProviderClientImpl(
         return observeUri(Contract.LockScreenQuickAffordances.AffordanceTable.URI).map {
             queryAffordances()
         }
+    }
+
+    override fun refreshAffordances() {
+        context.contentResolver.notifyChange(
+            Contract.LockScreenQuickAffordances.AffordanceTable.URI,
+            /* observer= */ null,
+        )
     }
 
     override suspend fun querySelections(): List<CustomizationProviderClient.Selection> {

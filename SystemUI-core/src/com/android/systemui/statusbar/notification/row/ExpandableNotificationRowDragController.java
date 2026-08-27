@@ -19,6 +19,8 @@ package com.android.systemui.statusbar.notification.row;
 
 import static android.widget.Toast.LENGTH_SHORT;
 
+import static com.android.wm.shell.shared.draganddrop.DragAndDropConstants.IS_FROM_NOTIFICATION;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
@@ -52,8 +54,8 @@ import com.android.systemui.res.R;
 import com.android.systemui.shade.ShadeController;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.statusbar.CommandQueue;
-import com.android.systemui.statusbar.notification.logging.NotificationPanelLogger;
 import com.android.systemui.statusbar.notification.headsup.HeadsUpManager;
+import com.android.systemui.statusbar.notification.logging.NotificationPanelLogger;
 
 import javax.inject.Inject;
 
@@ -100,7 +102,11 @@ public class ExpandableNotificationRowDragController {
             enr = (ExpandableNotificationRow) view;
         }
 
-        StatusBarNotification sn = enr.getEntry().getSbn();
+        if (!enr.getEntryAdapter().canDragAndDrop()) {
+            return;
+        }
+
+        StatusBarNotification sn = enr.getEntryAdapter().getSbn();
         Notification notification = sn.getNotification();
         final PendingIntent contentIntent = notification.contentIntent != null
                 ? notification.contentIntent
@@ -115,8 +121,7 @@ public class ExpandableNotificationRowDragController {
                  .show();
             return;
         }
-        Bitmap iconBitmap = getBitmapFromDrawable(
-                getPkgIcon(enr.getEntry().getSbn().getPackageName()));
+        Bitmap iconBitmap = getBitmapFromDrawable(getPkgIcon(sn.getPackageName()));
 
         final ImageView snapshot = new ImageView(mContext);
         snapshot.setImageBitmap(iconBitmap);
@@ -130,20 +135,25 @@ public class ExpandableNotificationRowDragController {
         ClipData.Item item = new ClipData.Item(dragIntent);
         InstanceId instanceId = new InstanceIdSequence(Integer.MAX_VALUE).newInstanceId();
         item.getIntent().putExtra(ClipDescription.EXTRA_LOGGING_INSTANCE_ID, instanceId);
+        item.getIntent().putExtra(IS_FROM_NOTIFICATION, true);
         ClipData dragData = new ClipData(clipDescription, item);
         View.DragShadowBuilder myShadow = new View.DragShadowBuilder(snapshot);
         view.setOnDragListener(getDraggedViewDragListener());
         boolean result = view.startDragAndDrop(dragData, myShadow, null, View.DRAG_FLAG_GLOBAL
                 | View.DRAG_FLAG_REQUEST_SURFACE_FOR_RETURN_ANIMATION);
         if (result) {
+            Log.d(TAG, "Starting drag from notification view=" + view);
             // Log notification drag only if it succeeds
-            mNotificationPanelLogger.logNotificationDrag(enr.getEntry());
+            mNotificationPanelLogger.logNotificationDrag(enr.getEntryAdapter());
             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             if (enr.isPinned()) {
-                mHeadsUpManager.releaseAllImmediately();
+                mHeadsUpManager.releaseAllImmediately("ExpandableNotificationRowDragController");
             } else {
                 dismissShade();
             }
+        } else {
+            Log.w(TAG, "Failed to starting drag from notification view=" + view);
+            view.setOnDragListener(null);
         }
     }
 
@@ -243,6 +253,9 @@ public class ExpandableNotificationRowDragController {
             }
 
             private void cleanUpSurface() {
+                if (!dragSurface.isValid()) {
+                    return;
+                }
                 tx.remove(dragSurface);
                 tx.apply();
                 tx.close();

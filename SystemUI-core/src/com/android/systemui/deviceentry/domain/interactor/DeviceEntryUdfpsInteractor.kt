@@ -17,12 +17,11 @@
 package com.android.systemui.deviceentry.domain.interactor
 
 import com.android.systemui.biometrics.domain.interactor.FingerprintPropertyInteractor
-import com.android.systemui.biometrics.shared.model.SensorLocation
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.data.repository.BiometricSettingsRepository
 import com.android.systemui.keyguard.data.repository.DeviceEntryFingerprintAuthRepository
+import com.android.systemui.shared.customization.data.SensorLocation
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -30,12 +29,11 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
 /** Encapsulates business logic for device entry under-display fingerprint state changes. */
-@ExperimentalCoroutinesApi
 @SysUISingleton
 class DeviceEntryUdfpsInteractor
 @Inject
 constructor(
-    fingerprintPropertyInteractor: FingerprintPropertyInteractor,
+    private val fingerprintPropertyInteractor: FingerprintPropertyInteractor,
     // TODO (b/309655554): create & use interactors for these repositories
     fingerprintAuthRepository: DeviceEntryFingerprintAuthRepository,
     biometricSettingsRepository: BiometricSettingsRepository,
@@ -72,4 +70,7 @@ constructor(
                 flowOf(null)
             }
         }
+
+    val scaleFactor: Float
+        get() = fingerprintPropertyInteractor.scaleFactor
 }

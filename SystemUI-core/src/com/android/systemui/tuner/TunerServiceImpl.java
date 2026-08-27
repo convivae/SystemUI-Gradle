@@ -75,8 +75,7 @@ public class TunerServiceImpl extends TunerService {
     private static final String[] RESET_EXCEPTION_LIST = new String[] {
             QSHost.TILES_SETTING,
             Settings.Secure.DOZE_ALWAYS_ON,
-            Settings.Secure.MEDIA_CONTROLS_RESUME,
-            Settings.Secure.MEDIA_CONTROLS_RECOMMENDATION
+            Settings.Secure.MEDIA_CONTROLS_RESUME
     };
 
     private final Observer mObserver = new Observer();
@@ -311,7 +310,7 @@ public class TunerServiceImpl extends TunerService {
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, mContext.getString(R.string.cancel),
                 (DialogInterface.OnClickListener) null);
         dialog.setButton(DialogInterface.BUTTON_POSITIVE,
-                mContext.getString(R.string.qs_customize_remove), (d, which) -> {
+                mContext.getString(R.string.tuner_remove), (d, which) -> {
                     // Tell the tuner (in main SysUI process) to clear all its settings.
                     mContext.sendBroadcast(new Intent(TunerService.ACTION_CLEAR));
                     // Disable access to tuner.

@@ -16,21 +16,24 @@
 
 package com.android.systemui.statusbar.notification.collection.coordinator
 
+import android.util.Log
 import com.android.app.tracing.traceSection
 import com.android.server.notification.Flags.screenshareNotificationHiding
-import com.android.systemui.Flags.screenshareNotificationHidingBugFix
-import com.android.systemui.statusbar.notification.collection.ListEntry
+import com.android.systemui.statusbar.notification.collection.BundleEntry
+import com.android.systemui.statusbar.notification.collection.GroupEntry
 import com.android.systemui.statusbar.notification.collection.NotifPipeline
+import com.android.systemui.statusbar.notification.collection.NotificationEntry
+import com.android.systemui.statusbar.notification.collection.PipelineEntry
 import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
 import com.android.systemui.statusbar.notification.collection.render.GroupExpansionManagerImpl
-import com.android.systemui.statusbar.notification.collection.render.NotifStackController
-import com.android.systemui.statusbar.notification.collection.render.NotifStats
+import com.android.systemui.statusbar.notification.data.model.NotifStats
 import com.android.systemui.statusbar.notification.domain.interactor.ActiveNotificationsInteractor
 import com.android.systemui.statusbar.notification.domain.interactor.RenderNotificationListInteractor
-import com.android.systemui.statusbar.notification.footer.shared.FooterViewRefactor
 import com.android.systemui.statusbar.notification.stack.BUCKET_SILENT
 import com.android.systemui.statusbar.policy.SensitiveNotificationProtectionController
 import javax.inject.Inject
+
+private const val TAG = "StackCoordinator"
 
 /**
  * A small coordinator which updates the notif stack (the view layer which holds notifications) with
@@ -39,7 +42,7 @@ import javax.inject.Inject
 @CoordinatorScope
 class StackCoordinator
 @Inject
-internal constructor(
+constructor(
     private val groupExpansionManagerImpl: GroupExpansionManagerImpl,
     private val renderListInteractor: RenderNotificationListInteractor,
     private val activeNotificationsInteractor: ActiveNotificationsInteractor,
@@ -51,34 +54,41 @@ internal constructor(
         groupExpansionManagerImpl.attach(pipeline)
     }
 
-    private fun onAfterRenderList(entries: List<ListEntry>, controller: NotifStackController) =
+    private fun onAfterRenderList(entries: List<PipelineEntry>) =
         traceSection("StackCoordinator.onAfterRenderList") {
             val notifStats = calculateNotifStats(entries)
-            if (FooterViewRefactor.isEnabled) {
-                activeNotificationsInteractor.setNotifStats(notifStats)
-            } else {
-                controller.setNotifStats(notifStats)
-            }
+            activeNotificationsInteractor.setNotifStats(notifStats)
             renderListInteractor.setRenderedList(entries)
         }
 
-    private fun calculateNotifStats(entries: List<ListEntry>): NotifStats {
+    /**
+     * Calculates stats about the notification list. This implementation first recursively unpacks
+     * all containers into a single, flat list of every individual notification, then iterates over
+     * that list to compute the final stats.
+     */
+    private fun calculateNotifStats(entries: List<PipelineEntry>): NotifStats {
         var hasNonClearableAlertingNotifs = false
         var hasClearableAlertingNotifs = false
         var hasNonClearableSilentNotifs = false
         var hasClearableSilentNotifs = false
+
         val isSensitiveContentProtectionActive =
             screenshareNotificationHiding() &&
-                screenshareNotificationHidingBugFix() &&
-                sensitiveNotificationProtectionController.isSensitiveStateActive
-        entries.forEach {
-            val section = checkNotNull(it.section) { "Null section for ${it.key}" }
-            val entry = checkNotNull(it.representativeEntry) { "Null notif entry for ${it.key}" }
+                    sensitiveNotificationProtectionController.isSensitiveStateActive
+
+        val notifEntryList = getFlatNotifEntryList(entries)
+        for (entry in notifEntryList) {
+            // Once all four booleans are true, we have all the info we need and can stop iterating
+            if (hasNonClearableAlertingNotifs && hasClearableAlertingNotifs &&
+                hasNonClearableSilentNotifs && hasClearableSilentNotifs) {
+                break
+            }
+
+            val section = checkNotNull(entry.section) { "Null section for ${entry.key}" }
             val isSilent = section.bucket == BUCKET_SILENT
-            // NOTE: NotificationEntry.isClearable will internally check group children to ensure
-            //  the group itself definitively clearable.
             val isClearable =
                 !isSensitiveContentProtectionActive && entry.isClearable && !entry.isSensitive.value
+
             when {
                 isSilent && isClearable -> hasClearableSilentNotifs = true
                 isSilent && !isClearable -> hasNonClearableSilentNotifs = true
@@ -86,12 +96,61 @@ internal constructor(
                 else -> hasNonClearableAlertingNotifs = true
             }
         }
+
         return NotifStats(
-            numActiveNotifs = entries.size,
             hasNonClearableAlertingNotifs = hasNonClearableAlertingNotifs,
             hasClearableAlertingNotifs = hasClearableAlertingNotifs,
             hasNonClearableSilentNotifs = hasNonClearableSilentNotifs,
             hasClearableSilentNotifs = hasClearableSilentNotifs,
         )
+    }
+
+    /**
+     * Recursively traverses list of PipelineEntry to unpack all containers and return a
+     * flat list of NotificationEntry
+     */
+    private fun getFlatNotifEntryList(entries: List<PipelineEntry>): List<NotificationEntry> {
+        return buildList {
+            for (entry in entries) {
+                when (entry) {
+                    is NotificationEntry -> {
+                        add(entry)
+                    }
+                    is GroupEntry -> {
+                        // NOTE: We must process the children of a group directly instead of relying
+                        // on the summary's isClearable() method.
+                        //
+                        // The summary's isClearable() only tells us if ALL children are clearable
+                        // and hides the fact that a group can contain a mix of clearable and
+                        // non-clearable notifications.
+                        //
+                        // Consider a group with:
+                        //  - one clearable alerting notif
+                        //  - one NON-clearable notif
+                        //  The summary's isClearable() would be false. If we only check the
+                        //  summary, we miss the clearable notif and incorrectly set
+                        //  hasClearableAlertingNotifs to false
+                        if (entry.children.isNotEmpty()) {
+                            addAll(entry.children)
+                            if (entry.summary == null) {
+                                Log.w(TAG, "Group ${entry.key} has children but no summary")
+                            }
+                        } else {
+                            entry.summary?.let { add(it) }
+                        }
+                    }
+                    is BundleEntry -> {
+                        addAll(getFlatNotifEntryList(entry.children))
+                    }
+                    else -> {
+                        Log.w(
+                            TAG,
+                            "Unknown PipelineEntry type: ${entry::class.simpleName}" +
+                                    "with key ${entry.key}"
+                        )
+                    }
+                }
+            }
+        }
     }
 }

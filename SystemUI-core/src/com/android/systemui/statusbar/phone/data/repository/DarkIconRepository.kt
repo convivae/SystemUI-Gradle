@@ -15,12 +15,15 @@
  */
 package com.android.systemui.statusbar.phone.data.repository
 
+import android.util.Log
+import com.android.app.displaylib.PerDisplayRepository
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.statusbar.data.repository.SysuiDarkIconDispatcherStore
+import com.android.systemui.display.dagger.ReferenceSysUIDisplaySubcomponent
 import com.android.systemui.statusbar.phone.SysuiDarkIconDispatcher.DarkChange
 import dagger.Binds
 import dagger.Module
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /** Dark-mode state for tinting icons. */
@@ -31,10 +34,27 @@ interface DarkIconRepository {
 @SysUISingleton
 class DarkIconRepositoryImpl
 @Inject
-constructor(private val darkIconDispatcherStore: SysuiDarkIconDispatcherStore) :
-    DarkIconRepository {
-    override fun darkState(displayId: Int): StateFlow<DarkChange> =
-        darkIconDispatcherStore.forDisplay(displayId).darkChangeFlow()
+constructor(
+    private val displaySubComponentRepository:
+        PerDisplayRepository<ReferenceSysUIDisplaySubcomponent>
+) : DarkIconRepository {
+    override fun darkState(displayId: Int): StateFlow<DarkChange> {
+        val displaySubComponent = displaySubComponentRepository[displayId]
+        if (displaySubComponent == null) {
+            Log.e(
+                TAG,
+                "DarkIconDispatcher for display $displayId is null. Returning flow of " +
+                    "DarkChange.EMPTY",
+            )
+            return MutableStateFlow(DarkChange.EMPTY)
+        }
+        val perDisplayDarkIconDispatcher = displaySubComponent.sysuiDarkIconDispatcher
+        return perDisplayDarkIconDispatcher.darkChangeFlow()
+    }
+
+    private companion object {
+        const val TAG = "DarkIconRepositoryImpl"
+    }
 }
 
 @Module

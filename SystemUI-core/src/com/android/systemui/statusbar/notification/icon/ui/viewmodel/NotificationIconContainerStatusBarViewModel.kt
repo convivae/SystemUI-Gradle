@@ -19,25 +19,20 @@ import android.content.res.Resources
 import android.graphics.Rect
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.dump.DumpManager
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
 import com.android.systemui.plugins.DarkIconDispatcher
 import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
-import com.android.systemui.statusbar.notification.domain.interactor.HeadsUpNotificationIconInteractor
 import com.android.systemui.statusbar.notification.icon.domain.interactor.StatusBarNotificationIconsInteractor
 import com.android.systemui.statusbar.phone.domain.interactor.DarkIconInteractor
-import com.android.systemui.util.kotlin.pairwise
-import com.android.systemui.util.kotlin.sample
-import com.android.systemui.util.ui.AnimatableEvent
-import com.android.systemui.util.ui.AnimatedValue
-import com.android.systemui.util.ui.toAnimatedValueFlow
+import com.android.systemui.util.kotlin.FlowDumperImpl
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
@@ -47,12 +42,12 @@ class NotificationIconContainerStatusBarViewModel
 constructor(
     @Background private val bgContext: CoroutineContext,
     private val darkIconInteractor: DarkIconInteractor,
+    dumpManager: DumpManager,
     iconsInteractor: StatusBarNotificationIconsInteractor,
-    headsUpIconInteractor: HeadsUpNotificationIconInteractor,
     keyguardInteractor: KeyguardInteractor,
     @Main resources: Resources,
     shadeInteractor: ShadeInteractor,
-) {
+) : FlowDumperImpl(dumpManager) {
 
     private val maxIcons = resources.getInteger(R.integer.max_notif_static_icons)
 
@@ -68,13 +63,14 @@ constructor(
             .distinctUntilChanged()
 
     /** The colors with which to display the notification icons. */
-    fun iconColors(displayId: Int): Flow<NotificationIconColors> =
-        darkIconInteractor
+    fun iconColors(displayId: Int): Flow<NotificationIconColors> {
+        return darkIconInteractor
             .darkState(displayId)
             .map { (areas: Collection<Rect>, tint: Int) -> IconColorsImpl(tint, areas) }
             .flowOn(bgContext)
             .conflate()
             .distinctUntilChanged()
+    }
 
     /** [NotificationIconsViewData] indicating which icons to display in the view. */
     val icons: Flow<NotificationIconsViewData> =
@@ -88,34 +84,7 @@ constructor(
             .flowOn(bgContext)
             .conflate()
             .distinctUntilChanged()
-
-    /** An Icon to show "isolated" in the IconContainer. */
-    val isolatedIcon: Flow<AnimatedValue<NotificationIconInfo?>> =
-        headsUpIconInteractor.isolatedNotification
-            .combine(icons) { isolatedNotif, iconsViewData ->
-                isolatedNotif?.let {
-                    iconsViewData.visibleIcons.firstOrNull { it.notifKey == isolatedNotif }
-                }
-            }
-            .distinctUntilChanged()
-            .flowOn(bgContext)
-            .conflate()
-            .distinctUntilChanged()
-            .pairwise(initialValue = null)
-            .sample(shadeInteractor.shadeExpansion) { (prev, iconInfo), shadeExpansion ->
-                val animate =
-                    when {
-                        iconInfo?.notifKey == prev?.notifKey -> false
-                        iconInfo == null || prev == null -> shadeExpansion == 0f
-                        else -> false
-                    }
-                AnimatableEvent(iconInfo, animate)
-            }
-            .toAnimatedValueFlow()
-
-    /** Location to show an isolated icon, if there is one. */
-    val isolatedIconLocation: Flow<Rect> =
-        headsUpIconInteractor.isolatedIconLocation.filterNotNull().conflate().distinctUntilChanged()
+            .dumpWhileCollecting("icons")
 
     private class IconColorsImpl(override val tint: Int, private val areas: Collection<Rect>) :
         NotificationIconColors {

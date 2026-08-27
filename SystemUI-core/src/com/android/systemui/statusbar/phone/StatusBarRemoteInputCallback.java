@@ -133,7 +133,7 @@ public class StatusBarRemoteInputCallback implements Callback, Callbacks,
                     mDeviceUnlockedInteractorLazy.get().getDeviceUnlockStatus(),
                     deviceUnlockStatus -> onStateChanged(mStatusBarStateController.getState()));
             javaAdapter.alwaysCollectFlow(
-                    mSceneInteractorLazy.get().getTransitionState(),
+                    mSceneInteractorLazy.get().getTransitionStateFlow(),
                     deviceUnlockStatus -> onStateChanged(mStatusBarStateController.getState()));
         }
     }
@@ -155,7 +155,8 @@ public class StatusBarRemoteInputCallback implements Callback, Callbacks,
         if (!row.isPinned()) {
             mStatusBarStateController.setLeaveOpenOnKeyguardHide(true);
         }
-        mStatusBarKeyguardViewManager.showBouncer(true /* scrimmed */);
+        mStatusBarKeyguardViewManager.showBouncer(true /* scrimmed */,
+                "StatusBarRemoteInputCallback#onLockedRemoteInput");
         mPendingRemoteInputView = clicked;
     }
 
@@ -215,7 +216,7 @@ public class StatusBarRemoteInputCallback implements Callback, Callbacks,
             if (ExpandHeadsUpOnInlineReply.isEnabled()) {
                 if (row.isChildInGroup() && !row.areChildrenExpanded()) {
                     // The group isn't expanded, let's make sure it's visible!
-                    mGroupExpansionManager.toggleGroupExpansion(row.getEntry());
+                    mGroupExpansionManager.toggleGroupExpansion(row.getEntryAdapter());
                 } else if (!row.isChildInGroup()) {
                     final boolean expandNotification;
                     if (row.isPinned()) {
@@ -227,34 +228,21 @@ public class StatusBarRemoteInputCallback implements Callback, Callbacks,
                     if (expandNotification) {
                         // notification isn't expanded, let's make sure it's expanded!
                         row.toggleExpansionState();
-                        row.getPrivateLayout().setOnExpandedVisibleListener(runnable);
                     }
                 }
+                row.getPrivateLayout().setOnExpandedVisibleListener(runnable);
             } else {
                 if (row.isChildInGroup() && !row.areChildrenExpanded()) {
                     // The group isn't expanded, let's make sure it's visible!
-                    mGroupExpansionManager.toggleGroupExpansion(row.getEntry());
+                    mGroupExpansionManager.toggleGroupExpansion(row.getEntryAdapter());
                 }
 
-                if (android.app.Flags.compactHeadsUpNotificationReply()
-                        && row.isCompactConversationHeadsUpOnScreen()) {
-                    // Notification can be system expanded true and it is set user expanded in
-                    // activateRemoteInput. notifyHeightChanged also doesn't work as visibleType
-                    // doesn't change. To expand huning notification properly,
-                    // we need set userExpanded false.
-                    if (!row.isPinned() && row.isExpanded()) {
-                        row.setUserExpanded(false);
-                    }
-                    // expand notification emits expanded information to HUN listener.
-                    row.expandNotification();
-                } else {
-                    // TODO(b/346976443) Group and normal notification expansions are two different
-                    // concepts. We should never call setUserExpanded for expanding groups.
+                // TODO(b/346976443) Group and normal notification expansions are two different
+                // concepts. We should never call setUserExpanded for expanding groups.
+                // Note: Since Normal HUN has remote input view in it, we don't expect to hit
+                // onMakeExpandedVisibleForRemoteInput from activateRemoteInput for Normal HUN.
+                row.setUserExpanded(true);
 
-                    // Note: Since Normal HUN has remote input view in it, we don't expect to hit
-                    // onMakeExpandedVisibleForRemoteInput from activateRemoteInput for Normal HUN.
-                    row.setUserExpanded(true);
-                }
                 row.getPrivateLayout().setOnExpandedVisibleListener(runnable);
             }
         }
@@ -358,7 +346,7 @@ public class StatusBarRemoteInputCallback implements Callback, Callbacks,
             final boolean isUnlocked = mDeviceUnlockedInteractorLazy.get()
                     .getDeviceUnlockStatus().getValue().isUnlocked();
             final boolean isIdle = mSceneInteractorLazy.get()
-                    .getTransitionState().getValue() instanceof ObservableTransitionState.Idle;
+                    .getTransitionStateFlow().getValue() instanceof ObservableTransitionState.Idle;
             return isUnlocked && isIdle;
         } else {
             return mKeyguardStateController.isUnlocked()

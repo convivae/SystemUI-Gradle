@@ -21,11 +21,14 @@ import android.media.MediaDescription
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.service.notification.StatusBarNotification
-import com.android.internal.logging.InstanceId
 import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
-import com.android.systemui.media.controls.data.repository.MediaFilterRepository
+import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor
+import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
+import com.android.systemui.keyguard.shared.model.Edge
+import com.android.systemui.keyguard.shared.model.KeyguardState.DOZING
+import com.android.systemui.keyguard.shared.model.KeyguardState.GONE
 import com.android.systemui.media.controls.domain.pipeline.MediaDataCombineLatest
 import com.android.systemui.media.controls.domain.pipeline.MediaDataFilterImpl
 import com.android.systemui.media.controls.domain.pipeline.MediaDataManager
@@ -34,21 +37,23 @@ import com.android.systemui.media.controls.domain.pipeline.MediaDeviceManager
 import com.android.systemui.media.controls.domain.pipeline.MediaSessionBasedFilter
 import com.android.systemui.media.controls.domain.pipeline.MediaTimeoutListener
 import com.android.systemui.media.controls.domain.resume.MediaResumeListener
-import com.android.systemui.media.controls.shared.model.MediaCommonModel
-import com.android.systemui.media.controls.util.MediaFlags
-import com.android.systemui.media.controls.util.MediaSmartspaceLogger
+import com.android.systemui.media.controls.util.MediaUiEventLogger
+import com.android.systemui.media.remedia.data.repository.MediaPipelineRepository
+import com.android.systemui.media.remedia.data.repository.MediaRepository
+import com.android.systemui.media.remedia.shared.flag.MediaControlsInComposeFlag
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.scene.shared.model.Scenes
 import java.io.PrintWriter
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /** Encapsulates business logic for media pipeline. */
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class MediaCarouselInteractor
 @Inject
@@ -61,51 +66,56 @@ constructor(
     private val mediaDeviceManager: MediaDeviceManager,
     private val mediaDataCombineLatest: MediaDataCombineLatest,
     private val mediaDataFilter: MediaDataFilterImpl,
-    private val mediaFilterRepository: MediaFilterRepository,
-    private val mediaFlags: MediaFlags,
+    private val mediaPipelineRepository: MediaPipelineRepository,
+    private val mediaRepository: MediaRepository,
+    private val mediaUiEventLogger: MediaUiEventLogger,
+    keyguardTransitionInteractor: KeyguardTransitionInteractor,
+    deviceEntryInteractor: DeviceEntryInteractor,
 ) : MediaDataManager, CoreStartable {
 
-    /** Are there any media notifications active, including the recommendations? */
-    val hasActiveMediaOrRecommendation: StateFlow<Boolean> =
-        combine(
-                mediaFilterRepository.selectedUserEntries,
-                mediaFilterRepository.smartspaceMediaData,
-                mediaFilterRepository.reactivatedId
-            ) { entries, smartspaceMediaData, reactivatedKey ->
-                entries.any { it.value.active } ||
-                    (smartspaceMediaData.isActive &&
-                        (smartspaceMediaData.isValid() || reactivatedKey != null))
-            }
+    /** Are there any media notifications active? */
+    val hasActiveMedia: StateFlow<Boolean> =
+        mediaPipelineRepository.currentUserEntries
+            .map { entries -> entries.any { it.value.active } }
             .stateIn(
                 scope = applicationScope,
                 started = SharingStarted.WhileSubscribed(),
                 initialValue = false,
             )
 
-    /** Are there any media entries we should display, including the recommendations? */
-    val hasAnyMediaOrRecommendation: StateFlow<Boolean> =
-        combine(
-                mediaFilterRepository.selectedUserEntries,
-                mediaFilterRepository.smartspaceMediaData
-            ) { entries, smartspaceMediaData ->
-                entries.isNotEmpty() ||
-                    (if (mediaFlags.isPersistentSsCardEnabled()) {
-                        smartspaceMediaData.isValid()
-                    } else {
-                        smartspaceMediaData.isActive && smartspaceMediaData.isValid()
-                    })
-            }
+    /** Are there any media entries, including inactive ones? */
+    val hasAnyMedia: StateFlow<Boolean> =
+        mediaPipelineRepository.currentUserEntries
+            .map { entries -> entries.isNotEmpty() }
             .stateIn(
                 scope = applicationScope,
                 started = SharingStarted.WhileSubscribed(),
                 initialValue = false,
             )
 
-    /** The current list for user media instances */
-    val currentMedia: StateFlow<List<MediaCommonModel>> = mediaFilterRepository.currentMedia
+    val allowMediaOnLockscreen: StateFlow<Boolean> =
+        mediaPipelineRepository.allowMediaPlayerOnLockscreen
+
+    internal val isOnLockscreen: Flow<Boolean> =
+        combine(
+            @Suppress("DEPRECATION") keyguardTransitionInteractor.isFinishedIn(Scenes.Gone, GONE),
+            keyguardTransitionInteractor.isInTransition(Edge.create(to = DOZING)),
+            deviceEntryInteractor.isDeviceEntered,
+        ) { isGone, isGoingToDozing, deviceEntered ->
+            if (SceneContainerFlag.isEnabled) {
+                !deviceEntered
+            } else {
+                !isGone || isGoingToDozing
+            }
+        }
+
+    val isLockedAndHidden =
+        combine(allowMediaOnLockscreen, isOnLockscreen) { allowMedia, onLockscreen ->
+            !allowMedia && onLockscreen
+        }
 
     override fun start() {
-        if (!SceneContainerFlag.isEnabled) {
+        if (!SceneContainerFlag.isEnabled && !MediaControlsInComposeFlag.isEnabled) {
             return
         }
 
@@ -170,7 +180,7 @@ constructor(
         token: MediaSession.Token,
         appName: String,
         appIntent: PendingIntent,
-        packageName: String
+        packageName: String,
     ) {
         mediaDataProcessor.addResumptionControls(
             userId,
@@ -179,23 +189,13 @@ constructor(
             token,
             appName,
             appIntent,
-            packageName
+            packageName,
         )
     }
 
     override fun dismissMediaData(key: String, delay: Long, userInitiated: Boolean): Boolean {
         return mediaDataProcessor.dismissMediaData(key, delay, userInitiated)
     }
-
-    fun removeMediaControl(instanceId: InstanceId, delay: Long) {
-        mediaDataProcessor.dismissMediaData(instanceId, delay, userInitiated = false)
-    }
-
-    override fun dismissSmartspaceRecommendation(key: String, delay: Long) {
-        return mediaDataProcessor.dismissSmartspaceRecommendation(key, delay)
-    }
-
-    override fun setRecommendationInactive(key: String) = unsupported
 
     override fun onNotificationRemoved(key: String) {
         mediaDataProcessor.onNotificationRemoved(key)
@@ -205,34 +205,15 @@ constructor(
         mediaDataProcessor.setMediaResumptionEnabled(isEnabled)
     }
 
-    override fun onSwipeToDismiss() = unsupported
-
-    fun onSwipeToDismiss(location: Int) {
-        mediaDataFilter.onSwipeToDismiss(MediaSmartspaceLogger.getSurface(location))
+    override fun onSwipeToDismiss() {
+        mediaUiEventLogger.logSwipeDismiss()
+        mediaRepository.setSwipedAwayState()
+        mediaDataFilter.onSwipeToDismiss()
     }
 
-    override fun hasActiveMediaOrRecommendation() =
-        mediaFilterRepository.hasActiveMediaOrRecommendation()
+    override fun hasActiveMedia() = mediaPipelineRepository.hasActiveMedia()
 
-    override fun hasAnyMediaOrRecommendation() = hasAnyMediaOrRecommendation.value
-
-    override fun hasActiveMedia() = mediaFilterRepository.hasActiveMedia()
-
-    override fun hasAnyMedia() = mediaFilterRepository.hasAnyMedia()
-
-    override fun isRecommendationActive() = mediaFilterRepository.isRecommendationActive()
-
-    fun reorderMedia() {
-        mediaFilterRepository.setOrderedMedia()
-    }
-
-    fun logSmartspaceSeenCard(visibleIndex: Int, location: Int, isMediaCardUpdate: Boolean) {
-        mediaFilterRepository.logSmartspaceCardSeen(
-            MediaSmartspaceLogger.getSurface(location),
-            visibleIndex,
-            isMediaCardUpdate
-        )
-    }
+    override fun hasAnyMedia() = mediaPipelineRepository.hasAnyMedia()
 
     /** Add a listener for internal events. */
     private fun addInternalListener(listener: MediaDataManager.Listener) =
@@ -245,6 +226,8 @@ constructor(
     companion object {
         val unsupported: Nothing
             get() =
-                error("Code path not supported when ${SceneContainerFlag.DESCRIPTION} is enabled")
+                error(
+                    "Code path not supported when ${SceneContainerFlag.DESCRIPTION} or media_controls_in_compose is enabled"
+                )
     }
 }

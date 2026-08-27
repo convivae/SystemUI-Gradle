@@ -23,6 +23,7 @@ import static android.service.notification.NotificationListenerService.REASON_AP
 import static android.service.notification.NotificationListenerService.REASON_APP_CANCEL_ALL;
 import static android.service.notification.NotificationListenerService.REASON_GROUP_SUMMARY_CANCELED;
 import static android.service.notification.NotificationListenerService.REASON_PACKAGE_BANNED;
+import static android.service.notification.NotificationListenerService.REASON_PACKAGE_CHANGED;
 import static android.service.notification.NotificationStats.DISMISSAL_BUBBLE;
 import static android.service.notification.NotificationStats.DISMISS_SENTIMENT_NEUTRAL;
 
@@ -61,20 +62,22 @@ import com.android.systemui.shade.ShadeController;
 import com.android.systemui.shared.system.QuickStepContract;
 import com.android.systemui.statusbar.NotificationLockscreenUserManager;
 import com.android.systemui.statusbar.NotificationShadeWindowController;
-import com.android.systemui.statusbar.notification.NotifPipelineFlags;
 import com.android.systemui.statusbar.notification.NotificationChannelHelper;
+import com.android.systemui.statusbar.notification.collection.EntryAdapter;
 import com.android.systemui.statusbar.notification.collection.NotifCollection;
 import com.android.systemui.statusbar.notification.collection.NotifPipeline;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.notification.collection.notifcollection.CommonNotifCollection;
 import com.android.systemui.statusbar.notification.collection.notifcollection.DismissedByUserStats;
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifCollectionListener;
+import com.android.systemui.statusbar.notification.collection.notifcollection.UpdateSource;
 import com.android.systemui.statusbar.notification.collection.render.NotificationVisibilityProvider;
 import com.android.systemui.statusbar.notification.interruption.VisualInterruptionDecisionProvider;
 import com.android.systemui.statusbar.phone.StatusBarWindowCallback;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.SensitiveNotificationProtectionController;
 import com.android.systemui.statusbar.policy.ZenModeController;
+import com.android.systemui.topui.TopUiController;
 import com.android.wm.shell.bubbles.Bubble;
 import com.android.wm.shell.bubbles.BubbleEntry;
 import com.android.wm.shell.bubbles.Bubbles;
@@ -100,6 +103,7 @@ public class BubblesManager {
     private final Context mContext;
     private final Bubbles mBubbles;
     private final NotificationShadeWindowController mNotificationShadeWindowController;
+    private final TopUiController mTopUiController;
     private final KeyguardStateController mKeyguardStateController;
     private final ShadeController mShadeController;
     private final IStatusBarService mBarService;
@@ -111,7 +115,6 @@ public class BubblesManager {
     private final SensitiveNotificationProtectionController mSensitiveNotifProtectionController;
     private final CommonNotifCollection mCommonNotifCollection;
     private final NotifPipeline mNotifPipeline;
-    private final NotifPipelineFlags mNotifPipelineFlags;
     private final Executor mSysuiMainExecutor;
     private final Executor mSysuiUiBgExecutor;
 
@@ -131,6 +134,7 @@ public class BubblesManager {
     public static BubblesManager create(Context context,
             Optional<Bubbles> bubblesOptional,
             NotificationShadeWindowController notificationShadeWindowController,
+            TopUiController topUiController,
             KeyguardStateController keyguardStateController,
             ShadeController shadeController,
             @Nullable IStatusBarService statusBarService,
@@ -145,13 +149,13 @@ public class BubblesManager {
             NotifPipeline notifPipeline,
             SysUiState sysUiState,
             FeatureFlags featureFlags,
-            NotifPipelineFlags notifPipelineFlags,
             Executor sysuiMainExecutor,
             Executor sysuiUiBgExecutor) {
         if (bubblesOptional.isPresent()) {
             return new BubblesManager(context,
                     bubblesOptional.get(),
                     notificationShadeWindowController,
+                    topUiController,
                     keyguardStateController,
                     shadeController,
                     statusBarService,
@@ -166,7 +170,6 @@ public class BubblesManager {
                     notifPipeline,
                     sysUiState,
                     featureFlags,
-                    notifPipelineFlags,
                     sysuiMainExecutor,
                     sysuiUiBgExecutor);
         } else {
@@ -178,6 +181,7 @@ public class BubblesManager {
     BubblesManager(Context context,
             Bubbles bubbles,
             NotificationShadeWindowController notificationShadeWindowController,
+            TopUiController topUiController,
             KeyguardStateController keyguardStateController,
             ShadeController shadeController,
             @Nullable IStatusBarService statusBarService,
@@ -192,12 +196,12 @@ public class BubblesManager {
             NotifPipeline notifPipeline,
             SysUiState sysUiState,
             FeatureFlags featureFlags,
-            NotifPipelineFlags notifPipelineFlags,
             Executor sysuiMainExecutor,
             Executor sysuiUiBgExecutor) {
         mContext = context;
         mBubbles = bubbles;
         mNotificationShadeWindowController = notificationShadeWindowController;
+        mTopUiController = topUiController;
         mKeyguardStateController = keyguardStateController;
         mShadeController = shadeController;
         mNotificationManager = notificationManager;
@@ -208,7 +212,6 @@ public class BubblesManager {
         mSensitiveNotifProtectionController = sensitiveNotificationProtectionController;
         mCommonNotifCollection = notifCollection;
         mNotifPipeline = notifPipeline;
-        mNotifPipelineFlags = notifPipelineFlags;
         mSysuiMainExecutor = sysuiMainExecutor;
         mSysuiUiBgExecutor = sysuiUiBgExecutor;
 
@@ -340,10 +343,9 @@ public class BubblesManager {
             }
 
             @Override
-            public void requestNotificationShadeTopUi(boolean requestTopUi, String componentTag) {
-                sysuiMainExecutor.execute(() -> {
-                    mNotificationShadeWindowController.setRequestTopUi(requestTopUi, componentTag);
-                });
+            public void requestTopUi(boolean requestTopUi, String componentTag) {
+                sysuiMainExecutor.execute(
+                        () -> mTopUiController.setRequestTopUi(requestTopUi, componentTag));
             }
 
             @Override
@@ -380,6 +382,8 @@ public class BubblesManager {
 
             @Override
             public void onStackExpandChanged(boolean shouldExpand) {
+                ProtoLog.d(WM_SHELL_BUBBLES, "Updating bubbles_expanded sys flag to %b",
+                        shouldExpand);
                 sysuiMainExecutor.execute(() -> {
                     sysUiState.setFlag(QuickStepContract.SYSUI_STATE_BUBBLES_EXPANDED, shouldExpand)
                             .commitUpdate(mContext.getDisplayId());
@@ -443,15 +447,16 @@ public class BubblesManager {
             }
 
             @Override
-            public void onEntryUpdated(NotificationEntry entry, boolean fromSystem) {
-                BubblesManager.this.onEntryUpdated(entry, fromSystem);
+            public void onEntryUpdated(NotificationEntry entry, UpdateSource source) {
+                BubblesManager.this.onEntryUpdated(entry, source != UpdateSource.SystemUi);
             }
 
             @Override
             public void onEntryRemoved(NotificationEntry entry,
                     @NotifCollection.CancellationReason int reason) {
                 if (reason == REASON_APP_CANCEL || reason == REASON_APP_CANCEL_ALL
-                        || reason == REASON_PACKAGE_BANNED) {
+                        || reason == REASON_PACKAGE_BANNED
+                        || reason == REASON_PACKAGE_CHANGED) {
                     BubblesManager.this.onEntryRemoved(entry);
                 }
             }
@@ -615,6 +620,28 @@ public class BubblesManager {
     }
 
     /**
+     * When a notification is set as important, make it a bubble
+     *
+     * @param entryAdapter the important notification.
+     */
+    public void onUserSetImportantConversation(EntryAdapter entryAdapter) {
+        if (entryAdapter.getSbn() != null
+                && entryAdapter.getSbn().getNotification().getBubbleMetadata() == null) {
+            // No bubble metadata, nothing to do.
+            return;
+        }
+        try {
+            int flags = Notification.BubbleMetadata.FLAG_SUPPRESS_NOTIFICATION;
+            mBarService.onNotificationBubbleChanged(entryAdapter.getKey(), true, flags);
+        } catch (RemoteException e) {
+            Log.e(TAG, e.getMessage());
+        }
+        mShadeController.collapseShade(true);
+        // NotificationGutsManager will refresh the ENR when the guts close and update the
+        // bubble button if needed
+    }
+
+    /**
      * Called when a user has indicated that an active notification should be shown as a bubble.
      * <p>
      * This method will collapse the shade, create the bubble without a flyout or dot, and suppress
@@ -643,7 +670,7 @@ public class BubblesManager {
 
         // Change the settings
         channel = NotificationChannelHelper.createConversationChannelIfNeeded(mContext,
-                mNotificationManager, entry, channel);
+                mNotificationManager, entry.getRanking(), entry.getSbn(), channel);
         channel.setAllowBubbles(shouldBubble);
         try {
             int currentPref = mNotificationManager.getBubblePreferenceForPackage(appPkg, appUid);

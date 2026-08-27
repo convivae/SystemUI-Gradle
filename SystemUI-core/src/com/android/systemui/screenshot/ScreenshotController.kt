@@ -16,6 +16,7 @@
 package com.android.systemui.screenshot
 
 import android.animation.Animator
+import android.app.ActivityOptions
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -35,7 +36,6 @@ import android.util.Log
 import android.view.Display
 import android.view.ScrollCaptureResponse
 import android.view.ViewRootImpl.ActivityConfigCallback
-import android.view.WindowManager
 import android.view.WindowManager.TAKE_SCREENSHOT_PROVIDED_IMAGE
 import android.widget.Toast
 import android.window.WindowContext
@@ -47,7 +47,6 @@ import com.android.systemui.broadcast.BroadcastSender
 import com.android.systemui.clipboardoverlay.ClipboardOverlayController
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.res.R
-import com.android.systemui.screenshot.ActionIntentCreator.createLongScreenshotIntent
 import com.android.systemui.screenshot.ScreenshotShelfViewProxy.ScreenshotViewCallback
 import com.android.systemui.screenshot.scroll.ScrollCaptureController.LongScreenshot
 import com.android.systemui.screenshot.scroll.ScrollCaptureExecutor
@@ -85,6 +84,7 @@ internal constructor(
     private val messageContainerController: MessageContainerController,
     private val announcementResolver: AnnouncementResolver,
     @Main private val mainExecutor: Executor,
+    private val actionIntentCreator: ActionIntentCreator,
     @Assisted private val display: Display,
 ) : InteractiveScreenshotHandler {
     private val context: WindowContext
@@ -121,7 +121,7 @@ internal constructor(
         window = screenshotWindowFactory.create(display)
         context = window.getContext()
 
-        viewProxy = viewProxyFactory.getProxy(context, display.displayId)
+        viewProxy = viewProxyFactory.getProxy(window, display.displayId)
 
         screenshotHandler.setOnTimeoutRunnable {
             if (LogConfig.DEBUG_UI) {
@@ -218,7 +218,7 @@ internal constructor(
         window.setFocusable(true)
         viewProxy.requestFocus()
 
-        if (screenshot.type != WindowManager.TAKE_SCREENSHOT_PROVIDED_IMAGE) {
+        if (!screenshot.suppressLongScreenshot) {
             enqueueScrollCaptureRequest(requestId, screenshot.userHandle)
         }
 
@@ -257,7 +257,7 @@ internal constructor(
     private fun prepareViewForNewScreenshot(screenshot: ScreenshotData, oldPackageName: String?) {
         window.whenWindowAttached {
             announcementResolver.getScreenshotAnnouncement(screenshot.userHandle.identifier) {
-                viewProxy.announceForAccessibility(it)
+                viewProxy.setSavingAnnouncement(it)
             }
         }
 
@@ -298,7 +298,10 @@ internal constructor(
         screenshotSoundController.releaseScreenshotSoundAsync()
         releaseContext()
         bgExecutor.shutdown()
+        screenshotHandler.cancelTimeout()
     }
+
+    override fun getDisplay() = display
 
     /** Release the constructed window context. */
     private fun releaseContext() {
@@ -359,7 +362,7 @@ internal constructor(
                                 { requestScrollCapture(requestId, owner) },
                                 150,
                             )
-                            viewProxy.updateInsets(window.getWindowInsets())
+                            viewProxy.updateInsets()
                             // Screenshot animation calculations won't be valid anymore, so just end
                             screenshotAnimation?.let { currentAnimation ->
                                 if (currentAnimation.isRunning) {
@@ -376,18 +379,23 @@ internal constructor(
     private fun requestScrollCapture(requestId: UUID, owner: UserHandle) {
         scrollCaptureExecutor.requestScrollCapture(display.displayId, window.getWindowToken()) {
             response: ScrollCaptureResponse ->
+            Log.i(TAG, "Scroll capture response: $response")
             uiEventLogger.log(
                 ScreenshotEvent.SCREENSHOT_LONG_SCREENSHOT_IMPRESSION,
                 0,
                 response.packageName,
             )
-            actionsController.onScrollChipReady(requestId) {
-                onScrollButtonClicked(owner, response)
+            actionsController.onScrollChipReady(requestId) { uri ->
+                onScrollButtonClicked(owner, response, uri)
             }
         }
     }
 
-    private fun onScrollButtonClicked(owner: UserHandle, response: ScrollCaptureResponse) {
+    private fun onScrollButtonClicked(
+        owner: UserHandle,
+        response: ScrollCaptureResponse,
+        originalBitmapUri: Uri,
+    ) {
         if (LogConfig.DEBUG_INPUT) {
             Log.d(TAG, "scroll chip tapped")
         }
@@ -403,16 +411,23 @@ internal constructor(
         }
         // delay starting scroll capture to make sure scrim is up before the app moves
         viewProxy.prepareScrollingTransition(response, newScreenshot, screenshotTakenInPortrait) {
-            executeBatchScrollCapture(response, owner)
+            executeBatchScrollCapture(response, owner, originalBitmapUri)
         }
     }
 
-    private fun executeBatchScrollCapture(response: ScrollCaptureResponse, owner: UserHandle) {
+    private fun executeBatchScrollCapture(
+        response: ScrollCaptureResponse,
+        owner: UserHandle,
+        originalBitmapUri: Uri,
+    ) {
         scrollCaptureExecutor.executeBatchScrollCapture(
             response,
             {
-                val intent = createLongScreenshotIntent(owner, context)
-                context.startActivity(intent)
+                val intent =
+                    actionIntentCreator.createLongScreenshotIntent(owner, originalBitmapUri)
+                val options = ActivityOptions.makeBasic()
+                options.setLaunchDisplayId(context.displayId)
+                context.startActivity(intent, options.toBundle())
             },
             { viewProxy.restoreNonScrollingUi() },
             { transitionDestination: Rect, onTransitionEnd: Runnable, longScreenshot: LongScreenshot
@@ -499,12 +514,40 @@ internal constructor(
                 screenshot.bitmap,
                 screenshot.userHandle,
                 display.displayId,
+                screenshot.customSaveUri,
             )
         future.addListener(
             {
                 try {
                     val result = future.get()
                     Log.d(TAG, "Saved screenshot: $result")
+
+                    // Signifies custom save failed & saved to default folder instead
+                    if (
+                        screenshot.customSaveUri != null &&
+                            !result.uri.toString().startsWith(screenshot.customSaveUri.toString())
+                    ) {
+                        val customFolderName =
+                            screenshot.customSaveUri.lastPathSegment
+                                ?.split(":")
+                                ?.last()
+                                ?.split("/")
+                                ?.last()
+                                ?.let {
+                                    if (it.length > 15) {
+                                        "${it.take(15)}…"
+                                    } else {
+                                        it
+                                    }
+                                }
+                        val defaultSaveErrorText =
+                            context.getString(
+                                R.string.screenshot_custom_uri_save_fail_message,
+                                customFolderName,
+                            )
+                        notificationController.notifyCustomUriSaveError(defaultSaveErrorText)
+                    }
+
                     logScreenshotResultStatus(result.uri, screenshot.userHandle)
                     onResult.accept(result)
                     if (LogConfig.DEBUG_CALLBACK) {

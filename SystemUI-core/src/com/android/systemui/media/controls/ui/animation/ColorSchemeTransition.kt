@@ -21,17 +21,16 @@ import android.animation.ValueAnimator
 import android.animation.ValueAnimator.AnimatorUpdateListener
 import android.content.Context
 import android.content.res.ColorStateList
-import android.content.res.Configuration
-import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import com.android.internal.R
 import com.android.internal.annotations.VisibleForTesting
-import com.android.settingslib.Utils
+import com.android.systemui.Flags.enableSuggestedDeviceUi
 import com.android.systemui.media.controls.ui.view.MediaViewHolder
 import com.android.systemui.monet.ColorScheme
-import com.android.systemui.surfaceeffects.loadingeffect.LoadingEffect
-import com.android.systemui.surfaceeffects.ripple.MultiRippleController
-import com.android.systemui.surfaceeffects.turbulencenoise.TurbulenceNoiseController
+import com.android.systemui.surfaceeffects.view.loadingeffect.LoadingEffect
+import com.android.systemui.surfaceeffects.view.ripple.MultiRippleController
+import com.android.systemui.surfaceeffects.view.turbulencenoise.TurbulenceNoiseController
 
 /**
  * A [ColorTransition] is an object that updates the colors of views each time [updateColorScheme]
@@ -51,7 +50,7 @@ interface ColorTransition {
 open class AnimatingColorTransition(
     private val defaultColor: Int,
     private val extractColor: (ColorScheme) -> Int,
-    private val applyColor: (Int) -> Unit
+    private val applyColor: (Int) -> Unit,
 ) : AnimatorUpdateListener, ColorTransition {
 
     private val argbEvaluator = ArgbEvaluator()
@@ -105,144 +104,108 @@ internal constructor(
     private val mediaViewHolder: MediaViewHolder,
     private val multiRippleController: MultiRippleController,
     private val turbulenceNoiseController: TurbulenceNoiseController,
-    animatingColorTransitionFactory: AnimatingColorTransitionFactory
+    animatingColorTransitionFactory: AnimatingColorTransitionFactory,
 ) {
     constructor(
         context: Context,
         mediaViewHolder: MediaViewHolder,
         multiRippleController: MultiRippleController,
-        turbulenceNoiseController: TurbulenceNoiseController
+        turbulenceNoiseController: TurbulenceNoiseController,
     ) : this(
         context,
         mediaViewHolder,
         multiRippleController,
         turbulenceNoiseController,
-        ::AnimatingColorTransition
+        ::AnimatingColorTransition,
     )
+
     var loadingEffect: LoadingEffect? = null
 
-    val bgColor = context.getColor(com.google.android.material.R.color.material_dynamic_neutral20)
-    val surfaceColor =
-        animatingColorTransitionFactory(bgColor, ::surfaceFromScheme) { surfaceColor ->
-            val colorList = ColorStateList.valueOf(surfaceColor)
-            mediaViewHolder.seamlessIcon.imageTintList = colorList
-            mediaViewHolder.seamlessText.setTextColor(surfaceColor)
-            mediaViewHolder.albumView.backgroundTintList = colorList
-            mediaViewHolder.gutsViewHolder.setSurfaceColor(surfaceColor)
-        }
-    val accentPrimary =
-        animatingColorTransitionFactory(
-            loadDefaultColor(R.attr.textColorPrimary),
-            ::accentPrimaryFromScheme
-        ) { accentPrimary ->
-            val accentColorList = ColorStateList.valueOf(accentPrimary)
-            mediaViewHolder.actionPlayPause.backgroundTintList = accentColorList
-            mediaViewHolder.gutsViewHolder.setAccentPrimaryColor(accentPrimary)
-            multiRippleController.updateColor(accentPrimary)
-            turbulenceNoiseController.updateNoiseColor(accentPrimary)
-            loadingEffect?.updateColor(accentPrimary)
-        }
+    private val buttonStrokeWidth =
+        context.resources.getDimensionPixelSize(
+            com.android.systemui.res.R.dimen.qs_media_button_stroke_width
+        )
 
-    val accentSecondary =
-        animatingColorTransitionFactory(
-            loadDefaultColor(R.attr.textColorPrimary),
-            ::accentSecondaryFromScheme
-        ) { accentSecondary ->
-            val colorList = ColorStateList.valueOf(accentSecondary)
+    // Defaults may be briefly visible before loading a new player's colors
+    private val backgroundDefault = context.getColor(R.color.system_on_surface_light)
+    private val primaryDefault = context.getColor(R.color.system_primary_dark)
+    private val onPrimaryDefault = context.getColor(R.color.system_on_primary_dark)
+    private val outlineDefault = context.getColor(R.color.system_outline_dark)
+
+    private val backgroundColor: AnimatingColorTransition by lazy {
+        animatingColorTransitionFactory(backgroundDefault, ::backgroundFromScheme) { color ->
+            mediaViewHolder.albumView.backgroundTintList = ColorStateList.valueOf(color)
+        }
+    }
+
+    private val primaryColor: AnimatingColorTransition by lazy {
+        animatingColorTransitionFactory(primaryDefault, ::primaryFromScheme) { primaryColor ->
+            val primaryColorList = ColorStateList.valueOf(primaryColor)
+            mediaViewHolder.actionPlayPause.backgroundTintList = primaryColorList
+            mediaViewHolder.seamlessButton.backgroundTintList = primaryColorList
             (mediaViewHolder.seamlessButton.background as? RippleDrawable)?.let {
-                it.setColor(colorList)
-                it.effectColor = colorList
+                it.setColor(primaryColorList)
+                it.effectColor = primaryColorList
+            }
+            mediaViewHolder.seekBar.progressBackgroundTintList = primaryColorList
+        }
+    }
+
+    private val onPrimaryColor: AnimatingColorTransition by lazy {
+        animatingColorTransitionFactory(onPrimaryDefault, ::onPrimaryFromScheme) { onPrimaryColor ->
+            val onPrimaryColorList = ColorStateList.valueOf(onPrimaryColor)
+            mediaViewHolder.actionPlayPause.imageTintList = onPrimaryColorList
+            mediaViewHolder.seamlessText.setTextColor(onPrimaryColor)
+            mediaViewHolder.seamlessIcon.imageTintList = onPrimaryColorList
+        }
+    }
+
+    private val outlineColor: AnimatingColorTransition by lazy {
+        animatingColorTransitionFactory(outlineDefault, ::outlineFromScheme) { outlineColor ->
+            if (enableSuggestedDeviceUi()) {
+                (mediaViewHolder.deviceSuggestionButton.background as? RippleDrawable)?.let {
+                    val shape = it.findDrawableByLayerId(R.id.background)
+                    if (shape is GradientDrawable) {
+                        shape.setStroke(buttonStrokeWidth, outlineColor)
+                    }
+                }
             }
         }
+    }
 
-    val colorSeamless =
-        animatingColorTransitionFactory(
-            loadDefaultColor(R.attr.textColorPrimary),
-            { colorScheme: ColorScheme ->
-                // A1-100 dark in dark theme, A1-200 in light theme
-                if (
-                    context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-                        UI_MODE_NIGHT_YES
-                )
-                    colorScheme.accent1.s100
-                else colorScheme.accent1.s200
-            },
-            { seamlessColor: Int ->
-                val accentColorList = ColorStateList.valueOf(seamlessColor)
-                mediaViewHolder.seamlessButton.backgroundTintList = accentColorList
-            }
-        )
+    fun getDeviceIconColor(): Int {
+        return onPrimaryColor.targetColor
+    }
 
-    val textPrimary =
-        animatingColorTransitionFactory(
-            loadDefaultColor(R.attr.textColorPrimary),
-            ::textPrimaryFromScheme
-        ) { textPrimary ->
-            mediaViewHolder.titleText.setTextColor(textPrimary)
-            val textColorList = ColorStateList.valueOf(textPrimary)
-            mediaViewHolder.seekBar.thumb.setTintList(textColorList)
-            mediaViewHolder.seekBar.progressTintList = textColorList
-            mediaViewHolder.scrubbingElapsedTimeView.setTextColor(textColorList)
-            mediaViewHolder.scrubbingTotalTimeView.setTextColor(textColorList)
-            for (button in mediaViewHolder.getTransparentActionButtons()) {
-                button.imageTintList = textColorList
-            }
-            mediaViewHolder.gutsViewHolder.setTextPrimaryColor(textPrimary)
-        }
+    fun getAppIconColor(): Int {
+        return primaryColor.targetColor
+    }
 
-    val textPrimaryInverse =
-        animatingColorTransitionFactory(
-            loadDefaultColor(R.attr.textColorPrimaryInverse),
-            ::textPrimaryInverseFromScheme
-        ) { textPrimaryInverse ->
-            mediaViewHolder.actionPlayPause.imageTintList =
-                ColorStateList.valueOf(textPrimaryInverse)
-        }
+    fun getSurfaceEffectColor(): Int {
+        return primaryColor.targetColor
+    }
 
-    val textSecondary =
-        animatingColorTransitionFactory(
-            loadDefaultColor(R.attr.textColorSecondary),
-            ::textSecondaryFromScheme
-        ) { textSecondary ->
-            mediaViewHolder.artistText.setTextColor(textSecondary)
-        }
+    fun getGutsTextColor(): Int {
+        return context.getColor(com.android.systemui.res.R.color.media_on_background)
+    }
 
-    val textTertiary =
-        animatingColorTransitionFactory(
-            loadDefaultColor(R.attr.textColorTertiary),
-            ::textTertiaryFromScheme
-        ) { textTertiary ->
-            mediaViewHolder.seekBar.progressBackgroundTintList =
-                ColorStateList.valueOf(textTertiary)
-        }
-
-    val colorTransitions =
-        arrayOf(
-            surfaceColor,
-            colorSeamless,
-            accentPrimary,
-            accentSecondary,
-            textPrimary,
-            textPrimaryInverse,
-            textSecondary,
-            textTertiary,
-        )
-
-    private fun loadDefaultColor(id: Int): Int {
-        return Utils.getColorAttr(context, id).defaultColor
+    private fun getColorTransitions(): Array<AnimatingColorTransition> {
+        return arrayOf(backgroundColor, primaryColor, onPrimaryColor, outlineColor)
     }
 
     fun updateColorScheme(colorScheme: ColorScheme?): Boolean {
         var anyChanged = false
-        colorTransitions.forEach {
+        getColorTransitions().forEach {
             val isChanged = it.updateColorScheme(colorScheme)
-
-            // Ignore changes to colorSeamless, since that is expected when toggling dark mode
-            if (it == colorSeamless) return@forEach
-
             anyChanged = isChanged || anyChanged
         }
-        colorScheme?.let { mediaViewHolder.gutsViewHolder.colorScheme = colorScheme }
+        getSurfaceEffectColor().let {
+            multiRippleController.updateColor(it)
+            turbulenceNoiseController.updateNoiseColor(it)
+            loadingEffect?.updateColor(it)
+        }
+        mediaViewHolder.gutsViewHolder.setTextColor(getGutsTextColor())
+        colorScheme?.let { mediaViewHolder.gutsViewHolder.setColors(it) }
         return anyChanged
     }
 }

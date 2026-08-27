@@ -48,6 +48,7 @@ interface LogMessage {
     var str3: String?
     var int1: Int
     var int2: Int
+    var int3: Int
     var long1: Long
     var long2: Long
     var double1: Double
@@ -55,6 +56,7 @@ interface LogMessage {
     var bool2: Boolean
     var bool3: Boolean
     var bool4: Boolean
+    var bool5: Boolean
 
     /** Function that dumps the [LogMessage] to the provided [writer]. */
     fun dump(writer: PrintWriter) {
@@ -87,7 +89,7 @@ private fun printLikeLogcat(
     formattedTimestamp: String,
     shortLogLevel: String,
     tag: String,
-    message: String
+    message: String,
 ) {
     pw.print(formattedTimestamp)
     pw.print(" ")

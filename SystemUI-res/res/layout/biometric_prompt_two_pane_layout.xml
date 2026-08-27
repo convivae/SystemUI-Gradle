@@ -12,10 +12,17 @@ android:layout_height="match_parent">
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:contentDescription="@string/cancel"
+        android:importantForAccessibility="no"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/auth_screen"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="button_bar, scrollView, indicator, close_button"/>
 
     <View
         android:id="@+id/panel"
@@ -24,11 +31,59 @@ android:layout_height="match_parent">
         android:layout_height="0dp"
         android:paddingHorizontal="16dp"
         android:paddingVertical="16dp"
-        android:visibility="visible"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintRight_toLeftOf="@+id/rightGuideline"
         app:layout_constraintLeft_toLeftOf="@+id/leftGuideline"
-        app:layout_constraintTop_toTopOf="@+id/topGuideline" />
+        app:layout_constraintTop_toTopOf="@+id/topBarrier" />
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/fallback_view"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:fillViewport="true"
+        app:layout_constrainedHeight="true"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintBottom_toTopOf="@id/bottomGuideline"
+        app:layout_constraintEnd_toEndOf="@id/panel"
+        app:layout_constraintStart_toStartOf="@id/panel"
+        app:layout_constraintTop_toTopOf="@+id/topGuideline"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/compose_credential_view"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:fillViewport="true"
+        app:layout_constrainedHeight="true"
+        app:layout_constrainedWidth="true"
+        app:layout_constraintBottom_toTopOf="@id/bottomGuideline"
+        app:layout_constraintEnd_toEndOf="@id/panel"
+        app:layout_constraintStart_toStartOf="@id/panel"
+        app:layout_constraintTop_toTopOf="@+id/topGuideline"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <FrameLayout
+        android:id="@+id/credential_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/panel"
+        app:layout_constraintBottom_toBottomOf="@id/panel"
+        app:layout_constraintStart_toStartOf="@id/panel"
+        app:layout_constraintEnd_toEndOf="@id/panel" />
+
+    <ViewStub
+        android:id="@+id/biometric_prompt_udfps_accessibility_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout="@layout/biometric_prompt_udfps_accessibility_overlay"
+        app:layout_constraintBottom_toBottomOf="@id/panel"
+        app:layout_constraintEnd_toEndOf="@id/panel"
+        app:layout_constraintStart_toStartOf="@id/panel"
+        app:layout_constraintTop_toTopOf="@id/panel" />
 
     <com.android.systemui.biometrics.BiometricPromptLottieViewWrapper
         android:id="@+id/biometric_icon"
@@ -89,6 +144,7 @@ android:layout_height="match_parent">
                 style="@style/TextAppearance.AuthCredential.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
                 android:gravity="@integer/biometric_dialog_text_gravity"
                 android:paddingHorizontal="0dp"
                 android:textAlignment="viewStart"
@@ -194,6 +250,16 @@ android:layout_height="match_parent">
         app:layout_constraintStart_toStartOf="@id/scrollView"
         app:layout_constraintTop_toBottomOf="@id/scrollView" />
 
+    <ImageButton
+        android:id="@+id/close_button"
+        style="@style/AuthCredentialCloseButton"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
+        android:src="@drawable/ic_close"
+        android:contentDescription="@string/cancel"
+        app:layout_constraintTop_toTopOf="@id/scrollView"
+        app:layout_constraintEnd_toEndOf="@id/scrollView" />
+
     <!-- Guidelines for setting panel border -->
     <androidx.constraintlayout.widget.Barrier
         android:id="@+id/topBarrier"
@@ -201,7 +267,7 @@ android:layout_height="match_parent">
         android:layout_height="wrap_content"
         app:barrierAllowsGoneWidgets="false"
         app:barrierDirection="top"
-        app:constraint_referenced_ids="scrollView" />
+        app:constraint_referenced_ids="scrollView, fallback_view, compose_credential_view" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/leftGuideline"

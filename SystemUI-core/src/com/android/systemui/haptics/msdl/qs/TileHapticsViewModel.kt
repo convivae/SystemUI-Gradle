@@ -17,29 +17,24 @@
 package com.android.systemui.haptics.msdl.qs
 
 import android.service.quicksettings.Tile
-import com.android.systemui.Flags
 import com.android.systemui.animation.Expandable
 import com.android.systemui.lifecycle.ExclusiveActivatable
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.util.kotlin.mapDirect
 import com.android.systemui.util.kotlin.pairwise
 import com.google.android.msdl.data.model.MSDLToken
 import com.google.android.msdl.domain.MSDLPlayer
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.transform
 
 /** A view-model to trigger haptic feedback on Quick Settings tiles */
-@OptIn(ExperimentalCoroutinesApi::class)
 class TileHapticsViewModel
 @AssistedInject
 constructor(
@@ -61,7 +56,7 @@ constructor(
 
     private val toggleHapticsState: Flow<TileHapticsState> =
         tileViewModel.state
-            .mapLatest { it.state }
+            .mapDirect { it.state }
             .pairwise()
             .transform { (previous, current) ->
                 val toggleState =
@@ -81,8 +76,7 @@ constructor(
         combine(tileInteractionState, tileAnimationState) { interactionState, animationState ->
                 when {
                     interactionState == TileInteractionState.LONG_CLICKED &&
-                        animationState == TileAnimationState.ACTIVITY_LAUNCH ->
-                        TileHapticsState.LONG_PRESS
+                        animationState != TileAnimationState.IDLE -> TileHapticsState.LONG_PRESS
                     else -> TileHapticsState.NO_HAPTICS
                 }
             }
@@ -91,25 +85,24 @@ constructor(
     private val hapticsState: Flow<TileHapticsState> =
         merge(toggleHapticsState, interactionHapticsState)
 
-    override suspend fun onActivated(): Nothing {
-        try {
-            hapticsState.collect { hapticsState ->
-                val tokenToPlay: MSDLToken? =
-                    when (hapticsState) {
-                        TileHapticsState.TOGGLE_ON -> MSDLToken.SWITCH_ON
-                        TileHapticsState.TOGGLE_OFF -> MSDLToken.SWITCH_OFF
-                        TileHapticsState.LONG_PRESS -> MSDLToken.LONG_PRESS
-                        TileHapticsState.NO_HAPTICS -> null
-                    }
-                tokenToPlay?.let {
-                    msdlPlayer.playToken(it)
-                    resetStates()
+    override suspend fun onActivated() {
+        hapticsState.collect { hapticsState ->
+            val tokenToPlay: MSDLToken? =
+                when (hapticsState) {
+                    TileHapticsState.TOGGLE_ON -> MSDLToken.SWITCH_ON
+                    TileHapticsState.TOGGLE_OFF -> MSDLToken.SWITCH_OFF
+                    TileHapticsState.LONG_PRESS -> MSDLToken.LONG_PRESS
+                    TileHapticsState.NO_HAPTICS -> null
                 }
+            tokenToPlay?.let {
+                msdlPlayer.playToken(it)
+                resetStates()
             }
-            awaitCancellation()
-        } finally {
-            resetStates()
         }
+    }
+
+    override suspend fun onDeactivated() {
+        resetStates()
     }
 
     private fun resetStates() {
@@ -171,15 +164,4 @@ constructor(
     interface Factory {
         fun create(tileViewModel: TileViewModel): TileHapticsViewModel
     }
-}
-
-class TileHapticsViewModelFactoryProvider
-@Inject
-constructor(private val tileHapticsViewModelFactory: TileHapticsViewModel.Factory) {
-    fun getHapticsViewModelFactory(): TileHapticsViewModel.Factory? =
-        if (Flags.msdlFeedback()) {
-            tileHapticsViewModelFactory
-        } else {
-            null
-        }
 }

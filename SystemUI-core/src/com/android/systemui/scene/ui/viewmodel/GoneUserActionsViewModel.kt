@@ -16,9 +16,12 @@
 
 package com.android.systemui.scene.ui.viewmodel
 
+import android.content.res.Resources
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
-import com.android.systemui.shade.domain.interactor.ShadeInteractor
+import com.android.systemui.res.R
+import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shade.shared.model.ShadeMode
 import com.android.systemui.shade.ui.viewmodel.dualShadeActions
 import com.android.systemui.shade.ui.viewmodel.singleShadeActions
@@ -28,22 +31,22 @@ import dagger.assisted.AssistedInject
 
 class GoneUserActionsViewModel
 @AssistedInject
-constructor(private val shadeInteractor: ShadeInteractor) : UserActionsViewModel() {
+constructor(
+    private val shadeModeInteractor: ShadeModeInteractor,
+    @ShadeDisplayAware private val resources: Resources,
+) : UserActionsViewModel() {
 
     override suspend fun hydrateActions(setActions: (Map<UserAction, UserActionResult>) -> Unit) {
-        shadeInteractor.shadeMode.collect { shadeMode ->
+        val twoFingerSwipeEnabled =
+            resources.getBoolean(R.bool.config_enableTwoFingerSwipeDownShade)
+        shadeModeInteractor.shadeMode.collect { shadeMode ->
             setActions(
-                buildList {
-                        addAll(
-                            when (shadeMode) {
-                                ShadeMode.Single ->
-                                    singleShadeActions(requireTwoPointersForTopEdgeForQs = true)
-                                ShadeMode.Split -> splitShadeActions()
-                                ShadeMode.Dual -> dualShadeActions()
-                            }
-                        )
-                    }
-                    .associate { it }
+                when (shadeMode) {
+                    ShadeMode.Single -> singleShadeActions(requireTwoPointersForTopEdgeForQs = true)
+                    ShadeMode.Split -> splitShadeActions()
+                    ShadeMode.Dual ->
+                        dualShadeActions(twoFingerSwipeEnabled = twoFingerSwipeEnabled)
+                }.associate { it }
             )
         }
     }

@@ -34,14 +34,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.compose.ui.platform.ComposeView;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.graphics.ColorUtils;
 import com.android.internal.util.ContrastColorUtil;
 import com.android.internal.widget.CachingIconView;
-import com.android.settingslib.Utils;
 import com.android.systemui.statusbar.CrossFadeHelper;
 import com.android.systemui.statusbar.TransformableView;
-import com.android.systemui.statusbar.notification.FeedbackIcon;
 import com.android.systemui.statusbar.notification.NotificationFadeAware;
 import com.android.systemui.statusbar.notification.TransformState;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
@@ -78,9 +78,11 @@ public abstract class NotificationViewWrapper implements TransformableView {
                 return new NotificationCompactMessagingTemplateViewWrapper(ctx, v, row);
             } else if ("progress".equals(v.getTag())) {
                 return new NotificationProgressTemplateViewWrapper(ctx, v, row);
+            } else if ("metric".equals(v.getTag())) {
+                return new NotificationMetricTemplateViewWrapper(ctx, v, row);
             }
 
-            if (row.getEntry().getSbn().getNotification().isStyle(
+            if (row.getEntryAdapter().getSbn().getNotification().isStyle(
                     Notification.DecoratedCustomViewStyle.class)) {
                 return new NotificationDecoratedCustomViewWrapper(ctx, v, row);
             }
@@ -90,6 +92,8 @@ public abstract class NotificationViewWrapper implements TransformableView {
             return new NotificationTemplateViewWrapper(ctx, v, row);
         } else if (v instanceof NotificationHeaderView) {
             return new NotificationHeaderViewWrapper(ctx, v, row);
+        } else if (v instanceof ComposeView && row.isBundle()) {
+            return new BundleHeaderViewWrapper(ctx, v, row);
         } else {
             return new NotificationCustomViewWrapper(ctx, v, row);
         }
@@ -106,10 +110,6 @@ public abstract class NotificationViewWrapper implements TransformableView {
      * @param row the row this wrapper is attached to
      */
     public void onContentUpdated(ExpandableNotificationRow row) {
-    }
-
-    /** Shows the given feedback icon, or hides the icon if null. */
-    public void setFeedbackIcon(@Nullable FeedbackIcon icon) {
     }
 
     public void onReinflated() {
@@ -136,7 +136,8 @@ public abstract class NotificationViewWrapper implements TransformableView {
         }
 
         // Apps targeting Q should fix their dark mode bugs.
-        if (mRow.getEntry().targetSdk >= Build.VERSION_CODES.Q) {
+        int targetSdk = mRow.getEntryAdapter().getTargetSdk();
+        if (targetSdk >= Build.VERSION_CODES.Q) {
             return false;
         }
 
@@ -344,9 +345,8 @@ public abstract class NotificationViewWrapper implements TransformableView {
         if (customBackgroundColor != 0) {
             return customBackgroundColor;
         }
-        return Utils.getColorAttr(mView.getContext(),
-                        com.android.internal.R.attr.materialColorSurfaceContainerHigh)
-                .getDefaultColor();
+        return mView.getContext().getColor(
+                com.android.internal.R.color.materialColorSurfaceContainerHigh);
     }
 
     public void setLegacy(boolean legacy) {

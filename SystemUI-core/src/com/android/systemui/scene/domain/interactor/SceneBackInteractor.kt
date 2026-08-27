@@ -18,13 +18,19 @@ package com.android.systemui.scene.domain.interactor
 
 import com.android.compose.animation.scene.SceneKey
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.log.table.Diffable
+import com.android.systemui.log.table.TableLogBuffer
+import com.android.systemui.log.table.TableRowLogger
 import com.android.systemui.scene.data.model.SceneStack
+import com.android.systemui.scene.data.model.asIterable
 import com.android.systemui.scene.data.model.peek
 import com.android.systemui.scene.data.model.pop
 import com.android.systemui.scene.data.model.push
 import com.android.systemui.scene.data.model.sceneStackOf
+import com.android.systemui.scene.domain.SceneFrameworkTableLog
 import com.android.systemui.scene.shared.logger.SceneLogger
 import com.android.systemui.scene.shared.model.SceneContainerConfig
+import com.android.systemui.scene.shared.model.Scenes
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +45,7 @@ class SceneBackInteractor
 constructor(
     private val logger: SceneLogger,
     private val sceneContainerConfig: SceneContainerConfig,
+    @SceneFrameworkTableLog private val tableLogBuffer: TableLogBuffer,
 ) {
     private val _backStack = MutableStateFlow(sceneStackOf())
     val backStack: StateFlow<SceneStack> = _backStack.asStateFlow()
@@ -58,6 +65,7 @@ constructor(
     fun onSceneChange(from: SceneKey, to: SceneKey) {
         check(from != to) { "from == to, from=${from.debugName}, to=${to.debugName}" }
 
+        val prevVal = backStack.value
         _backStack.update { stack ->
             when (stackOperation(from, to, stack)) {
                 null -> stack
@@ -67,13 +75,83 @@ constructor(
                     checkNotNull(stack.pop()) { "Cannot pop ${from.debugName} when stack is empty" }
             }
         }
-        logger.logSceneBackStack(backStack.value)
+        logger.logSceneBackStack(backStack.value, reason = "scene change")
+        tableLogBuffer.logDiffs(
+            prevVal = DiffableSceneStack(prevVal),
+            newVal = DiffableSceneStack(backStack.value),
+        )
     }
 
     /** Applies the given [transform] to the back stack. */
-    fun updateBackStack(transform: (SceneStack) -> SceneStack) {
+    fun updateBackStack(reason: String, transform: (SceneStack) -> SceneStack) {
+        val prevVal = backStack.value
         _backStack.update { stack -> transform(stack) }
-        logger.logSceneBackStack(backStack.value)
+        logger.logSceneBackStack(backStack.value, reason)
+        tableLogBuffer.logDiffs(
+            prevVal = DiffableSceneStack(prevVal),
+            newVal = DiffableSceneStack(backStack.value),
+        )
+    }
+
+    /**
+     * If the [Scenes.Lockscreen] is on the bottom of the navigation backstack, replaces it with
+     * [Scenes.Gone].
+     */
+    fun replaceLockscreenSceneOnBackStack(reason: String) {
+        replaceBottomScene(from = Scenes.Lockscreen, to = Scenes.Gone, reason)
+    }
+
+    /**
+     * If the [Scenes.Gone] is on the bottom of the navigation backstack, replaces it with
+     * [Scenes.Lockscreen].
+     */
+    fun replaceGoneSceneOnBackStack(reason: String) {
+        replaceBottomScene(from = Scenes.Gone, to = Scenes.Lockscreen, reason)
+    }
+
+    /**
+     * Remove Occluded from the backstack, usually due to the occluded app being stopped underneath
+     * the existing scene (like shade).
+     */
+    fun removeOccludedSceneOnBackStack(reason: String) {
+        updateBackStackList(reason) { list -> list.removeAll { it == Scenes.Occluded } }
+    }
+
+    /** Generic helper for simple 1:1 replacements at the bottom (end) of the stack. */
+    private fun replaceBottomScene(from: SceneKey, to: SceneKey, reason: String) {
+        updateBackStackList(reason) { list ->
+            if (list.lastOrNull() == from) {
+                list[list.lastIndex] = to
+            }
+        }
+    }
+
+    /**
+     * Adds the [Scenes.Lockscreen] to the bottom of the navigation backstack.
+     *
+     * If the backstack is empty, the lockscreen is pushed onto the stack. Otherwise, if the last
+     * item on the stack is [Scenes.Gone] it is replaced with the lockscreen.
+     */
+    fun addLockscreenToBackStack(reason: String) {
+        updateBackStackList(reason) { list ->
+            if (list.isEmpty()) {
+                list.add(Scenes.Lockscreen)
+            } else if (list.lastOrNull() == Scenes.Gone) {
+                list[list.lastIndex] = Scenes.Lockscreen
+            }
+        }
+    }
+
+    /** Utility to modify the back stack as a mutable list. */
+    private inline fun updateBackStackList(
+        reason: String,
+        crossinline mutate: (MutableList<SceneKey>) -> Unit,
+    ) {
+        updateBackStack(reason) { stack ->
+            val list = stack.asIterable().toMutableList()
+            mutate(list)
+            sceneStackOf(*list.toTypedArray())
+        }
     }
 
     private fun stackOperation(from: SceneKey, to: SceneKey, stack: SceneStack): StackOperation? {
@@ -106,4 +184,15 @@ constructor(
     private data object Push : StackOperation
 
     private data object Pop : StackOperation
+
+    private class DiffableSceneStack(private val sceneStack: SceneStack) :
+        Diffable<DiffableSceneStack> {
+
+        override fun logDiffs(prevVal: DiffableSceneStack, row: TableRowLogger) {
+            row.logChange(
+                columnName = "backStack",
+                value = sceneStack.asIterable().joinToString { it.debugName },
+            )
+        }
+    }
 }

@@ -21,26 +21,37 @@ import android.content.Context
 import android.content.pm.PackageManager.NameNotFoundException
 import android.util.Log
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.VerticalSplit
 import com.android.compose.ui.graphics.painter.DrawablePainter
-import com.android.systemui.Flags.keyboardShortcutHelperShortcutCustomizer
+import com.android.systemui.Flags.extendedAppsShortcutCategory
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.DisplayAware
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.PerDisplaySingleton
 import com.android.systemui.keyboard.shortcut.domain.interactor.ShortcutHelperCategoriesInteractor
+import com.android.systemui.keyboard.shortcut.domain.interactor.ShortcutHelperCustomizationModeInteractor
 import com.android.systemui.keyboard.shortcut.domain.interactor.ShortcutHelperStateInteractor
 import com.android.systemui.keyboard.shortcut.shared.model.Shortcut
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategory
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType
+import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.Accessibility
+import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.AppCategories
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.CurrentApp
+import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.InputMethodEditor
+import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.MultiTasking
+import com.android.systemui.keyboard.shortcut.shared.model.ShortcutCategoryType.System
+import com.android.systemui.keyboard.shortcut.shared.model.ShortcutHelperState
 import com.android.systemui.keyboard.shortcut.shared.model.ShortcutSubCategory
 import com.android.systemui.keyboard.shortcut.ui.model.IconSource
 import com.android.systemui.keyboard.shortcut.ui.model.ShortcutCategoryUi
 import com.android.systemui.keyboard.shortcut.ui.model.ShortcutsUiState
 import com.android.systemui.res.R
 import com.android.systemui.settings.UserTracker
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,34 +59,43 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
+@PerDisplaySingleton
 class ShortcutHelperViewModel
 @Inject
 constructor(
-    private val context: Context,
+    @DisplayAware private val context: Context,
     private val roleManager: RoleManager,
     private val userTracker: UserTracker,
-    @Background private val backgroundScope: CoroutineScope,
+    @DisplayAware private val displayScope: CoroutineScope,
     @Background private val backgroundDispatcher: CoroutineDispatcher,
     private val stateInteractor: ShortcutHelperStateInteractor,
     categoriesInteractor: ShortcutHelperCategoriesInteractor,
+    private val customizationModeInteractor: ShortcutHelperCustomizationModeInteractor,
+    @DisplayAware private val displayId: Int,
 ) {
 
     private val searchQuery = MutableStateFlow("")
     private val userContext = userTracker.createCurrentUserContext(userTracker.userContext)
 
+    // TODO: b/429374961 - this flow should be converted to Hydrated States per SysUI best practices
     val shouldShow =
-        categoriesInteractor.shortcutCategories
-            .map { it.isNotEmpty() }
+        combine(categoriesInteractor.shortcutCategories, stateInteractor.state) { categories, state
+                ->
+                categories.isNotEmpty() &&
+                    (state as? ShortcutHelperState.Active)?.displayId == displayId
+            }
             .distinctUntilChanged()
             .flowOn(backgroundDispatcher)
 
     val shortcutsUiState =
-        combine(searchQuery, categoriesInteractor.shortcutCategories) { query, categories ->
+        combine(
+                searchQuery,
+                categoriesInteractor.shortcutCategories,
+                customizationModeInteractor.isCustomizationModeEnabled,
+            ) { query, categories, isCustomizationModeEnabled ->
                 if (categories.isEmpty()) {
                     ShortcutsUiState.Inactive
                 } else {
@@ -85,20 +105,52 @@ constructor(
                     val filteredCategories =
                         filterCategoriesBySearchQuery(query, categoriesWithLauncherExcluded)
                     val shortcutCategoriesUi = convertCategoriesModelToUiModel(filteredCategories)
+
+                    val allowExtendedAppShortcutsCustomization =
+                        !isExtendedAppsShortcutCustomizationLimitReached(
+                            shortcutCategories = categoriesWithLauncherExcluded
+                        )
+
                     ShortcutsUiState.Active(
                         searchQuery = query,
                         shortcutCategories = shortcutCategoriesUi,
                         defaultSelectedCategory = getDefaultSelectedCategory(filteredCategories),
-                        isShortcutCustomizerFlagEnabled = keyboardShortcutHelperShortcutCustomizer(),
-                        shouldShowResetButton = shouldShowResetButton(shortcutCategoriesUi)
+                        isExtendedAppCategoryFlagEnabled = extendedAppsShortcutCategory(),
+                        shouldShowResetButton = shouldShowResetButton(shortcutCategoriesUi),
+                        isCustomizationModeEnabled = isCustomizationModeEnabled,
+                        allowExtendedAppShortcutsCustomization,
+                        shouldShowCustomAppsShortcutLimitHeader =
+                            isCustomizationModeEnabled &&
+                                extendedAppsShortcutCategory() &&
+                                !allowExtendedAppShortcutsCustomization,
                     )
                 }
             }
             .stateIn(
-                scope = backgroundScope,
+                scope = displayScope,
                 started = SharingStarted.Lazily,
                 initialValue = ShortcutsUiState.Inactive,
             )
+
+    private fun isExtendedAppsShortcutCustomizationLimitReached(
+        shortcutCategories: List<ShortcutCategory>
+    ): Boolean {
+        val appShortcutCategory = shortcutCategories.firstOrNull { it.type == AppCategories }
+        if (appShortcutCategory == null) {
+            return false
+        }
+
+        return getExtendedAppsShortcutCustomizationCount(appShortcutCategory) >=
+            EXTENDED_APPS_SHORTCUT_CUSTOMIZATION_LIMIT
+    }
+
+    private fun getExtendedAppsShortcutCustomizationCount(
+        appsShortcutCategory: ShortcutCategory
+    ): Int {
+        return appsShortcutCategory.subCategories
+            .flatMap { it.shortcuts }
+            .count { !it.containsDefaultShortcutCommands && it.containsCustomShortcutCommands }
+    }
 
     private fun shouldShowResetButton(categoriesUi: List<ShortcutCategoryUi>): Boolean {
         return categoriesUi.any { it.containsCustomShortcuts }
@@ -118,18 +170,16 @@ constructor(
 
     private fun getShortcutCategoryIcon(type: ShortcutCategoryType): IconSource {
         return when (type) {
-            ShortcutCategoryType.System -> IconSource(imageVector = Icons.Default.Tv)
-            ShortcutCategoryType.MultiTasking ->
-                IconSource(imageVector = Icons.Default.VerticalSplit)
-            ShortcutCategoryType.InputMethodEditor ->
-                IconSource(imageVector = Icons.Default.Keyboard)
-            ShortcutCategoryType.AppCategories -> IconSource(imageVector = Icons.Default.Apps)
+            System -> IconSource(imageVector = Icons.Default.Tv)
+            MultiTasking -> IconSource(imageVector = Icons.Default.VerticalSplit)
+            InputMethodEditor -> IconSource(imageVector = Icons.Default.Keyboard)
+            AppCategories -> IconSource(imageVector = Icons.Default.Apps)
             is CurrentApp -> {
                 try {
                     val iconDrawable =
                         userContext.packageManager.getApplicationIcon(type.packageName)
                     IconSource(painter = DrawablePainter(drawable = iconDrawable))
-                } catch (e: NameNotFoundException) {
+                } catch (_: NameNotFoundException) {
                     Log.w(
                         "ShortcutHelperViewModel",
                         "Package not found when retrieving icon for ${type.packageName}",
@@ -137,20 +187,19 @@ constructor(
                     IconSource(imageVector = Icons.Default.Android)
                 }
             }
+
+            Accessibility -> IconSource(imageVector = Icons.Default.AccessibilityNew)
         }
     }
 
     private fun getShortcutCategoryLabel(type: ShortcutCategoryType): String =
         when (type) {
-            ShortcutCategoryType.System ->
-                context.getString(R.string.shortcut_helper_category_system)
-            ShortcutCategoryType.MultiTasking ->
-                context.getString(R.string.shortcut_helper_category_multitasking)
-            ShortcutCategoryType.InputMethodEditor ->
-                context.getString(R.string.shortcut_helper_category_input)
-            ShortcutCategoryType.AppCategories ->
-                context.getString(R.string.shortcut_helper_category_app_shortcuts)
+            System -> context.getString(R.string.shortcut_helper_category_system)
+            MultiTasking -> context.getString(R.string.shortcut_helper_category_multitasking)
+            InputMethodEditor -> context.getString(R.string.shortcut_helper_category_input)
+            AppCategories -> context.getString(R.string.shortcut_helper_category_app_shortcuts)
             is CurrentApp -> getApplicationLabelForCurrentApp(type)
+            Accessibility -> context.getString(R.string.shortcutHelper_category_accessibility)
         }
 
     private fun getApplicationLabelForCurrentApp(type: CurrentApp): String {
@@ -234,6 +283,8 @@ constructor(
 
     fun onViewClosed() {
         stateInteractor.onViewClosed()
+        resetSearchQuery()
+        resetCustomizationMode()
     }
 
     fun onViewOpened() {
@@ -242,5 +293,21 @@ constructor(
 
     fun onSearchQueryChanged(query: String) {
         searchQuery.value = query
+    }
+
+    fun toggleCustomizationMode(isCustomizing: Boolean) {
+        customizationModeInteractor.toggleCustomizationMode(isCustomizing)
+    }
+
+    private fun resetSearchQuery() {
+        searchQuery.value = ""
+    }
+
+    private fun resetCustomizationMode() {
+        customizationModeInteractor.toggleCustomizationMode(false)
+    }
+
+    companion object {
+        const val EXTENDED_APPS_SHORTCUT_CUSTOMIZATION_LIMIT = 10
     }
 }

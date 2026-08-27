@@ -34,10 +34,14 @@ import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.statusbar.IStatusBarService;
+import com.android.systemui.notifications.content.icon.AppIconProvider;
+import com.android.systemui.statusbar.notification.CustomViewMemorySizeExceededException;
+import com.android.systemui.statusbar.notification.collection.BundleEntry;
 import com.android.systemui.statusbar.notification.collection.GroupEntry;
 import com.android.systemui.statusbar.notification.collection.ListEntry;
 import com.android.systemui.statusbar.notification.collection.NotifPipeline;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.collection.PipelineEntry;
 import com.android.systemui.statusbar.notification.collection.ShadeListBuilder;
 import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope;
 import com.android.systemui.statusbar.notification.collection.inflation.BindEventManagerImpl;
@@ -50,10 +54,7 @@ import com.android.systemui.statusbar.notification.collection.render.NotifViewBa
 import com.android.systemui.statusbar.notification.collection.render.NotifViewController;
 import com.android.systemui.statusbar.notification.row.NotifInflationErrorManager;
 import com.android.systemui.statusbar.notification.row.NotifInflationErrorManager.NotifInflationErrorListener;
-import com.android.systemui.statusbar.notification.row.icon.AppIconProvider;
 import com.android.systemui.statusbar.notification.row.icon.NotificationIconStyleProvider;
-import com.android.systemui.statusbar.notification.row.shared.AsyncGroupHeaderViewInflation;
-import com.android.systemui.statusbar.notification.row.shared.AsyncHybridViewInflation;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -171,9 +172,7 @@ public class PreparationCoordinator implements Coordinator {
                 () -> mNotifInflatingFilter.invalidateList("adjustmentProviderChanged"));
 
         pipeline.addCollectionListener(mNotifCollectionListener);
-        if (android.app.Flags.notificationsRedesignAppIcons()) {
-            pipeline.addOnBeforeTransformGroupsListener(this::purgeCaches);
-        }
+        pipeline.addOnBeforeTransformGroupsListener(this::purgeCaches);
         // Inflate after grouping/sorting since that affects what views to inflate.
         pipeline.addOnBeforeFinalizeFilterListener(this::inflateAllRequiredViews);
         pipeline.addFinalizeFilter(mNotifInflationErrorFilter);
@@ -232,14 +231,15 @@ public class PreparationCoordinator implements Coordinator {
          */
         @Override
         public boolean shouldFilterOut(NotificationEntry entry, long now) {
-            final GroupEntry parent = requireNonNull(entry.getParent());
-            Boolean isMemberOfDelayedGroup = mIsDelayedGroupCache.get(parent);
-            if (isMemberOfDelayedGroup == null) {
+            final PipelineEntry pipelineEntryParent = requireNonNull(entry.getParent());
+            Boolean isMemberOfDelayedGroup = mIsDelayedGroupCache.get(pipelineEntryParent);
+            if (isMemberOfDelayedGroup == null && pipelineEntryParent instanceof GroupEntry) {
+                GroupEntry parent = (GroupEntry) pipelineEntryParent;
                 isMemberOfDelayedGroup = shouldWaitForGroupToInflate(parent, now);
                 mIsDelayedGroupCache.put(parent, isMemberOfDelayedGroup);
             }
-
-            return !isInflated(entry) || isMemberOfDelayedGroup;
+            // TODO(b/395698521): Handle BundleEntry
+            return !isInflated(entry) || (isMemberOfDelayedGroup != null && isMemberOfDelayedGroup);
         }
 
         @Override
@@ -250,63 +250,113 @@ public class PreparationCoordinator implements Coordinator {
 
     private final NotifInflationErrorListener mInflationErrorListener =
             new NotifInflationErrorListener() {
-        @Override
-        public void onNotifInflationError(NotificationEntry entry, Exception e) {
-            mViewBarn.removeViewForEntry(entry);
-            mInflationStates.put(entry, STATE_ERROR);
-            try {
-                final StatusBarNotification sbn = entry.getSbn();
-                // report notification inflation errors back up
-                // to notification delegates
-                mStatusBarService.onNotificationError(
-                        sbn.getPackageName(),
-                        sbn.getTag(),
-                        sbn.getId(),
-                        sbn.getUid(),
-                        sbn.getInitialPid(),
-                        e.getMessage(),
-                        sbn.getUser().getIdentifier());
-            } catch (RemoteException ex) {
-                // System server is dead, nothing to do about that
-            }
-            mNotifInflationErrorFilter.invalidateList("onNotifInflationError for " + logKey(entry));
-        }
+                @Override
+                public void onNotifInflationError(NotificationEntry entry, Exception e) {
+                    // If the notification views exceeded their memory restriction, we strip
+                    // it down to the basic template and reinflate it in that basic form.
+                    if (e instanceof CustomViewMemorySizeExceededException
+                            // Prevent endless loop if no custom views are present.
+                            && entry.containsCustomViews()) {
+                        // "lighten" strips out all notification custom views, large bitmaps and
+                        // other extras.
+                        entry.getSbn().getNotification().lightenPayload();
+                        // Clear the error state and trigger reinflation of changed notification.
+                        mNotifErrorManager.clearInflationError(entry);
+                        mNotifCollectionListener.onEntryUpdated(entry);
+                        mNotifInflationErrorFilter.invalidateList(
+                                "reinflate for MemorySizeExceeded for " + logKey(entry));
+                        return;
+                    }
 
-        @Override
-        public void onNotifInflationErrorCleared(NotificationEntry entry) {
-            mNotifInflationErrorFilter.invalidateList(
-                    "onNotifInflationErrorCleared for " + logKey(entry));
-        }
-    };
+                    mViewBarn.removeViewForEntry(entry);
+                    mInflationStates.put(entry, STATE_ERROR);
+                    try {
+                        final StatusBarNotification sbn = entry.getSbn();
+                        // report notification inflation errors back up
+                        // to notification delegates
+                        mStatusBarService.onNotificationError(
+                                sbn.getPackageName(),
+                                sbn.getTag(),
+                                sbn.getId(),
+                                sbn.getUid(),
+                                sbn.getInitialPid(),
+                                e.getMessage(),
+                                sbn.getUser().getIdentifier());
+                    } catch (RemoteException ex) {
+                        // System server is dead, nothing to do about that
+                    }
+                    mNotifInflationErrorFilter.invalidateList(
+                            "onNotifInflationError for " + logKey(entry));
+                }
 
-    private void purgeCaches(Collection<ListEntry> entries) {
+                @Override
+                public void onNotifInflationErrorCleared(NotificationEntry entry) {
+                    mNotifInflationErrorFilter.invalidateList(
+                            "onNotifInflationErrorCleared for " + logKey(entry));
+                }
+            };
+
+    private void purgeCaches(Collection<PipelineEntry> entries) {
         Set<String> wantedPackages = getPackages(entries);
         mAppIconProvider.purgeCache(wantedPackages);
         mNotificationIconStyleProvider.purgeCache(wantedPackages);
     }
 
     /**
-     * Get all app packages present in {@param entries}.
+     * Get all app packages present in {@code entries}.
      */
-    private static @NonNull Set<String> getPackages(Collection<ListEntry> entries) {
+    private static @NonNull Set<String> getPackages(Collection<PipelineEntry> entries) {
         Set<String> packages = new HashSet<>();
-        for (ListEntry entry : entries) {
-            NotificationEntry notificationEntry = entry.getRepresentativeEntry();
-            if (notificationEntry == null) {
-                Log.wtf(TAG, "notification entry " + entry.getKey()
-                        + " has no representative entry");
-                continue;
+        for (PipelineEntry entry : entries) {
+            final ListEntry listEntry = entry.asListEntry();
+            if (listEntry == null) {
+                if (entry instanceof BundleEntry bundleEntry) {
+                    for (ListEntry childEntry : bundleEntry.getChildren()) {
+                        final String pkg = getPackage(childEntry);
+                        if (pkg != null) {
+                            packages.add(pkg);
+                        }
+                    }
+                }
+            } else {
+                final String pkg = getPackage(listEntry);
+                if (pkg != null) {
+                    packages.add(pkg);
+                }
             }
-            packages.add(notificationEntry.getSbn().getPackageName());
         }
         return packages;
     }
 
-    private void inflateAllRequiredViews(List<ListEntry> entries) {
+    private static @Nullable String getPackage(ListEntry listEntry) {
+        final NotificationEntry notificationEntry = listEntry.getRepresentativeEntry();
+        if (notificationEntry == null) {
+            Log.wtf(TAG, "notification entry " + listEntry.getKey()
+                    + " has no representative entry");
+            return null;
+        }
+        return notificationEntry.getSbn().getPackageName();
+    }
+
+    private void inflateAllRequiredViews(List<PipelineEntry> entries) {
         for (int i = 0, size = entries.size(); i < size; i++) {
-            ListEntry entry = entries.get(i);
-            if (entry instanceof GroupEntry) {
-                GroupEntry groupEntry = (GroupEntry) entry;
+            PipelineEntry entry = entries.get(i);
+            if (entry instanceof BundleEntry bundleEntry) {
+                for (ListEntry listEntry : bundleEntry.getChildren()) {
+                    BundleCoordinator.debugBundleLog(TAG, () -> " inflate bundle with "
+                            + bundleEntry.getChildren().size() + " children");
+                    if (listEntry instanceof GroupEntry groupEntry) {
+                        BundleCoordinator.debugBundleLog(TAG,
+                                () -> "inflate group: " + groupEntry.getKey());
+                        inflateRequiredGroupViews(groupEntry);
+                    } else {
+                        NotificationEntry notifEntry = (NotificationEntry) listEntry;
+                        BundleCoordinator.debugBundleLog(TAG,
+                                () -> "inflate notifEntry: " + notifEntry.getKey());
+                        inflateRequiredNotifViews(notifEntry);
+                    }
+                }
+            } else if (entry instanceof GroupEntry groupEntry) {
                 inflateRequiredGroupViews(groupEntry);
             } else {
                 NotificationEntry notifEntry = (NotificationEntry) entry;
@@ -317,14 +367,14 @@ public class PreparationCoordinator implements Coordinator {
 
     private void inflateRequiredGroupViews(GroupEntry groupEntry) {
         NotificationEntry summary = groupEntry.getSummary();
-        if (summary != null && AsyncGroupHeaderViewInflation.isEnabled()) {
+        if (summary != null) {
             summary.markAsGroupSummary();
         }
         List<NotificationEntry> children = groupEntry.getChildren();
         inflateRequiredNotifViews(summary);
         for (int j = 0; j < children.size(); j++) {
             NotificationEntry child = children.get(j);
-            if (AsyncHybridViewInflation.isEnabled()) child.markAsGroupChild();
+            child.markAsGroupChild();
             boolean childShouldBeBound = j < mChildBindCutoff;
             if (childShouldBeBound) {
                 inflateRequiredNotifViews(child);
@@ -416,7 +466,7 @@ public class PreparationCoordinator implements Coordinator {
                 /* showSnooze = */ adjustment.isSnoozeEnabled(),
                 /* isChildInGroup = */ adjustment.isChildInGroup(),
                 /* isGroupSummary = */ adjustment.isGroupSummary(),
-                /* needsRedaction = */ adjustment.getNeedsRedaction()
+                /* needsRedaction = */ adjustment.getRedactionType()
         );
     }
 

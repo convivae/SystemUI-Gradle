@@ -16,8 +16,9 @@
 
 package com.android.systemui.shade
 
+import android.view.MotionEvent
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.qs.ui.adapter.QSSceneAdapter
+import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import javax.inject.Inject
 
@@ -26,22 +27,27 @@ class QuickSettingsControllerSceneImpl
 @Inject
 constructor(
     private val shadeInteractor: ShadeInteractor,
-    private val qsSceneAdapter: QSSceneAdapter,
+    private val editModeViewModel: EditModeViewModel,
 ) : QuickSettingsController {
 
     override val expanded: Boolean
         get() = shadeInteractor.isQsExpanded.value
 
     override val isCustomizing: Boolean
-        get() = qsSceneAdapter.isCustomizerShowing.value
+        get() = editModeViewModel.isEditing.value
 
     @Deprecated("specific to legacy touch handling")
-    override fun shouldQuickSettingsIntercept(x: Float, y: Float, yDiff: Float): Boolean {
+    override fun shouldQuickSettingsIntercept(
+        x: Float,
+        y: Float,
+        yDiff: Float,
+        event: MotionEvent?,
+    ): Boolean {
         throw UnsupportedOperationException()
     }
 
     override fun closeQsCustomizer() {
-        qsSceneAdapter.requestCloseCustomizer()
+        editModeViewModel.stopEditing()
     }
 
     @Deprecated("specific to legacy split shade")
@@ -49,11 +55,14 @@ constructor(
         // Do nothing
     }
 
+    @Deprecated("specific to legacy shade expansion")
+    override fun setPanelExpanded(panelExpanded: Boolean) {}
+
     @Deprecated("specific to legacy DebugDrawable")
     override fun calculateNotificationsTopPadding(
         isShadeExpanding: Boolean,
         keyguardNotificationStaticPadding: Int,
-        expandedFraction: Float
+        expandedFraction: Float,
     ): Float {
         throw UnsupportedOperationException()
     }

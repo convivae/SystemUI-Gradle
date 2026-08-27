@@ -16,6 +16,7 @@
 
 package com.android.systemui.keyguard.ui.binder
 
+import android.transition.AutoTransition
 import android.transition.TransitionManager
 import android.transition.TransitionSet
 import android.view.View.INVISIBLE
@@ -26,19 +27,20 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.viewpager2.widget.ViewPager2
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.systemui.keyguard.MigrateClocksToBlueprint
 import com.android.systemui.keyguard.domain.interactor.KeyguardBlueprintInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor
 import com.android.systemui.keyguard.shared.model.ClockSize
+import com.android.systemui.keyguard.ui.view.layout.blueprints.transitions.IntraBlueprintTransition.Config
 import com.android.systemui.keyguard.ui.view.layout.blueprints.transitions.IntraBlueprintTransition.Type
 import com.android.systemui.keyguard.ui.view.layout.sections.ClockSection
 import com.android.systemui.keyguard.ui.viewmodel.AodBurnInViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardRootViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.plugins.clocks.AodClockBurnInModel
-import com.android.systemui.plugins.clocks.ClockController
+import com.android.systemui.plugins.keyguard.ui.clocks.AodClockBurnInModel
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockController
 import com.android.systemui.util.kotlin.DisposableHandles
 import com.android.systemui.util.ui.value
 import kotlinx.coroutines.DisposableHandle
@@ -48,6 +50,7 @@ import kotlinx.coroutines.flow.map
 
 object KeyguardClockViewBinder {
     private val TAG = KeyguardClockViewBinder::class.simpleName!!
+    private val defaultTransition = AutoTransition().excludeTarget(ViewPager2::class.java, true)
 
     @JvmStatic
     fun bind(
@@ -63,9 +66,11 @@ object KeyguardClockViewBinder {
         disposables +=
             keyguardRootView.repeatWhenAttached {
                 repeatOnLifecycle(Lifecycle.State.CREATED) {
-                    keyguardClockInteractor.clockEventController.registerListeners(keyguardRootView)
+                    keyguardClockInteractor.clockEventController.registerListeners()
                 }
             }
+
+        disposables += keyguardClockInteractor.clockEventController.bind(keyguardRootView)
 
         disposables +=
             keyguardRootView.repeatWhenAttached {
@@ -73,7 +78,6 @@ object KeyguardClockViewBinder {
                     // When changing to new clock, we need to remove old views from burnInLayer
                     var lastClock: ClockController? = null
                     launch {
-                            if (!MigrateClocksToBlueprint.isEnabled) return@launch
                             viewModel.currentClock.collect { currentClock ->
                                 if (lastClock != currentClock) {
                                     cleanupClockViews(
@@ -91,6 +95,7 @@ object KeyguardClockViewBinder {
                                     viewModel.clockSize.value,
                                 )
                                 applyConstraints(clockSection, keyguardRootView, true)
+                                currentClock?.apply { eventListeners.fire { onChangeComplete() } }
                             }
                         }
                         .invokeOnCompletion {
@@ -99,7 +104,6 @@ object KeyguardClockViewBinder {
                         }
 
                     launch {
-                        if (!MigrateClocksToBlueprint.isEnabled) return@launch
                         viewModel.clockSize.collect { clockSize ->
                             updateBurnInLayer(keyguardRootView, viewModel, clockSize)
                             blueprintInteractor.refreshBlueprint(Type.ClockSize)
@@ -107,15 +111,9 @@ object KeyguardClockViewBinder {
                     }
 
                     launch {
-                        if (!MigrateClocksToBlueprint.isEnabled) return@launch
                         viewModel.clockShouldBeCentered.collect {
                             viewModel.currentClock.value?.let {
-                                // TODO(b/301502635): remove "!it.config.useCustomClockScene" when
-                                // migrate clocks to blueprint is fully rolled out
-                                if (
-                                    it.largeClock.config.hasCustomPositionUpdatedAnimation &&
-                                        !it.config.useCustomClockScene
-                                ) {
+                                if (it.largeClock.config.hasCustomPositionUpdatedAnimation) {
                                     blueprintInteractor.refreshBlueprint(Type.DefaultClockStepping)
                                 } else {
                                     blueprintInteractor.refreshBlueprint(Type.DefaultTransition)
@@ -125,7 +123,6 @@ object KeyguardClockViewBinder {
                     }
 
                     launch {
-                        if (!MigrateClocksToBlueprint.isEnabled) return@launch
                         combine(
                                 viewModel.hasAodIcons,
                                 rootViewModel.isNotifIconContainerVisible.map { it.value },
@@ -143,7 +140,6 @@ object KeyguardClockViewBinder {
                     }
 
                     launch {
-                        if (!MigrateClocksToBlueprint.isEnabled) return@launch
                         aodBurnInViewModel.movement.collect { burnInModel ->
                             viewModel.currentClock.value
                                 ?.largeClock
@@ -159,12 +155,35 @@ object KeyguardClockViewBinder {
                     }
 
                     launch {
-                        if (!MigrateClocksToBlueprint.isEnabled) return@launch
                         viewModel.largeClockTextSize.collect { fontSizePx ->
                             viewModel.currentClock.value
                                 ?.largeClock
                                 ?.events
                                 ?.onFontSettingChanged(fontSizePx = fontSizePx.toFloat())
+                        }
+                    }
+
+                    launch("$TAG#clockViewModel.shouldDateWeatherBeBelowSmallClock") {
+                        viewModel.shouldDateWeatherBeBelowSmallClock.collect {
+                            blueprintInteractor.refreshBlueprint(
+                                Config(
+                                    Type.SmartspaceVisibility,
+                                    checkPriority = false,
+                                    terminatePrevious = false,
+                                )
+                            )
+                        }
+                    }
+
+                    launch("$TAG#clockViewModel.shouldDateWeatherBeBelowLargeClock") {
+                        viewModel.shouldDateWeatherBeBelowLargeClock.collect {
+                            blueprintInteractor.refreshBlueprint(
+                                Config(
+                                    Type.SmartspaceVisibility,
+                                    checkPriority = false,
+                                    terminatePrevious = false,
+                                )
+                            )
                         }
                     }
                 }
@@ -175,6 +194,7 @@ object KeyguardClockViewBinder {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.currentClock.collect { currentClock ->
                         currentClock?.apply {
+                            // Reapply existing theme
                             smallClock.run { events.onThemeChanged(theme) }
                             largeClock.run { events.onThemeChanged(theme) }
                         }
@@ -253,7 +273,7 @@ object KeyguardClockViewBinder {
         clockSection.applyConstraints(constraintSet)
         if (animated) {
             set?.let { TransitionManager.beginDelayedTransition(rootView, it) }
-                ?: run { TransitionManager.beginDelayedTransition(rootView) }
+                ?: run { TransitionManager.beginDelayedTransition(rootView, defaultTransition) }
         }
         constraintSet.applyTo(rootView)
     }

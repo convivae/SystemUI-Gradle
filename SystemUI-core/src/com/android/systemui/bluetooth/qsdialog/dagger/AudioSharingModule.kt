@@ -30,6 +30,7 @@ import com.android.systemui.bluetooth.qsdialog.AudioSharingRepositoryEmptyImpl
 import com.android.systemui.bluetooth.qsdialog.AudioSharingRepositoryImpl
 import com.android.systemui.bluetooth.qsdialog.AvailableAudioSharingMediaDeviceItemFactory
 import com.android.systemui.bluetooth.qsdialog.AvailableMediaDeviceItemFactory
+import com.android.systemui.bluetooth.qsdialog.BluetoothTileDialogLogger
 import com.android.systemui.bluetooth.qsdialog.ConnectedDeviceItemFactory
 import com.android.systemui.bluetooth.qsdialog.DeviceItemActionInteractor
 import com.android.systemui.bluetooth.qsdialog.DeviceItemActionInteractorImpl
@@ -37,11 +38,13 @@ import com.android.systemui.bluetooth.qsdialog.DeviceItemFactory
 import com.android.systemui.bluetooth.qsdialog.DeviceItemType
 import com.android.systemui.bluetooth.qsdialog.SavedDeviceItemFactory
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 
 /** Dagger module for audio sharing code for BT QS dialog */
 @Module
@@ -53,7 +56,9 @@ interface AudioSharingModule {
         fun provideAudioSharingRepository(
             localBluetoothManager: LocalBluetoothManager?,
             settingsLibAudioSharingRepository: SettingsLibAudioSharingRepository,
+            logger: BluetoothTileDialogLogger,
             @Background backgroundDispatcher: CoroutineDispatcher,
+            @Application coroutineScope: CoroutineScope,
         ): AudioSharingRepository =
             if (
                 (Flags.enableLeAudioSharing() || Flags.audioSharingDeveloperOption()) &&
@@ -62,7 +67,9 @@ interface AudioSharingModule {
                 AudioSharingRepositoryImpl(
                     localBluetoothManager,
                     settingsLibAudioSharingRepository,
+                    logger,
                     backgroundDispatcher,
+                    coroutineScope,
                 )
             } else {
                 AudioSharingRepositoryEmptyImpl()

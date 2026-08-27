@@ -23,16 +23,21 @@ import androidx.annotation.NonNull;
 import com.android.systemui.Dumpable;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dump.DumpManager;
+import com.android.systemui.statusbar.notification.collection.BundleEntry;
+import com.android.systemui.statusbar.notification.collection.EntryAdapter;
 import com.android.systemui.statusbar.notification.collection.GroupEntry;
-import com.android.systemui.statusbar.notification.collection.ListEntry;
 import com.android.systemui.statusbar.notification.collection.NotifPipeline;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.collection.PipelineEntry;
 import com.android.systemui.statusbar.notification.collection.listbuilder.OnBeforeRenderListListener;
+import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -53,7 +58,9 @@ public class GroupExpansionManagerImpl implements GroupExpansionManager, Dumpabl
      * NOTE: This should not be modified without notifying listeners, so prefer using
      * {@code setGroupExpanded} when making changes.
      */
-    private final Set<NotificationEntry> mExpandedGroups = new HashSet<>();
+    private final Set<NotificationEntry> mExpandedGroups = ConcurrentHashMap.newKeySet();
+
+    private final Set<EntryAdapter> mExpandedCollections = ConcurrentHashMap.newKeySet();
 
     @Inject
     public GroupExpansionManagerImpl(DumpManager dumpManager,
@@ -63,26 +70,48 @@ public class GroupExpansionManagerImpl implements GroupExpansionManager, Dumpabl
     }
 
     /**
-     * Cleanup entries from mExpandedGroups that no longer exist in the pipeline.
+     * Cleanup entries from internal tracking that no longer exist in the pipeline.
      */
     private final OnBeforeRenderListListener mNotifTracker = (entries) -> {
-        if (mExpandedGroups.isEmpty()) {
+        if (mExpandedCollections.isEmpty()) {
             return; // nothing to do
         }
 
-        final Set<NotificationEntry> renderingSummaries = new HashSet<>();
-        for (ListEntry entry : entries) {
-            if (entry instanceof GroupEntry) {
-                renderingSummaries.add(entry.getRepresentativeEntry());
+        final Set<PipelineEntry> renderingSummaries = new HashSet<>();
+        findRenderingSummariesRecursive(entries, renderingSummaries);
+
+        for (EntryAdapter entryAdapter : mExpandedCollections) {
+            boolean isInPipeline = false;
+            for (PipelineEntry entry : renderingSummaries) {
+                if (entry.getKey().equals(entryAdapter.getKey())) {
+                    isInPipeline = true;
+                    break;
+                }
+            }
+            if (!isInPipeline) {
+                setGroupExpanded(entryAdapter, false);
             }
         }
-
-        // If a group is in mExpandedGroups but not in the pipeline entries, collapse it.
-        final var groupsToRemove = setDifference(mExpandedGroups, renderingSummaries);
-        for (NotificationEntry entry : groupsToRemove) {
-            setGroupExpanded(entry, false);
-        }
     };
+
+    private void findRenderingSummariesRecursive(List<PipelineEntry> entries,
+            Set<PipelineEntry> renderingSummaries) {
+        for (PipelineEntry entry : entries) {
+            if (entry instanceof BundleEntry bundleEntry) {
+                renderingSummaries.add(entry);
+                List<PipelineEntry> children = bundleEntry.getChildren().stream().map(
+                        child -> (PipelineEntry) child).collect(
+                        Collectors.toList());
+                findRenderingSummariesRecursive(children, renderingSummaries);
+            } else if (entry instanceof GroupEntry groupEntry) {
+                renderingSummaries.add(groupEntry.getRepresentativeEntry());
+                List<PipelineEntry> children = groupEntry.getChildren().stream().map(
+                        child -> (PipelineEntry) child).collect(
+                        Collectors.toList());
+                findRenderingSummariesRecursive(children, renderingSummaries);
+            }
+        }
+    }
 
     public void attach(NotifPipeline pipeline) {
         mDumpManager.registerDumpable(this);
@@ -95,46 +124,53 @@ public class GroupExpansionManagerImpl implements GroupExpansionManager, Dumpabl
     }
 
     @Override
-    public boolean isGroupExpanded(NotificationEntry entry) {
-        return mExpandedGroups.contains(mGroupMembershipManager.getGroupSummary(entry));
+    public boolean isGroupExpanded(EntryAdapter entry) {
+        ExpandableNotificationRow parent = entry.getRow().getNotificationParent();
+        return mExpandedCollections.contains(entry)
+                || (parent != null
+                    // When the entry itself is a summary, we want only the first condition to be
+                    // checked (am I expanded?). We only defer the check to the parent for leaf
+                    // nodes.
+                    // We should avoid referring back to the ENR here but given the entry we
+                    // currently can't check if the entry is a summary row here.
+                    && !entry.getRow().isSummaryWithChildren()
+                    && mExpandedCollections.contains(parent.getEntryAdapter()));
     }
 
     @Override
-    public void setGroupExpanded(NotificationEntry entry, boolean expanded) {
-        NotificationEntry groupSummary = mGroupMembershipManager.getGroupSummary(entry);
-        if (entry.getParent() == null) {
+    public void setGroupExpanded(EntryAdapter groupRoot, boolean expanded) {
+        if (!groupRoot.isAttached()) {
             if (expanded) {
                 Log.wtf(TAG, "Cannot expand group that is not attached");
-            } else {
-                // The entry is no longer attached, but we still want to make sure we don't have
-                // a stale expansion state.
-                groupSummary = entry;
             }
         }
 
         boolean changed;
         if (expanded) {
-            changed = mExpandedGroups.add(groupSummary);
+            changed = mExpandedCollections.add(groupRoot);
         } else {
-            changed = mExpandedGroups.remove(groupSummary);
+            changed = mExpandedCollections.remove(groupRoot);
         }
 
         // Only notify listeners if something changed.
         if (changed) {
-            sendOnGroupExpandedChange(entry, expanded);
+            sendOnGroupExpandedChange(groupRoot, expanded);
         }
     }
 
     @Override
-    public boolean toggleGroupExpansion(NotificationEntry entry) {
-        setGroupExpanded(entry, !isGroupExpanded(entry));
-        return isGroupExpanded(entry);
+    public boolean toggleGroupExpansion(EntryAdapter groupRoot) {
+        setGroupExpanded(groupRoot, !isGroupExpanded(groupRoot));
+        return isGroupExpanded(groupRoot);
     }
 
     @Override
     public void collapseGroups() {
-        for (NotificationEntry entry : new ArrayList<>(mExpandedGroups)) {
-            setGroupExpanded(entry, false);
+        for (EntryAdapter entry : mExpandedCollections) {
+            // don't collapse system expanded groups
+            if (entry.getRow() != null && entry.getRow().isUserExpanded()) {
+                setGroupExpanded(entry, false);
+            }
         }
     }
 
@@ -145,9 +181,13 @@ public class GroupExpansionManagerImpl implements GroupExpansionManager, Dumpabl
         for (NotificationEntry entry : mExpandedGroups) {
             pw.println("  * " + entry.getKey());
         }
+        pw.println("  mExpandedCollection: " + mExpandedCollections.size());
+        for (EntryAdapter entry : mExpandedCollections) {
+            pw.println("  * " + entry.getKey());
+        }
     }
 
-    private void sendOnGroupExpandedChange(NotificationEntry entry, boolean expanded) {
+    private void sendOnGroupExpandedChange(EntryAdapter entry, boolean expanded) {
         for (OnGroupExpansionChangeListener listener : mOnGroupChangeListeners) {
             listener.onGroupExpansionChange(entry.getRow(), expanded);
         }

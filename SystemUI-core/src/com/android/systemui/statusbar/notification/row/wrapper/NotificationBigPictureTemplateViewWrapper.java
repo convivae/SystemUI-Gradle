@@ -47,7 +47,7 @@ public class NotificationBigPictureTemplateViewWrapper extends NotificationTempl
     public void onContentUpdated(ExpandableNotificationRow row) {
         super.onContentUpdated(row);
         resolveViews();
-        updateImageTag(row.getEntry().getSbn());
+        updateImageTag(row.getEntryAdapter().getSbn());
     }
 
     private void resolveViews() {

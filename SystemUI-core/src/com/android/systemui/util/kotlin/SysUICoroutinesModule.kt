@@ -21,7 +21,10 @@ import com.android.systemui.coroutines.newTracingContext
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.dagger.qualifiers.NotifInflation
 import com.android.systemui.dagger.qualifiers.UiBackground
+import com.android.systemui.util.compose.state.SnapshotFlowBuilder
+import com.android.systemui.util.kotlin.dispatchers.newIntrinsicLockFixedThreadPoolContext
 import com.android.systemui.util.settings.SettingsSingleThreadBackground
 import dagger.Module
 import dagger.Provides
@@ -33,7 +36,6 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.plus
 
 private const val LIMIT_BACKGROUND_DISPATCHER_THREADS = true
@@ -71,7 +73,9 @@ class SysUICoroutinesModule {
             // would share those threads with other dependencies using Dispatchers.IO.
             // Using a dedicated thread pool we have guarantees only SystemUI is able to schedule
             // code on those.
-            newFixedThreadPoolContext(
+            // We now use a custom thread pool dispatcher, where producers are not susceptible to
+            // lock contentions and priority inversion
+            newIntrinsicLockFixedThreadPoolContext(
                 nThreads = Runtime.getRuntime().availableProcessors(),
                 name = "SystemUIBg",
             )
@@ -123,4 +127,19 @@ class SysUICoroutinesModule {
     ): CoroutineContext {
         return uiBgCoroutineDispatcher
     }
+
+    /** Coroutine dispatcher for background notification inflation. */
+    @Provides
+    @NotifInflation
+    @SysUISingleton
+    fun notifInflationCoroutineDispatcher(
+        @NotifInflation notifInflationExecutor: Executor
+    ): CoroutineDispatcher {
+        return notifInflationExecutor.asCoroutineDispatcher()
+    }
+
+    @Provides
+    @Background
+    @SysUISingleton
+    fun backgroundSnapshotFlowBuilder() = SnapshotFlowBuilder.createOnNewBackgroundThread()
 }

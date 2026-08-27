@@ -25,7 +25,7 @@ import com.android.systemui.Flags.communalWidgetResizing
 import com.android.systemui.communal.domain.model.CommunalContentModel
 import com.android.systemui.communal.shared.model.CommunalContentSize
 import com.android.systemui.communal.ui.viewmodel.BaseCommunalViewModel
-import com.android.systemui.communal.ui.viewmodel.DragHandle
+import com.android.systemui.communal.ui.viewmodel.ResizeHandle
 import com.android.systemui.communal.ui.viewmodel.ResizeInfo
 import com.android.systemui.communal.widgets.WidgetConfigurator
 
@@ -57,7 +57,8 @@ class ContentListState
 internal constructor(
     communalContent: List<CommunalContentModel>,
     private val onAddWidget: (componentName: ComponentName, user: UserHandle, rank: Int) -> Unit,
-    private val onDeleteWidget: (id: Int, componentName: ComponentName, rank: Int) -> Unit,
+    private val onDeleteWidget:
+        (id: Int, key: String, componentName: ComponentName, rank: Int) -> Unit,
     private val onReorderWidgets: (widgetIdToRankMap: Map<Int, Int>) -> Unit,
     private val onResizeWidget:
         (
@@ -76,12 +77,22 @@ internal constructor(
         list.apply { add(toIndex, removeAt(fromIndex)) }
     }
 
+    /** Swap the two items in the list with the given indices. */
+    fun swapItems(index1: Int, index2: Int) {
+        list.apply {
+            val item1 = get(index1)
+            val item2 = get(index2)
+            set(index2, item1)
+            set(index1, item2)
+        }
+    }
+
     /** Remove widget from the list and the database. */
     fun onRemove(indexToRemove: Int) {
         if (list[indexToRemove].isWidgetContent()) {
             val widget = list[indexToRemove] as CommunalContentModel.WidgetContent
             list.apply { removeAt(indexToRemove) }
-            onDeleteWidget(widget.appWidgetId, widget.componentName, widget.rank)
+            onDeleteWidget(widget.appWidgetId, widget.key, widget.componentName, widget.rank)
         }
     }
 
@@ -104,7 +115,7 @@ internal constructor(
         val widgetIdToRankMap: Map<Int, Int> =
             if (
                 resizeInfo.isExpanding &&
-                    resizeInfo.fromHandle == DragHandle.TOP &&
+                    resizeInfo.fromHandle == ResizeHandle.TOP &&
                     prevItem is CommunalContentModel.WidgetContent.Widget
             ) {
                 onMove(index - 1, index)
@@ -153,6 +164,8 @@ internal constructor(
         onReorderWidgets(widgetIdToRankMap)
     }
 
-    /** Returns true if the item at given index is editable. */
-    fun isItemEditable(index: Int) = list[index].isWidgetContent()
+    /** Returns true if the item for the given key is editable. */
+    fun isItemEditable(key: Any): Boolean {
+        return list.firstOrNull { content -> content.key == key }?.isWidgetContent() ?: false
+    }
 }

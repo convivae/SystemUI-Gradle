@@ -22,9 +22,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.statusbar.notification.collection.EntryAdapter;
 import com.android.systemui.statusbar.notification.collection.GroupEntry;
 import com.android.systemui.statusbar.notification.collection.ListEntry;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.collection.PipelineEntry;
 
 import java.util.List;
 
@@ -40,59 +42,13 @@ public class GroupMembershipManagerImpl implements GroupMembershipManager {
     public GroupMembershipManagerImpl() {}
 
     @Override
-    public boolean isGroupSummary(@NonNull NotificationEntry entry) {
-        if (entry.getParent() == null) {
-            // The entry is not attached, so it doesn't count.
-            return false;
-        }
-        // If entry is a summary, its parent is a GroupEntry with summary = entry.
-        return entry.getParent().getSummary() == entry;
-    }
-
-    @Nullable
-    @Override
-    public NotificationEntry getGroupSummary(@NonNull NotificationEntry entry) {
-        if (isTopLevelEntry(entry) || entry.getParent() == null) {
-            return null;
-        }
-        return entry.getParent().getSummary();
+    public boolean isGroupRoot(@NonNull EntryAdapter entry) {
+        return entry.isGroupRoot();
     }
 
     @Override
-    public boolean isChildInGroup(@NonNull NotificationEntry entry) {
-        // An entry is a child if it's not a summary or top level entry, but it is attached.
-        return !isGroupSummary(entry) && !isTopLevelEntry(entry) && entry.getParent() != null;
-    }
-
-    @Override
-    public boolean isOnlyChildInGroup(@NonNull NotificationEntry entry) {
-        if (entry.getParent() == null) {
-            return false; // The entry is not attached.
-        }
-
-        return !isGroupSummary(entry) && entry.getParent().getChildren().size() == 1;
-    }
-
-    @Nullable
-    @Override
-    public List<NotificationEntry> getChildren(@NonNull ListEntry entry) {
-        if (entry instanceof GroupEntry) {
-            return ((GroupEntry) entry).getChildren();
-        }
-
-        NotificationEntry representativeEntry = entry.getRepresentativeEntry();
-        if (representativeEntry != null && isGroupSummary(representativeEntry)) {
-            // maybe we were actually passed the summary
-            GroupEntry parent = representativeEntry.getParent();
-            if (parent != null) {
-                return parent.getChildren();
-            }
-        }
-
-        return null;
-    }
-
-    private boolean isTopLevelEntry(@NonNull NotificationEntry entry) {
-        return entry.getParent() == ROOT_ENTRY;
+    public boolean isChildInGroup(@NonNull EntryAdapter entry) {
+        // An entry is a child if it's not a group root or top level entry, but it is attached.
+        return entry.isAttached() && !entry.isGroupRoot() && !entry.isTopLevelEntry();
     }
 }

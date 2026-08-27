@@ -21,17 +21,12 @@ import static android.view.WindowInsets.Type.ime;
 import static androidx.core.view.WindowInsetsCompat.Type;
 
 import static com.android.internal.accessibility.AccessibilityShortcutController.ACCESSIBILITY_BUTTON_COMPONENT_NAME;
-import static com.android.internal.accessibility.common.ShortcutConstants.AccessibilityFragmentType.INVISIBLE_TOGGLE;
-import static com.android.internal.accessibility.common.ShortcutConstants.UserShortcutType.HARDWARE;
 import static com.android.internal.accessibility.common.ShortcutConstants.UserShortcutType.SOFTWARE;
-import static com.android.internal.accessibility.util.AccessibilityUtils.getAccessibilityServiceFragmentType;
-import static com.android.internal.accessibility.util.AccessibilityUtils.setAccessibilityServiceState;
 import static com.android.systemui.accessibility.floatingmenu.MenuMessageView.Index;
 import static com.android.systemui.accessibility.floatingmenu.MenuNotificationFactory.ACTION_DELETE;
 import static com.android.systemui.accessibility.floatingmenu.MenuNotificationFactory.ACTION_UNDO;
 import static com.android.systemui.util.PluralMessageFormaterKt.icuMessageFormat;
 
-import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.IntDef;
 import android.annotation.StringDef;
 import android.annotation.SuppressLint;
@@ -39,7 +34,6 @@ import android.app.NotificationManager;
 import android.app.StatusBarManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentCallbacks;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -62,6 +56,7 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
 import android.view.accessibility.AccessibilityManager;
+import android.view.animation.Animation;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
@@ -98,7 +93,8 @@ import java.util.Optional;
 @SuppressLint("ViewConstructor")
 class MenuViewLayer extends FrameLayout implements
         ViewTreeObserver.OnComputeInternalInsetsListener, View.OnClickListener, ComponentCallbacks,
-        MenuView.OnMoveToTuckedListener {
+        MenuView.OnMoveToTuckedListener,
+        AccessibilityTargetAdapter.MoreOptionsClickListener {
     private static final int SHOW_MESSAGE_DELAY_MS = 3000;
 
     /**
@@ -137,9 +133,13 @@ class MenuViewLayer extends FrameLayout implements
             this::onDockTooltipVisibilityChanged;
     private final Observer<Boolean> mMigrationTooltipObserver =
             this::onMigrationTooltipVisibilityChanged;
+    private final Observer<MenuPosition> mPositionObserver =
+            this::onPositionChanged;
     private final Rect mImeInsetsRect = new Rect();
     private boolean mIsMigrationTooltipShowing;
     private boolean mShouldShowDockTooltip;
+    private boolean mShouldLoopDockDemo;
+    private boolean mIsDockDemoDocked;
     private boolean mIsNotificationShown;
     private Optional<MenuEduTooltipView> mEduTooltipView = Optional.empty();
     private BroadcastReceiver mNotificationActionReceiver;
@@ -174,47 +174,35 @@ class MenuViewLayer extends FrameLayout implements
     final Runnable mDismissMenuAction = new Runnable() {
         @Override
         public void run() {
-            if (android.view.accessibility.Flags.a11yQsShortcut()) {
-                mAccessibilityManager.enableShortcutsForTargets(
-                        /* enable= */ false,
-                        ShortcutConstants.UserShortcutType.SOFTWARE,
-                        new ArraySet<>(
-                                mAccessibilityManager.getAccessibilityShortcutTargets(SOFTWARE)),
-                        mSecureSettings.getRealUserHandle(UserHandle.USER_CURRENT)
-                );
-            } else {
-                mSecureSettings.putStringForUser(
-                        Settings.Secure.ACCESSIBILITY_BUTTON_TARGETS, /* value= */ "",
-                        UserHandle.USER_CURRENT);
-
-                final List<ComponentName> hardwareKeyShortcutComponents =
-                        mAccessibilityManager.getAccessibilityShortcutTargets(HARDWARE)
-                                .stream()
-                                .map(ComponentName::unflattenFromString)
-                                .toList();
-
-                // Should disable the corresponding service when the fragment type is
-                // INVISIBLE_TOGGLE, which will enable service when the shortcut is on.
-                final List<AccessibilityServiceInfo> serviceInfoList =
-                        mAccessibilityManager.getEnabledAccessibilityServiceList(
-                                AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
-                serviceInfoList.forEach(info -> {
-                    if (getAccessibilityServiceFragmentType(info) != INVISIBLE_TOGGLE) {
-                        return;
-                    }
-
-                    final ComponentName serviceComponentName = info.getComponentName();
-                    if (hardwareKeyShortcutComponents.contains(serviceComponentName)) {
-                        return;
-                    }
-
-                    setAccessibilityServiceState(
-                            getContext(), serviceComponentName, /* enabled= */ false,
-                            mSecureSettings.getRealUserHandle(UserHandle.USER_CURRENT));
-                });
-            }
-
+            mAccessibilityManager.enableShortcutsForTargets(
+                    /* enable= */ false,
+                    ShortcutConstants.UserShortcutType.SOFTWARE,
+                    new ArraySet<>(
+                            mAccessibilityManager.getAccessibilityShortcutTargets(SOFTWARE)),
+                    mSecureSettings.getRealUserHandle(UserHandle.USER_CURRENT)
+            );
             mFloatingMenu.hide();
+        }
+    };
+
+    Animation.AnimationListener mTuckDemoListener = new Animation.AnimationListener() {
+        @Override
+        public void onAnimationStart(Animation animation) {
+            mIsDockDemoDocked = false;
+        }
+
+        @Override
+        public void onAnimationEnd(Animation animation) {
+            mEduTooltipView.ifPresent(view -> removeTooltip(view));
+        }
+
+        @Override
+        public void onAnimationRepeat(Animation animation) {
+            mIsDockDemoDocked = !mIsDockDemoDocked;
+            // Only stop animation once MenuView has looped back to its normal position.
+            if (!mShouldLoopDockDemo && !mIsDockDemoDocked) {
+                mMenuView.clearAnimation();
+            }
         }
     };
 
@@ -244,14 +232,18 @@ class MenuViewLayer extends FrameLayout implements
                     @NonNull
                     @Override
                     public AccessibilityDelegateCompat getItemDelegate() {
-                        return new MenuItemAccessibilityDelegate(/* recyclerViewDelegate= */ this,
-                                mMenuAnimationController, MenuViewLayer.this);
+                        return new MenuItemAccessibilityDelegate(
+                                /* recyclerViewDelegate= */ this,
+                                mMenuAnimationController,
+                                MenuViewLayer.this);
                     }
                 });
         mMenuAnimationController = mMenuView.getMenuAnimationController();
         mMenuAnimationController.setSpringAnimationsEndAction(this::onSpringAnimationsEndAction);
         mDismissView = new DismissView(context);
-        mDragToInteractView = new DragToInteractView(context);
+        mDragToInteractView = new DragToInteractView(context, windowManager);
+        mDragToInteractView.addCircle(R.id.action_remove_menu);
+        mDragToInteractView.addCircle(R.id.action_edit);
         DismissViewUtils.setup(mDismissView);
         mDismissView.getCircle().setId(R.id.action_remove_menu);
         mNotificationFactory = new MenuNotificationFactory(context);
@@ -259,14 +251,9 @@ class MenuViewLayer extends FrameLayout implements
         mStatusBarManager = context.getSystemService(StatusBarManager.class);
         mNavigationModeController = navigationModeController;
         mNavigationModeChangedListender = (mode -> mMenuView.onPositionChanged());
+        mDragToInteractAnimationController = new DragToInteractAnimationController(
+                mDragToInteractView, mMenuView);
 
-        if (Flags.floatingMenuDragToEdit()) {
-            mDragToInteractAnimationController = new DragToInteractAnimationController(
-                    mDragToInteractView, mMenuView);
-        } else {
-            mDragToInteractAnimationController = new DragToInteractAnimationController(
-                    mDismissView, mMenuView);
-        }
         mDragToInteractAnimationController.setMagnetListener(new MagnetizedObject.MagnetListener() {
             @Override
             public void onStuckToTarget(@NonNull MagnetizedObject.MagneticTarget target,
@@ -322,11 +309,7 @@ class MenuViewLayer extends FrameLayout implements
         });
 
         addView(mMenuView, LayerIndex.MENU_VIEW);
-        if (Flags.floatingMenuDragToEdit()) {
-            addView(mDragToInteractView, LayerIndex.DISMISS_VIEW);
-        } else {
-            addView(mDismissView, LayerIndex.DISMISS_VIEW);
-        }
+        addView(mDragToInteractView, LayerIndex.DISMISS_VIEW);
         addView(mMessageView, LayerIndex.MESSAGE_VIEW);
 
         setClipChildren(true);
@@ -334,6 +317,72 @@ class MenuViewLayer extends FrameLayout implements
         setClickable(false);
         setFocusable(false);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+
+        AccessibilityTargetAdapter adapter =
+                (AccessibilityTargetAdapter) mMenuView.getTargetFeaturesView().getAdapter();
+        adapter.setMoreOptionsClickListener(this);
+    }
+
+    @Override
+    public void onMoreOptionsClicked(View anchorView) {
+        MenuPosition currentPosition = mMenuViewModel.getMenuPosition();
+        if (currentPosition == null) {
+            currentPosition = MenuPosition.BOTTOM_RIGHT;
+        }
+
+        int nextPositionHintResId = switch (currentPosition) {
+            case BOTTOM_RIGHT -> R.string.accessibility_floating_button_action_move_bottom_left;
+            case BOTTOM_LEFT -> R.string.accessibility_floating_button_action_move_top_left;
+            case TOP_LEFT -> R.string.accessibility_floating_button_action_move_top_right;
+            case TOP_RIGHT -> R.string.accessibility_floating_button_action_move_bottom_right;
+        };
+        String nextPositionHint = getContext().getString(nextPositionHintResId);
+
+        final MoreOptionsPopup popup =
+                createMoreOptionsPopup(
+                        nextPositionHint,
+                        new MoreOptionsPopup.OnItemClickListener() {
+                            @Override
+                            public void onEditClicked() {
+                                gotoEditScreen();
+                            }
+
+                            @Override
+                            public void onMoveClicked() {
+                                mMenuViewModel.cycleMenuPosition();
+                            }
+
+                            @Override
+                            public void onRemoveAllClicked() {
+                                mDismissMenuAction.run();
+                            }
+                        });
+        popup.show(anchorView);
+    }
+
+    @VisibleForTesting
+    MoreOptionsPopup createMoreOptionsPopup(
+            String nextMovePositionHint, MoreOptionsPopup.OnItemClickListener listener) {
+        return new MoreOptionsPopup(getContext(), nextMovePositionHint, listener);
+    }
+
+    private void onPositionChanged(MenuPosition position) {
+        if (position == null) return;
+
+        switch (position) {
+            case TOP_LEFT:
+                mMenuAnimationController.moveToTopLeftPosition();
+                break;
+            case TOP_RIGHT:
+                mMenuAnimationController.moveToTopRightPosition();
+                break;
+            case BOTTOM_LEFT:
+                mMenuAnimationController.moveToBottomLeftPosition();
+                break;
+            case BOTTOM_RIGHT:
+                mMenuAnimationController.moveToBottomRightPosition();
+                break;
+        }
     }
 
     @Override
@@ -379,12 +428,12 @@ class MenuViewLayer extends FrameLayout implements
         super.onAttachedToWindow();
 
         mMenuView.show();
-        setOnClickListener(this);
         setOnApplyWindowInsetsListener((view, insets) -> onWindowInsetsApplied(insets));
         getViewTreeObserver().addOnComputeInternalInsetsListener(this);
         mMenuViewModel.getDockTooltipVisibilityData().observeForever(mDockTooltipObserver);
         mMenuViewModel.getMigrationTooltipVisibilityData().observeForever(
                 mMigrationTooltipObserver);
+        mMenuViewModel.getPositionData().observeForever(mPositionObserver);
         mMessageView.setUndoListener(view -> undo());
         getContext().registerComponentCallbacks(this);
         mNavigationModeController.addListener(mNavigationModeChangedListender);
@@ -401,6 +450,7 @@ class MenuViewLayer extends FrameLayout implements
         mMenuViewModel.getDockTooltipVisibilityData().removeObserver(mDockTooltipObserver);
         mMenuViewModel.getMigrationTooltipVisibilityData().removeObserver(
                 mMigrationTooltipObserver);
+        mMenuViewModel.getPositionData().removeObserver(mPositionObserver);
         mHandler.removeCallbacksAndMessages(/* token= */ null);
         getContext().unregisterComponentCallbacks(this);
         mNavigationModeController.removeListener(mNavigationModeChangedListender);
@@ -470,6 +520,10 @@ class MenuViewLayer extends FrameLayout implements
             );
 
             setClipBounds(bounds);
+
+            // If the user tucks, skip the dock tooltip.
+            mMenuViewModel.updateDockTooltipVisibility(/* hasSeen= */ true);
+            mShouldShowDockTooltip = false;
         }
         // Instead of clearing clip bounds when moveToTuck is false,
         // wait until the spring animation finishes.
@@ -483,13 +537,23 @@ class MenuViewLayer extends FrameLayout implements
                     getContext().getText(R.string.accessibility_floating_button_docking_tooltip),
                     TooltipType.DOCK));
 
-            mMenuAnimationController.startTuckedAnimationPreview();
+            mShouldLoopDockDemo = true;
+            dispatchTooltipTuckAnimation();
+            mHandler.postDelayed(() -> mShouldLoopDockDemo = false,
+                    mAccessibilityManager.getRecommendedTimeoutMillis(
+                            SHOW_MESSAGE_DELAY_MS, AccessibilityManager.FLAG_CONTENT_TEXT));
         }
 
         if (!mMenuView.isMoveToTucked()) {
             setClipBounds(null);
         }
         mMenuView.onArrivalAtPosition(false);
+    }
+
+    void dispatchTooltipTuckAnimation() {
+        Animation animation =
+                mMenuAnimationController.startTuckedAnimationPreview();
+        animation.setAnimationListener(mTuckDemoListener);
     }
 
     void dispatchAccessibilityAction(int id) {
@@ -500,8 +564,7 @@ class MenuViewLayer extends FrameLayout implements
                 hideMenuAndShowMessage();
             }
             mMenuView.incrementTexMetric(TEX_METRIC_DISMISS);
-        } else if (id == R.id.action_edit
-                && Flags.floatingMenuDragToEdit()) {
+        } else if (id == R.id.action_edit) {
             gotoEditScreen();
             mMenuView.incrementTexMetric(TEX_METRIC_EDIT);
         }
@@ -512,11 +575,8 @@ class MenuViewLayer extends FrameLayout implements
     }
 
     void gotoEditScreen() {
-        if (!Flags.floatingMenuDragToEdit()) {
-            return;
-        }
         mMenuAnimationController.flingMenuThenSpringToEdge(
-                mMenuView.getMenuPosition().x, 100f, 0f);
+                mMenuView.getMenuPosition(), 100f, 0f);
 
         Intent intent = getIntentForEditScreen();
         PackageManager packageManager = getContext().getPackageManager();
@@ -572,6 +632,7 @@ class MenuViewLayer extends FrameLayout implements
 
         mMenuListViewTouchHandler.setOnActionDownEndListener(
                 () -> mEduTooltipView.ifPresent(this::removeTooltip));
+        setOnClickListener(this);
     }
 
     private void removeTooltip(View tooltipView) {
@@ -590,6 +651,8 @@ class MenuViewLayer extends FrameLayout implements
 
         mMenuListViewTouchHandler.setOnActionDownEndListener(null);
         mEduTooltipView = Optional.empty();
+
+        setClickable(false);
     }
 
     @VisibleForTesting

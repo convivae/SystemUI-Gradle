@@ -19,13 +19,14 @@ package com.android.systemui.statusbar.notification.collection.coordinator;
 import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_ASLEEP;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
 import com.android.systemui.Dumpable;
-import com.android.systemui.Flags;
 import com.android.systemui.communal.domain.interactor.CommunalSceneInteractor;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor;
@@ -41,11 +42,13 @@ import com.android.systemui.statusbar.notification.collection.GroupEntry;
 import com.android.systemui.statusbar.notification.collection.ListEntry;
 import com.android.systemui.statusbar.notification.collection.NotifPipeline;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.collection.PipelineEntry;
+import com.android.systemui.statusbar.notification.collection.listbuilder.OnBeforeRenderListListener;
 import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifStabilityManager;
 import com.android.systemui.statusbar.notification.collection.provider.VisualStabilityProvider;
+import com.android.systemui.statusbar.notification.data.repository.HeadsUpRepository;
 import com.android.systemui.statusbar.notification.domain.interactor.SeenNotificationsInteractor;
 import com.android.systemui.statusbar.notification.shared.NotificationMinimalism;
-import com.android.systemui.statusbar.notification.headsup.HeadsUpManager;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.util.concurrency.DelayableExecutor;
 import com.android.systemui.util.kotlin.BooleanFlowOperators;
@@ -54,6 +57,7 @@ import com.android.systemui.util.kotlin.JavaAdapter;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,7 +72,8 @@ import javax.inject.Inject;
 @SysUISingleton
 public class VisualStabilityCoordinator implements Coordinator, Dumpable {
     private final DelayableExecutor mDelayableExecutor;
-    private final HeadsUpManager mHeadsUpManager;
+    private final DelayableExecutor mMainExecutor;
+    private final HeadsUpRepository mHeadsUpRepository;
     private final SeenNotificationsInteractor mSeenNotificationsInteractor;
     private final ShadeAnimationInteractor mShadeAnimationInteractor;
     private final StatusBarStateController mStatusBarStateController;
@@ -90,12 +95,15 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
     private boolean mNotifPanelLaunchingActivity;
     private boolean mCommunalShowing = false;
     private boolean mLockscreenShowing = false;
+    private String mLockscreenShowingReason = "unset";
+    private boolean mTrackingHeadsUp = false;
     private boolean mLockscreenInGoneTransition = false;
+    private Set<String> mHeadsUpGroupKeys = new HashSet<>();
 
     private boolean mPipelineRunAllowed;
     private boolean mReorderingAllowed;
     private boolean mIsSuppressingPipelineRun = false;
-    private boolean mIsSuppressingGroupChange = false;
+    private boolean mIsSuppressingParentChange = false;
     private final Set<String> mEntriesWithSuppressedSectionChange = new HashSet<>();
     private boolean mIsSuppressingEntryReorder = false;
 
@@ -103,6 +111,7 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
     // value: runnable that when run removes its associated RemoveOverrideSuppressionRunnable
     // from the DelayableExecutor's queue
     private Map<String, Runnable> mEntriesThatCanChangeSection = new HashMap<>();
+    private Map<String, Runnable> mEntriesThatCanMoveFreely = new HashMap<>();
 
     @VisibleForTesting
     protected static final long ALLOW_SECTION_CHANGE_TIMEOUT = 500;
@@ -110,8 +119,9 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
     @Inject
     public VisualStabilityCoordinator(
             @Background DelayableExecutor delayableExecutor,
+            @Main DelayableExecutor mainExecutor,
             DumpManager dumpManager,
-            HeadsUpManager headsUpManager,
+            HeadsUpRepository headsUpRepository,
             ShadeAnimationInteractor shadeAnimationInteractor,
             JavaAdapter javaAdapter,
             SeenNotificationsInteractor seenNotificationsInteractor,
@@ -124,7 +134,7 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
             KeyguardTransitionInteractor keyguardTransitionInteractor,
             KeyguardStateController keyguardStateController,
             VisualStabilityCoordinatorLogger logger) {
-        mHeadsUpManager = headsUpManager;
+        mHeadsUpRepository = headsUpRepository;
         mShadeAnimationInteractor = shadeAnimationInteractor;
         mJavaAdapter = javaAdapter;
         mSeenNotificationsInteractor = seenNotificationsInteractor;
@@ -133,6 +143,7 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
         mWakefulnessLifecycle = wakefulnessLifecycle;
         mStatusBarStateController = statusBarStateController;
         mDelayableExecutor = delayableExecutor;
+        mMainExecutor = mainExecutor;
         mCommunalSceneInteractor = communalSceneInteractor;
         mShadeInteractor = shadeInteractor;
         mKeyguardTransitionInteractor = keyguardTransitionInteractor;
@@ -147,6 +158,7 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
         mWakefulnessLifecycle.addObserver(mWakefulnessObserver);
         mSleepy = mWakefulnessLifecycle.getWakefulness() == WAKEFULNESS_ASLEEP;
         mFullyDozed = mStatusBarStateController.getDozeAmount() == 1f;
+        mPanelExpanded = mStatusBarStateController.isExpanded();
 
         mStatusBarStateController.addCallback(mStatusBarStateControllerListener);
         mPulsing = mStatusBarStateController.isPulsing();
@@ -155,29 +167,69 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
         mJavaAdapter.alwaysCollectFlow(mShadeAnimationInteractor.isLaunchingActivity(),
                 this::onLaunchingActivityChanged);
         mJavaAdapter.alwaysCollectFlow(
-                BooleanFlowOperators.INSTANCE.allOf(
+                BooleanFlowOperators.allOf(
                         mCommunalSceneInteractor.isIdleOnCommunal(),
-                        BooleanFlowOperators.INSTANCE.not(mShadeInteractor.isAnyFullyExpanded())
+                        BooleanFlowOperators.not(mShadeInteractor.isAnyFullyExpanded())
                 ),
                 this::onCommunalShowingChanged);
+
+
+        if (StabilizeHeadsUpGroup.isEnabled()) {
+            pipeline.addOnBeforeRenderListListener(mOnBeforeRenderListListener);
+        }
 
         if (SceneContainerFlag.isEnabled()) {
             mJavaAdapter.alwaysCollectFlow(mKeyguardTransitionInteractor.transitionValue(
                             KeyguardState.LOCKSCREEN),
                     this::onLockscreenKeyguardStateTransitionValueChanged);
+
+            mJavaAdapter.alwaysCollectFlow(mKeyguardTransitionInteractor.isFinishedIn(
+                            Scenes.Gone, KeyguardState.GONE),
+                    this::onFinishedInGone);
+
+            mJavaAdapter.alwaysCollectFlow(mHeadsUpRepository.isTrackingHeadsUp(),
+                    this::onTrackingHeadsUpModeChanged);
+            mJavaAdapter.alwaysCollectFlow(mKeyguardTransitionInteractor.isInTransition(
+                            Edge.create(KeyguardState.LOCKSCREEN, Scenes.Gone), null),
+                    this::onLockscreenInGoneTransitionChanged);
+        } else {
+            setLockscreenShowing(mKeyguardStateController.isShowing(), "attach with flexi off");
+            mKeyguardStateController.addCallback(mKeyguardFadeAwayAnimationCallback);
+        }
+        pipeline.setVisualStabilityManager(mNotifStabilityManager);
+    }
+
+    private void setLockscreenShowing(boolean isShowing, String reason) {
+        mLockscreenShowing = isShowing;
+        mLockscreenShowingReason = reason;
+    }
+
+    /**
+     * Setter of heads up group keys.
+     */
+    @VisibleForTesting
+    public void setHeadsUpGroupKeys(Set<String> currentHeadsUpGroupKeys) {
+        if (StabilizeHeadsUpGroup.isUnexpectedlyInLegacyMode()) {
+            return;
         }
 
-        if (Flags.checkLockscreenGoneTransition()) {
-            if (SceneContainerFlag.isEnabled()) {
-                mJavaAdapter.alwaysCollectFlow(mKeyguardTransitionInteractor.isInTransition(
-                                Edge.create(KeyguardState.LOCKSCREEN, Scenes.Gone), null),
-                        this::onLockscreenInGoneTransitionChanged);
-            } else {
-                mKeyguardStateController.addCallback(mKeyguardFadeAwayAnimationCallback);
+        if (currentHeadsUpGroupKeys == null) {
+            currentHeadsUpGroupKeys = new HashSet<>();
+        }
+
+        boolean isAnyHeadsUpGroupRemoved = false;
+        for (String headsUpKey: mHeadsUpGroupKeys) {
+            if (!currentHeadsUpGroupKeys.contains(headsUpKey)) {
+                isAnyHeadsUpGroupRemoved = true;
+                break;
             }
         }
+        mHeadsUpGroupKeys = currentHeadsUpGroupKeys;
 
-        pipeline.setVisualStabilityManager(mNotifStabilityManager);
+        if (isAnyHeadsUpGroupRemoved) {
+            updateAllowedStates("headsUpGroupEntryChange",
+                    mHeadsUpGroupKeys.isEmpty(), /* async= */ true);
+        }
     }
 
     final KeyguardStateController.Callback mKeyguardFadeAwayAnimationCallback =
@@ -200,16 +252,73 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
                     boolean isTopUnseen = NotificationMinimalism.isEnabled()
                             && (mSeenNotificationsInteractor.isTopUnseenNotification(entry)
                                 || mSeenNotificationsInteractor.isTopOngoingNotification(entry));
-                    if (isTopUnseen || mHeadsUpManager.isHeadsUpEntry(entry.getKey())) {
+                    if (isTopUnseen || mHeadsUpRepository.isHeadsUpEntry(entry.getKey())) {
                         return !mVisibilityLocationProvider.isInVisibleLocation(entry);
                     }
                     return false;
                 }
 
+                private boolean isParentHeadsUpGroup(NotificationEntry entry) {
+                    if (StabilizeHeadsUpGroup.isUnexpectedlyInLegacyMode()) {
+                        return false;
+                    }
+                    if (entry == null) {
+                        return false;
+                    }
+
+                    final PipelineEntry parent = entry.getParent();
+
+                    if (parent == null) {
+                        return false;
+                    }
+                    return isHeadsUpGroup(parent);
+                }
+
+                private boolean isHeadsUpGroup(PipelineEntry pipelineEntry) {
+                    if (!(pipelineEntry instanceof GroupEntry groupEntry)) {
+                        return false;
+                    }
+
+                    if (StabilizeHeadsUpGroup.isUnexpectedlyInLegacyMode()) {
+                        return false;
+                    }
+
+                    final NotificationEntry summary = groupEntry.getSummary();
+                    if (summary == null) {
+                        return false;
+                    }
+
+                    return mHeadsUpRepository.isHeadsUpEntry(summary.getKey());
+                }
+                /**
+                 * When reordering is enabled, non-heads-up groups can be pruned.
+                 * @return true if the given group entry can be pruned.
+                 */
+                private boolean canReorderGroupEntry(GroupEntry entry) {
+                    if (StabilizeHeadsUpGroup.isUnexpectedlyInLegacyMode()) {
+                        return false;
+                    }
+
+                    return entry != null && mReorderingAllowed && !isHeadsUpGroup(entry);
+                }
+
+                /**
+                 * When reordering is enabled, notifications in non-heads-up groups notifications
+                 * are allowed to change.
+                 * @return true if the given notification entry can changed.
+                 */
+                private boolean canReorderNotificationEntry(NotificationEntry entry) {
+                    if (StabilizeHeadsUpGroup.isUnexpectedlyInLegacyMode()) {
+                        return false;
+                    }
+
+                    return entry != null && mReorderingAllowed && !isParentHeadsUpGroup(entry);
+                }
+
                 @Override
                 public void onBeginRun() {
                     mIsSuppressingPipelineRun = false;
-                    mIsSuppressingGroupChange = false;
+                    mIsSuppressingParentChange = false;
                     mEntriesWithSuppressedSectionChange.clear();
                     mIsSuppressingEntryReorder = false;
                 }
@@ -221,26 +330,63 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
                 }
 
                 @Override
-                public boolean isGroupChangeAllowed(@NonNull NotificationEntry entry) {
-                    final boolean isGroupChangeAllowedForEntry =
-                            mReorderingAllowed || canMoveForHeadsUp(entry);
-                    mIsSuppressingGroupChange |= !isGroupChangeAllowedForEntry;
+                public boolean isParentChangeAllowed(@NonNull NotificationEntry entry) {
+                    final boolean isGroupChangeAllowedForEntry;
+                    if (StabilizeHeadsUpGroup.isEnabled()) {
+                        isGroupChangeAllowedForEntry =
+                                isEveryChangeAllowed()
+                                        || canReorderNotificationEntry(entry)
+                                        || canMoveForHeadsUp(entry)
+                                        || canFreelyMoveEntry(entry);
+                    } else {
+                        isGroupChangeAllowedForEntry = mReorderingAllowed
+                                || canMoveForHeadsUp(entry)
+                                || canFreelyMoveEntry(entry);
+                    }
+                    mIsSuppressingParentChange |= !isGroupChangeAllowedForEntry;
                     return isGroupChangeAllowedForEntry;
                 }
 
                 @Override
+                public boolean isParentChangeAllowed(@NonNull GroupEntry entry) {
+                    final boolean isBundleChangeAllowedForGroup = isEveryChangeAllowed()
+                            || canFreelyMoveEntry(entry);
+                    mIsSuppressingParentChange |= !isBundleChangeAllowedForGroup;
+                    return isBundleChangeAllowedForGroup;
+                }
+
+                @Override
                 public boolean isGroupPruneAllowed(@NonNull GroupEntry entry) {
-                    final boolean isGroupPruneAllowedForEntry = mReorderingAllowed;
-                    mIsSuppressingGroupChange |= !isGroupPruneAllowedForEntry;
+                    boolean isGroupPruneAllowedForEntry;
+                    if (StabilizeHeadsUpGroup.isEnabled()) {
+                        isGroupPruneAllowedForEntry = isEveryChangeAllowed()
+                                || canReorderGroupEntry(entry);
+                    } else {
+                        isGroupPruneAllowedForEntry = mReorderingAllowed;
+                    }
+
+                    mIsSuppressingParentChange |= !isGroupPruneAllowedForEntry;
                     return isGroupPruneAllowedForEntry;
                 }
 
                 @Override
                 public boolean isSectionChangeAllowed(@NonNull NotificationEntry entry) {
-                    final boolean isSectionChangeAllowedForEntry =
-                            mReorderingAllowed
-                                    || canMoveForHeadsUp(entry)
-                                    || mEntriesThatCanChangeSection.containsKey(entry.getKey());
+                    final boolean isSectionChangeAllowedForEntry;
+                    if (StabilizeHeadsUpGroup.isEnabled()) {
+                        isSectionChangeAllowedForEntry =
+                                isEveryChangeAllowed()
+                                        || canReorderNotificationEntry(entry)
+                                        || canMoveForHeadsUp(entry)
+                                        || mEntriesThatCanChangeSection.containsKey(entry.getKey())
+                                        || canFreelyMoveEntry(entry);
+                    } else {
+                        isSectionChangeAllowedForEntry =
+                                mReorderingAllowed
+                                        || canMoveForHeadsUp(entry)
+                                        || mEntriesThatCanChangeSection.containsKey(entry.getKey())
+                                        || canFreelyMoveEntry(entry);
+                    }
+
                     if (!isSectionChangeAllowedForEntry) {
                         mEntriesWithSuppressedSectionChange.add(entry.getKey());
                     }
@@ -248,13 +394,31 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
                 }
 
                 @Override
-                public boolean isEntryReorderingAllowed(@NonNull ListEntry entry) {
-                    return mReorderingAllowed || canMoveForHeadsUp(entry.getRepresentativeEntry());
+                public boolean isEntryReorderingAllowed(@NonNull PipelineEntry entry) {
+                    final ListEntry listEntry = entry.asListEntry();
+                    final NotificationEntry notificationEntry =
+                            listEntry == null ? null : listEntry.getRepresentativeEntry();
+                    if (StabilizeHeadsUpGroup.isEnabled()) {
+                        if (isEveryChangeAllowed()) {
+                            return true;
+                        }
+
+                        return canReorderNotificationEntry(notificationEntry)
+                                || canMoveForHeadsUp(notificationEntry)
+                                || (notificationEntry != null
+                                        && canFreelyMoveEntry(notificationEntry));
+                    } else {
+                        return mReorderingAllowed || canMoveForHeadsUp(notificationEntry);
+                    }
                 }
 
                 @Override
                 public boolean isEveryChangeAllowed() {
-                    return mReorderingAllowed;
+                    if (StabilizeHeadsUpGroup.isEnabled()) {
+                        return mReorderingAllowed && mHeadsUpGroupKeys.isEmpty();
+                    } else {
+                        return mReorderingAllowed;
+                    }
                 }
 
                 @Override
@@ -263,32 +427,70 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
                 }
             };
 
+    private final OnBeforeRenderListListener mOnBeforeRenderListListener =
+            new OnBeforeRenderListListener() {
+                @Override
+                public void onBeforeRenderList(List<PipelineEntry> entries) {
+                    if (StabilizeHeadsUpGroup.isUnexpectedlyInLegacyMode()) {
+                        return;
+                    }
+
+                    final Set<String> currentHeadsUpKeys = new HashSet<>();
+
+                    for (int i = 0; i < entries.size(); i++) {
+                        if (entries.get(i) instanceof GroupEntry groupEntry) {
+                            final NotificationEntry summary = groupEntry.getSummary();
+                            if (summary == null) continue;
+
+                            final String summaryKey = summary.getKey();
+                            if (mHeadsUpRepository.isHeadsUpEntry(summaryKey)) {
+                                currentHeadsUpKeys.add(summaryKey);
+                            }
+                        }
+                    }
+
+                    setHeadsUpGroupKeys(currentHeadsUpKeys);
+                }
+            };
+
     private void updateAllowedStates(String field, boolean value) {
+        updateAllowedStates(field, value, /* async = */ false);
+    }
+
+    private void updateAllowedStates(String field, boolean value, boolean async) {
         boolean wasPipelineRunAllowed = mPipelineRunAllowed;
         boolean wasReorderingAllowed = mReorderingAllowed;
         // No need to run notification pipeline when the lockscreen is in fading animation.
         mPipelineRunAllowed = !(isPanelCollapsingOrLaunchingActivity()
-                || (Flags.checkLockscreenGoneTransition() && mLockscreenInGoneTransition));
+                || mLockscreenInGoneTransition);
         mReorderingAllowed = isReorderingAllowed();
         if (wasPipelineRunAllowed != mPipelineRunAllowed
                 || wasReorderingAllowed != mReorderingAllowed) {
             mLogger.logAllowancesChanged(
                     wasPipelineRunAllowed, mPipelineRunAllowed,
                     wasReorderingAllowed, mReorderingAllowed,
-                    field, value);
+                    field, value, async);
         }
+        if (async) {
+            mMainExecutor.execute(this::maybeInvalidateList);
+        } else {
+            maybeInvalidateList();
+        }
+        mVisualStabilityProvider.setReorderingAllowed(mReorderingAllowed);
+    }
+
+    private void maybeInvalidateList() {
         if (mPipelineRunAllowed && mIsSuppressingPipelineRun) {
             mNotifStabilityManager.invalidateList("pipeline run suppression ended");
-        } else if (mReorderingAllowed && (mIsSuppressingGroupChange
+        } else if (mReorderingAllowed && (mIsSuppressingParentChange
                 || isSuppressingSectionChange()
                 || mIsSuppressingEntryReorder)) {
-            String reason = "reorder suppression ended for"
-                    + " group=" + mIsSuppressingGroupChange
+            final String reason = "reorder suppression ended for"
+                    + " group=" + mIsSuppressingParentChange
                     + " section=" + isSuppressingSectionChange()
                     + " sort=" + mIsSuppressingEntryReorder;
             mNotifStabilityManager.invalidateList(reason);
         }
-        mVisualStabilityProvider.setReorderingAllowed(mReorderingAllowed);
     }
 
     private boolean isSuppressingSectionChange() {
@@ -301,9 +503,49 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
 
     private boolean isReorderingAllowed() {
         final boolean sleepyAndDozed = mFullyDozed && mSleepy;
-        final boolean stackShowing = mPanelExpanded
-                || (SceneContainerFlag.isEnabled() && mLockscreenShowing);
+        final boolean stackShowing = isStackShowing();
         return (sleepyAndDozed || !stackShowing || mCommunalShowing) && !mPulsing;
+    }
+
+    /** @return true when the notification stack is visible to the user */
+    private boolean isStackShowing() {
+        if (SceneContainerFlag.isEnabled()) {
+            return mPanelExpanded || mLockscreenShowing || mTrackingHeadsUp;
+        } else {
+            return mPanelExpanded;
+        }
+    }
+
+    /**
+     * Allows this notification entry to be re-ordered and re-parented in the notification list
+     * temporarily until the timeout has passed.
+     *
+     * Typically this is allowed because the user has directly changed something about the
+     * notification and we are reordering based on the user's change.
+     *
+     * @param entry notification entry that can move freely even if it would be otherwise suppressed
+     * @param now current time SystemClock.elapsedRealtime
+     */
+    public void temporarilyAllowFreeMovement(@NonNull NotificationEntry entry, long now) {
+        final String entryKey = entry.getKey();
+        final Runnable existing = mEntriesThatCanMoveFreely.get(entryKey);
+        final boolean wasAllowedToMoveFreely = existing != null;
+
+        // If it exists, cancel previous timeout
+        if (wasAllowedToMoveFreely) {
+            existing.run();
+        }
+
+        // Schedule & store new timeout cancellable
+        mEntriesThatCanMoveFreely.put(
+                entryKey,
+                mDelayableExecutor.executeAtTime(
+                        () -> mEntriesThatCanMoveFreely.remove(entryKey),
+                        now + ALLOW_SECTION_CHANGE_TIMEOUT));
+
+        if (!wasAllowedToMoveFreely) {
+            mNotifStabilityManager.invalidateList("temporarilyAllowFreeMovement");
+        }
     }
 
     /**
@@ -314,7 +556,7 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
      * notification and we are reordering based on the user's change.
      *
      * @param entry notification entry that can change sections even if isReorderingAllowed is false
-     * @param now current time SystemClock.uptimeMillis
+     * @param now current time SystemClock.elapsedRealtime
      */
     public void temporarilyAllowSectionChanges(@NonNull NotificationEntry entry, long now) {
         final String entryKey = entry.getKey();
@@ -336,6 +578,18 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
         if (!wasSectionChangeAllowed) {
             mNotifStabilityManager.invalidateList("temporarilyAllowSectionChanges");
         }
+    }
+
+    private boolean canFreelyMoveEntry(@NonNull GroupEntry entry) {
+        @Nullable NotificationEntry representativeEntry = entry.getRepresentativeEntry();
+        if (representativeEntry == null) {
+            return false;
+        }
+        return canFreelyMoveEntry(representativeEntry);
+    }
+
+    private boolean canFreelyMoveEntry(@NonNull NotificationEntry entry) {
+        return mEntriesThatCanMoveFreely.containsKey(entry.getKey());
     }
 
     final StatusBarStateController.StateListener mStatusBarStateControllerListener =
@@ -381,18 +635,22 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
         pw.println("pipelineRunAllowed: " + mPipelineRunAllowed);
         pw.println("  notifPanelCollapsing: " + mNotifPanelCollapsing);
         pw.println("  launchingNotifActivity: " + mNotifPanelLaunchingActivity);
-        if (Flags.checkLockscreenGoneTransition()) {
-            pw.println("  lockscreenInGoneTransition: " + mLockscreenInGoneTransition);
-        }
+        pw.println("  lockscreenInGoneTransition: " + mLockscreenInGoneTransition);
         pw.println("reorderingAllowed: " + mReorderingAllowed);
         pw.println("  sleepy: " + mSleepy);
         pw.println("  fullyDozed: " + mFullyDozed);
         pw.println("  panelExpanded: " + mPanelExpanded);
+        pw.println("  lockscreenShowing: " + mLockscreenShowing);
+        pw.println("  lockscreenShowingReason: " + mLockscreenShowingReason);
+        pw.println("  trackingHeadsUp: " + mTrackingHeadsUp);
         pw.println("  pulsing: " + mPulsing);
         pw.println("  communalShowing: " + mCommunalShowing);
         pw.println("isSuppressingPipelineRun: " + mIsSuppressingPipelineRun);
-        pw.println("isSuppressingGroupChange: " + mIsSuppressingGroupChange);
+        pw.println("isSuppressingGroupChange: " + mIsSuppressingParentChange);
         pw.println("isSuppressingEntryReorder: " + mIsSuppressingEntryReorder);
+        if (StabilizeHeadsUpGroup.isEnabled()) {
+            pw.println("headsUpGroupKeys: " + mHeadsUpGroupKeys.size());
+        }
         pw.println("entriesWithSuppressedSectionChange: "
                 + mEntriesWithSuppressedSectionChange.size());
         for (String key : mEntriesWithSuppressedSectionChange) {
@@ -428,15 +686,29 @@ public class VisualStabilityCoordinator implements Coordinator, Dumpable {
         if (isShowing == mLockscreenShowing) {
             return;
         }
+        String reason = "transitionValueShowing:" + isShowing;
+        setLockscreenShowing(isShowing, reason);
+        updateAllowedStates(reason, isShowing);
+    }
 
-        mLockscreenShowing = isShowing;
-        updateAllowedStates("lockscreenShowing", isShowing);
+    private void onFinishedInGone(boolean isFinishedInGone) {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) {
+            return;
+        }
+        if (isFinishedInGone) {
+            if (mLockscreenShowing) {
+                setLockscreenShowing(false, "inGone");
+            }
+            updateAllowedStates("onFinishedInGone", false);
+        }
+    }
+
+    private void onTrackingHeadsUpModeChanged(boolean isTrackingHeadsUp) {
+        mTrackingHeadsUp = isTrackingHeadsUp;
+        updateAllowedStates("trackingHeadsUp", isTrackingHeadsUp);
     }
 
     private void onLockscreenInGoneTransitionChanged(boolean inGoneTransition) {
-        if (!Flags.checkLockscreenGoneTransition()) {
-            return;
-        }
         if (inGoneTransition == mLockscreenInGoneTransition) {
             return;
         }

@@ -16,9 +16,6 @@
 
 package com.android.systemui.log.table
 
-import com.android.systemui.util.kotlin.pairwiseBy
-import kotlinx.coroutines.flow.Flow
-
 /**
  * An interface that enables logging the difference between values in table format.
  *
@@ -28,7 +25,7 @@ import kotlinx.coroutines.flow.Flow
  *
  * See [TableLogBuffer].
  */
-interface Diffable<T> {
+public interface Diffable<T> {
     /**
      * Finds the differences between [prevVal] and this object and logs those diffs to [row].
      *
@@ -42,7 +39,7 @@ interface Diffable<T> {
      *
      * Then only the val3 change should be logged.
      */
-    fun logDiffs(prevVal: T, row: TableRowLogger)
+    public fun logDiffs(prevVal: T, row: TableRowLogger)
 
     /**
      * Logs all the relevant fields of this object to [row].
@@ -52,135 +49,5 @@ interface Diffable<T> {
      * Implementation is optional. This method will only be used with [logDiffsForTable] in order to
      * fully log the initial value of the flow.
      */
-    fun logFull(row: TableRowLogger) {}
-}
-
-/**
- * Each time the flow is updated with a new value, logs the differences between the previous value
- * and the new value to the given [tableLogBuffer].
- *
- * The new value's [Diffable.logDiffs] method will be used to log the differences to the table.
- *
- * @param columnPrefix a prefix that will be applied to every column name that gets logged.
- */
-fun <T : Diffable<T>> Flow<T>.logDiffsForTable(
-    tableLogBuffer: TableLogBuffer,
-    columnPrefix: String,
-    initialValue: T,
-): Flow<T> {
-    // Fully log the initial value to the table.
-    val getInitialValue = {
-        tableLogBuffer.logChange(columnPrefix, isInitial = true) { row ->
-            initialValue.logFull(row)
-        }
-        initialValue
-    }
-    return this.pairwiseBy(getInitialValue) { prevVal: T, newVal: T ->
-        tableLogBuffer.logDiffs(columnPrefix, prevVal, newVal)
-        newVal
-    }
-}
-
-// Here and below: Various Flow<SomeType> extension functions that are effectively equivalent to the
-// above [logDiffsForTable] method.
-
-/** See [logDiffsForTable(TableLogBuffer, String, T)]. */
-fun Flow<Boolean>.logDiffsForTable(
-    tableLogBuffer: TableLogBuffer,
-    columnPrefix: String,
-    columnName: String,
-    initialValue: Boolean,
-): Flow<Boolean> {
-    val initialValueFun = {
-        tableLogBuffer.logChange(columnPrefix, columnName, initialValue, isInitial = true)
-        initialValue
-    }
-    return this.pairwiseBy(initialValueFun) { prevVal: Boolean, newVal: Boolean ->
-        if (prevVal != newVal) {
-            tableLogBuffer.logChange(columnPrefix, columnName, newVal)
-        }
-        newVal
-    }
-}
-
-/** See [logDiffsForTable(TableLogBuffer, String, T)]. */
-fun Flow<Int>.logDiffsForTable(
-    tableLogBuffer: TableLogBuffer,
-    columnPrefix: String,
-    columnName: String,
-    initialValue: Int,
-): Flow<Int> {
-    val initialValueFun = {
-        tableLogBuffer.logChange(columnPrefix, columnName, initialValue, isInitial = true)
-        initialValue
-    }
-    return this.pairwiseBy(initialValueFun) { prevVal: Int, newVal: Int ->
-        if (prevVal != newVal) {
-            tableLogBuffer.logChange(columnPrefix, columnName, newVal)
-        }
-        newVal
-    }
-}
-
-/** See [logDiffsForTable(TableLogBuffer, String, T)]. */
-fun Flow<Int?>.logDiffsForTable(
-    tableLogBuffer: TableLogBuffer,
-    columnPrefix: String,
-    columnName: String,
-    initialValue: Int?,
-): Flow<Int?> {
-    val initialValueFun = {
-        tableLogBuffer.logChange(columnPrefix, columnName, initialValue, isInitial = true)
-        initialValue
-    }
-    return this.pairwiseBy(initialValueFun) { prevVal: Int?, newVal: Int? ->
-        if (prevVal != newVal) {
-            tableLogBuffer.logChange(columnPrefix, columnName, newVal)
-        }
-        newVal
-    }
-}
-
-/** See [logDiffsForTable(TableLogBuffer, String, T)]. */
-fun Flow<String?>.logDiffsForTable(
-    tableLogBuffer: TableLogBuffer,
-    columnPrefix: String,
-    columnName: String,
-    initialValue: String?,
-): Flow<String?> {
-    val initialValueFun = {
-        tableLogBuffer.logChange(columnPrefix, columnName, initialValue, isInitial = true)
-        initialValue
-    }
-    return this.pairwiseBy(initialValueFun) { prevVal: String?, newVal: String? ->
-        if (prevVal != newVal) {
-            tableLogBuffer.logChange(columnPrefix, columnName, newVal)
-        }
-        newVal
-    }
-}
-
-/** See [logDiffsForTable(TableLogBuffer, String, T)]. */
-fun <T> Flow<List<T>>.logDiffsForTable(
-    tableLogBuffer: TableLogBuffer,
-    columnPrefix: String,
-    columnName: String,
-    initialValue: List<T>,
-): Flow<List<T>> {
-    val initialValueFun = {
-        tableLogBuffer.logChange(
-            columnPrefix,
-            columnName,
-            initialValue.toString(),
-            isInitial = true,
-        )
-        initialValue
-    }
-    return this.pairwiseBy(initialValueFun) { prevVal: List<T>, newVal: List<T> ->
-        if (prevVal != newVal) {
-            // TODO(b/267761156): Can we log list changes without using toString?
-            tableLogBuffer.logChange(columnPrefix, columnName, newVal.toString())
-        }
-        newVal
-    }
+    public fun logFull(row: TableRowLogger) {}
 }

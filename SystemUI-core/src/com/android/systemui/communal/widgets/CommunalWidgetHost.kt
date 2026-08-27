@@ -149,11 +149,20 @@ constructor(
         bgScope.launch {
             val newProviders = mutableMapOf<Int, AppWidgetProviderInfo?>()
             appWidgetHost.appWidgetIds.forEach { appWidgetId ->
-                // Listen for updates from each bound widget
-                addListener(appWidgetId)
+                try {
+                    // Listen for updates from each bound widget
+                    addListener(appWidgetId)
 
-                // Fetch provider info of the widget
-                newProviders[appWidgetId] = getAppWidgetInfo(appWidgetId)
+                    // Fetch provider info of the widget
+                    newProviders[appWidgetId] = getAppWidgetInfo(appWidgetId)
+                } catch (exception: Exception) {
+                    if (exception.isBinderSizeError()) {
+                        logger.e("failed to add listener for $appWidgetId", exception)
+                        newProviders.remove(appWidgetId)
+                    } else {
+                        throw exception
+                    }
+                }
             }
 
             _appWidgetProviders.value = newProviders.toMap()
@@ -165,17 +174,27 @@ constructor(
     }
 
     override fun onHostStopListening() {
-        // Remove listeners
-        _appWidgetProviders.value.keys.forEach { appWidgetId ->
-            appWidgetHost.removeListener(appWidgetId)
-        }
+        bgScope.launch {
+            // Remove listeners
+            _appWidgetProviders.value.keys.forEach { appWidgetId ->
+                appWidgetHost.removeListener(appWidgetId)
+            }
 
-        // Clear providers
-        _appWidgetProviders.value = emptyMap()
+            // Clear providers
+            _appWidgetProviders.value = emptyMap()
+        }
     }
 
     override fun onAllocateAppWidgetId(appWidgetId: Int) {
-        addListener(appWidgetId)
+        try {
+            addListener(appWidgetId)
+        } catch (exception: Exception) {
+            if (exception.isBinderSizeError()) {
+                logger.e("Could not add listener upon allocation", exception)
+            } else {
+                throw exception
+            }
+        }
     }
 
     override fun onDeleteAppWidgetId(appWidgetId: Int) {

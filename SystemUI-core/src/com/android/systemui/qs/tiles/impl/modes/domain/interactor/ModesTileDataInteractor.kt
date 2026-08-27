@@ -19,33 +19,43 @@ package com.android.systemui.qs.tiles.impl.modes.domain.interactor
 import android.content.Context
 import android.os.UserHandle
 import com.android.app.tracing.coroutines.flow.flowName
+import com.android.settingslib.notification.modes.ZenMode
 import com.android.systemui.common.shared.model.Icon
-import com.android.systemui.common.shared.model.asIcon
+import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
-import com.android.systemui.modes.shared.ModesUi
-import com.android.systemui.modes.shared.ModesUiIcons
+import com.android.systemui.keyguard.data.repository.KeyguardRepository
+import com.android.systemui.keyguard.shared.model.StatusBarState
 import com.android.systemui.qs.tiles.ModesTile
-import com.android.systemui.qs.tiles.base.interactor.DataUpdateTrigger
-import com.android.systemui.qs.tiles.base.interactor.QSTileDataInteractor
+import com.android.systemui.qs.tiles.base.domain.interactor.QSTileDataInteractor
+import com.android.systemui.qs.tiles.base.domain.model.DataUpdateTrigger
 import com.android.systemui.qs.tiles.impl.modes.domain.model.ModesTileModel
 import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.policy.domain.interactor.ZenModeInteractor
-import com.android.systemui.statusbar.policy.domain.model.ActiveZenModes
-import com.android.systemui.statusbar.policy.domain.model.ZenModeInfo
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
+@SysUISingleton
 class ModesTileDataInteractor
 @Inject
 constructor(
     @ShadeDisplayAware val context: Context,
     val zenModeInteractor: ZenModeInteractor,
+    private val shadeInteractor: ShadeInteractor,
+    private val keyguardRepository: KeyguardRepository,
     @Background val bgDispatcher: CoroutineDispatcher,
+    @Background val bgScope: CoroutineScope,
 ) : QSTileDataInteractor<ModesTileModel> {
 
     override fun tileData(
@@ -53,53 +63,110 @@ constructor(
         triggers: Flow<DataUpdateTrigger>,
     ): Flow<ModesTileModel> = tileData()
 
+    private val recentlyDeactivatedModeIds: MutableStateFlow<List<String>> =
+        MutableStateFlow(listOf())
+    private var waitingToRemoveQuickModeOverride: Job? = null
+
     /**
      * An adapted version of the base class' [tileData] method for use in an old-style tile.
      *
      * TODO(b/299909989): Remove after the transition.
      */
-    fun tileData() =
-        zenModeInteractor.activeModes
-            .map { activeModes -> buildTileData(activeModes) }
+    fun tileData(): Flow<ModesTileModel> =
+        combine(zenModeInteractor.modes, recentlyDeactivatedModeIds) {
+                modes,
+                recentlyDeactivatedModeIds ->
+                buildTileData(modes, recentlyDeactivatedModeIds)
+            }
             .flowName("tileData")
             .flowOn(bgDispatcher)
             .distinctUntilChanged()
 
-    suspend fun getCurrentTileModel() = buildTileData(zenModeInteractor.getActiveModes())
+    suspend fun getCurrentTileModel(): ModesTileModel =
+        buildTileData(zenModeInteractor.modes.value, recentlyDeactivatedModeIds.value)
 
-    private fun buildTileData(activeModes: ActiveZenModes): ModesTileModel {
-        if (ModesUiIcons.isEnabled) {
-            val tileIcon = getTileIcon(activeModes.mainMode)
-            return ModesTileModel(
-                isActivated = activeModes.isAnyActive(),
-                icon = tileIcon.icon,
-                iconResId = tileIcon.resId,
-                activeModes = activeModes.modeNames,
-            )
-        } else {
-            return ModesTileModel(
-                isActivated = activeModes.isAnyActive(),
-                icon = context.getDrawable(ModesTile.ICON_RES_ID)!!.asIcon(),
-                iconResId = ModesTile.ICON_RES_ID,
-                activeModes = activeModes.modeNames,
-            )
-        }
-    }
+    private suspend fun buildTileData(
+        modes: List<ZenMode>,
+        quickModeOverrides: List<String>,
+    ): ModesTileModel {
+        val activeModesList =
+            modes.filter { mode -> mode.isActive }.sortedWith(ZenMode.PRIORITIZING_COMPARATOR)
+        val mainActiveMode = activeModesList.firstOrNull()
+        val quickMode = getQuickMode(modes, quickModeOverrides)
 
-    private data class TileIcon(val icon: Icon.Loaded, val resId: Int?)
-
-    private fun getTileIcon(activeMode: ZenModeInfo?): TileIcon {
-        return if (activeMode != null) {
-            // ZenIconKey.resPackage is null if its resId is a system icon.
-            if (activeMode.icon.key.resPackage == null) {
-                TileIcon(activeMode.icon.drawable.asIcon(), activeMode.icon.key.resId)
+        val icon =
+            if (mainActiveMode != null) {
+                zenModeInteractor.getModeIcon(mainActiveMode)
             } else {
-                TileIcon(activeMode.icon.drawable.asIcon(), null)
+                if (quickMode != null) {
+                    zenModeInteractor.getModeIcon(quickMode)
+                } else {
+                    getDefaultTileIcon()
+                }
             }
-        } else {
-            TileIcon(context.getDrawable(ModesTile.ICON_RES_ID)!!.asIcon(), ModesTile.ICON_RES_ID)
+
+        return ModesTileModel(
+            isActivated = activeModesList.isNotEmpty(),
+            activeModes = activeModesList.map { ModesTileModel.ActiveMode(it.id, it.name) },
+            icon = icon,
+            quickMode = quickMode ?: modes.single { it.isManualDnd },
+        )
+    }
+
+    /**
+     * Calculate the "quick mode" (toggle in the two-target tile), which can be:
+     * 1. temporarily, the mode that was last deactivated via this tile (expires),
+     * 2. otherwise, the last activated manual mode,
+     * 3. otherwise, returns `null`, which means the DND mode will be used.
+     */
+    private fun getQuickMode(modes: List<ZenMode>, quickModeOverrides: List<String>): ZenMode? {
+        val manualModes =
+            modes
+                .filter { mode -> mode.isManualInvocationAllowed }
+                .sortedWith(ZenMode.PRIORITIZING_COMPARATOR)
+        val recentlyDeactivatedManualMode =
+            manualModes
+                .filter { mode -> quickModeOverrides.contains(mode.id) }
+                .minByOrNull { mode -> quickModeOverrides.indexOf(mode.id) }
+        val lastActivatedManualMode =
+            manualModes
+                .filter { mode -> mode.lastManualActivation != null }
+                .maxByOrNull { it.lastManualActivation!! }
+
+        return recentlyDeactivatedManualMode ?: lastActivatedManualMode
+    }
+
+    fun setQuickModeOverride(deactivatedModeIds: List<String>) {
+        waitingToRemoveQuickModeOverride?.cancel()
+        waitingToRemoveQuickModeOverride = null
+
+        recentlyDeactivatedModeIds.value = deactivatedModeIds
+
+        // Remember the recently deactivated modes (to use for "quick mode") until shade is closed,
+        // then clear it. That way the user can quickly reactivate a mode they just deactivated,
+        // but for later usages they will have their most recently activated mode.
+        if (deactivatedModeIds.isNotEmpty()) {
+            waitingToRemoveQuickModeOverride =
+                bgScope.launch {
+                    combine(shadeInteractor.isAnyExpanded, keyguardRepository.statusBarState) {
+                            isAnyExpanded,
+                            statusBarState ->
+                            !isAnyExpanded || statusBarState == StatusBarState.KEYGUARD
+                        }
+                        .distinctUntilChanged()
+                        .first { it } // it == shade is closed. stop collecting and continue
+
+                    recentlyDeactivatedModeIds.value = listOf()
+                }
         }
     }
 
-    override fun availability(user: UserHandle): Flow<Boolean> = flowOf(ModesUi.isEnabled)
+    private fun getDefaultTileIcon() =
+        Icon.Loaded(
+            context.getDrawable(ModesTile.ICON_RES_ID)!!,
+            contentDescription = null,
+            resId = ModesTile.ICON_RES_ID,
+        )
+
+    override fun availability(user: UserHandle): Flow<Boolean> = flowOf(true)
 }

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.android.systemui.scene.domain.startable
 
 import android.annotation.SuppressLint
@@ -26,7 +24,8 @@ import android.os.IBinder
 import android.os.RemoteException
 import android.provider.DeviceConfig
 import android.util.Log
-import com.android.compose.animation.scene.SceneKey
+import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.compose.animation.scene.OverlayKey
 import com.android.internal.config.sysui.SystemUiDeviceConfigFlags
 import com.android.internal.statusbar.IStatusBarService
 import com.android.systemui.CoreStartable
@@ -38,22 +37,20 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.deviceconfig.domain.interactor.DeviceConfigInteractor
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryFaceAuthInteractor
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor
+import com.android.systemui.keyguard.domain.interactor.KeyguardOcclusionInteractor
 import com.android.systemui.navigation.domain.interactor.NavigationInteractor
 import com.android.systemui.power.domain.interactor.PowerInteractor
 import com.android.systemui.power.shared.model.WakeSleepReason
 import com.android.systemui.power.shared.model.WakefulnessModel
-import com.android.systemui.scene.domain.interactor.SceneContainerOcclusionInteractor
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
-import com.android.systemui.scene.shared.model.Scenes
+import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import com.android.app.tracing.coroutines.launchTraced as launch
 import kotlinx.coroutines.withContext
 
 @SysUISingleton
@@ -66,7 +63,7 @@ constructor(
     private val selectedUserInteractor: SelectedUserInteractor,
     private val sceneInteractor: SceneInteractor,
     private val deviceEntryInteractor: DeviceEntryInteractor,
-    private val sceneContainerOcclusionInteractor: SceneContainerOcclusionInteractor,
+    private val occlusionInteractor: KeyguardOcclusionInteractor,
     private val deviceConfigInteractor: DeviceConfigInteractor,
     private val navigationInteractor: NavigationInteractor,
     private val authenticationInteractor: AuthenticationInteractor,
@@ -85,9 +82,8 @@ constructor(
         applicationScope.launch {
             combine(
                     selectedUserInteractor.selectedUser,
-                    sceneInteractor.currentScene,
                     deviceEntryInteractor.isDeviceEntered,
-                    sceneContainerOcclusionInteractor.invisibleDueToOcclusion,
+                    occlusionInteractor.isKeyguardOccluded,
                     deviceConfigInteractor.property(
                         namespace = DeviceConfig.NAMESPACE_SYSTEMUI,
                         name = SystemUiDeviceConfigFlags.NAV_BAR_HANDLE_SHOW_OVER_LOCKSCREEN,
@@ -96,17 +92,18 @@ constructor(
                     navigationInteractor.isGesturalMode,
                     authenticationInteractor.authenticationMethod,
                     powerInteractor.detailedWakefulness,
+                    sceneInteractor.currentOverlays,
                 ) { values ->
                     val selectedUserId = values[0] as Int
-                    val currentScene = values[1] as SceneKey
-                    val isDeviceEntered = values[2] as Boolean
-                    val isOccluded = values[3] as Boolean
-                    val isShowHomeOverLockscreen = values[4] as Boolean
-                    val isGesturalMode = values[5] as Boolean
-                    val authenticationMethod = values[6] as AuthenticationMethodModel
-                    val wakefulnessModel = values[7] as WakefulnessModel
+                    val isDeviceEntered = values[1] as Boolean
+                    val isOccluded = values[2] as Boolean
+                    val isShowHomeOverLockscreen = values[3] as Boolean
+                    val isGesturalMode = values[4] as Boolean
+                    val authenticationMethod = values[5] as AuthenticationMethodModel
+                    val wakefulnessModel = values[6] as WakefulnessModel
+                    val overlays = values[7] as Set<OverlayKey>
 
-                    val isForceHideHomeAndRecents = currentScene == Scenes.Bouncer
+                    val isForceHideHomeAndRecents = Overlays.Bouncer in overlays
                     val isKeyguardShowing = !isDeviceEntered
                     val isPowerGestureIntercepted =
                         with(wakefulnessModel) {

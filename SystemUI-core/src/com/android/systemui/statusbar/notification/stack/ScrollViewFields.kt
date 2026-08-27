@@ -33,21 +33,47 @@ import java.util.function.Consumer
  */
 class ScrollViewFields {
     /** Used to produce the clipping path */
-    var scrimClippingShape: ShadeScrimShape? = null
+    @JvmField var clippingShape: ShadeScrimShape? = null
+
+    /** Used to produce the negative clipping path */
+    @JvmField var negativeClippingShape: ShadeScrimShape? = null
 
     /** Scroll state of the notification shade. */
-    var scrollState: ShadeScrollState = ShadeScrollState()
+    @JvmField var scrollState: ShadeScrollState = ShadeScrollState()
 
     /**
      * Height in view pixels at which the Notification Stack would like to be laid out, including
-     * Notification rows, paddings the Shelf and the Footer.
+     * Notification rows, the Shelf, the Footer, or the EmptyView.
      */
-    var intrinsicStackHeight: Int = 0
+    @JvmField var intrinsicStackHeight: Int = 0
+
+    /**
+     * Whether the NSSL is interactive for touch-handling. When false, neither NSSL or its
+     * descendants handle touches. NSSL will dispatch TouchEvents to the scene container framework.
+     * This is achieved by NSSL intercepting TouchEvents and returning false in onTouchEvent().
+     *
+     * When mIsInteractive is false, NSSL and its child are not focusable or selectable by
+     * accessibility.
+     */
+    @JvmField var interactive = true
+
+    /**
+     * The base side paddings for NSSL, determined by screen width, orientation, and shadeMode.
+     *
+     * Check NotificationScrollViewModel.sidePaddingConfig
+     */
+    @JvmField var baseSidePadding: Int = 0
+
+    /**
+     * Whether the NSSL should inset its left and right paddings to visually align with the second
+     * tile from each edge in the QQS above notifications.
+     */
+    @JvmField var alignToInnerQqsTiles = false
 
     /**
      * When internal NSSL expansion requires the stack to be scrolled (e.g. to keep an expanding
      * notification in view), that scroll amount can be sent here and it will be handled by the
-     * placeholder
+     * placeholder.
      */
     var syntheticScrollConsumer: Consumer<Float>? = null
 
@@ -59,9 +85,10 @@ class ScrollViewFields {
 
     /**
      * When a gesture is consumed internally by NSSL but needs to be handled by other elements (such
-     * as the notif scrim) as overscroll, we can notify the placeholder through here.
+     * as the notif scrim), we can notify the placeholder through here.
      */
-    var currentGestureOverscrollConsumer: Consumer<Boolean>? = null
+    var currentGestureExpandingNotificationConsumer: Consumer<Boolean>? = null
+
     /**
      * When a gesture is on open notification guts, which means scene container should not close the
      * guts off of this gesture, we can notify the placeholder through here.
@@ -78,9 +105,9 @@ class ScrollViewFields {
     fun sendSyntheticScroll(syntheticScroll: Float) =
         syntheticScrollConsumer?.accept(syntheticScroll)
 
-    /** send [isCurrentGestureOverscroll] to the [currentGestureOverscrollConsumer], if present. */
-    fun sendCurrentGestureOverscroll(isCurrentGestureOverscroll: Boolean) =
-        currentGestureOverscrollConsumer?.accept(isCurrentGestureOverscroll)
+    /** send [isExpanding] to the [currentGestureExpandingNotificationConsumer], if present. */
+    fun sendCurrentGestureExpandingNotification(isExpanding: Boolean) =
+        currentGestureExpandingNotificationConsumer?.accept(isExpanding)
 
     /** send [isCurrentGestureInGuts] to the [currentGestureInGutsConsumer], if present. */
     fun sendCurrentGestureInGuts(isCurrentGestureInGuts: Boolean) =
@@ -96,9 +123,14 @@ class ScrollViewFields {
     }
 
     fun dump(pw: IndentingPrintWriter) {
-        pw.printSection("StackViewStates") {
-            pw.println("scrimClippingShape", scrimClippingShape)
+        pw.printSection("ScrollViewFields") {
+            pw.println("scrimClippingShape", clippingShape)
+            pw.println("negativeClippingShape", negativeClippingShape)
             pw.println("scrollState", scrollState)
+            pw.println("intrinsicStackHeight", intrinsicStackHeight)
+            pw.println("interactive", interactive)
+            pw.println("baseSidePadding", baseSidePadding)
+            pw.println("alignToInnerQqsTiles", alignToInnerQqsTiles)
         }
     }
 }

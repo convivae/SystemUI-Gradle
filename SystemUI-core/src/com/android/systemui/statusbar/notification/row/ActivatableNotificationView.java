@@ -16,7 +16,11 @@
 
 package com.android.systemui.statusbar.notification.row;
 
+import static com.android.systemui.Flags.lockscreenBlurForNotifications;
+import static com.android.systemui.Flags.notificationAppearNonlinear;
 import static com.android.systemui.Flags.notificationBackgroundTintOptimization;
+import static com.android.systemui.Flags.notificationRowTransparency;
+import static com.android.systemui.Flags.physicalNotificationMovement;
 import static com.android.systemui.statusbar.notification.row.ExpandableView.ClipSide.BOTTOM;
 import static com.android.systemui.statusbar.notification.row.ExpandableView.ClipSide.TOP;
 
@@ -25,6 +29,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.util.AttributeSet;
 import android.util.IndentingPrintWriter;
@@ -34,11 +39,14 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Interpolator;
 
+import androidx.annotation.VisibleForTesting;
+
 import com.android.app.animation.Interpolators;
 import com.android.internal.jank.InteractionJankMonitor;
 import com.android.internal.jank.InteractionJankMonitor.Configuration;
-import com.android.settingslib.Utils;
+import com.android.systemui.Flags;
 import com.android.systemui.Gefingerpoken;
+import com.android.systemui.common.shared.colors.SurfaceEffectColors;
 import com.android.systemui.res.R;
 import com.android.systemui.shade.TouchLogger;
 import com.android.systemui.statusbar.NotificationShelf;
@@ -70,7 +78,8 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
      * #ALPHA_APPEAR_START_FRACTION.
      */
 
-    private static final float ALPHA_APPEAR_START_FRACTION = .7f;
+    private static final float ALPHA_APPEAR_START_FRACTION =
+            notificationAppearNonlinear() ? .55f : .7f;
     /**
      * The content should show fully with progress at #ALPHA_APPEAR_END_FRACTION
      * The start of the animation is at #ALPHA_APPEAR_START_FRACTION
@@ -97,7 +106,8 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
     private ValueAnimator mBackgroundColorAnimator;
     private float mAppearAnimationFraction = -1.0f;
     private float mAppearAnimationTranslation;
-    private int mNormalColor;
+    protected int mNormalColor;
+    protected int mOpaqueColor;
     private boolean mIsBelowSpeedBump;
     private long mLastActionUpTime;
 
@@ -110,10 +120,18 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
     private float mOverrideAmount;
     private boolean mShadowHidden;
     private boolean mIsHeadsUpAnimation;
-    /* In order to track headsup longpress coorindate. */
+    private boolean mIsHeadsUpCycling;
+    /* In order to track headsup longpress coordindate. */
     protected Point mTargetPoint;
     private boolean mDismissed;
     private boolean mRefocusOnDismiss;
+    /**
+     * Whether the notification is on the keyguard. This is used to disable the transparent
+     * background, and the {@link ExpandableNotificationRow} additionally uses this to disable
+     * expansion.
+     */
+    protected boolean mOnKeyguard;
+    protected boolean mIsBlurSupported;
 
     public ActivatableNotificationView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -122,9 +140,27 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
         updateColors();
     }
 
-    private void updateColors() {
-        mNormalColor = Utils.getColorAttrDefaultColor(mContext,
-                com.android.internal.R.attr.materialColorSurfaceContainerHigh);
+    /**
+     * @return Fraction of ongoing appear animation.
+     */
+    public float getAppearAnimationFraction() {
+        return mAppearAnimationFraction;
+    }
+
+    @VisibleForTesting
+    public void setAppearAnimationFraction(float fraction) {
+        mAppearAnimationFraction = fraction;
+    }
+
+    protected void updateColors() {
+        if (notificationRowTransparency()) {
+            mNormalColor = SurfaceEffectColors.surfaceEffect1(getContext());
+            mOpaqueColor = mContext.getColor(
+                    com.android.internal.R.color.materialColorSurfaceContainer);
+        } else {
+            mNormalColor = mContext.getColor(
+                    com.android.internal.R.color.materialColorSurfaceContainerHigh);
+        }
         mTintedRippleColor = mContext.getColor(
                 R.color.notification_ripple_tinted_color);
         mNormalRippleColor = mContext.getColor(
@@ -158,6 +194,11 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
         mBackgroundNormal.setActualWidth(width);
     }
 
+    @VisibleForTesting
+    public void setCurrentAppearInterpolator(Interpolator interpolator) {
+        mCurrentAppearInterpolator = interpolator;
+    }
+
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
@@ -176,6 +217,7 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
      */
     protected void initBackground() {
         mBackgroundNormal.setCustomBackground(R.drawable.notification_material_bg);
+        mBackgroundNormal.setBlurBackgroundEnabled(usesBlurredBackground());
     }
 
     protected boolean hideBackground() {
@@ -317,6 +359,27 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
         mBackgroundNormal.setBottomAmountClips(!isChildInGroup());
     }
 
+    public void setIsBlurSupported(boolean isBlurSupported) {
+        if (!notificationRowTransparency()) {
+            return;
+        }
+        boolean usedTransparentBackground = usesTransparentBackground();
+        mIsBlurSupported = isBlurSupported;
+        if (usedTransparentBackground != usesTransparentBackground()) {
+            updateBackgroundTint();
+            mBackgroundNormal.setBlurBackgroundEnabled(usesBlurredBackground());
+        }
+    }
+
+    protected boolean usesBlurredBackground() {
+        return usesTransparentBackground() && lockscreenBlurForNotifications();
+    }
+
+    protected boolean usesTransparentBackground() {
+        return mIsBlurSupported && notificationRowTransparency()
+                && (!mOnKeyguard || lockscreenBlurForNotifications());
+    }
+
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
@@ -343,11 +406,33 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
     }
 
     @Override
+    public void setBottomOverlap(int bottomOverlap) {
+        super.setBottomOverlap(bottomOverlap);
+        mBackgroundNormal.setBottomOverlap(bottomOverlap);
+    }
+
+    @Override
+    public void setTopOverlap(int topOverlap) {
+        super.setTopOverlap(topOverlap);
+        mBackgroundNormal.setTopOverlap(topOverlap);
+    }
+
+    @Override
+    public boolean isBackgroundOpaque() {
+        if (Color.alpha(mCurrentBackgroundTint) == 255) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
     public long performRemoveAnimation(long duration, long delay, float translationDirection,
-            boolean isHeadsUpAnimation, Runnable onStartedRunnable, Runnable onFinishedRunnable,
-            AnimatorListenerAdapter animationListener, ClipSide clipSide) {
+            boolean isHeadsUpAnimation, boolean isHeadsUpCycling, Runnable onStartedRunnable,
+            Runnable onFinishedRunnable, AnimatorListenerAdapter animationListener,
+            ClipSide clipSide) {
         enableAppearDrawing(true);
         mIsHeadsUpAnimation = isHeadsUpAnimation;
+        mIsHeadsUpCycling = isHeadsUpCycling;
         if (mDrawingAppearAnimation) {
             startAppearAnimation(false /* isAppearing */, translationDirection,
                     delay, duration, onStartedRunnable, onFinishedRunnable, animationListener,
@@ -365,9 +450,10 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
 
     @Override
     public void performAddAnimation(long delay, long duration, boolean isHeadsUpAppear,
-            Runnable onFinishRunnable) {
+            boolean isHeadsUpCycling, Runnable onFinishRunnable) {
         enableAppearDrawing(true);
         mIsHeadsUpAnimation = isHeadsUpAppear;
+        mIsHeadsUpCycling = isHeadsUpCycling;
         if (mDrawingAppearAnimation) {
             startAppearAnimation(true /* isAppearing */, isHeadsUpAppear ? 0.0f : -1.0f, delay,
                     duration, null, null, null, ClipSide.BOTTOM);
@@ -399,14 +485,14 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
             targetValue = 0.0f;
         }
 
-        if (NotificationHeadsUpCycling.isEnabled()) {
-            // TODO(b/316404716): add avalanche filtering
+        if (NotificationHeadsUpCycling.isEnabled() && !useNonLinearAnimation()) {
             mCurrentAppearInterpolator = Interpolators.LINEAR;
         }
 
         mAppearAnimator = ValueAnimator.ofFloat(mAppearAnimationFraction,
                 targetValue);
-        mAppearAnimator.setInterpolator(mCurrentAppearInterpolator);
+        mAppearAnimator.setInterpolator(
+                useNonLinearAnimation() ? Interpolators.LINEAR : mCurrentAppearInterpolator);
         mAppearAnimator.setDuration(
                 (long) (duration * Math.abs(mAppearAnimationFraction - targetValue)));
         mAppearAnimator.addUpdateListener(animation -> {
@@ -414,9 +500,9 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
             updateAppearAnimationAlpha();
             if (NotificationHeadsUpCycling.isEnabled()) {
                 // For cycling out, we want the HUN to be clipped from the top.
-                updateAppearRect(clipSide);
+                updateAppearRect(clipSide, getWidth(), getActualHeight());
             } else {
-                updateAppearRect();
+                updateAppearRect(clipSide.BOTTOM, getWidth(), getActualHeight());
             }
             invalidate();
         });
@@ -426,9 +512,9 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
         // we need to apply the initial state already to avoid drawn frames in the wrong state
         updateAppearAnimationAlpha();
         if (NotificationHeadsUpCycling.isEnabled()) {
-            updateAppearRect(clipSide);
+            updateAppearRect(clipSide, getWidth(), getActualHeight());
         } else {
-            updateAppearRect();
+            updateAppearRect(clipSide.BOTTOM, getWidth(), getActualHeight());
         }
         mAppearAnimator.addListener(new AnimatorListenerAdapter() {
             private boolean mRunWithoutInterruptions;
@@ -487,6 +573,15 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
                 }, delay);
     }
 
+    @Override
+    public int getBackgroundBottom() {
+        int backgroundBottom = super.getBackgroundBottom();
+        if (mDrawingAppearAnimation) {
+            backgroundBottom += (int) mAppearAnimationTranslation;
+        }
+        return backgroundBottom;
+    }
+
     private int getCujType(boolean isAppearing) {
         if (mIsHeadsUpAnimation) {
             return isAppearing
@@ -523,38 +618,53 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
     /**
      * Update the View's Rect clipping to fit the appear animation
      * @param clipSide Which side if view we want to clip from
+     * @param fullWidth The width of the view.
+     * @param fullHeight The actualHeight of the view.
      */
-    private void updateAppearRect(ClipSide clipSide) {
-        float interpolatedFraction = mAppearAnimationFraction;
+    @VisibleForTesting
+    public void updateAppearRect(ClipSide clipSide, int fullWidth, int fullHeight) {
+        float interpolatedFraction;
+        if (useNonLinearAnimation()) {
+            interpolatedFraction = mCurrentAppearInterpolator.getInterpolation(
+                    mAppearAnimationFraction);
+        } else {
+            interpolatedFraction = mAppearAnimationFraction;
+        }
+        // mAppearAnimationTranslation is used in dispatchDraw to translate the canvas
         mAppearAnimationTranslation = (1.0f - interpolatedFraction) * mAnimationTranslationY;
-        final int fullHeight = getActualHeight();
-        float height = fullHeight * interpolatedFraction;
+        final float animatingHeight = fullHeight * interpolatedFraction;
+
         if (mTargetPoint != null) {
             int width = getWidth();
             float fraction = 1 - mAppearAnimationFraction;
-
-            setOutlineRect(mTargetPoint.x * fraction,
-                    mAnimationTranslationY
+            setOutlineRect(
+                    /* left= */ mTargetPoint.x * fraction,
+                    /* top= */  mAnimationTranslationY
                             + (mAnimationTranslationY - mTargetPoint.y) * fraction,
-                    width - (width - mTargetPoint.x) * fraction,
-                    fullHeight - (fullHeight - mTargetPoint.y) * fraction);
+                    /* right= */  fullWidth - (fullWidth - mTargetPoint.x) * fraction,
+                    /* bottom= */ fullHeight - (fullHeight - mTargetPoint.y) * fraction);
         } else {
             if (clipSide == TOP) {
                 setOutlineRect(
-                        0,
-                        /* top= */ fullHeight - height,
-                        getWidth(),
+                        /* left= */ 0,
+                        /* top= */ fullHeight - animatingHeight,
+                        /* right= */ fullWidth,
                         /* bottom= */ fullHeight
                 );
             } else if (clipSide == BOTTOM) {
-                setOutlineRect(0, mAppearAnimationTranslation, getWidth(),
-                        height + mAppearAnimationTranslation);
+                setOutlineRect(
+                        /* left= */ 0,
+                        /* top= */ 0,
+                        /* right= */ fullWidth,
+                        /* bottom= */ animatingHeight
+                );
             }
         }
     }
 
-    private void updateAppearRect() {
-        updateAppearRect(ClipSide.BOTTOM);
+    private boolean useNonLinearAnimation() {
+        return notificationAppearNonlinear() && (!mIsHeadsUpCycling
+                || physicalNotificationMovement());
     }
 
     private void updateAppearAnimationAlpha() {
@@ -562,7 +672,7 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
                 mAppearAnimationFraction,
                 ALPHA_APPEAR_START_FRACTION,
                 ALPHA_APPEAR_END_FRACTION,
-                Interpolators.ALPHA_IN
+                notificationAppearNonlinear() ? mCurrentAppearInterpolator : Interpolators.ALPHA_IN
         );
     }
 
@@ -657,7 +767,11 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
         if (withTint && mBgTint != NO_COLOR) {
             return mBgTint;
         } else {
-            return mNormalColor;
+            if (Flags.notificationRowTransparency()) {
+                return usesTransparentBackground() ? mNormalColor : mOpaqueColor;
+            } else {
+                return mNormalColor;
+            }
         }
     }
 
@@ -758,6 +872,30 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
         mTouchHandler = touchHandler;
     }
 
+    /**
+     * Sets whether this view is on the keyguard.
+     * Subclass implementations must set {@link #mOnKeyguard} to the given value.
+     * @see #isOnKeyguard()
+     */
+    public void setOnKeyguard(boolean onKeyguard) {
+        if (mOnKeyguard == onKeyguard) {
+            return;
+        }
+        mOnKeyguard = onKeyguard;
+        mBackgroundNormal.setOnKeyguard(mOnKeyguard);
+        if (notificationRowTransparency()) {
+            updateBackgroundTint();
+        }
+    }
+
+    /**
+     * Whether this row is displayed over the unoccluded lockscreen. Returns false on the
+     * locked shade.
+     */
+    public boolean isOnKeyguard() {
+        return mOnKeyguard;
+    }
+
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
@@ -808,6 +946,7 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
         pw.print("mDrawingAppearAnimation", mDrawingAppearAnimation);
         pw.print("mAppearAnimationFraction", mAppearAnimationFraction);
         pw.print("mIsHeadsUpAnimation", mIsHeadsUpAnimation);
+        pw.print("mIsHeadsUpCycling", mIsHeadsUpCycling);
         pw.print("mTargetPoint", mTargetPoint);
         pw.println();
     }

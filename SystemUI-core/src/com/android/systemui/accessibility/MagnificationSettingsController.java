@@ -26,11 +26,11 @@ import android.content.res.Configuration;
 import android.util.Range;
 import android.view.WindowManager;
 
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
 import com.android.internal.accessibility.common.MagnificationConstants;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.graphics.SfVsyncFrameCallbackProvider;
 import com.android.systemui.util.settings.SecureSettings;
+import com.android.systemui.utils.windowmanager.WindowManagerProvider;
 
 /**
  * A class to control {@link WindowMagnificationSettings} and receive settings panel callbacks by
@@ -62,9 +62,11 @@ public class MagnificationSettingsController implements ComponentCallbacks {
             SfVsyncFrameCallbackProvider sfVsyncFrameProvider,
             @NonNull Callback settingsControllerCallback,
             SecureSettings secureSettings,
-            ViewCaptureAwareWindowManager viewCaptureAwareWindowManager) {
-        this(context, sfVsyncFrameProvider, settingsControllerCallback,  secureSettings, null,
-                viewCaptureAwareWindowManager);
+            WindowManagerProvider windowManagerProvider,
+            AccessibilityLogger accessibilityLogger) {
+        this(context, sfVsyncFrameProvider, settingsControllerCallback, secureSettings,
+                  windowManagerProvider, /* windowMagnificationSettings= */ null,
+                  accessibilityLogger);
     }
 
     @VisibleForTesting
@@ -73,8 +75,9 @@ public class MagnificationSettingsController implements ComponentCallbacks {
             SfVsyncFrameCallbackProvider sfVsyncFrameProvider,
             @NonNull Callback settingsControllerCallback,
             SecureSettings secureSettings,
+            WindowManagerProvider windowManagerProvider,
             WindowMagnificationSettings windowMagnificationSettings,
-            ViewCaptureAwareWindowManager viewCaptureAwareWindowManager) {
+            AccessibilityLogger accessibilityLogger) {
         mContext = context.createWindowContext(
                 context.getDisplay(),
                 WindowManager.LayoutParams.TYPE_NAVIGATION_BAR_PANEL,
@@ -86,9 +89,10 @@ public class MagnificationSettingsController implements ComponentCallbacks {
         if (windowMagnificationSettings != null) {
             mWindowMagnificationSettings = windowMagnificationSettings;
         } else {
+            WindowManager windowManager = windowManagerProvider.getWindowManager(mContext);
             mWindowMagnificationSettings = new WindowMagnificationSettings(mContext,
                     mWindowMagnificationSettingsCallback,
-                    sfVsyncFrameProvider, secureSettings, viewCaptureAwareWindowManager);
+                    sfVsyncFrameProvider, secureSettings, windowManager, accessibilityLogger);
         }
     }
 
@@ -162,6 +166,22 @@ public class MagnificationSettingsController implements ComponentCallbacks {
         void onSetDiagonalScrolling(int displayId, boolean enable);
 
         /**
+         * Called when set magnify typing.
+         *
+         * @param displayId The logical display id.
+         * @param enable Magnify typing enable value.
+         */
+        void onSetMagnifyTyping(int displayId, boolean enable);
+
+        /**
+         * Called when set magnify keyboard.
+         *
+         * @param displayId The logical display id.
+         * @param enable Magnify keyboard enable value.
+         */
+        void onSetMagnifyKeyboard(int displayId, boolean enable);
+
+        /**
          * Called when change magnification size on free mode.
          *
          * @param displayId The logical display id.
@@ -200,9 +220,19 @@ public class MagnificationSettingsController implements ComponentCallbacks {
     @VisibleForTesting
     final WindowMagnificationSettingsCallback mWindowMagnificationSettingsCallback =
             new WindowMagnificationSettingsCallback() {
-                @Override
+        @Override
         public void onSetDiagonalScrolling(boolean enable) {
             mSettingsControllerCallback.onSetDiagonalScrolling(mDisplayId, enable);
+        }
+
+        @Override
+        public void onSetMagnifyTyping(boolean enable) {
+            mSettingsControllerCallback.onSetMagnifyTyping(mDisplayId, enable);
+        }
+
+        @Override
+        public void onSetMagnifyKeyboard(boolean enable) {
+            mSettingsControllerCallback.onSetMagnifyKeyboard(mDisplayId, enable);
         }
 
         @Override

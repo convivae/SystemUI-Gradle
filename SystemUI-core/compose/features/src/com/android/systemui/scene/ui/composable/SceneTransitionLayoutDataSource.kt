@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.android.systemui.scene.ui.composable
 
 import androidx.compose.runtime.snapshotFlow
@@ -23,6 +21,7 @@ import com.android.compose.animation.scene.MutableSceneTransitionLayoutState
 import com.android.compose.animation.scene.OverlayKey
 import com.android.compose.animation.scene.SceneKey
 import com.android.compose.animation.scene.TransitionKey
+import com.android.compose.animation.scene.content.state.TransitionState
 import com.android.compose.animation.scene.observableTransitionState
 import com.android.systemui.scene.shared.model.SceneDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +34,7 @@ import kotlinx.coroutines.flow.stateIn
 /**
  * An implementation of [SceneDataSource] that's backed by a [MutableSceneTransitionLayoutState].
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class SceneTransitionLayoutDataSource(
     private val state: MutableSceneTransitionLayoutState,
 
@@ -44,6 +44,9 @@ class SceneTransitionLayoutDataSource(
      */
     private val coroutineScope: CoroutineScope,
 ) : SceneDataSource {
+    override val transitionState: TransitionState
+        get() = state.transitionState
+
     override val currentScene: StateFlow<SceneKey> =
         state
             .observableTransitionState()
@@ -62,20 +65,11 @@ class SceneTransitionLayoutDataSource(
                 initialValue = emptySet(),
             )
 
-    override fun changeScene(
-        toScene: SceneKey,
-        transitionKey: TransitionKey?,
-    ) {
+    override fun changeScene(toScene: SceneKey, transitionKey: TransitionKey?) {
         state.setTargetScene(
             targetScene = toScene,
             transitionKey = transitionKey,
             animationScope = coroutineScope,
-        )
-    }
-
-    override fun snapToScene(toScene: SceneKey) {
-        state.snapToScene(
-            scene = toScene,
         )
     }
 
@@ -102,5 +96,20 @@ class SceneTransitionLayoutDataSource(
             animationScope = coroutineScope,
             transitionKey = transitionKey,
         )
+    }
+
+    override fun freezeAndAnimateToCurrentState() {
+        state.currentTransition?.freezeAndAnimateToCurrentState()
+    }
+
+    override fun instantlyTransitionTo(scene: SceneKey?, overlays: Set<OverlayKey>?) {
+        state.snapTo(
+            scene = scene ?: state.transitionState.currentScene,
+            overlays = overlays ?: state.transitionState.currentOverlays,
+        )
+    }
+
+    override fun startTransitionImmediately(transition: TransitionState.Transition) {
+        state.startTransitionImmediately(animationScope = coroutineScope, transition = transition)
     }
 }

@@ -16,14 +16,18 @@
 
 package com.android.systemui.communal.ui.viewmodel
 
+import android.content.res.Resources
 import com.android.compose.animation.scene.Swipe
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
 import com.android.systemui.deviceentry.domain.interactor.DeviceUnlockedInteractor
-import com.android.systemui.scene.shared.model.SceneFamilies
+import com.android.systemui.res.R
 import com.android.systemui.scene.shared.model.Scenes
+import com.android.systemui.scene.shared.model.TransitionKeys
 import com.android.systemui.scene.ui.viewmodel.UserActionsViewModel
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shade.shared.model.ShadeMode
 import com.android.systemui.shade.ui.viewmodel.dualShadeActions
 import com.android.systemui.shade.ui.viewmodel.singleShadeActions
@@ -41,9 +45,13 @@ class CommunalUserActionsViewModel
 constructor(
     private val deviceUnlockedInteractor: DeviceUnlockedInteractor,
     private val shadeInteractor: ShadeInteractor,
+    private val shadeModeInteractor: ShadeModeInteractor,
+    @ShadeDisplayAware private val resources: Resources,
 ) : UserActionsViewModel() {
 
     override suspend fun hydrateActions(setActions: (Map<UserAction, UserActionResult>) -> Unit) {
+        val twoFingerSwipeEnabled =
+            resources.getBoolean(R.bool.config_enableTwoFingerSwipeDownShade)
         shadeInteractor.isShadeTouchable
             .flatMapLatestConflated { isShadeTouchable ->
                 if (!isShadeTouchable) {
@@ -51,21 +59,31 @@ constructor(
                 } else {
                     combine(
                         deviceUnlockedInteractor.deviceUnlockStatus.map { it.isUnlocked },
-                        shadeInteractor.shadeMode,
+                        shadeModeInteractor.shadeMode,
                     ) { isDeviceUnlocked, shadeMode ->
                         buildList {
-                                val bouncerOrGone =
-                                    if (isDeviceUnlocked) Scenes.Gone else Scenes.Bouncer
-                                add(Swipe.Up to bouncerOrGone)
+                                if (isDeviceUnlocked) {
+                                    add(
+                                        Swipe.Up to
+                                            UserActionResult(
+                                                Scenes.Gone,
+                                                transitionKey = TransitionKeys.SwipeUpToGone,
+                                            )
+                                    )
+                                } else {
+                                    add(Swipe.Up to Scenes.Lockscreen)
+                                }
 
-                                // "Home" is either Lockscreen, or Gone - if the device is entered.
-                                add(Swipe.End to SceneFamilies.Home)
+                                add(Swipe.End to Scenes.Lockscreen)
 
                                 addAll(
                                     when (shadeMode) {
                                         ShadeMode.Single -> singleShadeActions()
                                         ShadeMode.Split -> splitShadeActions()
-                                        ShadeMode.Dual -> dualShadeActions()
+                                        ShadeMode.Dual ->
+                                            dualShadeActions(
+                                                twoFingerSwipeEnabled = twoFingerSwipeEnabled
+                                            )
                                     }
                                 )
                             }

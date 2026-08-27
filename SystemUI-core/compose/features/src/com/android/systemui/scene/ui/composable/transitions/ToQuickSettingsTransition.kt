@@ -19,31 +19,47 @@ package com.android.systemui.scene.ui.composable.transitions
 import androidx.compose.animation.core.tween
 import com.android.compose.animation.scene.Edge
 import com.android.compose.animation.scene.TransitionBuilder
+import com.android.systemui.brightness.ui.compose.BrightnessSlider
+import com.android.systemui.brightness.ui.compose.BrightnessSliderDimensions
 import com.android.systemui.notifications.ui.composable.Notifications
-import com.android.systemui.qs.ui.composable.QuickSettings
+import com.android.systemui.qs.shared.ui.QuickSettings.Elements
+import com.android.systemui.qs.ui.composable.QuickSettingsScene
+import com.android.systemui.shade.ui.composable.Shade
 import com.android.systemui.shade.ui.composable.ShadeHeader
 import kotlin.time.Duration.Companion.milliseconds
 
-fun TransitionBuilder.toQuickSettingsTransition(
-    durationScale: Double = 1.0,
-) {
+fun TransitionBuilder.toQuickSettingsSceneTransition(durationScale: Double = 1.0) {
     spec = tween(durationMillis = (DefaultDuration * durationScale).inWholeMilliseconds.toInt())
 
+    val translationY = ShadeHeader.Dimensions.CollapsedHeightForTransitions
     translate(
         ShadeHeader.Elements.ExpandedContent,
-        y = -(ShadeHeader.Dimensions.ExpandedHeight - ShadeHeader.Dimensions.CollapsedHeight)
+        y = -(ShadeHeader.Dimensions.ExpandedHeight - translationY),
     )
-    translate(ShadeHeader.Elements.Clock, y = -ShadeHeader.Dimensions.CollapsedHeight)
-    translate(ShadeHeader.Elements.ShadeCarrierGroup, y = -ShadeHeader.Dimensions.CollapsedHeight)
+    translate(ShadeHeader.Elements.Clock, y = -translationY)
+    translate(ShadeHeader.Elements.ShadeCarrierGroup, y = -translationY)
 
     fractionRange(start = .58f) {
         fade(ShadeHeader.Elements.ExpandedContent)
         fade(ShadeHeader.Elements.Clock)
         fade(ShadeHeader.Elements.ShadeCarrierGroup)
+        fade(Elements.BrightnessSlider)
     }
 
-    translate(QuickSettings.Elements.Content, y = -ShadeHeader.Dimensions.ExpandedHeight * .66f)
+    fade(Notifications.Elements.HeadsUpNotificationPlaceholder)
+    fade(Shade.Elements.BackgroundScrim)
+
+    // New all compose element
+    // Ideally, we would want to have the BrightnessSlider start right off screen and translate
+    // down,
+    // And have the other elements of the content slide anchored to that. But anchoredTranslate does
+    // not support that yet.
+    translate(
+        Elements.QuickSettingsContent,
+        y = -ShadeHeader.Dimensions.ExpandedHeight - BrightnessSliderDimensions.Default.thumbHeight,
+    )
     translate(Notifications.Elements.NotificationScrim, Edge.Top, false)
+    translate(QuickSettingsScene.Companion.InternalScenes.Edit.rootElementKey, Edge.Top, true)
 }
 
 private val DefaultDuration = 500.milliseconds

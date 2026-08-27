@@ -18,13 +18,24 @@ package com.android.systemui.communal.data.db
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.android.systemui.communal.data.model.CommunalWidgetId
 
-@Entity(tableName = "communal_widget_table")
+@Entity(
+    tableName = "communal_widget_table",
+    indices = [Index(value = ["widget_id"], unique = true, name = "widget_id_index")],
+)
 data class CommunalWidgetItem(
     @PrimaryKey(autoGenerate = true) val uid: Long,
-    /** Id of an app widget */
-    @ColumnInfo(name = "widget_id") val widgetId: Int,
+    /**
+     * Id of an app widget.
+     *
+     * If the value is negative, it is a placeholder ID and the widget needs to be hydrated
+     * (allocated) before it can be displayed. This happens when the communal features are disabled
+     * but default widgets are populated in the database.
+     */
+    @ColumnInfo(name = "widget_id") val widgetId: CommunalWidgetId,
     /** Component name of the app widget provider */
     @ColumnInfo(name = "component_name") val componentName: String,
     /** Reference the id of an item persisted in the glanceable hub */

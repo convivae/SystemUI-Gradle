@@ -25,11 +25,15 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.doOnDetach
 import androidx.core.view.isInvisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.systemui.common.ui.view.LongPressHandlingView
+import com.android.internal.graphics.drawable.BackgroundBlurDrawable
+import com.android.systemui.Flags
+import com.android.systemui.Flags.enableLockscreenBlur
+import com.android.systemui.common.ui.view.TouchHandlingView
 import com.android.systemui.keyguard.ui.view.DeviceEntryIconView
 import com.android.systemui.keyguard.ui.viewmodel.DeviceEntryBackgroundViewModel
 import com.android.systemui.keyguard.ui.viewmodel.DeviceEntryForegroundViewModel
@@ -39,19 +43,21 @@ import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.util.kotlin.DisposableHandles
+import com.android.systemui.window.domain.interactor.WindowRootViewBlurInteractor
+import com.google.android.msdl.data.model.MSDLToken
+import com.google.android.msdl.domain.MSDLPlayer
+import kotlin.math.min
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DisposableHandle
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import com.android.app.tracing.coroutines.launchTraced as launch
 
-@ExperimentalCoroutinesApi
 object DeviceEntryIconViewBinder {
     private const val TAG = "DeviceEntryIconViewBinder"
 
     /**
      * Updates UI for:
      * - device entry containing view (parent view for the below views)
-     *     - long-press handling view (transparent, no UI)
+     *     - touch handling view (transparent, no UI)
      *     - foreground icon view (lock/unlock/fingerprint)
      *     - background view (optional)
      */
@@ -59,29 +65,25 @@ object DeviceEntryIconViewBinder {
     @JvmStatic
     fun bind(
         applicationScope: CoroutineScope,
+        mainImmediateDispatcher: CoroutineDispatcher,
+        windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
         view: DeviceEntryIconView,
         viewModel: DeviceEntryIconViewModel,
         fgViewModel: DeviceEntryForegroundViewModel,
         bgViewModel: DeviceEntryBackgroundViewModel,
         falsingManager: FalsingManager,
         vibratorHelper: VibratorHelper,
+        msdlPlayer: MSDLPlayer,
         overrideColor: Color? = null,
     ): DisposableHandle {
         val disposables = DisposableHandles()
-        val longPressHandlingView = view.longPressHandlingView
+        val touchHandlingView = view.touchHandlingView
         val fgIconView = view.iconView
         val bgView = view.bgView
-        longPressHandlingView.listener =
-            object : LongPressHandlingView.Listener {
-                override fun onLongPressDetected(
-                    view: View,
-                    x: Int,
-                    y: Int,
-                    isA11yAction: Boolean,
-                ) {
-                    if (
-                        !isA11yAction && falsingManager.isFalseLongTap(FalsingManager.LOW_PENALTY)
-                    ) {
+        touchHandlingView.listener =
+            object : TouchHandlingView.Listener {
+                override fun onLongPressDetected(view: View, x: Int, y: Int) {
+                    if (falsingManager.isFalseLongTap(FalsingManager.LOW_PENALTY)) {
                         Log.d(
                             TAG,
                             "Long press rejected because it is not a11yAction " +
@@ -89,11 +91,64 @@ object DeviceEntryIconViewBinder {
                         )
                         return
                     }
-                    vibratorHelper.performHapticFeedback(view, HapticFeedbackConstants.CONFIRM)
+                    if (!Flags.msdlFeedback()) {
+                        vibratorHelper.performHapticFeedback(view, HapticFeedbackConstants.CONFIRM)
+                    }
                     applicationScope.launch {
                         view.clearFocus()
                         view.clearAccessibilityFocus()
                         viewModel.onUserInteraction()
+                    }
+                }
+            }
+        val layoutChangeListener =
+            View.OnLayoutChangeListener {
+                v,
+                left,
+                top,
+                right,
+                bottom,
+                oldLeft,
+                oldTop,
+                oldRight,
+                oldBottom ->
+                val width = right - left
+                val height = bottom - top
+                if (height <= 0 || width <= 0) {
+                    return@OnLayoutChangeListener
+                }
+                if (height == oldBottom - oldTop && width == oldLeft - oldRight) {
+                    return@OnLayoutChangeListener
+                }
+                v?.background?.let {
+                    if (it is BackgroundBlurDrawable) {
+                        it.setCornerRadius(min(height, width).toFloat() / 2f)
+                    }
+                }
+            }
+
+        disposables +=
+            view.repeatWhenAttached(mainImmediateDispatcher) {
+                repeatOnLifecycle(Lifecycle.State.CREATED) {
+                    launch("$TAG#viewModel.useBackgroundProtection") {
+                        viewModel.useBackgroundProtection.collect { useBackgroundProtection ->
+                            if (useBackgroundProtection) {
+                                bgView.visibility = View.VISIBLE
+                            } else {
+                                bgView.visibility = View.GONE
+                            }
+                        }
+                    }
+                    launch("$TAG#viewModel.burnInOffsets") {
+                        viewModel.burnInOffsets.collect { burnInOffsets ->
+                            view.translationX = burnInOffsets.x.toFloat()
+                            view.translationY = burnInOffsets.y.toFloat()
+                            view.aodFpDrawable.progress = burnInOffsets.progress
+                        }
+                    }
+
+                    launch("$TAG#viewModel.deviceEntryViewAlpha") {
+                        viewModel.deviceEntryViewAlpha.collect { alpha -> view.alpha = alpha }
                     }
                 }
             }
@@ -106,18 +161,18 @@ object DeviceEntryIconViewBinder {
                 repeatOnLifecycle(Lifecycle.State.CREATED) {
                     launch("$TAG#viewModel.isVisible") {
                         viewModel.isVisible.collect { isVisible ->
-                            longPressHandlingView.isInvisible = !isVisible
+                            touchHandlingView.isInvisible = !isVisible
                             view.isClickable = isVisible
                         }
                     }
                     launch("$TAG#viewModel.isLongPressEnabled") {
                         viewModel.isLongPressEnabled.collect { isEnabled ->
-                            longPressHandlingView.setLongPressHandlingEnabled(isEnabled)
+                            touchHandlingView.setLongPressHandlingEnabled(isEnabled)
                         }
                     }
                     launch("$TAG#viewModel.isUdfpsSupported") {
                         viewModel.isUdfpsSupported.collect { udfpsSupported ->
-                            longPressHandlingView.longPressDuration =
+                            touchHandlingView.longPressDuration =
                                 if (udfpsSupported) {
                                     {
                                         view.resources
@@ -140,10 +195,23 @@ object DeviceEntryIconViewBinder {
                             view.accessibilityHintType = hint
                             if (hint != DeviceEntryIconView.AccessibilityHintType.NONE) {
                                 view.setOnClickListener {
-                                    vibratorHelper.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstants.CONFIRM,
-                                    )
+                                    if (Flags.msdlFeedback()) {
+                                        val token =
+                                            if (
+                                                hint ==
+                                                    DeviceEntryIconView.AccessibilityHintType.ENTER
+                                            ) {
+                                                MSDLToken.UNLOCK
+                                            } else {
+                                                MSDLToken.LONG_PRESS
+                                            }
+                                        msdlPlayer.playToken(token)
+                                    } else {
+                                        vibratorHelper.performHapticFeedback(
+                                            view,
+                                            HapticFeedbackConstants.CONFIRM,
+                                        )
+                                    }
                                     applicationScope.launch {
                                         view.clearFocus()
                                         view.clearAccessibilityFocus()
@@ -152,28 +220,20 @@ object DeviceEntryIconViewBinder {
                                 }
                             } else {
                                 view.setOnClickListener(null)
+                                view.isClickable = false
+                                view.focusable = View.NOT_FOCUSABLE
                             }
-                        }
-                    }
-                    launch("$TAG#viewModel.useBackgroundProtection") {
-                        viewModel.useBackgroundProtection.collect { useBackgroundProtection ->
-                            if (useBackgroundProtection) {
-                                bgView.visibility = View.VISIBLE
-                            } else {
-                                bgView.visibility = View.GONE
-                            }
-                        }
-                    }
-                    launch("$TAG#viewModel.burnInOffsets") {
-                        viewModel.burnInOffsets.collect { burnInOffsets ->
-                            view.translationX = burnInOffsets.x.toFloat()
-                            view.translationY = burnInOffsets.y.toFloat()
-                            view.aodFpDrawable.progress = burnInOffsets.progress
                         }
                     }
 
-                    launch("$TAG#viewModel.deviceEntryViewAlpha") {
-                        viewModel.deviceEntryViewAlpha.collect { alpha -> view.alpha = alpha }
+                    if (Flags.msdlFeedback()) {
+                        launch("$TAG#viewModel.isPrimaryBouncerShowing") {
+                            viewModel.deviceDidNotEnterFromDeviceEntryIcon.collect {
+                                // If we did not enter from the icon, we did not play device entry
+                                // haptics. Therefore, we play the token for long-press instead.
+                                msdlPlayer.playToken(MSDLToken.LONG_PRESS)
+                            }
+                        }
                     }
                 }
             }
@@ -215,10 +275,38 @@ object DeviceEntryIconViewBinder {
             }
 
         disposables +=
-            bgView.repeatWhenAttached {
+            bgView.repeatWhenAttached(mainImmediateDispatcher) {
                 repeatOnLifecycle(Lifecycle.State.CREATED) {
+                    if (enableLockscreenBlur()) {
+                        bgView.background =
+                            bgView.viewRootImpl.createBackgroundBlurDrawable().apply {
+                                setBlurRadius(
+                                    bgView.context.resources.getDimensionPixelOffset(
+                                        R.dimen.fingerprint_icon_blur_radius
+                                    )
+                                )
+                                setVisible(false, false)
+                            }
+                        bgView.addOnLayoutChangeListener(layoutChangeListener)
+                        bgView.doOnDetach {
+                            bgView.removeOnLayoutChangeListener(layoutChangeListener)
+                        }
+
+                        launch("$TAG#windowRootViewBlurInteractor.isBlurCurrentlySupported") {
+                            windowRootViewBlurInteractor.isBlurCurrentlySupported.collect {
+                                isSupported ->
+                                bgView.background?.setVisible(isSupported, false)
+                            }
+                        }
+                    }
+
                     launch("$TAG#bgViewModel.alpha") {
-                        bgViewModel.alpha.collect { alpha -> bgView.alpha = alpha }
+                        bgViewModel.alpha.collect { alpha ->
+                            bgView.alpha = alpha
+                            if (enableLockscreenBlur()) {
+                                bgView.background?.alpha = (255 * alpha).toInt()
+                            }
+                        }
                     }
                     launch("$TAG#bgViewModel.color") {
                         bgViewModel.color.collect { color ->

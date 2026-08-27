@@ -16,47 +16,49 @@
 
 package com.android.systemui.scene.ui.composable.transitions
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import com.android.compose.animation.scene.Edge
 import com.android.compose.animation.scene.TransitionBuilder
-import com.android.systemui.keyguard.ui.composable.blueprint.ClockElementKeys
+import com.android.compose.animation.scene.reveal.ContainerRevealHaptics
+import com.android.compose.animation.scene.reveal.verticalContainerReveal
+import com.android.mechanics.behavior.VerticalExpandContainerSpec
 import com.android.systemui.notifications.ui.composable.Notifications
 import com.android.systemui.notifications.ui.composable.NotificationsShade
+import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.shade.ui.composable.OverlayShade
-import com.android.systemui.shade.ui.composable.Shade
 import kotlin.time.Duration.Companion.milliseconds
 
 fun TransitionBuilder.toNotificationsShadeTransition(
-    translateClock: Boolean = false,
     durationScale: Double = 1.0,
+    enableSharedElements: Boolean,
+    shadeExpansionMotion: VerticalExpandContainerSpec,
+    revealHaptics: ContainerRevealHaptics,
 ) {
     spec = tween(durationMillis = (DefaultDuration * durationScale).inWholeMilliseconds.toInt())
-    swipeSpec =
-        spring(
-            stiffness = Spring.StiffnessMediumLow,
-            visibilityThreshold = Shade.Dimensions.ScrimVisibilityThreshold,
-        )
-    // Ensure the clock isn't clipped by the shade outline during the transition from lockscreen.
+
+    // Ensure the shared elements aren't clipped by the shade outline during the transition from
+    // lockscreen.
     sharedElement(
-        ClockElementKeys.smallClockElementKey,
+        LockscreenElementKeys.Clock.Small,
+        enabled = enableSharedElements,
         elevateInContent = Overlays.NotificationsShade,
     )
-    scaleSize(OverlayShade.Elements.Panel, height = 0f)
-    // TODO(b/376659778): This is a temporary hack to have a shared element transition with the
-    //  lockscreen clock. Remove once nested STLs are supported.
-    if (!translateClock) {
-        translate(ClockElementKeys.smallClockElementKey)
-    }
-    // Avoid translating the status bar with the shade panel.
-    translate(NotificationsShade.Elements.StatusBar)
-    // Slide in the shade panel from the top edge.
-    translate(OverlayShade.Elements.Panel, Edge.Top)
+    sharedElement(
+        LockscreenElementKeys.MediaCarousel,
+        enabled = enableSharedElements,
+        elevateInContent = Overlays.NotificationsShade,
+    )
+    sharedElement(Notifications.Elements.StackPlaceholder, enabled = enableSharedElements)
+    sharedElement(
+        Notifications.Elements.HeadsUpNotificationPlaceholder,
+        enabled = enableSharedElements,
+    )
 
+    verticalContainerReveal(NotificationsShade.Elements.Panel, shadeExpansionMotion, revealHaptics)
+
+    fractionRange(start = .16f, end = 0.8f) { fade(NotificationsShade.Elements.StatusBar) }
+    fractionRange(start = .33f, end = 0.8f) { fade(Notifications.Elements.StackPlaceholder) }
     fractionRange(end = .5f) { fade(OverlayShade.Elements.Scrim) }
-    fractionRange(start = .5f) { fade(Notifications.Elements.NotificationScrim) }
 }
 
 private val DefaultDuration = 300.milliseconds

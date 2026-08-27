@@ -182,11 +182,12 @@ public class GroupCoalescer implements Dumpable, PipelineDumpable {
     private void maybeEmitBatch(StatusBarNotification sbn) {
         final CoalescedEvent event = mCoalescedEvents.get(sbn.getKey());
         final EventBatch batch = mBatches.get(sbn.getGroupKey());
+        long now = mClock.elapsedRealtime();
         if (event != null) {
             mLogger.logEarlyEmit(sbn.getKey(), requireNonNull(event.getBatch()).mGroupKey);
             emitBatch(requireNonNull(event.getBatch()));
         } else if (batch != null
-                && mClock.uptimeMillis() - batch.mCreatedTimestamp >= mMaxGroupLingerDuration) {
+                && now - batch.mCreatedTimestamp >= mMaxGroupLingerDuration) {
             mLogger.logMaxBatchTimeout(sbn.getKey(), batch.mGroupKey);
             emitBatch(batch);
         }
@@ -228,7 +229,7 @@ public class GroupCoalescer implements Dumpable, PipelineDumpable {
     private EventBatch getOrBuildBatch(final String groupKey) {
         EventBatch batch = mBatches.get(groupKey);
         if (batch == null) {
-            batch = new EventBatch(mClock.uptimeMillis(), groupKey);
+            batch = new EventBatch(mClock.elapsedRealtime(), groupKey);
             mBatches.put(groupKey, batch);
         }
         return batch;
@@ -268,7 +269,7 @@ public class GroupCoalescer implements Dumpable, PipelineDumpable {
         }
         events.sort(mEventComparator);
 
-        long batchAge = mClock.uptimeMillis() - batch.mCreatedTimestamp;
+        long batchAge = mClock.elapsedRealtime() - batch.mCreatedTimestamp;
         mLogger.logEmitBatch(batch.mGroupKey, batch.mMembers.size(), batchAge);
 
         mHandler.onNotificationBatchPosted(events);
@@ -298,7 +299,7 @@ public class GroupCoalescer implements Dumpable, PipelineDumpable {
 
     @Override
     public void dump(@NonNull PrintWriter pw, @NonNull String[] args) {
-        long now = mClock.uptimeMillis();
+        long now = mClock.elapsedRealtime();
 
         int eventCount = 0;
 

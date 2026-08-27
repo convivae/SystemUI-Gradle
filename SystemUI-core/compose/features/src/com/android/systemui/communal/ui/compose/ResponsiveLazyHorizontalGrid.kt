@@ -17,6 +17,7 @@
 package com.android.systemui.communal.ui.compose
 
 import android.content.res.Configuration
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollableDefaults
@@ -33,10 +34,13 @@ import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -45,11 +49,17 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
+import androidx.window.layout.WindowMetricsCalculator
+import com.android.systemui.communal.util.WindowSizeUtils.COMPACT_HEIGHT
+import com.android.systemui.communal.util.WindowSizeUtils.COMPACT_WIDTH
 
 /**
  * Renders a responsive [LazyHorizontalGrid] with dynamic columns and rows. Each cell will maintain
  * the specified aspect ratio, but is otherwise resizeable in order to best fill the available
  * space.
+ *
+ * @param cellAspectRatio The aspect ratio (width / height) for each cell. Use 0f for flexible
+ *   aspect ratio, allowing cells to fill all available space.
  */
 @Composable
 fun ResponsiveLazyHorizontalGrid(
@@ -58,6 +68,7 @@ fun ResponsiveLazyHorizontalGrid(
     state: LazyGridState = rememberLazyGridState(),
     setContentOffset: (offset: Offset) -> Unit = {},
     minContentPadding: PaddingValues = PaddingValues(0.dp),
+    animateContentPadding: Boolean = false,
     minHorizontalArrangement: Dp = 0.dp,
     minVerticalArrangement: Dp = 0.dp,
     flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
@@ -65,13 +76,12 @@ fun ResponsiveLazyHorizontalGrid(
     overscrollEffect: OverscrollEffect? = rememberOverscrollEffect(),
     content: LazyGridScope.(sizeInfo: SizeInfo) -> Unit,
 ) {
-    check(cellAspectRatio > 0f) { "Aspect ratio must be greater than 0, but was $cellAspectRatio" }
     check(minHorizontalArrangement.value >= 0f && minVerticalArrangement.value >= 0f) {
         "Horizontal and vertical arrangements must be non-negative, but were " +
             "$minHorizontalArrangement and $minVerticalArrangement, respectively."
     }
     BoxWithConstraints(modifier) {
-        val gridSize = rememberGridSize(maxWidth = maxWidth, maxHeight = maxHeight)
+        val gridSize = rememberGridSize()
         val layoutDirection = LocalLayoutDirection.current
         val density = LocalDensity.current
 
@@ -128,25 +138,60 @@ fun ResponsiveLazyHorizontalGrid(
         val extraWidth = maxWidth - usedWidth
         val extraHeight = maxHeight - usedHeight
 
-        val finalStartPadding = minStartPadding + extraWidth / 2
-        val finalTopPadding = minTopPadding + extraHeight / 2
+        // If there is a single column or single row, distribute extra space evenly across the grid.
+        // Otherwise, distribute it along the content padding to center the content.
+        val distributeHorizontalSpaceAlongGutters = gridSize.height == 1 || gridSize.width == 1
+        val evenlyDistributedWidth =
+            if (distributeHorizontalSpaceAlongGutters) {
+                extraWidth / (gridSize.width + 1)
+            } else {
+                extraWidth / 2
+            }
 
-        val finalContentPadding =
-            PaddingValues(
-                start = finalStartPadding,
-                end = minEndPadding + extraWidth / 2,
-                top = finalTopPadding,
-                bottom = minBottomPadding + extraHeight / 2,
-            )
+        val finalStartPadding = minStartPadding + evenlyDistributedWidth
+        val finalEndPadding = minEndPadding + evenlyDistributedWidth
+        val finalTopPadding = minTopPadding + extraHeight / 2
+        val finalBottomPadding = minBottomPadding + extraHeight / 2
+
+        val finalContentPadding: PaddingValues
+        if (animateContentPadding) {
+            val finalStartPaddingAnimated by animateDpAsState(finalStartPadding)
+            val finalTopPaddingAnimated by animateDpAsState(finalTopPadding)
+            val finalEndPaddingAnimated by animateDpAsState(finalEndPadding)
+            val finalBottomPaddingAnimated by animateDpAsState(finalBottomPadding)
+
+            finalContentPadding =
+                PaddingValues(
+                    start = finalStartPaddingAnimated,
+                    top = finalTopPaddingAnimated,
+                    end = finalEndPaddingAnimated,
+                    bottom = finalBottomPaddingAnimated,
+                )
+        } else {
+            finalContentPadding =
+                PaddingValues(
+                    start = finalStartPadding,
+                    top = finalTopPadding,
+                    end = finalEndPadding,
+                    bottom = finalBottomPadding,
+                )
+        }
 
         with(density) { setContentOffset(Offset(finalStartPadding.toPx(), finalTopPadding.toPx())) }
+
+        val horizontalArrangement =
+            if (distributeHorizontalSpaceAlongGutters) {
+                minHorizontalArrangement + evenlyDistributedWidth
+            } else {
+                minHorizontalArrangement
+            }
 
         LazyHorizontalGrid(
             rows = GridCells.Fixed(gridSize.height),
             modifier = Modifier.fillMaxSize(),
             state = state,
             contentPadding = finalContentPadding,
-            horizontalArrangement = Arrangement.spacedBy(minHorizontalArrangement),
+            horizontalArrangement = Arrangement.spacedBy(horizontalArrangement),
             verticalArrangement = Arrangement.spacedBy(minVerticalArrangement),
             flingBehavior = flingBehavior,
             userScrollEnabled = userScrollEnabled,
@@ -172,7 +217,10 @@ private fun calculateUsedSpace(cellSize: Dp, numCells: Int, padding: Dp, cellSpa
     cellSize * numCells + padding + (numCells - 1) * cellSpacing
 
 private fun calculateClosestSize(maxWidth: Dp, maxHeight: Dp, aspectRatio: Float): DpSize {
-    return if (maxWidth / maxHeight > aspectRatio) {
+    return if (aspectRatio <= 0f) {
+        // Flexible aspect ratio. Allow cell to fill max width and height.
+        DpSize(maxWidth, maxHeight)
+    } else if (maxWidth / maxHeight > aspectRatio) {
         // Target is too wide, shrink width
         DpSize(maxHeight * aspectRatio, maxHeight)
     } else {
@@ -210,39 +258,48 @@ data class SizeInfo(
 }
 
 @Composable
-private fun rememberGridSize(maxWidth: Dp, maxHeight: Dp): IntSize {
+private fun rememberGridSize(): IntSize {
     val configuration = LocalConfiguration.current
     val orientation = configuration.orientation
+    val screenSize = calculateWindowSize()
 
-    return remember(orientation, maxWidth, maxHeight) {
+    return remember(orientation, screenSize) {
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             IntSize(
-                width = calculateNumCellsWidth(maxWidth),
-                height = calculateNumCellsHeight(maxHeight),
+                width = calculateNumCellsWidth(screenSize.width),
+                height = calculateNumCellsHeight(screenSize.height),
             )
         } else {
             // In landscape we invert the rows/columns to ensure we match the same area as portrait.
             // This keeps the number of elements in the grid consistent when changing orientation.
             IntSize(
-                width = calculateNumCellsHeight(maxWidth),
-                height = calculateNumCellsWidth(maxHeight),
+                width = calculateNumCellsHeight(screenSize.width),
+                height = calculateNumCellsWidth(screenSize.height),
             )
         }
     }
 }
 
+@Composable
+fun calculateWindowSize(): DpSize {
+    // Observe view configuration changes and recalculate the size class on each change.
+    LocalConfiguration.current
+    val density = LocalDensity.current
+    val context = LocalContext.current
+    val metrics = WindowMetricsCalculator.getOrCreate().computeCurrentWindowMetrics(context)
+    return with(density) { metrics.bounds.toComposeRect().size.toDpSize() }
+}
+
 private fun calculateNumCellsWidth(width: Dp) =
-    // See https://developer.android.com/develop/ui/views/layout/use-window-size-classes
     when {
-        width >= 840.dp -> 3
-        width >= 600.dp -> 2
+        width >= 900.dp -> 3
+        width >= COMPACT_WIDTH -> 2
         else -> 1
     }
 
 private fun calculateNumCellsHeight(height: Dp) =
-    // See https://developer.android.com/develop/ui/views/layout/use-window-size-classes
     when {
-        height >= 900.dp -> 3
-        height >= 480.dp -> 2
+        height >= 1000.dp -> 3
+        height >= COMPACT_HEIGHT -> 3
         else -> 1
     }

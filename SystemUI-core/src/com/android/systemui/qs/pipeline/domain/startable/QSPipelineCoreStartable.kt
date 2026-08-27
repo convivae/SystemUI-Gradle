@@ -18,11 +18,13 @@ package com.android.systemui.qs.pipeline.domain.startable
 
 import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.qs.panels.domain.interactor.IconTilesInteractor
 import com.android.systemui.qs.pipeline.domain.interactor.AccessibilityTilesInteractor
 import com.android.systemui.qs.pipeline.domain.interactor.AutoAddInteractor
 import com.android.systemui.qs.pipeline.domain.interactor.CurrentTilesInteractor
 import com.android.systemui.qs.pipeline.domain.interactor.RestoreReconciliationInteractor
-import com.android.systemui.qs.pipeline.shared.QSPipelineFlagsRepository
+import com.android.systemui.qs.pipeline.domain.upgrade.CustomTileAddedRepositoryUpgrader
+import com.android.systemui.qs.shared.QSSettingsPackageRepository
 import javax.inject.Inject
 
 @SysUISingleton
@@ -32,13 +34,18 @@ constructor(
     private val currentTilesInteractor: CurrentTilesInteractor,
     private val accessibilityTilesInteractor: AccessibilityTilesInteractor,
     private val autoAddInteractor: AutoAddInteractor,
-    private val featureFlags: QSPipelineFlagsRepository,
+    private val settingsPackageRepository: QSSettingsPackageRepository,
     private val restoreReconciliationInteractor: RestoreReconciliationInteractor,
+    private val customTileAddedRepositoryUpgrader: CustomTileAddedRepositoryUpgrader,
+    private val iconTilesInteractor: IconTilesInteractor,
 ) : CoreStartable {
 
     override fun start() {
         accessibilityTilesInteractor.init(currentTilesInteractor)
-        autoAddInteractor.init(currentTilesInteractor)
+        autoAddInteractor.init(currentTilesInteractor, iconTilesInteractor)
+        settingsPackageRepository.init()
         restoreReconciliationInteractor.start()
+
+        customTileAddedRepositoryUpgrader.start(currentTilesInteractor.userId)
     }
 }

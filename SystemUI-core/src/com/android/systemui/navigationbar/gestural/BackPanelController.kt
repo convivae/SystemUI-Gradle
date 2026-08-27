@@ -33,7 +33,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.os.postDelayed
 import androidx.core.view.isVisible
 import androidx.dynamicanimation.animation.DynamicAnimation
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager
 import com.android.internal.jank.Cuj
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.internal.util.LatencyTracker
@@ -85,7 +84,7 @@ class BackPanelController
 @AssistedInject
 constructor(
     @Assisted context: Context,
-    private val windowManager: ViewCaptureAwareWindowManager,
+    @Assisted private val windowManager: WindowManager,
     private val viewConfiguration: ViewConfiguration,
     @Assisted private val mainHandler: Handler,
     private val systemClock: SystemClock,
@@ -97,7 +96,11 @@ constructor(
 
     @AssistedFactory
     interface Factory {
-        fun create(context: Context, handler: Handler): BackPanelController
+        fun create(
+            context: Context,
+            windowManager: WindowManager,
+            handler: Handler,
+        ): BackPanelController
     }
 
     @VisibleForTesting internal var params: EdgePanelParams = EdgePanelParams(resources)
@@ -632,8 +635,6 @@ constructor(
             }
     }
 
-    override fun setInsets(insetLeft: Int, insetRight: Int) = Unit
-
     override fun setBackCallback(callback: NavigationEdgeBackPlugin.BackCallback) {
         backCallback = callback
     }
@@ -1021,10 +1022,10 @@ constructor(
         updateArrowState(GestureState.GONE, force = true)
     }
 
-    override fun dump(pw: PrintWriter) {
-        pw.println("$TAG:")
-        pw.println("  currentState=$currentState")
-        pw.println("  isLeftPanel=${mView.isLeftPanel}")
+    override fun dump(prefix: String, pw: PrintWriter) {
+        pw.println("$prefix$TAG:")
+        pw.println("$prefix  currentState=$currentState")
+        pw.println("$prefix  isLeftPanel=${mView.isLeftPanel}")
     }
 
     @VisibleForTesting

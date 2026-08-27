@@ -35,7 +35,7 @@ import kotlinx.coroutines.flow.emptyFlow
  */
 @SysUISingleton
 class NoopDeviceEntryFaceAuthRepository @Inject constructor() : DeviceEntryFaceAuthRepository {
-    override val isAuthenticated: StateFlow<Boolean> = MutableStateFlow(false)
+    override val isCurrentUserAuthenticated: StateFlow<Boolean> = MutableStateFlow(false)
 
     override val canRunFaceAuth: StateFlow<Boolean> = MutableStateFlow(false)
 
@@ -49,8 +49,10 @@ class NoopDeviceEntryFaceAuthRepository @Inject constructor() : DeviceEntryFaceA
 
     override val isAuthRunning: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
-    override val isBypassEnabled: Flow<Boolean>
-        get() = emptyFlow()
+    override val isDetectRunning: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+
+    override val isBypassEnabled: StateFlow<Boolean>
+        get() = MutableStateFlow(false)
 
     override fun setLockedOut(isLockedOut: Boolean) = Unit
 

@@ -5,14 +5,21 @@ import android.app.admin.DevicePolicyResources
 import android.content.Context
 import android.hardware.biometrics.Flags
 import android.os.UserManager
+import android.security.Flags.secureLockDevice
+import android.util.Log
 import com.android.internal.widget.LockPatternUtils
+import com.android.internal.widget.LockPatternUtils.StrongAuthTracker.PRIMARY_AUTH_REQUIRED_FOR_SECURE_LOCK_DEVICE
 import com.android.internal.widget.LockscreenCredential
 import com.android.internal.widget.VerifyCredentialResponse
 import com.android.systemui.biometrics.domain.model.BiometricPromptRequest
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.res.R
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.util.time.SystemClock
 import javax.inject.Inject
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.toKotlinDuration
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -72,10 +79,9 @@ constructor(
         // Request LockSettingsService to return the Gatekeeper Password in the
         // VerifyCredentialResponse so that we can request a Gatekeeper HAT with the
         // Gatekeeper Password and operationId.
-        var effectiveUserId = request.userInfo.deviceCredentialOwnerId
+        val effectiveUserId = request.userInfo.deviceCredentialOwnerId
         val response =
             if (Flags.privateSpaceBp() && effectiveUserId != request.userInfo.userId) {
-                effectiveUserId = request.userInfo.userId
                 lockPatternUtils.verifyTiedProfileChallenge(
                     credential,
                     request.userInfo.userId,
@@ -90,7 +96,21 @@ constructor(
             }
 
         if (response.isMatched) {
-            lockPatternUtils.userPresent(effectiveUserId)
+            if (
+                secureLockDevice() &&
+                    SceneContainerFlag.isEnabled &&
+                    lockPatternUtils
+                        .getStrongAuthForUser(request.userInfo.userId)
+                        .and(PRIMARY_AUTH_REQUIRED_FOR_SECURE_LOCK_DEVICE) != 0
+            ) {
+                Log.i(
+                    TAG,
+                    "Device is in secure lock device mode; awaiting second factor biometric " +
+                        "authentication before unlocking.",
+                )
+            } else {
+                lockPatternUtils.userPresent(effectiveUserId)
+            }
 
             // The response passed into this method contains the Gatekeeper
             // Password. We still have to request Gatekeeper to create a
@@ -101,24 +121,24 @@ constructor(
                 lockPatternUtils.verifyGatekeeperPasswordHandle(
                     pwHandle,
                     request.operationInfo.gatekeeperChallenge,
-                    effectiveUserId,
+                    request.userInfo.userId,
                 )
             val hat = gkResponse.gatekeeperHAT
             lockPatternUtils.removeGatekeeperPasswordHandle(pwHandle)
             emit(CredentialStatus.Success.Verified(checkNotNull(hat)))
-        } else if (response.timeout > 0) {
+        } else if (response.timeout.isPositive) {
             // if requests are being throttled, update the error message every
             // second until the temporary lock has expired
-            val deadline: Long =
-                lockPatternUtils.setLockoutAttemptDeadline(effectiveUserId, response.timeout)
-            val interval = LockPatternUtils.FAILED_ATTEMPT_COUNTDOWN_INTERVAL_MS
-            var remaining = deadline - systemClock.elapsedRealtime()
-            while (remaining > 0) {
+            val lockoutEndTime: Duration =
+                lockPatternUtils.getLockoutEndTime(effectiveUserId).toKotlinDuration()
+            val interval = LockPatternUtils.FAILED_ATTEMPT_COUNTDOWN_INTERVAL_MS.milliseconds
+            var remaining = lockoutEndTime - systemClock.elapsedRealtime().milliseconds
+            while (remaining.isPositive()) {
                 emit(
                     CredentialStatus.Fail.Throttled(
                         applicationContext.getString(
                             R.string.biometric_dialog_credential_too_many_attempts,
-                            remaining / 1000,
+                            remaining.inWholeSeconds,
                         )
                     )
                 )
@@ -167,6 +187,10 @@ constructor(
         } else {
             null
         }
+
+    companion object {
+        private val TAG = "CredentialInteractorImpl"
+    }
 }
 
 private enum class UserType {

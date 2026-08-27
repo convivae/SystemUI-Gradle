@@ -179,6 +179,25 @@ public class QuickAccessWalletController {
     }
 
     /**
+     * Sets the double tap power button gesture to open the wallet, if the wallet service is
+     * available.
+     *
+     * @return true if the wallet is enabled and the setting was updated, false otherwise.
+     */
+    @WorkerThread
+    public boolean setupDoubleTapPowerButtonToOpenWallet() {
+        updateWalletPreference();
+        if (!mWalletEnabled) {
+            Log.i(TAG, "Wallet is not enabled, not setting double tap power button gesture.");
+            return false;
+        }
+        // 1 = Wallet launch (Settings.Secure.DOUBLE_TAP_POWER_BUTTON_GESTURE)
+        Settings.Secure.putInt(
+                mContext.getContentResolver(), Settings.Secure.DOUBLE_TAP_POWER_BUTTON_GESTURE, 1);
+        return true;
+    }
+
+    /**
      * Query the wallet cards from {@link QuickAccessWalletClient}.
      * This should not be called on the main thread.
      *
@@ -229,6 +248,35 @@ public class QuickAccessWalletController {
     }
 
     /**
+     * Starts the QuickAccessWallet Gesture UI (the app is launched by a hardware gesture).
+     *
+     *
+     * The Wallet target activity is defined as the {@link android.app.PendingIntent} returned by
+     * {@link QuickAccessWalletClient#getGestureTargetActivityPendingIntent} if that is not null.
+     * If that is null, then the method {@link QuickAccessWalletController#startQuickAccessUiIntent}
+     * as defined below is called, which starts the QuickAccessWallet UI.
+     *
+     * @param activityStarter an {@link ActivityStarter} to launch the Intent or PendingIntent.
+     * @param animationController an {@link ActivityTransitionAnimator.Controller} to provide a
+     *                            smooth animation for the activity launch.
+     */
+    public void startGestureUiIntent(ActivityStarter activityStarter,
+            ActivityTransitionAnimator.Controller animationController){
+        mQuickAccessWalletClient.getGestureTargetActivityPendingIntent(
+                mExecutor,
+                gesturePendingIntent -> {
+                    if (gesturePendingIntent != null) {
+                        activityStarter.startPendingIntentMaybeDismissingKeyguard(
+                                gesturePendingIntent, null, null);
+                        return;
+                    }
+
+                    startQuickAccessUiIntent(activityStarter, animationController, true);
+                }
+        );
+    }
+
+    /**
      * Starts the QuickAccessWallet UI: either the app's designated UI, or the built-in Wallet UI.
      *
      * If the service has configured itself so that
@@ -264,7 +312,7 @@ public class QuickAccessWalletController {
                         intent = getSysUiWalletIntent();
                     }
                     startQuickAccessViaIntent(intent, hasCard, activityStarter,
-                            animationController);
+                            animationController, mQuickAccessWalletClient.getUser());
 
                 });
     }
@@ -294,7 +342,8 @@ public class QuickAccessWalletController {
     private void startQuickAccessViaIntent(Intent intent,
             boolean hasCard,
             ActivityStarter activityStarter,
-            ActivityTransitionAnimator.Controller animationController) {
+            ActivityTransitionAnimator.Controller animationController,
+            UserHandle user) {
         if (hasCard) {
             activityStarter.startActivity(intent, true /* dismissShade */,
                     animationController, true /* showOverLockscreenWhenLocked */);
@@ -302,7 +351,9 @@ public class QuickAccessWalletController {
             activityStarter.postStartActivityDismissingKeyguard(
                     intent,
                     /* delay= */ 0,
-                    animationController);
+                    animationController,
+                    null,
+                    user);
         }
     }
 

@@ -16,6 +16,9 @@
 
 package com.android.systemui.screenrecord;
 
+import static com.android.systemui.screenrecord.ScreenRecordUxController.EXTRA_STATE;
+import static com.android.systemui.screenrecord.ScreenRecordUxController.INTENT_UPDATE_STATE;
+
 import android.annotation.Nullable;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -35,7 +38,6 @@ import android.os.Process;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.UserHandle;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.Display;
 import android.widget.Toast;
@@ -49,6 +51,7 @@ import com.android.systemui.recordissue.ScreenRecordingStartTimeStore;
 import com.android.systemui.res.R;
 import com.android.systemui.screenrecord.ScreenMediaRecorder.SavedRecording;
 import com.android.systemui.screenrecord.ScreenMediaRecorder.ScreenMediaRecorderListener;
+import com.android.systemui.screenrecord.data.repository.ScreenRecordingPreferenceRepository;
 import com.android.systemui.settings.UserContextProvider;
 import com.android.systemui.statusbar.phone.KeyguardDismissUtil;
 
@@ -77,6 +80,7 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
     protected static final String EXTRA_PATH = "extra_path";
     private static final String EXTRA_AUDIO_SOURCE = "extra_useAudio";
     private static final String EXTRA_SHOW_TAPS = "extra_showTaps";
+    private static final String EXTRA_SHOW_SECONDS = "extra_showSeconds";
     private static final String EXTRA_CAPTURE_TARGET = "extra_captureTarget";
     private static final String EXTRA_DISPLAY_ID = "extra_displayId";
     private static final String EXTRA_STOP_REASON = "extra_stopReason";
@@ -91,12 +95,10 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
     private static final String PERMISSION_SELF = "com.android.systemui.permission.SELF";
     protected static final String EXTRA_NOTIFICATION_ID = "notification_id";
 
-    private final RecordingController mController;
+    private final ScreenRecordUxController mController;
     protected final KeyguardDismissUtil mKeyguardDismissUtil;
     private final Handler mMainHandler;
     private ScreenRecordingAudioSource mAudioSource = ScreenRecordingAudioSource.NONE;
-    private boolean mShowTaps;
-    private boolean mOriginalShowTaps;
     private ScreenMediaRecorder mRecorder;
     private final ScreenRecordingStartTimeStore mScreenRecordingStartTimeStore;
     private final Executor mLongExecutor;
@@ -106,8 +108,11 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
     protected int mNotificationId = NOTIF_BASE_ID;
     private RecordingServiceStrings mStrings;
 
+    private final ScreenRecordingPreferenceRepository mRecordingPreferenceRepository =
+            new ScreenRecordingPreferenceRepository(this);
+
     @Inject
-    public RecordingService(RecordingController controller, @LongRunning Executor executor,
+    public RecordingService(ScreenRecordUxController controller, @LongRunning Executor executor,
             @Main Handler handler, UiEventLogger uiEventLogger,
             NotificationManager notificationManager,
             UserContextProvider userContextTracker, KeyguardDismissUtil keyguardDismissUtil,
@@ -194,17 +199,16 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
                 mAudioSource = ScreenRecordingAudioSource
                         .values()[intent.getIntExtra(EXTRA_AUDIO_SOURCE, 0)];
                 Log.d(getTag(), "recording with audio source " + mAudioSource);
-                mShowTaps = intent.getBooleanExtra(EXTRA_SHOW_TAPS, false);
                 MediaProjectionCaptureTarget captureTarget =
                         intent.getParcelableExtra(EXTRA_CAPTURE_TARGET,
                                 MediaProjectionCaptureTarget.class);
 
-                mOriginalShowTaps = Settings.System.getInt(
-                        getApplicationContext().getContentResolver(),
-                        Settings.System.SHOW_TOUCHES, 0) != 0;
                 int displayId = intent.getIntExtra(EXTRA_DISPLAY_ID, Display.DEFAULT_DISPLAY);
 
-                setTapsVisible(mShowTaps);
+                mRecordingPreferenceRepository.setShouldShowTaps(
+                        intent.getBooleanExtra(EXTRA_SHOW_TAPS, false));
+                mRecordingPreferenceRepository.setShouldShowSeconds(
+                        intent.getBooleanExtra(EXTRA_SHOW_SECONDS, false));
 
                 mRecorder = new ScreenMediaRecorder(
                         mUserContextTracker.getUserContext(),
@@ -213,8 +217,7 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
                         mAudioSource,
                         captureTarget,
                         displayId,
-                        this,
-                        mScreenRecordingStartTimeStore
+                        this
                 );
 
                 if (startRecording()) {
@@ -292,8 +295,8 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
             // Main user has a reference to the correct controller, so no need to use a broadcast
             mController.updateState(state);
         } else {
-            Intent intent = new Intent(RecordingController.INTENT_UPDATE_STATE);
-            intent.putExtra(RecordingController.EXTRA_STATE, state);
+            Intent intent = new Intent(INTENT_UPDATE_STATE);
+            intent.putExtra(EXTRA_STATE, state);
             intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
             sendBroadcast(intent, PERMISSION_SELF);
         }
@@ -489,17 +492,14 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
                 getTag(), notificationIdForGroup, groupNotif, currentUser);
     }
 
-    private void stopService(@StopReason int stopReason) {
-        stopService(USER_ID_NOT_SPECIFIED, stopReason);
-    }
-
     private void stopService(int userId, @StopReason int stopReason) {
         if (userId == USER_ID_NOT_SPECIFIED) {
             userId = mUserContextTracker.getUserContext().getUserId();
+            Log.w(getTag(), "Stopping service without specifying user! " + userId);
         }
         UserHandle currentUser = new UserHandle(userId);
         Log.d(getTag(), "notifying for user " + userId);
-        setTapsVisible(mOriginalShowTaps);
+        mRecordingPreferenceRepository.maybeRestoreSetting();
         try {
             if (getRecorder() != null) {
                 getRecorder().end(stopReason);
@@ -513,7 +513,7 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
             }
             showErrorToast(R.string.screenrecord_save_error);
             Log.e(getTag(), "stopRecording called, but there was an error when ending"
-                    + "recording");
+                    + " recording");
             exception.printStackTrace();
             createErrorSavingNotification(currentUser);
         } catch (Throwable throwable) {
@@ -559,11 +559,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
                 createSaveNotification(savedRecording), currentUser);
     }
 
-    private void setTapsVisible(boolean turnOn) {
-        int value = turnOn ? 1 : 0;
-        Settings.System.putInt(getContentResolver(), Settings.System.SHOW_TOUCHES, value);
-    }
-
     protected String getTag() {
         return TAG;
     }
@@ -582,7 +577,6 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
     protected RecordingServiceStrings provideRecordingServiceStrings() {
         return new RecordingServiceStrings(getResources());
     }
-
 
     /**
      * Get an intent to stop the recording service.
@@ -621,10 +615,16 @@ public class RecordingService extends Service implements ScreenMediaRecorderList
     }
 
     @Override
-    public void onStopped(@StopReason int stopReason) {
+    public void onStarted() {
+        mScreenRecordingStartTimeStore.markStartTime();
+    }
+
+    @Override
+    public void onStopped(int userId, @StopReason int stopReason) {
         if (mController.isRecording()) {
-            Log.d(getTag(), "Stopping recording because the system requested the stop");
-            stopService(stopReason);
+            Log.d(getTag(), "Stopping recording for user " + userId
+                    + " because the system requested the stop");
+            stopService(userId, stopReason);
         }
     }
 }

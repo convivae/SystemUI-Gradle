@@ -15,32 +15,24 @@
  */
 package com.android.systemui.mediaprojection.permission
 
-import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.view.ViewStub
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.ImageView
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.annotation.CallSuper
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
-import androidx.annotation.LayoutRes
 import androidx.annotation.StringRes
 import com.android.systemui.mediaprojection.MediaProjectionMetricsLogger
 import com.android.systemui.res.R
-import com.android.systemui.statusbar.phone.DialogDelegate
+import com.android.systemui.statusbar.phone.SystemUIDialog
 
 /** Base permission dialog for screen share and recording */
-abstract class BaseMediaProjectionPermissionDialogDelegate<T : AlertDialog>(
+abstract class BaseMediaProjectionPermissionDialogDelegate(
+    private val context: Context,
     private val screenShareOptions: List<ScreenShareOption>,
     private val appName: String?,
     private val hostUid: Int,
@@ -48,35 +40,38 @@ abstract class BaseMediaProjectionPermissionDialogDelegate<T : AlertDialog>(
     @DrawableRes private val dialogIconDrawable: Int? = null,
     @ColorRes private val dialogIconTint: Int? = null,
     @ScreenShareMode val defaultSelectedMode: Int = screenShareOptions.first().mode,
-) : DialogDelegate<T>, AdapterView.OnItemSelectedListener {
+    private val systemUIDialogFactory: SystemUIDialog.Factory,
+) : SystemUIDialog.Delegate {
     private lateinit var dialogTitle: TextView
     private lateinit var cancelButton: TextView
-    private lateinit var screenShareModeSpinner: Spinner
-    protected lateinit var dialog: AlertDialog
-    protected lateinit var viewBinder: BaseMediaProjectionPermissionViewBinder
+    protected lateinit var dialog: SystemUIDialog
+    protected lateinit var contentManager: BaseMediaProjectionPermissionContentManager
 
     /**
      * Create the view binder for the permission dialog, this can be override by child classes to
      * support a different type of view binder
      */
-    open fun createViewBinder(): BaseMediaProjectionPermissionViewBinder {
-        return BaseMediaProjectionPermissionViewBinder(
+    open fun createContentManager(): BaseMediaProjectionPermissionContentManager {
+        return BaseMediaProjectionPermissionContentManager(
             screenShareOptions,
             appName,
             hostUid,
             mediaProjectionMetricsLogger,
             defaultSelectedMode,
-            dialog,
         )
     }
 
-    @CallSuper
-    override fun onStop(dialog: T) {
-        viewBinder.unbind()
+    override fun createDialog(): SystemUIDialog {
+        return systemUIDialogFactory.create(this, context)
     }
 
     @CallSuper
-    override fun onCreate(dialog: T, savedInstanceState: Bundle?) {
+    override fun onStop(dialog: SystemUIDialog) {
+        contentManager.unbind()
+    }
+
+    @CallSuper
+    override fun onCreate(dialog: SystemUIDialog, savedInstanceState: Bundle?) {
         this.dialog = dialog
         dialog.window?.addPrivateFlags(WindowManager.LayoutParams.SYSTEM_FLAG_SHOW_FOR_ALL_USERS)
         dialog.window?.setGravity(Gravity.CENTER)
@@ -84,12 +79,10 @@ abstract class BaseMediaProjectionPermissionDialogDelegate<T : AlertDialog>(
         dialogTitle = dialog.requireViewById(R.id.screen_share_dialog_title)
         cancelButton = dialog.requireViewById(android.R.id.button2)
         updateIcon()
-        createOptionsView(getOptionsViewLayoutId())
-        if (!::viewBinder.isInitialized) {
-            viewBinder = createViewBinder()
+        if (!::contentManager.isInitialized) {
+            contentManager = createContentManager()
         }
-        viewBinder.bind()
-        initScreenShareSpinner()
+        contentManager.bind(dialog.requireViewById(R.id.screen_share_permission_dialog))
     }
 
     private fun updateIcon() {
@@ -102,36 +95,8 @@ abstract class BaseMediaProjectionPermissionDialogDelegate<T : AlertDialog>(
         }
     }
 
-    private fun initScreenShareSpinner() {
-        val adapter = OptionsAdapter(dialog.context.applicationContext, screenShareOptions)
-        screenShareModeSpinner = dialog.requireViewById(R.id.screen_share_mode_options)
-        screenShareModeSpinner.adapter = adapter
-        screenShareModeSpinner.onItemSelectedListener = this
-
-        // disable redundant Touch & Hold accessibility action for Switch Access
-        screenShareModeSpinner.accessibilityDelegate =
-            object : View.AccessibilityDelegate() {
-                override fun onInitializeAccessibilityNodeInfo(
-                    host: View,
-                    info: AccessibilityNodeInfo,
-                ) {
-                    info.removeAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK)
-                    super.onInitializeAccessibilityNodeInfo(host, info)
-                }
-            }
-        screenShareModeSpinner.isLongClickable = false
-        val defaultModePosition = screenShareOptions.indexOfFirst { it.mode == defaultSelectedMode }
-        screenShareModeSpinner.setSelection(defaultModePosition, /* animate= */ false)
-    }
-
-    override fun onItemSelected(adapterView: AdapterView<*>?, view: View, pos: Int, id: Long) {
-        viewBinder.onItemSelected(pos)
-    }
-
-    override fun onNothingSelected(parent: AdapterView<*>?) {}
-
     fun getSelectedScreenShareOption(): ScreenShareOption {
-        return viewBinder.selectedScreenShareOption
+        return contentManager.selectedScreenShareOption
     }
 
     /** Protected methods for the text updates & functionality */
@@ -141,50 +106,10 @@ abstract class BaseMediaProjectionPermissionDialogDelegate<T : AlertDialog>(
     }
 
     protected fun setStartButtonOnClickListener(listener: View.OnClickListener?) {
-        viewBinder.setStartButtonOnClickListener(listener)
+        contentManager.setStartButtonOnClickListener(listener)
     }
 
     protected fun setCancelButtonOnClickListener(listener: View.OnClickListener?) {
         cancelButton.setOnClickListener(listener)
-    }
-
-    // Create additional options that is shown under the share mode spinner
-    // Eg. the audio and tap toggles in SysUI Recorder
-    @LayoutRes protected open fun getOptionsViewLayoutId(): Int? = null
-
-    private fun createOptionsView(@LayoutRes layoutId: Int?) {
-        if (layoutId == null) return
-        val stub = dialog.requireViewById<View>(R.id.options_stub) as ViewStub
-        stub.layoutResource = layoutId
-        stub.inflate()
-    }
-}
-
-private class OptionsAdapter(context: Context, private val options: List<ScreenShareOption>) :
-    ArrayAdapter<String>(
-        context,
-        R.layout.screen_share_dialog_spinner_text,
-        options.map { context.getString(it.spinnerText, it.displayName) },
-    ) {
-
-    override fun isEnabled(position: Int): Boolean {
-        return options[position].spinnerDisabledText == null
-    }
-
-    override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
-        val inflater = LayoutInflater.from(parent.context)
-        val view = inflater.inflate(R.layout.screen_share_dialog_spinner_item_text, parent, false)
-        val titleTextView = view.requireViewById<TextView>(android.R.id.text1)
-        val errorTextView = view.requireViewById<TextView>(android.R.id.text2)
-        titleTextView.text = getItem(position)
-        errorTextView.text = options[position].spinnerDisabledText
-        if (isEnabled(position)) {
-            errorTextView.visibility = View.GONE
-            titleTextView.isEnabled = true
-        } else {
-            errorTextView.visibility = View.VISIBLE
-            titleTextView.isEnabled = false
-        }
-        return view
     }
 }

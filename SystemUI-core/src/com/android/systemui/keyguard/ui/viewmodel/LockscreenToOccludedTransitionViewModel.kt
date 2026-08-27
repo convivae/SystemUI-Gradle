@@ -16,6 +16,7 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
+import android.util.MathUtils
 import com.android.app.animation.Interpolators.EMPHASIZED_ACCELERATE
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton
@@ -26,10 +27,13 @@ import com.android.systemui.keyguard.shared.model.KeyguardState.OCCLUDED
 import com.android.systemui.keyguard.ui.KeyguardTransitionAnimationFlow
 import com.android.systemui.keyguard.ui.transitions.DeviceEntryIconTransition
 import com.android.systemui.res.R
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 
 /**
@@ -40,64 +44,65 @@ import kotlinx.coroutines.flow.flatMapLatest
 class LockscreenToOccludedTransitionViewModel
 @Inject
 constructor(
-    shadeDependentFlows: ShadeDependentFlows,
     @ShadeDisplayAware configurationInteractor: ConfigurationInteractor,
     animationFlow: KeyguardTransitionAnimationFlow,
 ) : DeviceEntryIconTransition {
 
     private val transitionAnimation =
-        animationFlow.setup(
-            duration = TO_OCCLUDED_DURATION,
-            edge = Edge.create(from = KeyguardState.LOCKSCREEN, to = OCCLUDED),
-        )
+        animationFlow
+            .setup(
+                duration = TO_OCCLUDED_DURATION,
+                edge = Edge.create(from = KeyguardState.LOCKSCREEN, to = Scenes.Occluded),
+            )
+            .setupWithoutSceneContainer(
+                edge = Edge.create(from = KeyguardState.LOCKSCREEN, to = OCCLUDED)
+            )
 
     /** Lockscreen views alpha */
-    val lockscreenAlpha: Flow<Float> =
-        shadeDependentFlows.transitionFlow(
-            flowWhenShadeIsNotExpanded =
-                transitionAnimation.sharedFlow(
-                    duration = 250.milliseconds,
-                    onStep = { 1f - it },
-                    name = "LOCKSCREEN->OCCLUDED: lockscreenAlpha",
-                ),
-            flowWhenShadeIsExpanded = transitionAnimation.immediatelyTransitionTo(0f),
+    fun lockscreenAlpha(viewState: ViewStateAccessor): Flow<Float> {
+        var startAlpha = 1f
+        return transitionAnimation.sharedFlowWithShade(
+            duration = 250.milliseconds,
+            onStart = { startAlpha = viewState.alpha() },
+            onStep = { step, isShadeExpanded ->
+                if (isShadeExpanded) 0f else MathUtils.lerp(startAlpha, 0f, step)
+            },
         )
+    }
 
     val shortcutsAlpha: Flow<Float> =
-        shadeDependentFlows.transitionFlow(
-            flowWhenShadeIsNotExpanded =
-                transitionAnimation.sharedFlow(
-                    duration = 250.milliseconds,
-                    onStep = { 1f - it },
-                    onFinish = { 0f },
-                    onCancel = { 1f },
-                ),
-            flowWhenShadeIsExpanded = transitionAnimation.immediatelyTransitionTo(0f),
+        transitionAnimation.sharedFlowWithShade(
+            duration = 250.milliseconds,
+            onStep = { step, isShadeExpanded -> if (isShadeExpanded) 0f else 1f - step },
+            onFinish = { 0f },
+            onCancel = { 1f },
         )
 
     /** Lockscreen views y-translation */
     val lockscreenTranslationY: Flow<Float> =
-        configurationInteractor
-            .dimensionPixelSize(R.dimen.lockscreen_to_occluded_transition_lockscreen_translation_y)
-            .flatMapLatest { translatePx ->
-                transitionAnimation.sharedFlow(
-                    duration = TO_OCCLUDED_DURATION,
-                    onStep = { value -> value * translatePx },
-                    // Reset on cancel or finish
-                    onFinish = { 0f },
-                    onCancel = { 0f },
-                    interpolator = EMPHASIZED_ACCELERATE,
+        if (SceneContainerFlag.isEnabled) {
+            emptyFlow()
+        } else {
+            configurationInteractor
+                .dimensionPixelSize(
+                    R.dimen.lockscreen_to_occluded_transition_lockscreen_translation_y
                 )
-            }
+                .flatMapLatest { translatePx ->
+                    transitionAnimation.sharedFlow(
+                        duration = TO_OCCLUDED_DURATION,
+                        onStep = { value -> value * translatePx },
+                        // Reset on cancel or finish
+                        onFinish = { 0f },
+                        onCancel = { 0f },
+                        interpolator = EMPHASIZED_ACCELERATE,
+                    )
+                }
+        }
 
     override val deviceEntryParentViewAlpha: Flow<Float> =
-        shadeDependentFlows.transitionFlow(
-            flowWhenShadeIsNotExpanded =
-                transitionAnimation.sharedFlow(
-                    duration = 250.milliseconds,
-                    onStep = { 1f - it },
-                    onCancel = { 0f },
-                ),
-            flowWhenShadeIsExpanded = transitionAnimation.immediatelyTransitionTo(0f),
+        transitionAnimation.sharedFlowWithShade(
+            duration = 250.milliseconds,
+            onStep = { step, isShadeExpanded -> if (isShadeExpanded) 0f else 1f - step },
+            onCancel = { 0f },
         )
 }

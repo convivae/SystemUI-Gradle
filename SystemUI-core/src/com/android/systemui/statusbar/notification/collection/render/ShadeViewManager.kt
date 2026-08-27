@@ -20,12 +20,16 @@ import android.content.Context
 import android.view.View
 import com.android.app.tracing.traceSection
 import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.statusbar.notification.Bundles
 import com.android.systemui.statusbar.notification.NotificationSectionsFeatureManager
+import com.android.systemui.statusbar.notification.OnboardingAffordanceManager
+import com.android.systemui.statusbar.notification.Summarization
+import com.android.systemui.statusbar.notification.collection.BundleEntry
 import com.android.systemui.statusbar.notification.collection.GroupEntry
-import com.android.systemui.statusbar.notification.collection.ListEntry
 import com.android.systemui.statusbar.notification.collection.NotificationEntry
 import com.android.systemui.statusbar.notification.collection.PipelineDumpable
 import com.android.systemui.statusbar.notification.collection.PipelineDumper
+import com.android.systemui.statusbar.notification.collection.PipelineEntry
 import com.android.systemui.statusbar.notification.collection.provider.SectionHeaderVisibilityProvider
 import com.android.systemui.statusbar.notification.stack.NotificationListContainer
 import dagger.assisted.Assisted
@@ -41,13 +45,15 @@ class ShadeViewManager
 constructor(
     @ShadeDisplayAware context: Context,
     @Assisted listContainer: NotificationListContainer,
-    @Assisted private val stackController: NotifStackController,
     mediaContainerController: MediaContainerController,
     featureManager: NotificationSectionsFeatureManager,
     sectionHeaderVisibilityProvider: SectionHeaderVisibilityProvider,
     nodeSpecBuilderLogger: NodeSpecBuilderLogger,
     shadeViewDifferLogger: ShadeViewDifferLogger,
     private val viewBarn: NotifViewBarn,
+    private val bundleBarn: BundleBarn,
+    @Bundles bundleOnboardingAffordanceManager: OnboardingAffordanceManager,
+    @Summarization summaryOnboardingAffordanceManager: OnboardingAffordanceManager,
 ) : PipelineDumpable {
     // We pass a shim view here because the listContainer may not actually have a view associated
     // with it and the differ never actually cares about the root node's view.
@@ -58,7 +64,10 @@ constructor(
             featureManager,
             sectionHeaderVisibilityProvider,
             viewBarn,
+            bundleBarn,
             nodeSpecBuilderLogger,
+            bundleOnboardingAffordanceManager,
+            summaryOnboardingAffordanceManager,
         )
     private val viewDiffer = ShadeViewDiffer(rootController, shadeViewDifferLogger)
 
@@ -72,31 +81,30 @@ constructor(
             dump("rootController", rootController)
             dump("specBuilder", specBuilder)
             dump("viewDiffer", viewDiffer)
+            dump("bundleBarn", bundleBarn)
         }
 
     private val viewRenderer =
         object : NotifViewRenderer {
 
-            override fun onRenderList(notifList: List<ListEntry>) {
+            override fun onRenderList(notifList: List<PipelineEntry>) {
                 traceSection("ShadeViewManager.onRenderList") {
                     viewDiffer.applySpec(specBuilder.buildNodeSpec(rootController, notifList))
                 }
             }
-
-            override fun getStackController(): NotifStackController = stackController
 
             override fun getGroupController(group: GroupEntry): NotifGroupController =
                 viewBarn.requireGroupController(group.requireSummary)
 
             override fun getRowController(entry: NotificationEntry): NotifRowController =
                 viewBarn.requireRowController(entry)
+
+            override fun getBundleController(entry: BundleEntry): NotifRowController =
+                bundleBarn.requireNodeController(entry) as NotifRowController
         }
 }
 
 @AssistedFactory
 interface ShadeViewManagerFactory {
-    fun create(
-        listContainer: NotificationListContainer,
-        stackController: NotifStackController,
-    ): ShadeViewManager
+    fun create(listContainer: NotificationListContainer): ShadeViewManager
 }

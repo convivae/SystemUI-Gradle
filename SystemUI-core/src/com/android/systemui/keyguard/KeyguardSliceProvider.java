@@ -49,12 +49,13 @@ import androidx.slice.builders.SliceAction;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardUpdateMonitorCallback;
-import com.android.systemui.SystemUIAppComponentFactoryBase;
+import com.android.systemui.application.ContentProviderContextAvailableCallback;
+import com.android.systemui.application.ContentProviderContextInitializer;
 import com.android.systemui.dagger.qualifiers.Background;
+import com.android.systemui.media.NotificationMediaManager;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
-import com.android.systemui.statusbar.NotificationMediaManager;
 import com.android.systemui.statusbar.StatusBarState;
 import com.android.systemui.statusbar.phone.DozeParameters;
 import com.android.systemui.statusbar.phone.KeyguardBypassController;
@@ -74,13 +75,13 @@ import javax.inject.Inject;
 /**
  * Simple Slice provider that shows the current date.
  *
- * Injection is handled by {@link SystemUIAppComponentFactoryBase} +
+ * Injection is handled by {@link com.android.systemui.SystemUIAppComponentFactoryBase} +
  * {@link com.android.systemui.dagger.GlobalRootComponent#inject(KeyguardSliceProvider)}.
  */
 public class KeyguardSliceProvider extends SliceProvider implements
         NextAlarmController.NextAlarmChangeCallback, ZenModeController.Callback,
         NotificationMediaManager.MediaListener, StatusBarStateController.StateListener,
-        SystemUIAppComponentFactoryBase.ContextInitializer {
+        ContentProviderContextInitializer {
 
     private static final String TAG = "KgdSliceProvider";
 
@@ -150,7 +151,7 @@ public class KeyguardSliceProvider extends SliceProvider implements
     protected boolean mDozing;
     private int mStatusBarState;
     private boolean mMediaIsVisible;
-    private SystemUIAppComponentFactoryBase.ContextAvailableCallback mContextAvailableCallback;
+    private ContentProviderContextAvailableCallback mContextAvailableCallback;
     @Inject
     WakeLockLogger mWakeLockLogger;
     @Inject
@@ -556,8 +557,7 @@ public class KeyguardSliceProvider extends SliceProvider implements
     }
 
     @Override
-    public void setContextAvailableCallback(
-            SystemUIAppComponentFactoryBase.ContextAvailableCallback callback) {
+    public void setContextAvailableCallback(ContentProviderContextAvailableCallback callback) {
         mContextAvailableCallback = callback;
     }
 }

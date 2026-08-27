@@ -28,6 +28,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.systemui.Dumpable;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dump.DumpManager;
+import com.android.systemui.notifications.ui.YSpace;
 import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shade.ShadeDisplayAware;
@@ -35,12 +36,13 @@ import com.android.systemui.shade.transition.LargeScreenShadeInterpolator;
 import com.android.systemui.statusbar.NotificationShelf;
 import com.android.systemui.statusbar.StatusBarState;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.data.repository.HeadsUpRepository;
+import com.android.systemui.statusbar.notification.headsup.AvalancheController;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 import com.android.systemui.statusbar.notification.row.ExpandableView;
 import com.android.systemui.statusbar.notification.stack.StackScrollAlgorithm.BypassController;
 import com.android.systemui.statusbar.notification.stack.StackScrollAlgorithm.SectionProvider;
 import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager;
-import com.android.systemui.statusbar.notification.headsup.AvalancheController;
 
 import java.io.PrintWriter;
 
@@ -60,15 +62,15 @@ public class AmbientState implements Dumpable {
     private final BypassController mBypassController;
     private final LargeScreenShadeInterpolator mLargeScreenShadeInterpolator;
     private final AvalancheController mAvalancheController;
+    private final HeadsUpRepository mHeadsUpRepository;
 
     /**
      *  Used to read bouncer states.
      */
     private StatusBarKeyguardViewManager mStatusBarKeyguardViewManager;
-    private float mStackTop;
-    private float mStackCutoff;
+    private float mStackScrollTop;
+    private YSpace mStackBounds = new YSpace(0, 0);
     private float mHeadsUpTop;
-    private float mHeadsUpBottom;
     private int mScrollY;
     private float mOverScrollTopAmount;
     private float mOverScrollBottomAmount;
@@ -98,6 +100,24 @@ public class AmbientState implements Dumpable {
     private boolean mPulsing;
     private float mHideAmount;
     private float mPulseHeight = MAX_PULSE_HEIGHT;
+    private boolean mApplyHunTranslation;
+    private float mPlaceholderAlpha = 1.0f;
+    private boolean mCurrentSceneLockscreen;
+    private float mLStoShadeProgress = 0f;
+
+    /**
+     * Sets whether HUN translation should be applied to viewState.yTranslation
+     */
+    public void setApplyHunTranslation(boolean apply) {
+        mApplyHunTranslation = apply;
+    }
+
+    /**
+     * @return {@code true} if HUN translation should be applied to viewState.yTranslation
+     */
+    public boolean shouldApplyHunTranslation() {
+        return mApplyHunTranslation;
+    }
 
     /**
      * The ExpandableNotificationRow that is pulsing, or the one that was pulsing
@@ -281,6 +301,21 @@ public class AmbientState implements Dumpable {
         return mQsExpansionFraction;
     }
 
+
+    /**
+     * @param shadeProgress Fraction of shade expansion when expanding shade from Lockscreen.
+     */
+    public void setLStoShadeProgress(float shadeProgress) {
+        mLStoShadeProgress = shadeProgress;
+    }
+
+    /**
+     * @return Fraction of shade expansion when expanding shade from Lockscreen.
+     */
+    public float getLStoShadeProgress() {
+        return mLStoShadeProgress;
+    }
+
     /**
      * @return Height of the notification content returned by {@link #getStackEndHeight()}, but
      * interpolated by the shade expansion fraction.
@@ -304,6 +339,7 @@ public class AmbientState implements Dumpable {
             @NonNull BypassController bypassController,
             @Nullable StatusBarKeyguardViewManager statusBarKeyguardViewManager,
             @NonNull LargeScreenShadeInterpolator largeScreenShadeInterpolator,
+            @NonNull HeadsUpRepository headsUpRepository,
             AvalancheController avalancheController
     ) {
         mSectionProvider = sectionProvider;
@@ -311,6 +347,7 @@ public class AmbientState implements Dumpable {
         mStatusBarKeyguardViewManager = statusBarKeyguardViewManager;
         mLargeScreenShadeInterpolator = largeScreenShadeInterpolator;
         mAvalancheController = avalancheController;
+        mHeadsUpRepository = headsUpRepository;
         reload(context);
         dumpManager.registerDumpable(this);
     }
@@ -377,16 +414,33 @@ public class AmbientState implements Dumpable {
         return mZDistanceBetweenElements;
     }
 
-    /** Y coordinate in view pixels of the top of the notification stack */
-    public float getStackTop() {
+    /**
+     * The Y coordinate for the top of the notification stack, in pixels. This value accounts for
+     * scrolling, so it can be negative if the stack is scrolled off-screen. It defines the top
+     * position where the first notification is placed.
+     */
+    public float getStackScrollTop() {
         if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return 0f;
-        return mStackTop;
+        return mStackScrollTop;
     }
 
-    /** @see #getStackTop() */
-    public void setStackTop(float mStackTop) {
+    /** @see #getStackScrollTop() */
+    public void setStackScrollTop(float mStackScrollTop) {
         if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
-        this.mStackTop = mStackTop;
+        this.mStackScrollTop = mStackScrollTop;
+    }
+
+    /** @return bounds of the area in view pixels where the NSSL's content can be placed. */
+    @NonNull
+    public YSpace getStackBounds() {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return new YSpace(0, 0);
+        return mStackBounds;
+    }
+
+    /** @see #getStackBounds()  */
+    public void setStackBounds(@NonNull YSpace drawBounds) {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
+        mStackBounds = drawBounds;
     }
 
     /**
@@ -395,13 +449,7 @@ public class AmbientState implements Dumpable {
      */
     public float getStackCutoff() {
         if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return 0f;
-        return mStackCutoff;
-    }
-
-    /** @see #getStackCutoff() */
-    public void setStackCutoff(float stackCutoff) {
-        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
-        this.mStackCutoff = stackCutoff;
+        return mStackBounds.bottom;
     }
 
     /** y coordinate of the top position of a pinned HUN */
@@ -414,18 +462,6 @@ public class AmbientState implements Dumpable {
     public void setHeadsUpTop(float mHeadsUpTop) {
         if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
         this.mHeadsUpTop = mHeadsUpTop;
-    }
-
-    /** the bottom-most y position where we can draw pinned HUNs  */
-    public float getHeadsUpBottom() {
-        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return 0f;
-        return mHeadsUpBottom;
-    }
-
-    /** @see #getHeadsUpBottom() */
-    public void setHeadsUpBottom(float headsUpBottom) {
-        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
-        mHeadsUpBottom = headsUpBottom;
     }
 
     public int getScrollY() {
@@ -641,6 +677,11 @@ public class AmbientState implements Dumpable {
         mShowingStackOnLockscreen = showingStackOnLockscreen;
     }
 
+    public boolean isLockscreenStackFadingIn() {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return false;
+        return mLockscreenStackFadeInProgress > 0f && mLockscreenStackFadeInProgress < 1f;
+    }
+
     public float getLockscreenStackFadeInProgress() {
         if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return 0f;
         return mLockscreenStackFadeInProgress;
@@ -649,6 +690,16 @@ public class AmbientState implements Dumpable {
     public void setLockscreenStackFadeInProgress(float lockscreenStackFadeInProgress) {
         if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
         mLockscreenStackFadeInProgress = lockscreenStackFadeInProgress;
+    }
+
+    public void setCurrentSceneLockscreen(boolean isCurrentSceneLockscreen) {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
+        mCurrentSceneLockscreen = isCurrentSceneLockscreen;
+    }
+
+    public boolean isCurrentSceneLockscreen() {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return false;
+        return mCurrentSceneLockscreen;
     }
 
     public void setStatusBarState(int statusBarState) {
@@ -689,8 +740,14 @@ public class AmbientState implements Dumpable {
         return mPulsing;
     }
 
+    public boolean isPulsing(String entryKey) {
+        boolean isHeadsUp = mHeadsUpRepository.isHeadsUpEntry(entryKey);
+        return mPulsing && isHeadsUp;
+    }
+
     public boolean isPulsing(NotificationEntry entry) {
-        return mPulsing && entry.isHeadsUpEntry();
+        boolean isHeadsUp = entry.isHeadsUpEntry();
+        return mPulsing && isHeadsUp;
     }
 
     public void setPulsingRow(ExpandableNotificationRow row) {
@@ -740,7 +797,8 @@ public class AmbientState implements Dumpable {
      * @return whether a row is dozing and not pulsing right now
      */
     public boolean isDozingAndNotPulsing(ExpandableNotificationRow row) {
-        return isDozing() && !isPulsing(row.getEntry());
+        boolean isPulsing = isPulsing(row.getKey());
+        return isDozing() && !isPulsing;
     }
 
     /**
@@ -857,19 +915,70 @@ public class AmbientState implements Dumpable {
         return mLargeScreenShadeInterpolator;
     }
 
+    /**
+     * Store the alpha value set by STL for the StackPlaceholder element, which is determined based
+     * on current transition state. We keep track of this value in order to apply it on a row-by-row
+     * basis, as a tracked heads up row {@link #getTrackedHeadsUpRow()} may need to remain visible
+     * while the rest of the placeholder fades.
+     *
+     * @param alpha value as set from STL transition.
+     */
+    public void setPlaceholderAlpha(float alpha) {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return;
+        mPlaceholderAlpha = alpha;
+    }
+
+    /**
+     * The current alpha for the StackPlaceholder element as specified for STL transitions.
+     * @return current placeholder alpha.
+     */
+    public float getPlaceholderAlpha() {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return 0;
+        return mPlaceholderAlpha;
+    }
+
+    /**
+     * Whether the notifications are currently being faded or hidden via transitions involving the
+     * StackPlaceholder.
+     *
+     * @return whether the current alpha via StackPlaceholder is < 1.0.
+     */
+    public boolean isPlaceholderFading() {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) return false;
+        return mPlaceholderAlpha < 1.0f;
+    }
+
     @Override
     public void dump(PrintWriter pw, String[] args) {
-        pw.println("mStackTop=" + mStackTop);
-        pw.println("mStackCutoff=" + mStackCutoff);
-        pw.println("mHeadsUpTop=" + mHeadsUpTop);
-        pw.println("mHeadsUpBottom=" + mHeadsUpBottom);
-        pw.println("mTopPadding=" + mTopPadding);
-        pw.println("mStackTopMargin=" + mStackTopMargin);
-        pw.println("mStackTranslation=" + mStackTranslation);
-        pw.println("mLayoutMinHeight=" + mLayoutMinHeight);
-        pw.println("mLayoutMaxHeight=" + mLayoutMaxHeight);
+        if (SceneContainerFlag.isEnabled()) {
+            pw.println("mStackScrollTop=" + mStackScrollTop);
+            pw.println("mStackBounds=" + mStackBounds);
+            pw.println("mHeadsUpTop=" + mHeadsUpTop);
+            pw.println("mPlaceholderAlpha=" + mPlaceholderAlpha);
+            pw.println("mLStoShadeProgress=" + mLStoShadeProgress);
+        } else {
+            // fields which will be removed with SceneContainer
+            pw.println("mTopPadding=" + mTopPadding);
+            pw.println("mStackTopMargin=" + mStackTopMargin);
+            pw.println("mStackTranslation=" + mStackTranslation);
+            pw.println("mLayoutMinHeight=" + mLayoutMinHeight);
+            pw.println("mLayoutMaxHeight=" + mLayoutMaxHeight);
+            pw.println("mContentHeight=" + mContentHeight);
+            pw.println("mAppearFraction=" + mAppearFraction);
+            pw.println("mExpandingVelocity=" + mExpandingVelocity);
+            pw.println("mOverScrollTopAmount=" + mOverScrollTopAmount);
+            pw.println("mOverScrollBottomAmount=" + mOverScrollBottomAmount);
+            pw.println("mOverExpansion=" + mOverExpansion);
+            pw.println("mStackY=" + mStackY);
+            pw.println("mScrollY=" + mScrollY);
+            pw.println("mCurrentScrollVelocity=" + mCurrentScrollVelocity);
+            pw.println("mIsSwipingUp=" + mIsSwipingUp);
+            pw.println("mPanelTracking=" + mPanelTracking);
+            pw.println("mIsFlinging=" + mIsFlinging);
+            pw.println("mIsFlingRequiredAfterLockScreenSwipeUp="
+                    + mIsFlingRequiredAfterLockScreenSwipeUp);
+        }
         pw.println("mLayoutHeight=" + mLayoutHeight);
-        pw.println("mContentHeight=" + mContentHeight);
         pw.println("mHideSensitive=" + mHideSensitive);
         pw.println("mShadeExpanded=" + mShadeExpanded);
         pw.println("mClearAllInProgress=" + mClearAllInProgress);
@@ -884,23 +993,10 @@ public class AmbientState implements Dumpable {
         pw.println("mDozing=" + mDozing);
         pw.println("mFractionToShade=" + mFractionToShade);
         pw.println("mHideAmount=" + mHideAmount);
-        pw.println("mAppearFraction=" + mAppearFraction);
         pw.println("mExpansionFraction=" + mExpansionFraction);
         pw.println("mQsExpansionFraction=" + mQsExpansionFraction);
-        pw.println("mExpandingVelocity=" + mExpandingVelocity);
-        pw.println("mOverScrollTopAmount=" + mOverScrollTopAmount);
-        pw.println("mOverScrollBottomAmount=" + mOverScrollBottomAmount);
-        pw.println("mOverExpansion=" + mOverExpansion);
         pw.println("mStackHeight=" + mStackHeight);
         pw.println("mStackEndHeight=" + mStackEndHeight);
-        pw.println("mStackY=" + mStackY);
-        pw.println("mScrollY=" + mScrollY);
-        pw.println("mCurrentScrollVelocity=" + mCurrentScrollVelocity);
-        pw.println("mIsSwipingUp=" + mIsSwipingUp);
-        pw.println("mPanelTracking=" + mPanelTracking);
-        pw.println("mIsFlinging=" + mIsFlinging);
-        pw.println("mIsFlingRequiredAfterLockScreenSwipeUp="
-                + mIsFlingRequiredAfterLockScreenSwipeUp);
         pw.println("mZDistanceBetweenElements=" + mZDistanceBetweenElements);
         pw.println("mBaseZHeight=" + mBaseZHeight);
         pw.println("mIsClosing=" + mIsClosing);

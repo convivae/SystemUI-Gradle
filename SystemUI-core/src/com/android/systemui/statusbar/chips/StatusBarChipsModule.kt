@@ -20,23 +20,16 @@ import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.LogBufferFactory
-import com.android.systemui.statusbar.chips.notification.demo.ui.viewmodel.DemoNotifChipViewModel
 import com.android.systemui.statusbar.chips.notification.domain.interactor.StatusBarNotificationChipsInteractor
-import com.android.systemui.statusbar.chips.notification.shared.StatusBarNotifChips
-import dagger.Binds
-import dagger.Lazy
+import com.android.systemui.statusbar.chips.ui.viewmodel.OngoingActivityChipsRefiner
 import dagger.Module
 import dagger.Provides
 import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
+import dagger.multibindings.Multibinds
 
 @Module
 abstract class StatusBarChipsModule {
-    @Binds
-    @IntoMap
-    @ClassKey(DemoNotifChipViewModel::class)
-    abstract fun binds(impl: DemoNotifChipViewModel): CoreStartable
-
     companion object {
         @Provides
         @SysUISingleton
@@ -50,13 +43,11 @@ abstract class StatusBarChipsModule {
         @IntoMap
         @ClassKey(StatusBarNotificationChipsInteractor::class)
         fun statusBarNotificationChipsInteractorAsCoreStartable(
-            interactorLazy: Lazy<StatusBarNotificationChipsInteractor>
-        ): CoreStartable {
-            return if (StatusBarNotifChips.isEnabled) {
-                interactorLazy.get()
-            } else {
-                CoreStartable.NOP
-            }
-        }
+            interactor: StatusBarNotificationChipsInteractor
+        ): CoreStartable = interactor
     }
+
+    /** Provides the base empty set for [OngoingActivityChipsRefiner]. */
+    @Multibinds
+    abstract fun provideOngoingActivityChipRefinerSet(): Set<OngoingActivityChipsRefiner>
 }

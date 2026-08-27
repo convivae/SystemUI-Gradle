@@ -24,8 +24,8 @@ import android.annotation.SuppressLint
 import android.os.Trace
 import android.util.Log
 import com.android.app.animation.Interpolators
+import com.android.app.tracing.coroutines.flow.traceAs
 import com.android.app.tracing.coroutines.withContextTraced as withContext
-import com.android.systemui.Flags.transitionRaceCondition
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.shared.model.KeyguardState
@@ -33,6 +33,8 @@ import com.android.systemui.keyguard.shared.model.TransitionInfo
 import com.android.systemui.keyguard.shared.model.TransitionModeOnCanceled
 import com.android.systemui.keyguard.shared.model.TransitionState
 import com.android.systemui.keyguard.shared.model.TransitionStep
+import com.android.systemui.keyguard.shared.transition.KeyguardTransitionAnimationCallback
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -40,10 +42,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.sync.Mutex
@@ -76,8 +74,6 @@ interface KeyguardTransitionRepository {
      */
     val transitions: Flow<TransitionStep>
 
-    /** The [TransitionInfo] of the most recent call to [startTransition]. */
-    val currentTransitionInfoInternal: StateFlow<TransitionInfo>
     /** The [TransitionInfo] of the most recent call to [startTransition]. */
     val currentTransitionInfo: TransitionInfo
 
@@ -131,7 +127,10 @@ interface KeyguardTransitionRepository {
 @SysUISingleton
 class KeyguardTransitionRepositoryImpl
 @Inject
-constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionRepository {
+constructor(
+    @Main private val mainDispatcher: CoroutineDispatcher,
+    private val transitionCallback: KeyguardTransitionAnimationCallback,
+) : KeyguardTransitionRepository {
     /**
      * Each transition between [KeyguardState]s will have an associated Flow. In order to collect
      * these events, clients should call [transition].
@@ -139,26 +138,17 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
     @SuppressLint("SharedFlowCreation")
     private val _transitions =
         MutableSharedFlow<TransitionStep>(
-            replay = 2,
-            extraBufferCapacity = 20,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
-    override val transitions = _transitions.asSharedFlow().distinctUntilChanged()
+                replay = 2,
+                extraBufferCapacity = 20,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
+            .traceAs("KTR-transitions")
+    override val transitions = _transitions.distinctUntilChanged()
     private var lastStep: TransitionStep = TransitionStep()
     private var lastAnimator: ValueAnimator? = null
     private var animatorListener: AnimatorListenerAdapter? = null
 
     private val withContextMutex = Mutex()
-    private val _currentTransitionInfo: MutableStateFlow<TransitionInfo> =
-        MutableStateFlow(
-            TransitionInfo(
-                ownerName = "",
-                from = KeyguardState.OFF,
-                to = KeyguardState.OFF,
-                animator = null,
-            )
-        )
-    override var currentTransitionInfoInternal = _currentTransitionInfo.asStateFlow()
 
     @Volatile
     override var currentTransitionInfo: TransitionInfo =
@@ -189,12 +179,7 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
     }
 
     override suspend fun startTransition(info: TransitionInfo): UUID? {
-        if (transitionRaceCondition()) {
-            currentTransitionInfo = info
-        } else {
-            _currentTransitionInfo.value = info
-        }
-        Log.d(TAG, "(Internal) Setting current transition info: $info")
+        currentTransitionInfo = info
 
         // There is no fairness guarantee with 'withContext', which means that transitions could
         // be processed out of order. Use a Mutex to guarantee ordering. [updateTransition]
@@ -207,13 +192,16 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
 
         // Animators must be started on the main thread.
         return withContext("$TAG#startTransition", mainDispatcher) {
-            withContextMutex.unlock()
             if (lastStep.from == info.from && lastStep.to == info.to) {
                 Log.i(TAG, "Duplicate call to start the transition, rejecting: $info")
+                withContextMutex.unlock()
                 return@withContext null
             }
+            val isAnimatorRunning = lastAnimator?.isRunning() ?: false
+            val isManualTransitionRunning =
+                updateTransitionId != null && lastStep.transitionState != TransitionState.FINISHED
             val startingValue =
-                if (lastStep.transitionState != TransitionState.FINISHED) {
+                if (isAnimatorRunning || isManualTransitionRunning) {
                     Log.i(TAG, "Transition still active: $lastStep, canceling")
                     when (info.modeOnCanceled) {
                         TransitionModeOnCanceled.LAST_VALUE -> lastStep.value
@@ -249,16 +237,19 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
                 animatorListener =
                     object : AnimatorListenerAdapter() {
                         override fun onAnimationStart(animation: Animator) {
+                            transitionCallback.onAnimationStarted(info.from, info.to)
                             emitTransition(
                                 TransitionStep(info, startingValue, TransitionState.STARTED)
                             )
                         }
 
                         override fun onAnimationCancel(animation: Animator) {
+                            transitionCallback.onAnimationCanceled(info.from, info.to)
                             endAnimation(lastStep.value, TransitionState.CANCELED)
                         }
 
                         override fun onAnimationEnd(animation: Animator) {
+                            transitionCallback.onAnimationEnded(info.from, info.to)
                             endAnimation(1f, TransitionState.FINISHED)
                         }
 
@@ -273,6 +264,7 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
                 animator.addListener(animatorListener)
                 animator.addUpdateListener(updateListener)
                 animator.start()
+                withContextMutex.unlock()
                 return@withContext null
             }
                 ?: run {
@@ -283,6 +275,7 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
 
                     // No animator, so it's manual. Provide a mechanism to callback
                     updateTransitionId = UUID.randomUUID()
+                    withContextMutex.unlock()
                     return@withContext updateTransitionId
                 }
         }
@@ -298,9 +291,8 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
         // requires the same lock
         withContextMutex.lock()
         withContext("$TAG#updateTransition", mainDispatcher) {
-            withContextMutex.unlock()
-
             updateTransitionInternal(transitionId, value, state)
+            withContextMutex.unlock()
         }
     }
 
@@ -312,8 +304,6 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
         withContextMutex.lock()
 
         return withContext("$TAG#forceFinishCurrentTransition", mainDispatcher) {
-            withContextMutex.unlock()
-
             Log.d(TAG, "forceFinishCurrentTransition() - emitting FINISHED early.")
 
             lastAnimator?.apply {
@@ -328,6 +318,7 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
                 // Ask the listener to emit FINISHED and clean up its state.
                 animatorListener?.onAnimationEnd(this)
             }
+            withContextMutex.unlock()
         }
     }
 
@@ -350,6 +341,15 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
     }
 
     private fun emitTransition(nextStep: TransitionStep, isManual: Boolean = false) {
+        if (SceneContainerFlag.isEnabled) {
+            if (
+                nextStep.from == KeyguardState.UNDEFINED && nextStep.to == KeyguardState.UNDEFINED
+            ) {
+                Log.i(TAG, "Skipping UNDEFINED->UNDEFINED transition")
+                return
+            }
+        }
+
         logAndTrace(nextStep, isManual)
         _transitions.tryEmit(nextStep)
         lastStep = nextStep
@@ -360,23 +360,14 @@ constructor(@Main val mainDispatcher: CoroutineDispatcher) : KeyguardTransitionR
         // Tests runs on testDispatcher, which is not the main thread, causing the animator thread
         // check to fail
         if (testSetup) {
-            if (transitionRaceCondition()) {
-                currentTransitionInfo =
-                    TransitionInfo(
-                        ownerName = ownerName,
-                        from = KeyguardState.OFF,
-                        to = to,
-                        animator = null,
-                    )
-            } else {
-                _currentTransitionInfo.value =
-                    TransitionInfo(
-                        ownerName = ownerName,
-                        from = KeyguardState.OFF,
-                        to = to,
-                        animator = null,
-                    )
-            }
+            currentTransitionInfo =
+                TransitionInfo(
+                    ownerName = ownerName,
+                    from = KeyguardState.OFF,
+                    to = to,
+                    animator = null,
+                )
+
             emitTransition(
                 TransitionStep(
                     KeyguardState.OFF,

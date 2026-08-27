@@ -28,4 +28,28 @@ object SharedPreferencesExt {
         registerOnSharedPreferenceChangeListener(listener)
         awaitClose { unregisterOnSharedPreferenceChangeListener(listener) }
     }
+
+    fun SharedPreferences.observeBoolean(key: String, defValue: Boolean): Flow<Boolean> =
+        observeValue(key) { getBoolean(key, defValue) }
+
+    fun SharedPreferences.observeLong(key: String, defValue: Long): Flow<Long> =
+        observeValue(key) { getLong(key, defValue) }
+
+    fun SharedPreferences.observeString(key: String, defValue: String): Flow<String> =
+        observeValue(key) { getString(key, defValue) ?: defValue }
+
+    private fun <T> SharedPreferences.observeValue(
+        key: String,
+        fetchValue: SharedPreferences.() -> T,
+    ): Flow<T> = conflatedCallbackFlow {
+        val listener =
+            SharedPreferences.OnSharedPreferenceChangeListener { _, k ->
+                if (k == key) {
+                    trySend(fetchValue())
+                }
+            }
+        trySend(fetchValue())
+        registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 }

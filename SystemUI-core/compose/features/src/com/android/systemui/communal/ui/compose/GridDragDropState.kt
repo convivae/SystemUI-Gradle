@@ -19,9 +19,11 @@ package com.android.systemui.communal.ui.compose
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.grid.LazyGridItemInfo
 import androidx.compose.foundation.lazy.grid.LazyGridItemScope
@@ -37,13 +39,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.toOffset
-import androidx.compose.ui.unit.toSize
 import com.android.systemui.Flags.communalWidgetResizing
+import com.android.systemui.communal.domain.model.CommunalContentModel
+import com.android.systemui.communal.shared.model.CommunalContentSize
 import com.android.systemui.communal.ui.compose.extensions.firstItemAtOffset
 import com.android.systemui.communal.ui.compose.extensions.plus
 import com.android.systemui.communal.ui.viewmodel.BaseCommunalViewModel
@@ -60,22 +65,22 @@ fun rememberGridDragDropState(
     contentListState: ContentListState,
     updateDragPositionForRemove: (boundingBox: IntRect) -> Boolean,
 ): GridDragDropState {
-    val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
+    val autoScrollThreshold = with(LocalDensity.current) { 60.dp.toPx() }
+
     val state =
         remember(gridState, contentListState, updateDragPositionForRemove) {
             GridDragDropState(
-                state = gridState,
+                gridState = gridState,
                 contentListState = contentListState,
-                scope = scope,
+                coroutineScope = coroutineScope,
+                autoScrollThreshold = autoScrollThreshold,
                 updateDragPositionForRemove = updateDragPositionForRemove,
             )
         }
-    LaunchedEffect(state) {
-        while (true) {
-            val diff = state.scrollChannel.receive()
-            gridState.scrollBy(diff)
-        }
-    }
+
+    LaunchedEffect(state) { state.processScrollRequests(coroutineScope) }
+
     return state
 }
 
@@ -87,41 +92,78 @@ fun rememberGridDragDropState(
  * to remove the dragged item if condition met and call [ContentListState.onSaveList] to persist any
  * change in ordering.
  */
-class GridDragDropState
-internal constructor(
-    private val state: LazyGridState,
+class GridDragDropState(
+    val gridState: LazyGridState,
     private val contentListState: ContentListState,
-    private val scope: CoroutineScope,
+    private val coroutineScope: CoroutineScope,
+    private val autoScrollThreshold: Float,
     private val updateDragPositionForRemove: (draggingBoundingBox: IntRect) -> Boolean,
 ) {
-    var draggingItemKey by mutableStateOf<Any?>(null)
-        private set
+    var draggingItemKey by mutableStateOf<String?>(null)
+        protected set
 
     var isDraggingToRemove by mutableStateOf(false)
-        private set
+        protected set
 
-    internal val scrollChannel = Channel<Float>()
+    var draggingItemDraggedDelta by mutableStateOf(Offset.Zero)
+    var draggingItemInitialOffset by mutableStateOf(Offset.Zero)
 
-    private var draggingItemDraggedDelta by mutableStateOf(Offset.Zero)
-    private var draggingItemInitialOffset by mutableStateOf(Offset.Zero)
-
-    private var previousTargetItemKey: Any? = null
-
-    internal val draggingItemOffset: Offset
+    val draggingItemOffset: Offset
         get() =
             draggingItemLayoutInfo?.let { item ->
                 draggingItemInitialOffset + draggingItemDraggedDelta - item.offset.toOffset()
             } ?: Offset.Zero
 
-    private val draggingItemLayoutInfo: LazyGridItemInfo?
-        get() = state.layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggingItemKey }
+    val draggingItemLayoutInfo: LazyGridItemInfo?
+        get() = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggingItemKey }
 
-    /**
-     * Called when dragging is initiated.
-     *
-     * @return {@code True} if dragging a grid item, {@code False} otherwise.
-     */
-    internal fun onDragStart(
+    private val scrollChannel = Channel<Float>(Channel.UNLIMITED)
+
+    // Used to keep track of the dragging item during scrolling (because it might be off screen
+    // and no longer in the list of visible items).
+    private var draggingItemWhileScrolling: LazyGridItemInfo? by mutableStateOf(null)
+
+    private val spacer =
+        CommunalContentModel.Spacer(CommunalContentSize.fixedThirdOrResponsiveSize())
+
+    private var previousTargetItemKey: Any? = null
+
+    // Basically, the location of the user's finger on the screen.
+    private var currentDragPositionOnScreen by mutableStateOf(Offset.Zero)
+    // The offset of the grid from the top of the screen.
+    private var contentOffset = Offset.Zero
+
+    // The width of one column in the grid (needed in order to auto-scroll one column at a time).
+    private var columnWidth = 0
+
+    suspend fun processScrollRequests(coroutineScope: CoroutineScope) {
+        while (true) {
+            val amount = scrollChannel.receive()
+
+            if (gridState.isScrollInProgress) {
+                // Ignore overscrolling if a scroll is already in progress (but we still want to
+                // consume the scroll event so that we don't end up processing a bunch of old
+                // events after scrolling has finished).
+                continue
+            }
+
+            // We perform the rest of the drag action after scrolling has finished (or immediately
+            // if there will be no scrolling).
+            if (amount != 0f) {
+                coroutineScope.launch {
+                    gridState.animateScrollBy(
+                        amount,
+                        tween(delayMillis = 250, durationMillis = 1000),
+                    )
+                    performDragAction()
+                }
+            } else {
+                performDragAction()
+            }
+        }
+    }
+
+    fun onDragStart(
         offset: Offset,
         screenWidth: Int,
         layoutDirection: LayoutDirection,
@@ -132,21 +174,40 @@ internal constructor(
                 if (layoutDirection == LayoutDirection.Ltr) offset.x else screenWidth - offset.x,
                 offset.y,
             )
-        state.layoutInfo.visibleItemsInfo
-            .filter { item -> contentListState.isItemEditable(item.index) }
+
+        currentDragPositionOnScreen = normalizedOffset
+        this.contentOffset = contentOffset
+
+        gridState.layoutInfo.visibleItemsInfo
+            .filter { item -> contentListState.isItemEditable(item.key) }
             // grid item offset is based off grid content container so we need to deduct
             // before content padding from the initial pointer position
             .firstItemAtOffset(normalizedOffset - contentOffset)
             ?.apply {
-                draggingItemKey = key
+                draggingItemKey = key as String
+                draggingItemWhileScrolling = this
                 draggingItemInitialOffset = this.offset.toOffset()
+                columnWidth =
+                    this.size.width +
+                        gridState.layoutInfo.beforeContentPadding +
+                        gridState.layoutInfo.afterContentPadding
+                // Add a spacer after the last widget if it is larger than the dragging widget.
+                // This allows overscrolling, enabling the dragging widget to be placed beyond it.
+                val lastWidget = contentListState.list.lastOrNull { it.isWidgetContent() }
+                if (
+                    lastWidget != null &&
+                        draggingItemLayoutInfo != null &&
+                        lastWidget.size.span > draggingItemLayoutInfo!!.span
+                ) {
+                    contentListState.list.add(spacer)
+                }
                 return true
             }
 
         return false
     }
 
-    internal fun onDragInterrupted() {
+    fun onDragInterrupted() {
         draggingItemKey?.let {
             if (isDraggingToRemove) {
                 contentListState.onRemove(
@@ -162,42 +223,59 @@ internal constructor(
         previousTargetItemKey = null
         draggingItemDraggedDelta = Offset.Zero
         draggingItemInitialOffset = Offset.Zero
+        currentDragPositionOnScreen = Offset.Zero
+        draggingItemWhileScrolling = null
+        // Remove spacer, if one is added at the end, when a drag gesture finishes.
+        if (
+            contentListState.list.isNotEmpty() &&
+                contentListState.list.last() is CommunalContentModel.Spacer
+        ) {
+            contentListState.list.removeLast()
+        }
     }
 
-    internal fun onDrag(offset: Offset, layoutDirection: LayoutDirection) {
+    fun onDrag(offset: Offset, layoutDirection: LayoutDirection) {
         // Adjust offset to match the layout direction
-        draggingItemDraggedDelta +=
-            Offset(offset.x.directional(LayoutDirection.Ltr, layoutDirection), offset.y)
+        val delta = Offset(offset.x.directional(LayoutDirection.Ltr, layoutDirection), offset.y)
+        draggingItemDraggedDelta += delta
+        currentDragPositionOnScreen += delta
 
-        val draggingItem = draggingItemLayoutInfo ?: return
-        val startOffset = draggingItem.offset.toOffset() + draggingItemOffset
-        val endOffset = startOffset + draggingItem.size.toSize()
-        val middleOffset = startOffset + (endOffset - startOffset) / 2f
+        scrollChannel.trySend(computeAutoscroll(currentDragPositionOnScreen))
+    }
+
+    fun performDragAction() {
+        val draggingItem = draggingItemLayoutInfo ?: draggingItemWhileScrolling
+        if (draggingItem == null) {
+            return
+        }
+
         val draggingBoundingBox =
             IntRect(draggingItem.offset + draggingItemOffset.round(), draggingItem.size)
+        val curDragPositionInGrid = (currentDragPositionOnScreen - contentOffset)
 
         val targetItem =
             if (communalWidgetResizing()) {
-                state.layoutInfo.visibleItemsInfo.findLast { item ->
-                    val lastVisibleItemIndex = state.layoutInfo.visibleItemsInfo.last().index
-                    val itemBoundingBox = IntRect(item.offset, item.size)
-                    draggingItemKey != item.key &&
-                        contentListState.isItemEditable(item.index) &&
-                        (draggingBoundingBox.contains(itemBoundingBox.center) ||
-                            itemBoundingBox.contains(draggingBoundingBox.center)) &&
-                        // If we swap with the last visible item, and that item doesn't fit
-                        // in the gap created by moving the current item, then the current item
-                        // will get placed after the last visible item. In this case, it gets
-                        // placed outside of the viewport. We avoid this here, so the user
-                        // has to scroll first before the swap can happen.
-                        (item.index != lastVisibleItemIndex || item.span <= draggingItem.span)
-                }
+                val lastVisibleItemIndex = gridState.layoutInfo.visibleItemsInfo.last().index
+                gridState.layoutInfo.visibleItemsInfo.findLast(
+                    fun(item): Boolean {
+                        val itemBoundingBox = IntRect(item.offset, item.size)
+                        return draggingItemKey != item.key &&
+                            contentListState.isItemEditable(item.key) &&
+                            itemBoundingBox.contains(curDragPositionInGrid.round()) &&
+                            // If we swap with the last visible item, and that item doesn't fit
+                            // in the gap created by moving the current item, then the current item
+                            // will get placed after the last visible item. In this case, it gets
+                            // placed outside of the viewport. We avoid this here, so the user
+                            // has to scroll first before the swap can happen.
+                            (item.index != lastVisibleItemIndex || item.span <= draggingItem.span)
+                    }
+                )
             } else {
-                state.layoutInfo.visibleItemsInfo
+                gridState.layoutInfo.visibleItemsInfo
                     .asSequence()
-                    .filter { item -> contentListState.isItemEditable(item.index) }
+                    .filter { item -> contentListState.isItemEditable(item.key) }
                     .filter { item -> draggingItem.index != item.index }
-                    .firstItemAtOffset(middleOffset)
+                    .firstItemAtOffset(curDragPositionInGrid)
             }
 
         if (
@@ -205,9 +283,9 @@ internal constructor(
                 (!communalWidgetResizing() || targetItem.key != previousTargetItemKey)
         ) {
             val scrollToIndex =
-                if (targetItem.index == state.firstVisibleItemIndex) {
+                if (targetItem.index == gridState.firstVisibleItemIndex) {
                     draggingItem.index
-                } else if (draggingItem.index == state.firstVisibleItemIndex) {
+                } else if (draggingItem.index == gridState.firstVisibleItemIndex) {
                     targetItem.index
                 } else {
                     null
@@ -221,32 +299,45 @@ internal constructor(
                 previousTargetItemKey = targetItem.key
             }
             if (scrollToIndex != null) {
-                scope.launch {
+                coroutineScope.launch {
                     // this is needed to neutralize automatic keeping the first item first.
-                    state.scrollToItem(scrollToIndex, state.firstVisibleItemScrollOffset)
-                    contentListState.onMove(draggingItem.index, targetItem.index)
+                    gridState.scrollToItem(scrollToIndex, gridState.firstVisibleItemScrollOffset)
+                    contentListState.swapItems(draggingItem.index, targetItem.index)
                 }
             } else {
-                contentListState.onMove(draggingItem.index, targetItem.index)
+                contentListState.swapItems(draggingItem.index, targetItem.index)
             }
+            draggingItemWhileScrolling = targetItem
             isDraggingToRemove = false
         } else if (targetItem == null) {
-            val overscroll = checkForOverscroll(startOffset, endOffset)
-            if (overscroll != 0f) {
-                scrollChannel.trySend(overscroll)
-            }
             isDraggingToRemove = checkForRemove(draggingBoundingBox)
             previousTargetItemKey = null
         }
     }
 
-    /** Calculate the amount dragged out of bound on both sides. Returns 0f if not overscrolled */
-    private fun checkForOverscroll(startOffset: Offset, endOffset: Offset): Float {
+    /** Calculate the amount dragged out of bound on both sides. Returns 0f if not overscrolled. */
+    private fun computeAutoscroll(dragOffset: Offset): Float {
+        val orientation = gridState.layoutInfo.orientation
+        val distanceFromStart =
+            if (orientation == Orientation.Horizontal) {
+                dragOffset.x
+            } else {
+                dragOffset.y
+            }
+        val distanceFromEnd =
+            if (orientation == Orientation.Horizontal) {
+                gridState.layoutInfo.viewportEndOffset - dragOffset.x
+            } else {
+                gridState.layoutInfo.viewportEndOffset - dragOffset.y
+            }
+
         return when {
-            draggingItemDraggedDelta.x > 0 ->
-                (endOffset.x - state.layoutInfo.viewportEndOffset).coerceAtLeast(0f)
-            draggingItemDraggedDelta.x < 0 ->
-                (startOffset.x - state.layoutInfo.viewportStartOffset).coerceAtMost(0f)
+            distanceFromEnd < autoScrollThreshold -> {
+                (columnWidth - gridState.layoutInfo.beforeContentPadding).toFloat()
+            }
+            distanceFromStart < autoScrollThreshold -> {
+                -(columnWidth - gridState.layoutInfo.afterContentPadding).toFloat()
+            }
             else -> 0f
         }
     }
@@ -284,7 +375,9 @@ fun Modifier.dragContainer(
                             contentOffset,
                         )
                     ) {
-                        viewModel.onReorderWidgetStart()
+                        // draggingItemKey is guaranteed to be non-null here because it is set in
+                        // onDragStart()
+                        viewModel.onReorderWidgetStart(dragDropState.draggingItemKey!!)
                     }
                 },
                 onDragEnd = {

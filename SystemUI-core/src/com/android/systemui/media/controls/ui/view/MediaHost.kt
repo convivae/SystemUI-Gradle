@@ -20,15 +20,13 @@ import android.graphics.Rect
 import android.util.ArraySet
 import android.view.View
 import android.view.View.OnAttachStateChangeListener
-import com.android.systemui.Flags.mediaControlsUmoInflationInBackground
 import com.android.systemui.media.controls.domain.pipeline.MediaDataManager
-import com.android.systemui.media.controls.shared.model.MediaData
-import com.android.systemui.media.controls.shared.model.SmartspaceMediaData
 import com.android.systemui.media.controls.ui.controller.MediaCarouselController
 import com.android.systemui.media.controls.ui.controller.MediaCarouselControllerLogger
 import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager
 import com.android.systemui.media.controls.ui.controller.MediaHostStatesManager
 import com.android.systemui.media.controls.ui.controller.MediaLocation
+import com.android.systemui.media.remedia.shared.flag.MediaControlsInComposeFlag
 import com.android.systemui.util.animation.DisappearParameters
 import com.android.systemui.util.animation.MeasurementInput
 import com.android.systemui.util.animation.MeasurementOutput
@@ -88,37 +86,8 @@ class MediaHost(
 
     private val listener =
         object : MediaDataManager.Listener {
-            override fun onMediaDataLoaded(
-                key: String,
-                oldKey: String?,
-                data: MediaData,
-                immediately: Boolean,
-                receivedSmartspaceCardLatency: Int,
-                isSsReactivated: Boolean,
-            ) {
-                if (mediaControlsUmoInflationInBackground()) return
-
-                if (immediately) {
-                    updateViewVisibility()
-                }
-            }
-
-            override fun onSmartspaceMediaDataLoaded(
-                key: String,
-                data: SmartspaceMediaData,
-                shouldPrioritize: Boolean,
-            ) {
-                updateViewVisibility()
-            }
-
             override fun onMediaDataRemoved(key: String, userInitiated: Boolean) {
                 updateViewVisibility()
-            }
-
-            override fun onSmartspaceMediaDataRemoved(key: String, immediately: Boolean) {
-                if (immediately) {
-                    updateViewVisibility()
-                }
             }
         }
 
@@ -142,6 +111,8 @@ class MediaHost(
      * ```
      */
     fun init(@MediaLocation location: Int) {
+        if (MediaControlsInComposeFlag.isEnabled) return
+
         if (inited) {
             return
         }
@@ -208,18 +179,19 @@ class MediaHost(
      * the visibility has changed
      */
     fun updateViewVisibility() {
+        val oldState = state.visible
         state.visible =
             if (mediaCarouselController.isLockedAndHidden()) {
                 false
             } else if (showsOnlyActiveMedia) {
-                mediaDataManager.hasActiveMediaOrRecommendation()
+                mediaDataManager.hasActiveMedia()
             } else {
-                mediaDataManager.hasAnyMediaOrRecommendation()
+                mediaDataManager.hasAnyMedia()
             }
         val newVisibility = if (visible) View.VISIBLE else View.GONE
-        if (newVisibility != hostView.visibility) {
+        if (oldState != state.visible || newVisibility != hostView.visibility) {
             hostView.visibility = newVisibility
-            debugLogger.logMediaHostVisibility(location, visible)
+            debugLogger.logMediaHostVisibility(location, visible, oldState)
             visibleChangedListeners.forEach { it.invoke(visible) }
         }
     }
@@ -294,7 +266,7 @@ class MediaHost(
                 changedListener?.invoke()
             }
 
-        override var disablePagination: Boolean = false
+        override var disableScrolling: Boolean = false
             set(value) {
                 if (field == value) {
                     return
@@ -319,7 +291,7 @@ class MediaHost(
             mediaHostState.visible = visible
             mediaHostState.disappearParameters = disappearParameters.deepCopy()
             mediaHostState.falsingProtectionNeeded = falsingProtectionNeeded
-            mediaHostState.disablePagination = disablePagination
+            mediaHostState.disableScrolling = disableScrolling
             return mediaHostState
         }
 
@@ -348,7 +320,7 @@ class MediaHost(
             if (!disappearParameters.equals(other.disappearParameters)) {
                 return false
             }
-            if (disablePagination != other.disablePagination) {
+            if (disableScrolling != other.disableScrolling) {
                 return false
             }
             return true
@@ -362,7 +334,7 @@ class MediaHost(
             result = 31 * result + showsOnlyActiveMedia.hashCode()
             result = 31 * result + if (visible) 1 else 2
             result = 31 * result + disappearParameters.hashCode()
-            result = 31 * result + disablePagination.hashCode()
+            result = 31 * result + disableScrolling.hashCode()
             return result
         }
     }
@@ -422,10 +394,11 @@ interface MediaHostState {
     var disappearParameters: DisappearParameters
 
     /**
-     * Whether pagination should be disabled for this host, meaning that when there are multiple
-     * media sessions, only the first one will appear.
+     * Whether scrolling should be disabled for this host, meaning that when there are multiple
+     * media sessions, it will not be possible to scroll between media sessions or swipe away the
+     * entire media carousel. The first media session will always be shown.
      */
-    var disablePagination: Boolean
+    var disableScrolling: Boolean
 
     /** Get a copy of this view state, deepcopying all appropriate members */
     fun copy(): MediaHostState

@@ -29,7 +29,7 @@ sealed interface FakeWifiEventModel {
         val level: Int?,
         @Annotation.DataActivityType val activity: Int,
         val ssid: String?,
-        val validated: Boolean?,
+        val showExclamation: Boolean?,
         val hotspotDeviceType: WifiNetworkModel.HotspotDeviceType =
             WifiNetworkModel.HotspotDeviceType.NONE,
     ) : FakeWifiEventModel
@@ -38,6 +38,7 @@ sealed interface FakeWifiEventModel {
         val subscriptionId: Int,
         val level: Int,
         val numberOfLevels: Int,
+        val inflateSignalStrength: Boolean,
         @Annotation.DataActivityType val activity: Int,
     ) : FakeWifiEventModel
 

@@ -25,17 +25,13 @@ import com.android.systemui.statusbar.notification.NotificationFadeAware
 import com.android.systemui.statusbar.notification.NotificationUtils
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow
 
-/**
- * Wraps a notification containing a call template
- */
-class NotificationCallTemplateViewWrapper constructor(
-    ctx: Context,
-    view: View,
-    row: ExpandableNotificationRow
-) : NotificationTemplateViewWrapper(ctx, view, row) {
+/** Wraps a notification containing a call template */
+class NotificationCallTemplateViewWrapper
+constructor(ctx: Context, view: View, row: ExpandableNotificationRow) :
+    NotificationTemplateViewWrapper(ctx, view, row) {
 
     private val minHeightWithActions: Int =
-            NotificationUtils.getFontScaledHeight(ctx, R.dimen.notification_max_height)
+        NotificationUtils.getFontScaledHeight(ctx, R.dimen.notification_max_height)
     private val callLayout: CallLayout = view as CallLayout
 
     private lateinit var conversationIconContainer: View
@@ -48,13 +44,13 @@ class NotificationCallTemplateViewWrapper constructor(
     private fun resolveViews() {
         with(callLayout) {
             conversationIconContainer =
-                    requireViewById(com.android.internal.R.id.conversation_icon_container)
+                requireViewById(com.android.internal.R.id.conversation_icon_container)
             conversationIconView = requireViewById(com.android.internal.R.id.conversation_icon)
             conversationBadgeBg =
-                    requireViewById(com.android.internal.R.id.conversation_icon_badge_bg)
+                requireViewById(com.android.internal.R.id.conversation_icon_badge_bg)
             expandBtn = requireViewById(com.android.internal.R.id.expand_button)
             appName = requireViewById(com.android.internal.R.id.app_name_text)
-            conversationTitleView = requireViewById(com.android.internal.R.id.conversation_text)
+            conversationTitleView = requireViewById(com.android.internal.R.id.title)
         }
     }
 
@@ -68,20 +64,12 @@ class NotificationCallTemplateViewWrapper constructor(
     override fun updateTransformedTypes() {
         // This also clears the existing types
         super.updateTransformedTypes()
-        addTransformedViews(
-                appName,
-                conversationTitleView
-        )
-        addViewsTransformingToSimilar(
-                conversationIconView,
-                conversationBadgeBg,
-                expandBtn
-        )
+        addTransformedViews(appName, conversationTitleView)
+        addViewsTransformingToSimilar(conversationIconView, conversationBadgeBg, expandBtn)
     }
 
     override fun disallowSingleClick(x: Float, y: Float): Boolean {
-        val isOnExpandButton = expandBtn.visibility == View.VISIBLE &&
-                isOnView(expandBtn, x, y)
+        val isOnExpandButton = expandBtn.visibility == View.VISIBLE && isOnView(expandBtn, x, y)
         return isOnExpandButton || super.disallowSingleClick(x, y)
     }
 

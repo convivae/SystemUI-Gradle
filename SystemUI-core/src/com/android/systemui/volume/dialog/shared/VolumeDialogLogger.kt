@@ -32,7 +32,7 @@ class VolumeDialogLogger @Inject constructor(@VolumeLog private val logBuffer: L
             TAG,
             LogLevel.DEBUG,
             { int1 = reason },
-            { "Show: ${Events.SHOW_REASONS[int1]}" },
+            { "Show: ${Events.SHOW_REASONS.getOrNull(int1) ?: "unknown($int1)"}" },
         )
     }
 
@@ -41,8 +41,54 @@ class VolumeDialogLogger @Inject constructor(@VolumeLog private val logBuffer: L
             TAG,
             LogLevel.DEBUG,
             { int1 = reason },
-            { "Dismiss: ${Events.DISMISS_REASONS[int1]}" },
+            { "Dismiss: ${Events.DISMISS_REASONS.getOrNull(int1) ?: "unknown($int1)"}" },
         )
+    }
+
+    fun onVolumeSliderAdjustmentFinished(volume: Int, stream: Int) {
+        logBuffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            {
+                int1 = volume
+                int2 = stream
+            },
+            { "Volume adjusted: volume=$int1 stream=$int2" },
+        )
+    }
+
+    fun onVolumeSlidersUpdated(primaryStream: Int, floating: Collection<Int>) {
+        logBuffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            {
+                int1 = primaryStream
+                str1 = floating.joinToString(",") { it.toString() }
+            },
+            { "Showing streams: primary=$int1 floating=$str1" },
+        )
+    }
+
+    fun onRingerModeChanged(ringerMode: RingerMode) {
+        logBuffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            { int1 = ringerMode.value },
+            { "Ringer mode changed to: $int1" },
+        )
+    }
+
+    fun onRingerDrawerAvailable(modes: List<RingerMode>) {
+        logBuffer.log(
+            TAG,
+            LogLevel.DEBUG,
+            { str1 = modes.joinToString(",") { it.value.toString() } },
+            { "Ringer drawer available with modes: $str1" },
+        )
+    }
+
+    fun onRingerDrawerUnavailable() {
+        logBuffer.log(TAG, LogLevel.DEBUG, {}, { "Ringer drawer unavailable" })
     }
 
     fun onCurrentRingerModeIsUnsupported(ringerMode: RingerMode) {

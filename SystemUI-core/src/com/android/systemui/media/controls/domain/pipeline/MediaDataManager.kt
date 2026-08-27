@@ -20,8 +20,8 @@ import android.app.PendingIntent
 import android.media.MediaDescription
 import android.media.session.MediaSession
 import android.service.notification.StatusBarNotification
+import androidx.annotation.WorkerThread
 import com.android.systemui.media.controls.shared.model.MediaData
-import com.android.systemui.media.controls.shared.model.SmartspaceMediaData
 
 /** Facilitates management and loading of Media Data, ready for binding. */
 interface MediaDataManager {
@@ -46,7 +46,7 @@ interface MediaDataManager {
     fun destroy()
 
     /** Sets resume action. */
-    fun setResumeAction(key: String, action: Runnable?)
+    @WorkerThread fun setResumeAction(key: String, action: Runnable?)
 
     /** Adds resume media data. */
     fun addResumptionControls(
@@ -56,20 +56,11 @@ interface MediaDataManager {
         token: MediaSession.Token,
         appName: String,
         appIntent: PendingIntent,
-        packageName: String
+        packageName: String,
     )
 
     /** Dismiss a media entry. Returns false if the key was not found. */
     fun dismissMediaData(key: String, delay: Long, userInitiated: Boolean): Boolean
-
-    /**
-     * Called whenever the recommendation has been expired or removed by the user. This will remove
-     * the recommendation card entirely from the carousel.
-     */
-    fun dismissSmartspaceRecommendation(key: String, delay: Long)
-
-    /** Called when the recommendation card should no longer be visible in QQS or lockscreen */
-    fun setRecommendationInactive(key: String)
 
     /** Invoked when notification is removed. */
     fun onNotificationRemoved(key: String)
@@ -79,20 +70,11 @@ interface MediaDataManager {
     /** Invoked when the user has dismissed the media carousel */
     fun onSwipeToDismiss()
 
-    /** Are there any media notifications active, including the recommendations? */
-    fun hasActiveMediaOrRecommendation(): Boolean
-
-    /** Are there any media entries we should display, including the recommendations? */
-    fun hasAnyMediaOrRecommendation(): Boolean
-
-    /** Are there any resume media notifications active, excluding the recommendations? */
+    /** Are there any active media controls? */
     fun hasActiveMedia(): Boolean
 
-    /** Are there any resume media notifications active, excluding the recommendations? */
+    /** Are there any media controls, including inactive ones? */
     fun hasAnyMedia(): Boolean
-
-    /** Is recommendation card active? */
-    fun isRecommendationActive(): Boolean
 
     // Uses [MediaDataProcessor.Listener] in order to link the new logic code with UI layer.
     interface Listener : MediaDataProcessor.Listener {
@@ -107,45 +89,22 @@ interface MediaDataManager {
          * @param immediately indicates should apply the UI changes immediately, otherwise wait
          *   until the next refresh-round before UI becomes visible. True by default to take in
          *   place immediately.
-         * @param receivedSmartspaceCardLatency is the latency between headphone connects and sysUI
-         *   displays Smartspace media targets. Will be 0 if the data is not activated by Smartspace
-         *   signal.
-         * @param isSsReactivated indicates resume media card is reactivated by Smartspace
-         *   recommendation signal
          */
         override fun onMediaDataLoaded(
             key: String,
             oldKey: String?,
             data: MediaData,
             immediately: Boolean,
-            receivedSmartspaceCardLatency: Int,
-            isSsReactivated: Boolean,
-        ) {}
-
-        /**
-         * Called whenever there's new Smartspace media data loaded.
-         *
-         * @param shouldPrioritize indicates the sorting priority of the Smartspace card. If true,
-         *   it will be prioritized as the first card. Otherwise, it will show up as the last card
-         *   as default.
-         */
-        override fun onSmartspaceMediaDataLoaded(
-            key: String,
-            data: SmartspaceMediaData,
-            shouldPrioritize: Boolean,
         ) {}
 
         /** Called whenever a previously existing Media notification was removed. */
         override fun onMediaDataRemoved(key: String, userInitiated: Boolean) {}
 
         /**
-         * Called whenever a previously existing Smartspace media data was removed.
-         *
-         * @param immediately indicates should apply the UI changes immediately, otherwise wait
-         *   until the next refresh-round before UI becomes visible. True by default to take in
-         *   place immediately.
+         * Called whenever the current active media notification changes. Should only be used if
+         * [SceneContainerFlag] is disabled
          */
-        override fun onSmartspaceMediaDataRemoved(key: String, immediately: Boolean) {}
+        override fun onCurrentActiveMediaChanged(key: String?, data: MediaData?) {}
     }
 
     companion object {

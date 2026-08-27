@@ -16,17 +16,15 @@
 
 package com.android.systemui.keyboard.shortcut.ui.composable
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -36,23 +34,39 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.compose.ui.graphics.painter.rememberDrawablePainter
@@ -64,15 +78,23 @@ import com.android.systemui.res.R
 fun ShortcutCustomizationDialog(
     uiState: ShortcutCustomizationUiState,
     modifier: Modifier = Modifier,
-    onKeyPress: (KeyEvent) -> Boolean,
+    onShortcutKeyCombinationSelected: (KeyEvent) -> Boolean,
     onCancel: () -> Unit,
     onConfirmSetShortcut: () -> Unit,
     onConfirmDeleteShortcut: () -> Unit,
     onConfirmResetShortcut: () -> Unit,
+    onClearSelectedKeyCombination: () -> Unit,
 ) {
     when (uiState) {
         is ShortcutCustomizationUiState.AddShortcutDialog -> {
-            AddShortcutDialog(modifier, uiState, onKeyPress, onCancel, onConfirmSetShortcut)
+            AddShortcutDialog(
+                modifier,
+                uiState,
+                onShortcutKeyCombinationSelected,
+                onCancel,
+                onConfirmSetShortcut,
+                onClearSelectedKeyCombination,
+            )
         }
         is ShortcutCustomizationUiState.DeleteShortcutDialog -> {
             DeleteShortcutDialog(modifier, onCancel, onConfirmDeleteShortcut)
@@ -87,43 +109,50 @@ fun ShortcutCustomizationDialog(
 }
 
 @Composable
+private fun DialogSurface(content: @Composable () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) { content() }
+}
+
+@Composable
 private fun AddShortcutDialog(
     modifier: Modifier,
     uiState: ShortcutCustomizationUiState.AddShortcutDialog,
-    onKeyPress: (KeyEvent) -> Boolean,
+    onShortcutKeyCombinationSelected: (KeyEvent) -> Boolean,
     onCancel: () -> Unit,
-    onConfirmSetShortcut: () -> Unit
-){
-    Column(modifier = modifier) {
-        Title(uiState.shortcutLabel)
-        Description(
-            text =
-            stringResource(
-                id = R.string.shortcut_customize_mode_add_shortcut_description
+    onConfirmSetShortcut: () -> Unit,
+    onClearSelectedKeyCombination: () -> Unit,
+) {
+    DialogSurface {
+        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            Title(uiState.shortcutLabel)
+            Description(
+                text =
+                    stringResource(id = R.string.shortcut_customize_mode_add_shortcut_description)
             )
-        )
-        PromptShortcutModifier(
-            modifier =
-            Modifier.padding(top = 24.dp, start = 116.5.dp, end = 116.5.dp)
-                .width(131.dp)
-                .height(48.dp),
-            defaultModifierKey = uiState.defaultCustomShortcutModifierKey,
-        )
-        SelectedKeyCombinationContainer(
-            shouldShowError = uiState.errorMessage.isNotEmpty(),
-            onKeyPress = onKeyPress,
-            pressedKeys = uiState.pressedKeys,
-        )
-        ErrorMessageContainer(uiState.errorMessage)
-        DialogButtons(
-            onCancel,
-            isConfirmButtonEnabled = uiState.pressedKeys.isNotEmpty(),
-            onConfirm = onConfirmSetShortcut,
-            confirmButtonText =
-            stringResource(
-                R.string.shortcut_helper_customize_dialog_set_shortcut_button_label
-            ),
-        )
+            PromptShortcutModifier(
+                modifier =
+                    Modifier.padding(top = 24.dp).sizeIn(minWidth = 131.dp, minHeight = 48.dp),
+                defaultModifierKey = uiState.defaultCustomShortcutModifierKey,
+            )
+            SelectedKeyCombinationContainer(
+                shouldShowError = uiState.errorMessage.isNotEmpty(),
+                onShortcutKeyCombinationSelected = onShortcutKeyCombinationSelected,
+                pressedKeys = uiState.pressedKeys,
+                contentDescription = uiState.pressedKeysDescription,
+                onConfirmSetShortcut = onConfirmSetShortcut,
+                onClearSelectedKeyCombination = onClearSelectedKeyCombination,
+            )
+            ErrorMessageContainer(uiState.errorMessage)
+            DialogButtons(
+                onCancel,
+                isConfirmButtonEnabled = uiState.pressedKeys.isNotEmpty(),
+                onConfirm = onConfirmSetShortcut,
+                confirmButtonText =
+                    stringResource(
+                        R.string.shortcut_helper_customize_dialog_set_shortcut_button_label
+                    ),
+            )
+        }
     }
 }
 
@@ -131,20 +160,15 @@ private fun AddShortcutDialog(
 private fun DeleteShortcutDialog(
     modifier: Modifier,
     onCancel: () -> Unit,
-    onConfirmDeleteShortcut: () -> Unit
-){
+    onConfirmDeleteShortcut: () -> Unit,
+) {
     ConfirmationDialog(
         modifier = modifier,
-        title =
-        stringResource(
-            id = R.string.shortcut_customize_mode_remove_shortcut_dialog_title
-        ),
+        title = stringResource(id = R.string.shortcut_customize_mode_remove_shortcut_dialog_title),
         description =
-        stringResource(
-            id = R.string.shortcut_customize_mode_remove_shortcut_description
-        ),
+            stringResource(id = R.string.shortcut_customize_mode_remove_shortcut_description),
         confirmButtonText =
-        stringResource(R.string.shortcut_helper_customize_dialog_remove_button_label),
+            stringResource(R.string.shortcut_helper_customize_dialog_remove_button_label),
         onCancel = onCancel,
         onConfirm = onConfirmDeleteShortcut,
     )
@@ -154,20 +178,15 @@ private fun DeleteShortcutDialog(
 private fun ResetShortcutDialog(
     modifier: Modifier,
     onCancel: () -> Unit,
-    onConfirmResetShortcut: () -> Unit
-){
+    onConfirmResetShortcut: () -> Unit,
+) {
     ConfirmationDialog(
         modifier = modifier,
-        title =
-        stringResource(
-            id = R.string.shortcut_customize_mode_reset_shortcut_dialog_title
-        ),
+        title = stringResource(id = R.string.shortcut_customize_mode_reset_shortcut_dialog_title),
         description =
-        stringResource(
-            id = R.string.shortcut_customize_mode_reset_shortcut_description
-        ),
+            stringResource(id = R.string.shortcut_customize_mode_reset_shortcut_description),
         confirmButtonText =
-        stringResource(R.string.shortcut_helper_customize_dialog_reset_button_label),
+            stringResource(R.string.shortcut_helper_customize_dialog_reset_button_label),
         onCancel = onCancel,
         onConfirm = onConfirmResetShortcut,
     )
@@ -182,14 +201,16 @@ private fun ConfirmationDialog(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    Column(modifier) {
-        Title(title = title)
-        Description(text = description)
-        DialogButtons(
-            onCancel = onCancel,
-            onConfirm = onConfirm,
-            confirmButtonText = confirmButtonText,
-        )
+    DialogSurface {
+        Column(modifier) {
+            Title(title = title)
+            Description(text = description)
+            DialogButtons(
+                onCancel = onCancel,
+                onConfirm = onConfirm,
+                confirmButtonText = confirmButtonText,
+            )
+        }
     }
 }
 
@@ -200,6 +221,9 @@ private fun DialogButtons(
     onConfirm: () -> Unit,
     confirmButtonText: String,
 ) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
     Row(
         modifier =
             Modifier.padding(top = 24.dp, start = 24.dp, end = 24.dp)
@@ -211,15 +235,19 @@ private fun DialogButtons(
             shape = RoundedCornerShape(50.dp),
             onClick = onCancel,
             color = Color.Transparent,
-            width = 80.dp,
+            modifier = Modifier.heightIn(40.dp),
             contentColor = MaterialTheme.colorScheme.primary,
             text = stringResource(R.string.shortcut_helper_customize_dialog_cancel_button_label),
+            border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
         )
         Spacer(modifier = Modifier.width(8.dp))
         ShortcutHelperButton(
+            modifier =
+                Modifier.heightIn(40.dp).focusRequester(focusRequester).focusProperties {
+                    canFocus = true
+                }, // enable focus on touch/click mode
             onClick = onConfirm,
             color = MaterialTheme.colorScheme.primary,
-            width = 116.dp,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             text = confirmButtonText,
             enabled = isConfirmButtonEnabled,
@@ -230,7 +258,10 @@ private fun DialogButtons(
 @Composable
 private fun ErrorMessageContainer(errorMessage: String) {
     if (errorMessage.isNotEmpty()) {
-        Box(modifier = Modifier.padding(horizontal = 16.dp).width(332.dp).height(40.dp)) {
+        Box(
+            modifier =
+                Modifier.padding(horizontal = 16.dp).sizeIn(minWidth = 332.dp, minHeight = 40.dp)
+        ) {
             Text(
                 text = errorMessage,
                 style = MaterialTheme.typography.bodyMedium,
@@ -238,7 +269,11 @@ private fun ErrorMessageContainer(errorMessage: String) {
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.W500,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 24.dp).width(252.dp),
+                modifier =
+                    Modifier.padding(start = 24.dp).width(252.dp).semantics {
+                        contentDescription = errorMessage
+                        liveRegion = LiveRegionMode.Polite
+                    },
             )
         }
     }
@@ -247,72 +282,96 @@ private fun ErrorMessageContainer(errorMessage: String) {
 @Composable
 private fun SelectedKeyCombinationContainer(
     shouldShowError: Boolean,
-    onKeyPress: (KeyEvent) -> Boolean,
+    onShortcutKeyCombinationSelected: (KeyEvent) -> Boolean,
     pressedKeys: List<ShortcutKey>,
+    contentDescription: String,
+    onConfirmSetShortcut: () -> Unit,
+    onClearSelectedKeyCombination: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val outlineColor =
-        if (!isFocused) MaterialTheme.colorScheme.outline
-        else if (shouldShowError) MaterialTheme.colorScheme.error
-        else MaterialTheme.colorScheme.primary
     val focusRequester = remember { FocusRequester() }
-
+    val focusManager = LocalFocusManager.current
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    ClickableShortcutSurface(
-        onClick = {},
-        color = Color.Transparent,
-        shape = RoundedCornerShape(50.dp),
+    OutlinedInputField(
         modifier =
             Modifier.padding(all = 16.dp)
                 .sizeIn(minWidth = 332.dp, minHeight = 56.dp)
-                .border(width = 2.dp, color = outlineColor, shape = RoundedCornerShape(50.dp))
-                .onKeyEvent { onKeyPress(it) }
-                .focusRequester(focusRequester),
-        interactionSource = interactionSource,
-    ) {
-        Row(
-            modifier = Modifier.padding(start = 24.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (pressedKeys.isEmpty()) {
-                PressKeyPrompt()
+                .focusRequester(focusRequester)
+                .focusProperties { canFocus = true }
+                .onPreviewKeyEvent { keyEvent ->
+                    val keyEventProcessed = onShortcutKeyCombinationSelected(keyEvent)
+                    if (keyEventProcessed) {
+                        true
+                    } else {
+                        if (keyEvent.type == KeyEventType.KeyUp) {
+                            when (keyEvent.key) {
+                                Key.Enter -> {
+                                    onConfirmSetShortcut()
+                                    return@onPreviewKeyEvent true
+                                }
+                                Key.Backspace -> {
+                                    onClearSelectedKeyCombination()
+                                    return@onPreviewKeyEvent true
+                                }
+                                Key.DirectionDown -> {
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                    return@onPreviewKeyEvent true
+                                }
+                                else -> return@onPreviewKeyEvent false
+                            }
+                        } else false
+                    }
+                },
+        trailingIcon = { ErrorIcon(shouldShowError) },
+        isError = shouldShowError,
+        placeholder = { PressKeyPrompt() },
+        content =
+            if (pressedKeys.isNotEmpty()) {
+                { PressedKeysTextContainer(pressedKeys) }
             } else {
-                PressedKeysTextContainer(pressedKeys)
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            if (shouldShowError) {
-                Icon(
-                    imageVector = Icons.Default.ErrorOutline,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-        }
+                null
+            },
+        contentDescription = contentDescription,
+    )
+}
+
+@Composable
+private fun ErrorIcon(shouldShowError: Boolean) {
+    if (shouldShowError) {
+        Icon(
+            imageVector = Icons.Default.ErrorOutline,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.error,
+        )
     }
 }
 
 @Composable
-private fun RowScope.PressedKeysTextContainer(pressedKeys: List<ShortcutKey>) {
-    pressedKeys.forEachIndexed { keyIndex, key ->
-        if (keyIndex > 0) {
-            ShortcutKeySeparator()
-        }
-        if (key is ShortcutKey.Text) {
-            ShortcutTextKey(key)
-        } else if (key is ShortcutKey.Icon) {
-            ShortcutIconKey(key)
+private fun PressedKeysTextContainer(pressedKeys: List<ShortcutKey>) {
+    Row(
+        modifier = Modifier.semantics { hideFromAccessibility() },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        pressedKeys.forEachIndexed { keyIndex, key ->
+            if (keyIndex > 0) {
+                ShortcutKeySeparator()
+            }
+            if (key is ShortcutKey.Text) {
+                ShortcutTextKey(key)
+            } else if (key is ShortcutKey.Icon) {
+                ShortcutIconKey(key)
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ShortcutKeySeparator() {
     Text(
         text = stringResource(id = R.string.shortcut_helper_plus_symbol),
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.bodyLargeEmphasized,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -320,7 +379,7 @@ private fun ShortcutKeySeparator() {
 }
 
 @Composable
-private fun RowScope.ShortcutIconKey(key: ShortcutKey.Icon) {
+private fun ShortcutIconKey(key: ShortcutKey.Icon) {
     Icon(
         painter =
             when (key) {
@@ -328,7 +387,7 @@ private fun RowScope.ShortcutIconKey(key: ShortcutKey.Icon) {
                 is ShortcutKey.Icon.DrawableIcon -> rememberDrawablePainter(drawable = key.drawable)
             },
         contentDescription = null,
-        modifier = Modifier.align(Alignment.CenterVertically).height(24.dp),
+        modifier = Modifier.height(24.dp),
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -344,11 +403,12 @@ private fun PressKeyPrompt() {
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ShortcutTextKey(key: ShortcutKey.Text) {
     Text(
         text = key.value,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.bodyLargeEmphasized,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -366,6 +426,7 @@ private fun Title(title: String) {
         color = MaterialTheme.colorScheme.onSurface,
         lineHeight = 32.sp,
         fontWeight = FontWeight.W400,
+        textAlign = TextAlign.Center,
     )
 }
 
@@ -379,6 +440,7 @@ private fun Description(text: String) {
                 .width(316.dp)
                 .wrapContentSize(Alignment.Center),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
     )
 }
 
@@ -387,7 +449,11 @@ private fun PromptShortcutModifier(
     modifier: Modifier,
     defaultModifierKey: ShortcutKey.Icon.ResIdIcon,
 ) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         ActionKeyContainer(defaultModifierKey)
         PlusIconContainer()
     }
@@ -397,14 +463,14 @@ private fun PromptShortcutModifier(
 private fun ActionKeyContainer(defaultModifierKey: ShortcutKey.Icon.ResIdIcon) {
     Row(
         modifier =
-            Modifier.height(48.dp)
-                .width(105.dp)
+            Modifier.sizeIn(minWidth = 105.dp, minHeight = 48.dp)
                 .background(
                     color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(16.dp),
                 )
                 .padding(all = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         ActionKeyIcon(defaultModifierKey)
         ActionKeyText()
@@ -414,7 +480,7 @@ private fun ActionKeyContainer(defaultModifierKey: ShortcutKey.Icon.ResIdIcon) {
 @Composable
 private fun ActionKeyText() {
     Text(
-        text = "Action",
+        text = stringResource(R.string.shortcut_helper_customizer_action_key_text),
         style = MaterialTheme.typography.titleMedium,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -440,5 +506,37 @@ private fun PlusIconContainer() {
         contentDescription =
             stringResource(id = R.string.shortcut_helper_content_description_plus_icon),
         modifier = Modifier.padding(vertical = 12.dp).size(24.dp).wrapContentSize(Alignment.Center),
+    )
+}
+
+@Composable
+private fun OutlinedInputField(
+    content: @Composable (() -> Unit)?,
+    placeholder: @Composable () -> Unit,
+    trailingIcon: @Composable () -> Unit,
+    isError: Boolean,
+    modifier: Modifier = Modifier,
+    contentDescription: String,
+) {
+    OutlinedTextField(
+        value = "",
+        onValueChange = {},
+        placeholder = if (content == null) placeholder else null,
+        prefix = content,
+        singleLine = true,
+        modifier =
+            modifier.semantics(mergeDescendants = true) {
+                this.contentDescription = contentDescription
+            },
+        trailingIcon = trailingIcon,
+        colors =
+            OutlinedTextFieldDefaults.colors()
+                .copy(
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                    errorIndicatorColor = MaterialTheme.colorScheme.error,
+                ),
+        shape = RoundedCornerShape(50.dp),
+        isError = isError,
     )
 }

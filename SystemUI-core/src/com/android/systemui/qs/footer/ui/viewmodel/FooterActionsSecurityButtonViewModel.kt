@@ -19,10 +19,16 @@ package com.android.systemui.qs.footer.ui.viewmodel
 import android.content.Context
 import com.android.systemui.animation.Expandable
 import com.android.systemui.common.shared.model.Icon
+import com.android.systemui.qs.footer.domain.model.FooterTextButtonModel.FooterBasicButtonModel
 
 /** A ViewModel for the security button. */
-data class FooterActionsSecurityButtonViewModel(
-    val icon: Icon,
-    val text: String,
-    val onClick: ((quickSettingsContext: Context, Expandable) -> Unit)?,
-)
+class FooterActionsSecurityButtonViewModel(
+    override val model: FooterBasicButtonModel,
+    override val onClick: ((quickSettingsContext: Context, Expandable) -> Unit)?,
+) : FooterTextButtonViewModel {
+    constructor(
+        text: String,
+        icon: Icon,
+        onClick: ((quickSettingsContext: Context, Expandable) -> Unit)?,
+    ) : this(model = FooterBasicButtonModel(text = text, icon = icon), onClick = onClick)
+}

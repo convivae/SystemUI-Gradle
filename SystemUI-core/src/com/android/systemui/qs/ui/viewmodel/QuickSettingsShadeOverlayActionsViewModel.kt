@@ -21,10 +21,12 @@ import com.android.compose.animation.scene.Swipe
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
 import com.android.compose.animation.scene.UserActionResult.HideOverlay
-import com.android.compose.animation.scene.UserActionResult.ReplaceByOverlay
+import com.android.compose.animation.scene.UserActionResult.ShowOverlay
+import com.android.compose.animation.scene.UserActionResult.ShowOverlay.HideCurrentOverlays
 import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
 import com.android.systemui.scene.shared.model.Overlays
-import com.android.systemui.scene.ui.viewmodel.SceneContainerEdge
+import com.android.systemui.scene.ui.viewmodel.SceneContainerArea.BottomEdge
+import com.android.systemui.scene.ui.viewmodel.SceneContainerArea.TopEdgeStartHalf
 import com.android.systemui.scene.ui.viewmodel.UserActionsViewModel
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -38,16 +40,24 @@ constructor(private val editModeViewModel: EditModeViewModel) : UserActionsViewM
     override suspend fun hydrateActions(setActions: (Map<UserAction, UserActionResult>) -> Unit) {
         editModeViewModel.isEditing
             .map { isEditing ->
+                val hideQuickSettings = HideOverlay(Overlays.QuickSettingsShade)
                 buildMap {
-                    put(Swipe.Up, HideOverlay(Overlays.QuickSettingsShade))
-                    // When editing, back should go back to QS from edit mode (i.e. remain in the
-                    // same overlay).
-                    if (!isEditing) {
-                        put(Back, HideOverlay(Overlays.QuickSettingsShade))
+                    if (isEditing) {
+                        // When editing, the back gesture is handled outside of this view-model.
+                        // TODO(b/418003378): Back should go back to the QS grid layout.
+                        put(Swipe.Up(fromSource = BottomEdge), hideQuickSettings)
+                    } else {
+                        put(Back, hideQuickSettings)
+                        put(Swipe.Up, hideQuickSettings)
                     }
+
                     put(
-                        Swipe.Down(fromSource = SceneContainerEdge.TopLeft),
-                        ReplaceByOverlay(Overlays.NotificationsShade),
+                        Swipe.Down(fromSource = TopEdgeStartHalf),
+                        ShowOverlay(
+                            Overlays.NotificationsShade,
+                            hideCurrentOverlays =
+                                HideCurrentOverlays.Some(Overlays.QuickSettingsShade),
+                        ),
                     )
                 }
             }

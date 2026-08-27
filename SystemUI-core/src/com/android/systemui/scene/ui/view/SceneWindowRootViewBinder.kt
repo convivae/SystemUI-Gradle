@@ -17,48 +17,64 @@
 package com.android.systemui.scene.ui.view
 
 import android.content.Context
-import android.graphics.Point
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
-import androidx.activity.OnBackPressedDispatcher
-import androidx.activity.OnBackPressedDispatcherOwner
-import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
+import android.widget.FrameLayout
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
-import androidx.lifecycle.Lifecycle
+import com.android.compose.animation.scene.HoistedSceneTransitionLayoutState
 import com.android.compose.animation.scene.OverlayKey
 import com.android.compose.animation.scene.SceneKey
+import com.android.compose.animation.scene.content.state.TransitionState
+import com.android.compose.modifiers.thenIf
+import com.android.compose.snapshot.ObserveReadsRoot
 import com.android.compose.theme.PlatformTheme
-import com.android.internal.policy.ScreenDecorationsUtils
-import com.android.systemui.common.ui.compose.windowinsets.CutoutLocation
-import com.android.systemui.common.ui.compose.windowinsets.DisplayCutout
+import com.android.systemui.Flags
+import com.android.systemui.bouncer.ui.composable.BouncerSceneContainer
+import com.android.systemui.common.ui.compose.windowinsets.LocalDisplayCutout
+import com.android.systemui.common.ui.compose.windowinsets.LocalScreenCornerRadius
 import com.android.systemui.common.ui.compose.windowinsets.ScreenDecorProvider
+import com.android.systemui.common.ui.compose.windowinsets.rememberDisplayCutout
+import com.android.systemui.common.ui.compose.windowinsets.rememberScreenCornerRadius
+import com.android.systemui.compose.modifiers.sysUiResTagContainer
+import com.android.systemui.initOnBackPressedDispatcherOwner
+import com.android.systemui.keyboard.shortcut.ui.composable.InteractionsConfig
+import com.android.systemui.keyboard.shortcut.ui.composable.rememberShortcutHelperIndication
+import com.android.systemui.keyguard.ui.composable.AuthRippleScrim
+import com.android.systemui.keyguard.ui.viewmodel.AuthRippleScrimViewModel
 import com.android.systemui.lifecycle.WindowLifecycleState
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.lifecycle.setSnapshotBinding
 import com.android.systemui.lifecycle.viewModel
-import com.android.systemui.qs.ui.adapter.QSSceneAdapter
 import com.android.systemui.res.R
+import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.SceneContainerConfig
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator
+import com.android.systemui.scene.ui.composable.DualShadeEducationalTooltips
 import com.android.systemui.scene.ui.composable.Overlay
 import com.android.systemui.scene.ui.composable.Scene
 import com.android.systemui.scene.ui.composable.SceneContainer
+import com.android.systemui.scene.ui.compose.assertPointerState
+import com.android.systemui.scene.ui.viewmodel.DualShadeEducationalTooltipsViewModel
 import com.android.systemui.scene.ui.viewmodel.SceneContainerViewModel
+import com.android.systemui.scene.ui.viewmodel.ToBouncerTransitionViewModel
+import com.android.systemui.shade.ui.composable.LocalStatusIconContext
+import com.android.systemui.shade.ui.composable.rememberStatusIconContext
 import com.android.systemui.statusbar.notification.stack.ui.view.SharedNotificationContainer
-import javax.inject.Provider
+import com.android.systemui.statusbar.phone.ui.TintedIconManager
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
-@ExperimentalCoroutinesApi
+/** View binder that wires up scene container specific view bindings. */
 object SceneWindowRootViewBinder {
 
     /** Binds between the view and view-model pertaining to a specific scene container. */
@@ -66,14 +82,17 @@ object SceneWindowRootViewBinder {
         view: ViewGroup,
         viewModelFactory: SceneContainerViewModel.Factory,
         motionEventHandlerReceiver: (SceneContainerViewModel.MotionEventHandler?) -> Unit,
-        windowInsets: StateFlow<WindowInsets?>,
+        windowInsets: State<WindowInsets?>,
         containerConfig: SceneContainerConfig,
         sharedNotificationContainer: SharedNotificationContainer,
         scenes: Set<Scene>,
         overlays: Set<Overlay>,
         onVisibilityChangedInternal: (isVisible: Boolean) -> Unit,
         dataSourceDelegator: SceneDataSourceDelegator,
-        qsSceneAdapter: Provider<QSSceneAdapter>,
+        sceneJankMonitorFactory: SceneJankMonitor.Factory,
+        sceneTransitionLatencyMonitor: SceneTransitionLatencyMonitor,
+        tintedIconManagerFactory: TintedIconManager.Factory,
+        authRippleViewModelFactory: AuthRippleScrimViewModel.Factory,
     ) {
         val unsortedSceneByKey: Map<SceneKey, Scene> = scenes.associateBy { scene -> scene.key }
         val sortedSceneByKey: Map<SceneKey, Scene> =
@@ -106,33 +125,39 @@ object SceneWindowRootViewBinder {
             view.viewModel(
                 traceName = "SceneWindowRootViewBinder",
                 minWindowLifecycleState = WindowLifecycleState.ATTACHED,
-                factory = { viewModelFactory.create(view, motionEventHandlerReceiver) },
+                factory = { viewModelFactory.create(motionEventHandlerReceiver) },
             ) { viewModel ->
                 try {
-                    view.setViewTreeOnBackPressedDispatcherOwner(
-                        object : OnBackPressedDispatcherOwner {
-                            override val onBackPressedDispatcher =
-                                OnBackPressedDispatcher().apply {
-                                    setOnBackInvokedDispatcher(
-                                        view.viewRootImpl.onBackInvokedDispatcher
-                                    )
-                                }
-
-                            override val lifecycle: Lifecycle = this@repeatWhenAttached.lifecycle
-                        }
+                    view.initOnBackPressedDispatcherOwner(
+                        lifecycle = this@repeatWhenAttached.lifecycle,
+                        force = true,
                     )
+
+                    val bouncerOverlay = unsortedOverlayByKey[Overlays.Bouncer]
+                    val bouncerSceneTransitionCoordinator =
+                        bouncerOverlay?.let { BouncerSceneTransitionCoordinator(viewModel) }
 
                     view.addView(
                         createSceneContainerView(
-                                scope = this,
                                 context = view.context,
                                 viewModel = viewModel,
                                 windowInsets = windowInsets,
                                 sceneByKey = sortedSceneByKey,
                                 overlayByKey = sortedOverlayByKey,
                                 dataSourceDelegator = dataSourceDelegator,
-                                qsSceneAdapter = qsSceneAdapter,
                                 containerConfig = containerConfig,
+                                sceneJankMonitorFactory = sceneJankMonitorFactory,
+                                sceneTransitionLatencyMonitor = sceneTransitionLatencyMonitor,
+                                tintedIconManagerFactory = tintedIconManagerFactory,
+                                onTransitionStart = { transition, animationScope ->
+                                    bouncerSceneTransitionCoordinator
+                                        ?.onMainContainerTransitionStart(transition, animationScope)
+                                },
+                                onSnap = { idle ->
+                                    bouncerSceneTransitionCoordinator?.onMainContainerSnap(
+                                        idle.currentOverlays.contains(Overlays.Bouncer)
+                                    )
+                                },
                             )
                             .also { it.id = R.id.scene_container_root_composable }
                     )
@@ -149,6 +174,42 @@ object SceneWindowRootViewBinder {
                     )
                     view.addView(sharedNotificationContainer)
 
+                    view.addView(
+                        createDualShadeEducationalTooltipsView(
+                            context = view.context,
+                            viewModelFactory =
+                                viewModel.dualShadeEducationalTooltipsViewModelFactory,
+                            windowInsets = windowInsets,
+                        )
+                    )
+
+                    // If the Bouncer overlay is present in the build, add a view to host it so it
+                    // renders above the notifications view. The scene container that shows all
+                    // scenes and overlays knows to skip the rendering of the bouncer overlay.
+                    if (bouncerOverlay != null && bouncerSceneTransitionCoordinator != null) {
+                        view.addView(
+                            createBouncerSceneContainerView(
+                                context = view.context,
+                                viewModel = viewModel,
+                                state =
+                                    bouncerSceneTransitionCoordinator.bouncerSceneContainerState,
+                                bouncerOverlay = bouncerOverlay,
+                                windowInsets = windowInsets,
+                                tintedIconManagerFactory = tintedIconManagerFactory,
+                                toBouncerTransitionViewModel =
+                                    viewModel.toBouncerTransitionViewModel,
+                            )
+                        )
+                    }
+
+                    view.addView(
+                        createAuthRippleScrim(
+                            context = view.context,
+                            viewModelFactory = authRippleViewModelFactory,
+                            windowInsets = windowInsets,
+                        )
+                    )
+
                     view.setSnapshotBinding { onVisibilityChangedInternal(viewModel.isVisible) }
                     awaitCancellation()
                 } finally {
@@ -160,73 +221,159 @@ object SceneWindowRootViewBinder {
     }
 
     private fun createSceneContainerView(
-        scope: CoroutineScope,
         context: Context,
         viewModel: SceneContainerViewModel,
-        windowInsets: StateFlow<WindowInsets?>,
+        windowInsets: State<WindowInsets?>,
         sceneByKey: Map<SceneKey, Scene>,
         overlayByKey: Map<OverlayKey, Overlay>,
         dataSourceDelegator: SceneDataSourceDelegator,
-        qsSceneAdapter: Provider<QSSceneAdapter>,
         containerConfig: SceneContainerConfig,
+        sceneJankMonitorFactory: SceneJankMonitor.Factory,
+        sceneTransitionLatencyMonitor: SceneTransitionLatencyMonitor,
+        tintedIconManagerFactory: TintedIconManager.Factory,
+        onTransitionStart:
+            (transition: TransitionState.Transition, animationScope: CoroutineScope) -> Unit,
+        onSnap: (idle: TransitionState.Idle) -> Unit,
     ): View {
         return ComposeView(context).apply {
+            setSnapshotBinding {
+                accessibilityPaneTitle = viewModel.accessibilityTitle?.let(context::getString)
+            }
+            setContent {
+                SceneContainerContainer(
+                    windowInsets = windowInsets,
+                    tintedIconManagerFactory = tintedIconManagerFactory,
+                    modifier =
+                        Modifier
+                            // Gated because attaching a pointer modifier (even a passive one) can
+                            // subtly change event propagation or hit-testing behavior.
+                            .thenIf(Flags.notificationDeveloperLogging()) {
+                                Modifier.assertPointerState { Log.wtf(TAG, it) }
+                            },
+                ) { modifier ->
+                    SceneContainer(
+                        viewModel = viewModel,
+                        sceneByKey = sceneByKey,
+                        overlayByKey = overlayByKey,
+                        initialSceneKey = containerConfig.initialSceneKey,
+                        transitionsBuilder = containerConfig.transitionsBuilder,
+                        dataSourceDelegator = dataSourceDelegator,
+                        sceneJankMonitorFactory = sceneJankMonitorFactory,
+                        sceneTransitionLatencyMonitor = sceneTransitionLatencyMonitor,
+                        onTransitionStart = onTransitionStart,
+                        onSnap = onSnap,
+                        modifier = modifier,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun createDualShadeEducationalTooltipsView(
+        context: Context,
+        viewModelFactory: DualShadeEducationalTooltipsViewModel.Factory,
+        windowInsets: State<WindowInsets?>,
+    ): View {
+        return ComposeView(context).apply {
+            layoutParams =
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                )
             setContent {
                 PlatformTheme {
-                    ScreenDecorProvider(
-                        displayCutout = displayCutoutFromWindowInsets(scope, context, windowInsets),
-                        screenCornerRadius = ScreenDecorationsUtils.getWindowCornerRadius(context),
-                    ) {
-                        SceneContainer(
-                            viewModel = viewModel,
-                            sceneByKey = sceneByKey,
-                            overlayByKey = overlayByKey,
-                            initialSceneKey = containerConfig.initialSceneKey,
-                            sceneTransitions = containerConfig.transitions,
-                            dataSourceDelegator = dataSourceDelegator,
-                            qsSceneAdapter = qsSceneAdapter,
-                        )
+                    ScreenDecorProvider(windowInsets = { windowInsets.value }) {
+                        DualShadeEducationalTooltips(viewModelFactory = viewModelFactory)
                     }
                 }
             }
         }
     }
 
-    // TODO(b/298525212): remove once Compose exposes window inset bounds.
-    private fun displayCutoutFromWindowInsets(
-        scope: CoroutineScope,
+    private fun createBouncerSceneContainerView(
         context: Context,
-        windowInsets: StateFlow<WindowInsets?>,
-    ): StateFlow<DisplayCutout> =
-        windowInsets
-            .map {
-                val boundingRect = it?.displayCutout?.boundingRectTop
-                val width = boundingRect?.let { boundingRect.right - boundingRect.left } ?: 0
-                val left = boundingRect?.left?.toDp(context) ?: 0.dp
-                val top = boundingRect?.top?.toDp(context) ?: 0.dp
-                val right = boundingRect?.right?.toDp(context) ?: 0.dp
-                val bottom = boundingRect?.bottom?.toDp(context) ?: 0.dp
-                val location =
-                    when {
-                        width <= 0f -> CutoutLocation.NONE
-                        left <= 0.dp -> CutoutLocation.LEFT
-                        right >= getDisplayWidth(context) -> CutoutLocation.RIGHT
-                        else -> CutoutLocation.CENTER
-                    }
-                val viewDisplayCutout = it?.displayCutout
-                DisplayCutout(left, top, right, bottom, location, viewDisplayCutout)
+        viewModel: SceneContainerViewModel,
+        state: HoistedSceneTransitionLayoutState,
+        bouncerOverlay: Overlay,
+        windowInsets: State<WindowInsets?>,
+        tintedIconManagerFactory: TintedIconManager.Factory,
+        toBouncerTransitionViewModel: ToBouncerTransitionViewModel,
+    ): View {
+        return ComposeView(context).apply {
+            setContent {
+                SceneContainerContainer(
+                    windowInsets = windowInsets,
+                    tintedIconManagerFactory = tintedIconManagerFactory,
+                ) { modifier ->
+                    BouncerSceneContainer(
+                        viewModel = viewModel,
+                        state = state,
+                        bouncerOverlay = bouncerOverlay,
+                        modifier = modifier,
+                        toBouncerTransitionViewModel = toBouncerTransitionViewModel,
+                    )
+                }
             }
-            .stateIn(scope, SharingStarted.WhileSubscribed(), DisplayCutout())
-
-    // TODO(b/298525212): remove once Compose exposes window inset bounds.
-    private fun getDisplayWidth(context: Context): Dp {
-        val point = Point()
-        checkNotNull(context.display).getRealSize(point)
-        return point.x.toDp(context)
+        }
     }
 
-    // TODO(b/298525212): remove once Compose exposes window inset bounds.
-    private fun Int.toDp(context: Context): Dp {
-        return (this.toFloat() / context.resources.displayMetrics.density).dp
+    private fun createAuthRippleScrim(
+        context: Context,
+        viewModelFactory: AuthRippleScrimViewModel.Factory,
+        windowInsets: State<WindowInsets?>,
+    ): View {
+        return ComposeView(context).apply {
+            layoutParams =
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+            setContent {
+                PlatformTheme {
+                    ScreenDecorProvider(windowInsets = { windowInsets.value }) {
+                        AuthRippleScrim(viewModelFactory = viewModelFactory)
+                    }
+                }
+            }
+        }
     }
+
+    /**
+     * Helper function to make all SceneContainer type composables be wrapped in the exact same
+     * logic so they behave the same exact way as each other.
+     *
+     * To use properly, the passed in [content] must apply the [Modifier] it is given to its root
+     * composable.
+     */
+    @Composable
+    private fun SceneContainerContainer(
+        windowInsets: State<WindowInsets?>,
+        tintedIconManagerFactory: TintedIconManager.Factory,
+        modifier: Modifier = Modifier,
+        content: @Composable (modifier: Modifier) -> Unit,
+    ) {
+        PlatformTheme {
+            CompositionLocalProvider(
+                LocalScreenCornerRadius provides rememberScreenCornerRadius(),
+                LocalDisplayCutout provides rememberDisplayCutout { windowInsets.value },
+                LocalStatusIconContext provides rememberStatusIconContext(tintedIconManagerFactory),
+                LocalIndication provides
+                    rememberShortcutHelperIndication(
+                        InteractionsConfig(
+                            hoverOverlayColor = MaterialTheme.colorScheme.onSurface,
+                            hoverOverlayAlpha = 0.11f,
+                            pressedOverlayColor = MaterialTheme.colorScheme.onSurface,
+                            pressedOverlayAlpha = 0.15f,
+                            // we are OK using this as our content is clipped and all
+                            // corner radius are larger than this
+                            surfaceCornerRadius = 16.dp,
+                        )
+                    ),
+            ) {
+                ObserveReadsRoot { content(modifier.sysUiResTagContainer()) }
+            }
+        }
+    }
+
+    private const val TAG = "SceneWindowRootViewBinder"
 }

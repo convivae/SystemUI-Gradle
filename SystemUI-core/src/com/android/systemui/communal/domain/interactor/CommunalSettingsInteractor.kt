@@ -17,22 +17,24 @@
 package com.android.systemui.communal.domain.interactor
 
 import android.content.pm.UserInfo
-import com.android.systemui.common.coroutine.ConflatedCallbackFlow.conflatedCallbackFlow
-import com.android.systemui.communal.data.model.CommunalEnabledState
+import com.android.systemui.communal.data.model.FEATURE_AUTO_OPEN
+import com.android.systemui.communal.data.model.FEATURE_ENABLED
+import com.android.systemui.communal.data.model.FEATURE_MANUAL_OPEN
+import com.android.systemui.communal.data.model.SuppressionReason
 import com.android.systemui.communal.data.repository.CommunalSettingsRepository
 import com.android.systemui.communal.shared.model.CommunalBackgroundType
+import com.android.systemui.communal.shared.model.WhenToStartHub
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
-import com.android.systemui.log.dagger.CommunalTableLog
-import com.android.systemui.log.table.TableLogBuffer
-import com.android.systemui.log.table.logDiffsForTable
+import com.android.systemui.process.domain.interactor.ProcessInteractor
 import com.android.systemui.settings.UserTracker
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor
+import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
+import com.android.systemui.utils.coroutines.flow.flatMapLatestConflated
 import java.util.concurrent.Executor
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,7 +45,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class CommunalSettingsInteractor
 @Inject
@@ -52,22 +53,39 @@ constructor(
     @Background private val bgDispatcher: CoroutineDispatcher,
     @Background private val bgExecutor: Executor,
     private val repository: CommunalSettingsRepository,
+    private val processInteractor: ProcessInteractor,
     userInteractor: SelectedUserInteractor,
     private val userTracker: UserTracker,
-    @CommunalTableLog tableLogBuffer: TableLogBuffer,
 ) {
-    /** Whether or not communal is enabled for the currently selected user. */
+    /** Whether communal is enabled at all. */
     val isCommunalEnabled: StateFlow<Boolean> =
-        userInteractor.selectedUserInfo
-            .flatMapLatest { user -> repository.getEnabledState(user) }
-            .logDiffsForTable(
-                tableLogBuffer = tableLogBuffer,
-                columnPrefix = "disabledReason",
-                initialValue = CommunalEnabledState(),
-            )
-            .map { model -> model.enabled }
-            // Start this eagerly since the value is accessed synchronously in many places.
+        repository
+            .isEnabled(FEATURE_ENABLED)
             .stateIn(scope = bgScope, started = SharingStarted.Eagerly, initialValue = false)
+
+    /** Whether manually opening the hub is enabled */
+    val manualOpenEnabled: StateFlow<Boolean> =
+        repository
+            .isEnabled(FEATURE_MANUAL_OPEN)
+            .stateIn(scope = bgScope, started = SharingStarted.Eagerly, initialValue = false)
+
+    /** Whether auto-opening the hub is enabled */
+    val autoOpenEnabled: StateFlow<Boolean> =
+        repository
+            .isEnabled(FEATURE_AUTO_OPEN)
+            .stateIn(scope = bgScope, started = SharingStarted.Eagerly, initialValue = false)
+
+    /** When to automatically start hub for the currently selected user. */
+    val whenToStartHub: Flow<WhenToStartHub> = repository.getWhenToStartHubState()
+
+    /** Whether communal hub is allowed by device policy for the current user */
+    val allowedForCurrentUserByDevicePolicy: Flow<Boolean> =
+        userInteractor.selectedUserInfo.flatMapLatestConflated { user ->
+            getAllowedByDevicePolicy(user)
+        }
+
+    /** Whether the hub is enabled for the current user */
+    val settingEnabledForCurrentUser: Flow<Boolean> = repository.getSettingEnabledByUser()
 
     /**
      * Returns true if any glanceable hub functionality should be enabled via configs and flags.
@@ -98,11 +116,17 @@ constructor(
      */
     fun isV2FlagEnabled(): Boolean = repository.getV2FlagEnabled()
 
+    /**
+     * Suppresses the hub with the given reasons. If there are no reasons, the hub will not be
+     * suppressed.
+     */
+    fun setSuppressionReasons(reasons: List<SuppressionReason>) {
+        repository.setSuppressionReasons(reasons)
+    }
+
     /** The type of background to use for the hub. Used to experiment with different backgrounds */
     val communalBackground: Flow<CommunalBackgroundType> =
-        userInteractor.selectedUserInfo
-            .flatMapLatest { user -> repository.getBackground(user) }
-            .flowOn(bgDispatcher)
+        repository.getBackground().flowOn(bgDispatcher)
 
     private val workProfileUserInfoCallbackFlow: Flow<UserInfo?> = conflatedCallbackFlow {
         fun send(profiles: List<UserInfo>) {
@@ -129,9 +153,7 @@ constructor(
         workProfileUserInfoCallbackFlow
             .flatMapLatest { workProfile ->
                 workProfile?.let {
-                    repository.getAllowedByDevicePolicy(it).map { allowed ->
-                        if (!allowed) it else null
-                    }
+                    getAllowedByDevicePolicy(it).map { allowed -> if (!allowed) it else null }
                 } ?: flowOf(null)
             }
             .stateIn(
@@ -139,4 +161,13 @@ constructor(
                 started = SharingStarted.WhileSubscribed(),
                 initialValue = null,
             )
+
+    private fun getAllowedByDevicePolicy(user: UserInfo): Flow<Boolean> =
+        processInteractor.processUserReady.flatMapLatestConflated { ready ->
+            if (ready) {
+                repository.getAllowedByDevicePolicy(user)
+            } else {
+                flowOf(false)
+            }
+        }
 }

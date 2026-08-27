@@ -18,7 +18,9 @@ package com.android.systemui.communal
 
 import android.app.StatsManager
 import android.util.StatsEvent
+import com.android.app.tracing.coroutines.runBlockingTraced as runBlocking
 import com.android.systemui.CoreStartable
+import com.android.systemui.Flags.doNotUseRunBlocking
 import com.android.systemui.communal.domain.interactor.CommunalInteractor
 import com.android.systemui.communal.domain.interactor.CommunalSettingsInteractor
 import com.android.systemui.communal.shared.log.CommunalMetricsLogger
@@ -28,7 +30,6 @@ import com.android.systemui.shared.system.SysUiStatsLog
 import java.util.concurrent.Executor
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 @SysUISingleton
 class CommunalMetricsStartable
@@ -60,12 +61,17 @@ constructor(
 
         metricsLogger.logWidgetsSnapshot(
             statsEvents,
-            componentNames =
+            componentNames = if (doNotUseRunBlocking()) {
+                communalInteractor.widgetContent.value.map {
+                    it.componentName.flattenToString()
+                }
+            } else {
                 runBlocking {
                     communalInteractor.widgetContent.first().map {
                         it.componentName.flattenToString()
                     }
-                },
+                }
+           },
         )
         return StatsManager.PULL_SUCCESS
     }

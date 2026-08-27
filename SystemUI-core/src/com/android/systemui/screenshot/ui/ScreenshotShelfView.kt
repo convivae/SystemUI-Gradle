@@ -18,7 +18,6 @@ package com.android.systemui.screenshot.ui
 
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Insets
 import android.graphics.Rect
 import android.graphics.Region
 import android.util.AttributeSet
@@ -27,6 +26,7 @@ import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_GESTURAL
 import android.view.accessibility.AccessibilityEvent
@@ -48,7 +48,7 @@ class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :
     private val tmpRect = Rect()
     private lateinit var actionsContainerBackground: View
     private lateinit var actionsContainer: View
-    private lateinit var dismissButton: View
+    private var currentWindowInsets: WindowInsets = WindowInsets(Rect())
 
     // Prepare an internal `GestureDetector` to determine when we can initiate a touch-interception
     // session (with the client's provided `onTouchInterceptListener`). We delegate out to their
@@ -84,6 +84,10 @@ class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :
         })
 
         gestureDetector.setIsLongpressEnabled(false)
+        viewTreeObserver.addOnComputeInternalInsetsListener { info ->
+            info.setTouchableInsets(ViewTreeObserver.InternalInsetsInfo.TOUCHABLE_INSETS_REGION)
+            info.touchableRegion.set(getTouchRegion())
+        }
 
         // Extend the timeout on any accessibility event (e.g. voice access or explore-by-touch).
         setAccessibilityDelegate(
@@ -109,7 +113,6 @@ class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :
         screenshotStatic = requireViewById(R.id.screenshot_static)
         actionsContainerBackground = requireViewById(R.id.actions_container_background)
         actionsContainer = requireViewById(R.id.actions_container)
-        dismissButton = requireViewById(R.id.screenshot_dismiss_button)
 
         // Configure to extend the timeout during ongoing gestures (i.e. scrolls) that are already
         // being handled by our child views.
@@ -119,14 +122,33 @@ class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :
         })
     }
 
-    fun getTouchRegion(gestureInsets: Insets): Region {
-        val region = getSwipeRegion()
-
-        // only add gesture insets to touch region in gestural mode
+    fun getObservedRegion(): Region {
+        val region = getTouchRegion()
         if (
-            resources.getInteger(com.android.internal.R.integer.config_navBarInteractionMode) ==
+            resources.getInteger(com.android.internal.R.integer.config_navBarInteractionMode) !=
                 NAV_BAR_MODE_GESTURAL
         ) {
+            val boundingRects =
+                currentWindowInsets.getBoundingRects(WindowInsets.Type.navigationBars())
+            if (boundingRects.isNotEmpty()) {
+                region.op(boundingRects.first(), Region.Op.UNION)
+            }
+        }
+        return region
+    }
+
+    private fun getTouchRegion(): Region {
+        val region = getSwipeRegion()
+
+        /* only add gesture insets to touch region in gestural mode and if we have focus. if the
+        screenshot UI doesn't have focus we can't respond to back gestures anyway, so we shouldn't
+        count those regions as touchable. */
+        if (
+            hasWindowFocus() &&
+                resources.getInteger(com.android.internal.R.integer.config_navBarInteractionMode) ==
+                    NAV_BAR_MODE_GESTURAL
+        ) {
+            val gestureInsets = currentWindowInsets.getInsets(WindowInsets.Type.systemGestures())
             // Receive touches in gesture insets so they don't cause TOUCH_OUTSIDE
             // left edge gesture region
             val insetRect = Rect(0, 0, gestureInsets.left, displayMetrics.heightPixels)
@@ -145,10 +167,11 @@ class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :
     }
 
     fun updateInsets(insets: WindowInsets) {
+        currentWindowInsets = insets
         val orientation = mContext.resources.configuration.orientation
         val inPortrait = orientation == Configuration.ORIENTATION_PORTRAIT
-        val cutout = insets.displayCutout
-        val navBarInsets = insets.getInsets(WindowInsets.Type.navigationBars())
+        val cutout = currentWindowInsets.displayCutout
+        val navBarInsets = currentWindowInsets.getInsets(WindowInsets.Type.navigationBars())
 
         // When honoring the navbar or other obstacle offsets, include some extra padding above
         // the inset itself.
@@ -197,6 +220,13 @@ class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :
         }
     }
 
+    fun setSavingAnnouncement(string: String) {
+        val announceRegion = findViewById<View>(R.id.screenshot_saving_live_region)
+        // clear the description to make sure we announce for successive screenshots
+        announceRegion.contentDescription = ""
+        announceRegion.contentDescription = string
+    }
+
     // Max function for two or more params.
     private fun max(first: Int, second: Int, vararg items: Int): Int {
         var largest = if (first > second) first else second
@@ -213,7 +243,6 @@ class ScreenshotShelfView(context: Context, attrs: AttributeSet? = null) :
         val padding = FloatingWindowUtil.dpToPx(displayMetrics, -1 * TOUCH_PADDING_DP).toInt()
         swipeRegion.addInsetView(screenshotPreview, padding)
         swipeRegion.addInsetView(actionsContainerBackground, padding)
-        swipeRegion.addInsetView(dismissButton, padding)
         findViewById<View>(R.id.screenshot_message_container)?.let {
             swipeRegion.addInsetView(it, padding)
         }

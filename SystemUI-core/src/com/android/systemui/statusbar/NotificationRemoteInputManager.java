@@ -54,15 +54,16 @@ import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.power.domain.interactor.PowerInteractor;
 import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
+import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.statusbar.dagger.CentralSurfacesDependenciesModule;
-import com.android.systemui.statusbar.notification.NotifPipelineFlags;
 import com.android.systemui.statusbar.notification.RemoteInputControllerLogger;
+import com.android.systemui.statusbar.notification.collection.EntryAdapter;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry.EditedSuggestionInfo;
 import com.android.systemui.statusbar.notification.collection.render.NotificationVisibilityProvider;
-import com.android.systemui.statusbar.notification.logging.NotificationLogger;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
+import com.android.systemui.statusbar.notification.stack.shared.NotificationLocationHelperKt;
 import com.android.systemui.statusbar.phone.ExpandHeadsUpOnInlineReply;
 import com.android.systemui.statusbar.policy.RemoteInputUriController;
 import com.android.systemui.statusbar.policy.RemoteInputView;
@@ -104,7 +105,6 @@ public class NotificationRemoteInputManager implements CoreStartable {
     private final JavaAdapter mJavaAdapter;
     private final ShadeInteractor mShadeInteractor;
     protected final Context mContext;
-    protected final NotifPipelineFlags mNotifPipelineFlags;
     private final UserManager mUserManager;
     private final KeyguardManager mKeyguardManager;
     private final StatusBarStateController mStatusBarStateController;
@@ -118,8 +118,6 @@ public class NotificationRemoteInputManager implements CoreStartable {
     protected Callback mCallback;
 
     private final List<RemoteInputController.Callback> mControllerCallbacks = new ArrayList<>();
-    private final ListenerSet<Consumer<NotificationEntry>> mActionPressListeners =
-            new ListenerSet<>();
 
     private final InteractionHandler mInteractionHandler = new InteractionHandler() {
 
@@ -132,18 +130,22 @@ public class NotificationRemoteInputManager implements CoreStartable {
             Integer actionIndex = (Integer)
                     view.getTag(com.android.internal.R.id.notification_action_index_tag);
 
-            final NotificationEntry entry = getNotificationForParent(view.getParent());
-            mLogger.logInitialClick(entry, actionIndex, pendingIntent);
+            final ExpandableNotificationRow row = getNotificationRowForParent(view.getParent());
+            if (row == null) {
+                return false;
+            }
+            mLogger.logInitialClick(row.getLoggingKey(), actionIndex, pendingIntent);
 
             if (handleRemoteInput(view, pendingIntent)) {
-                mLogger.logRemoteInputWasHandled(entry, actionIndex);
+                mLogger.logRemoteInputWasHandled(row.getLoggingKey(), actionIndex);
                 return true;
             }
 
             if (DEBUG) {
                 Log.v(TAG, "Notification click handler invoked for intent: " + pendingIntent);
             }
-            logActionClick(view, entry, pendingIntent);
+            Notification.Action action = getActionFromView(view, row, pendingIntent);
+            logActionClick(view, row.getKey(), action);
             // The intent we are sending is for the application, which
             // won't have permission to immediately start an activity after
             // the user switches to home.  We know it is safe to do at this
@@ -152,32 +154,38 @@ public class NotificationRemoteInputManager implements CoreStartable {
                 ActivityManager.getService().resumeAppSwitches();
             } catch (RemoteException e) {
             }
-            Notification.Action action = getActionFromView(view, entry, pendingIntent);
             return mCallback.handleRemoteViewClick(view, pendingIntent,
                     action == null ? false : action.isAuthenticationRequired(), actionIndex, () -> {
                     Pair<Intent, ActivityOptions> options = response.getLaunchOptions(view);
-                    mLogger.logStartingIntentWithDefaultHandler(entry, pendingIntent, actionIndex);
+                    mLogger.logStartingIntentWithDefaultHandler(
+                             row.getLoggingKey(), pendingIntent, actionIndex);
                     boolean started = RemoteViews.startPendingIntent(view, pendingIntent, options);
-                    if (started) releaseNotificationIfKeptForRemoteInputHistory(entry);
+                    if (started) {
+                        releaseNotificationIfKeptForRemoteInputHistory(row.getEntryAdapter());
+                    }
                     return started;
             });
         }
 
         private @Nullable Notification.Action getActionFromView(View view,
-                NotificationEntry entry, PendingIntent actionIntent) {
+                ExpandableNotificationRow row, PendingIntent actionIntent) {
             Integer actionIndex = (Integer)
                     view.getTag(com.android.internal.R.id.notification_action_index_tag);
             if (actionIndex == null) {
                 return null;
             }
-            if (entry == null) {
+            StatusBarNotification statusBarNotification = null;
+            if (row.getEntryAdapter() != null) {
+                statusBarNotification = row.getEntryAdapter().getSbn();
+            }
+
+            if (statusBarNotification == null) {
                 Log.w(TAG, "Couldn't determine notification for click.");
                 return null;
             }
 
             // Notification may be updated before this function is executed, and thus play safe
             // here and verify that the action object is still the one that where the click happens.
-            StatusBarNotification statusBarNotification = entry.getSbn();
             Notification.Action[] actions = statusBarNotification.getNotification().actions;
             if (actions == null || actionIndex >= actions.length) {
                 Log.w(TAG, "statusBarNotification.getNotification().actions is null or invalid");
@@ -194,14 +202,12 @@ public class NotificationRemoteInputManager implements CoreStartable {
 
         private void logActionClick(
                 View view,
-                NotificationEntry entry,
-                PendingIntent actionIntent) {
-            Notification.Action action = getActionFromView(view, entry, actionIntent);
+                String key,
+                Notification.Action action) {
             if (action == null) {
                 return;
             }
             ViewParent parent = view.getParent();
-            String key = entry.getSbn().getKey();
             int buttonIndex = -1;
             // If this is a default template, determine the index of the button.
             if (view.getId() == com.android.internal.R.id.action0 &&
@@ -209,14 +215,14 @@ public class NotificationRemoteInputManager implements CoreStartable {
                 ViewGroup actionGroup = (ViewGroup) parent;
                 buttonIndex = actionGroup.indexOfChild(view);
             }
-            final NotificationVisibility nv = mVisibilityProvider.obtain(entry, true);
+            final NotificationVisibility nv = mVisibilityProvider.obtain(key, true);
             mClickNotifier.onNotificationActionClick(key, buttonIndex, action, nv, false);
         }
 
-        private NotificationEntry getNotificationForParent(ViewParent parent) {
+        private @Nullable ExpandableNotificationRow getNotificationRowForParent(ViewParent parent) {
             while (parent != null) {
                 if (parent instanceof ExpandableNotificationRow) {
-                    return ((ExpandableNotificationRow) parent).getEntry();
+                    return ((ExpandableNotificationRow) parent);
                 }
                 parent = parent.getParent();
             }
@@ -260,8 +266,7 @@ public class NotificationRemoteInputManager implements CoreStartable {
      */
     @Inject
     public NotificationRemoteInputManager(
-            Context context,
-            NotifPipelineFlags notifPipelineFlags,
+            @ShadeDisplayAware Context context,
             NotificationLockscreenUserManager lockscreenUserManager,
             SmartReplyController smartReplyController,
             NotificationVisibilityProvider visibilityProvider,
@@ -274,7 +279,6 @@ public class NotificationRemoteInputManager implements CoreStartable {
             JavaAdapter javaAdapter,
             ShadeInteractor shadeInteractor) {
         mContext = context;
-        mNotifPipelineFlags = notifPipelineFlags;
         mLockscreenUserManager = lockscreenUserManager;
         mSmartReplyController = smartReplyController;
         mVisibilityProvider = visibilityProvider;
@@ -351,7 +355,7 @@ public class NotificationRemoteInputManager implements CoreStartable {
                                 entry.getSbn().getKey(),
                                 entry.editedSuggestionInfo.index,
                                 entry.editedSuggestionInfo.originalText,
-                                NotificationLogger
+                                NotificationLocationHelperKt
                                         .getNotificationLocation(entry)
                                         .toMetricsEventEnum(),
                                 modifiedBeforeSending);
@@ -377,14 +381,6 @@ public class NotificationRemoteInputManager implements CoreStartable {
         } else {
             mControllerCallbacks.remove(callback);
         }
-    }
-
-    public void addActionPressListener(Consumer<NotificationEntry> listener) {
-        mActionPressListeners.addIfAbsent(listener);
-    }
-
-    public void removeActionPressListener(Consumer<NotificationEntry> listener) {
-        mActionPressListeners.remove(listener);
     }
 
     /**
@@ -646,12 +642,6 @@ public class NotificationRemoteInputManager implements CoreStartable {
         }
     }
 
-    /** Returns whether the given notification is lifetime extended because of remote input */
-    public boolean isNotificationKeptForRemoteInputHistory(String key) {
-        return mRemoteInputListener != null
-                && mRemoteInputListener.isNotificationKeptForRemoteInputHistory(key);
-    }
-
     /** Returns whether the notification should be lifetime extended for remote input history */
     public boolean shouldKeepForRemoteInputHistory(NotificationEntry entry) {
         if (!FORCE_REMOTE_INPUT_HISTORY) {
@@ -666,16 +656,15 @@ public class NotificationRemoteInputManager implements CoreStartable {
      * (after unlock, if applicable), and will then wait a short time to allow the app to update the
      * notification in response to the action.
      */
-    private void releaseNotificationIfKeptForRemoteInputHistory(NotificationEntry entry) {
-        if (entry == null) {
+    private void releaseNotificationIfKeptForRemoteInputHistory(EntryAdapter entryAdapter) {
+        if (entryAdapter == null) {
             return;
         }
         if (mRemoteInputListener != null) {
-            mRemoteInputListener.releaseNotificationIfKeptForRemoteInputHistory(entry);
+            mRemoteInputListener.releaseNotificationIfKeptForRemoteInputHistory(
+                    entryAdapter.getKey());
         }
-        for (Consumer<NotificationEntry> listener : mActionPressListeners) {
-            listener.accept(entry);
-        }
+        entryAdapter.onNotificationActionClicked();
     }
 
     /** Returns whether the notification should be lifetime extended for smart reply history */
@@ -721,7 +710,7 @@ public class NotificationRemoteInputManager implements CoreStartable {
      *
      * @return on-click handler
      */
-    public RemoteViews.InteractionHandler getRemoteViewsOnClickHandler() {
+    public InteractionHandler getRemoteViewsOnClickHandler() {
         return mInteractionHandler;
     }
 
@@ -847,11 +836,8 @@ public class NotificationRemoteInputManager implements CoreStartable {
         /** Called when the notification shade becomes fully closed */
         void onPanelCollapsed();
 
-        /** @return whether lifetime of a notification is being extended by the listener */
-        boolean isNotificationKeptForRemoteInputHistory(@NonNull String key);
-
         /** Called on user interaction to end lifetime extension for history */
-        void releaseNotificationIfKeptForRemoteInputHistory(@NonNull NotificationEntry entry);
+        void releaseNotificationIfKeptForRemoteInputHistory(@NonNull String entryKey);
 
         /** Called when the RemoteInputController is attached to the manager */
         void setRemoteInputController(@NonNull RemoteInputController remoteInputController);

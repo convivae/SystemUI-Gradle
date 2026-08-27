@@ -15,8 +15,10 @@
  */
 package com.android.keyguard;
 
-import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BUTTON;
-import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_KEY;
+import static android.security.Flags.lockscreenTimeoutDeactivatePinPad;
+
+import static com.android.keyguard.NumPadAnimatableKt.DISABLED_BACKGROUND_ALPHA;
+import static com.android.keyguard.NumPadAnimatableKt.DISABLED_FOREGROUND_ALPHA;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -28,21 +30,30 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
+import androidx.annotation.DrawableRes;
 import androidx.annotation.Nullable;
 
-import com.android.settingslib.Utils;
+import com.android.systemui.Flags;
+import com.android.systemui.bouncer.shared.constants.PinBouncerConstants.Color;
+import com.android.systemui.bouncer.ui.BouncerColors;
 import com.android.systemui.res.R;
+import com.android.systemui.util.ColorUtilKt;
 
-/**
- * Similar to the {@link NumPadKey}, but displays an image.
- */
-public class NumPadButton extends AlphaOptimizedImageButton implements NumPadAnimationListener {
+/** Similar to the {@link NumPadKey}, but displays an image. */
+public class NumPadButton extends AlphaOptimizedImageButton
+        implements NumPadAnimationListener, NumPadAnimatable {
 
     @Nullable
     private NumPadAnimator mAnimator;
     private int mOrientation;
     private int mStyleAttr;
     private boolean mIsTransparentMode;
+
+    @DrawableRes
+    private int mDrawableForTransparentMode = 0;
+
+    @DrawableRes
+    private int mDefaultDrawable = 0;
 
     public NumPadButton(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -53,6 +64,25 @@ public class NumPadButton extends AlphaOptimizedImageButton implements NumPadAni
     @Override
     protected void onConfigurationChanged(Configuration newConfig) {
         mOrientation = newConfig.orientation;
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        if (mAnimator == null || !lockscreenTimeoutDeactivatePinPad()) {
+            return;
+        }
+        if (enabled) {
+            mAnimator.enable();
+        } else {
+            mAnimator.disable();
+        }
+    }
+
+    @Override
+    public void setAlpha(float fgAlpha, float bgAlpha) {
+        reloadIconTintWithAlpha(fgAlpha);
+        getBackground().mutate().setAlpha(i(bgAlpha));
     }
 
     @Override
@@ -82,6 +112,9 @@ public class NumPadButton extends AlphaOptimizedImageButton implements NumPadAni
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (lockscreenTimeoutDeactivatePinPad() && !isEnabled()) {
+            return super.onTouchEvent(event);
+        }
         switch(event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 if (mAnimator != null) mAnimator.expand();
@@ -100,15 +133,25 @@ public class NumPadButton extends AlphaOptimizedImageButton implements NumPadAni
     public void reloadColors() {
         if (mAnimator != null) mAnimator.reloadColors(getContext());
 
-        int textColorResId = mIsTransparentMode ? NUM_PAD_KEY : NUM_PAD_BUTTON;
-        int imageColor = Utils.getColorAttrDefaultColor(getContext(), textColorResId);
+        if (lockscreenTimeoutDeactivatePinPad()) {
+            reloadIconTintWithAlpha(isEnabled() ? 1f : DISABLED_FOREGROUND_ALPHA);
+            return;
+        }
+        int textColorResId = mIsTransparentMode ? Color.actionWithAutoConfirm : Color.action;
+        int imageColor = getContext().getColor(textColorResId);
         ((VectorDrawable) getDrawable()).setTintList(ColorStateList.valueOf(imageColor));
+    }
+
+    private void reloadIconTintWithAlpha(float alpha) {
+        int textColorResId = mIsTransparentMode ? Color.actionWithAutoConfirm : Color.action;
+        int iconColor = ColorUtilKt.getColorWithAlpha(getContext().getColor(textColorResId), alpha);
+        getDrawable().mutate().setTint(iconColor);
     }
 
     @Override
     public void setProgress(float progress) {
         if (mAnimator != null) {
-            mAnimator.setProgress(progress);
+            mAnimator.setProgress(progress, isEnabled());
         }
     }
 
@@ -125,9 +168,20 @@ public class NumPadButton extends AlphaOptimizedImageButton implements NumPadAni
         mIsTransparentMode = isTransparentMode;
 
         if (isTransparentMode) {
+            if (mDrawableForTransparentMode != 0) {
+                setImageResource(mDrawableForTransparentMode);
+            }
             setBackgroundColor(getResources().getColor(android.R.color.transparent));
         } else {
-            setBackground(getContext().getDrawable(R.drawable.num_pad_key_background));
+            if (mDefaultDrawable != 0) {
+                setImageResource(mDefaultDrawable);
+            }
+            Drawable bgDrawable = getContext().getDrawable(R.drawable.num_pad_key_background);
+            if (Flags.bouncerUiRevamp2() && bgDrawable != null) {
+                int bgColor = BouncerColors.pinActionBg(getContext());
+                bgDrawable.setTint(bgColor);
+            }
+            setBackground(bgDrawable);
         }
         setupAnimator();
         reloadColors();
@@ -141,7 +195,7 @@ public class NumPadButton extends AlphaOptimizedImageButton implements NumPadAni
         Drawable background = getBackground();
         if (background instanceof GradientDrawable) {
             mAnimator = new NumPadAnimator(getContext(), background.mutate(),
-                    mStyleAttr, getDrawable());
+                    mStyleAttr, getDrawable(), this);
         } else {
             mAnimator = null;
         }
@@ -151,5 +205,20 @@ public class NumPadButton extends AlphaOptimizedImageButton implements NumPadAni
     public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
         super.onInitializeAccessibilityNodeInfo(info);
         info.setTextEntryKey(true);
+    }
+
+    /**
+     * Drawable to use when transparent mode is enabled
+     */
+    public void setDrawableForTransparentMode(@DrawableRes int drawableResId) {
+        mDrawableForTransparentMode = drawableResId;
+    }
+
+    /**
+     * Drawable to use when transparent mode is not enabled.
+     */
+    public void setDefaultDrawable(@DrawableRes int drawableResId) {
+        mDefaultDrawable = drawableResId;
+        setImageResource(mDefaultDrawable);
     }
 }

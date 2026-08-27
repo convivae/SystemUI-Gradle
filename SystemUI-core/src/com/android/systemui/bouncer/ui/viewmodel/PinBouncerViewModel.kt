@@ -14,35 +14,34 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.android.systemui.bouncer.ui.viewmodel
 
 import android.content.Context
-import android.view.HapticFeedbackConstants
 import android.view.KeyEvent.KEYCODE_0
 import android.view.KeyEvent.KEYCODE_9
 import android.view.KeyEvent.KEYCODE_DEL
 import android.view.KeyEvent.KEYCODE_NUMPAD_0
 import android.view.KeyEvent.KEYCODE_NUMPAD_9
 import android.view.KeyEvent.isConfirmKey
-import android.view.View
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.keyguard.PinShapeAdapter
+import com.android.keyguard.domain.interactor.KeyguardKeyboardInteractor
+import com.android.systemui.Flags
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel
 import com.android.systemui.bouncer.domain.interactor.BouncerInteractor
 import com.android.systemui.bouncer.domain.interactor.SimBouncerInteractor
-import com.android.systemui.bouncer.shared.flag.ComposeBouncerFlags
 import com.android.systemui.bouncer.ui.helper.BouncerHapticPlayer
 import com.android.systemui.res.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,7 +49,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 /** Holds UI state and handles user input for the PIN code bouncer UI. */
 class PinBouncerViewModel
@@ -59,6 +57,7 @@ constructor(
     applicationContext: Context,
     interactor: BouncerInteractor,
     private val simBouncerInteractor: SimBouncerInteractor,
+    keyguardKeyboardInteractor: KeyguardKeyboardInteractor,
     @Assisted bouncerHapticPlayer: BouncerHapticPlayer,
     @Assisted isInputEnabled: StateFlow<Boolean>,
     @Assisted private val onIntentionalUserInput: () -> Unit,
@@ -78,26 +77,56 @@ constructor(
     val isSimAreaVisible = authenticationMethod == AuthenticationMethodModel.Sim
     val isLockedEsim: StateFlow<Boolean?> = simBouncerInteractor.isLockedEsim
     val errorDialogMessage: StateFlow<String?> = simBouncerInteractor.errorDialogMessage
+
+    val isPinDisplayBorderVisible: Flow<Boolean> =
+        keyguardKeyboardInteractor.isAnyKeyboardConnected.map { isAnyKeyboardConnected ->
+            isAnyKeyboardConnected && Flags.pinInputFieldStyledFocusState()
+        }
+
     val isSimUnlockingDialogVisible: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val pinShapes = PinShapeAdapter(applicationContext)
     private val mutablePinInput = MutableStateFlow(PinInputViewModel.empty())
 
     /** Currently entered pin keys. */
     val pinInput: StateFlow<PinInputViewModel> = mutablePinInput
+    /** The length of the currently inputted PIN so far. */
+    val enteredPinLength: Int by pinInput.map { it.getPin().size }.hydratedStateOf(initialValue = 0)
 
     private val _hintedPinLength = MutableStateFlow<Int?>(null)
     /** The length of the PIN for which we should show a hint. */
     val hintedPinLength: StateFlow<Int?> = _hintedPinLength.asStateFlow()
 
-    private val _backspaceButtonAppearance = MutableStateFlow(ActionButtonAppearance.Hidden)
+    // If `true`, some element of PinBouncer currently has keyboard focus.
+    private val _isFocused = MutableStateFlow<Boolean>(false)
+
+    // The initial value is true if input is enabled, so PinBouncer requests keyboard focus when it
+    // appears.
+    private val _isFocusRequested = MutableStateFlow(isInputEnabled.value)
+
+    /** Whether the PinBouncer UI should request keyboard focus. */
+    val isFocusRequested = _isFocusRequested.asStateFlow()
+
     /** Appearance of the backspace button. */
-    val backspaceButtonAppearance: StateFlow<ActionButtonAppearance> =
-        _backspaceButtonAppearance.asStateFlow()
+    val backspaceButtonAppearance: ActionButtonAppearance by
+        combine(
+                mutablePinInput,
+                interactor.isAutoConfirmEnabled,
+                ::computeBackspaceButtonAppearance,
+            )
+            .hydratedStateOf(
+                initialValue =
+                    computeBackspaceButtonAppearance(
+                        mutablePinInput.value,
+                        interactor.isAutoConfirmEnabled.value,
+                    )
+            )
 
     private val _confirmButtonAppearance = MutableStateFlow(ActionButtonAppearance.Hidden)
     /** Appearance of the confirm button. */
     val confirmButtonAppearance: StateFlow<ActionButtonAppearance> =
         _confirmButtonAppearance.asStateFlow()
+
+    override val _readyToTryAuthenticate = MutableStateFlow(false)
 
     override val lockoutMessageId = R.string.kg_too_many_failed_pin_attempts_dialog_message
 
@@ -106,6 +135,7 @@ constructor(
     override suspend fun onActivated(): Nothing {
         coroutineScope {
             launch { super.onActivated() }
+                .invokeOnCompletion { simBouncerInteractor.resetSimPukUserInput() }
             launch {
                 requests.receiveAsFlow().collect { request ->
                     when (request) {
@@ -130,17 +160,7 @@ constructor(
                     }
                     .collect { _hintedPinLength.value = it }
             }
-            launch {
-                combine(mutablePinInput, interactor.isAutoConfirmEnabled) {
-                        mutablePinEntries,
-                        isAutoConfirmEnabled ->
-                        computeBackspaceButtonAppearance(
-                            pinInput = mutablePinEntries,
-                            isAutoConfirmEnabled = isAutoConfirmEnabled,
-                        )
-                    }
-                    .collect { _backspaceButtonAppearance.value = it }
-            }
+            launch { mutablePinInput.collect { _readyToTryAuthenticate.value = !it.isEmpty() } }
             launch {
                 interactor.isAutoConfirmEnabled
                     .map { if (it) ActionButtonAppearance.Hidden else ActionButtonAppearance.Shown }
@@ -150,6 +170,14 @@ constructor(
                 interactor.isPinEnhancedPrivacyEnabled
                     .map { !it }
                     .collect { _isDigitButtonAnimationEnabled.value = it }
+            }
+            launch {
+                // This re-requests focus when input becomes re-enabled, or if focus gets lost, e.g.
+                // due to b/453871684.
+                combine(isInputEnabled, _isFocused) { hasInput, isFocused ->
+                        hasInput && !isFocused && !wasSuccessfullyAuthenticated
+                    }
+                    .collect { _isFocusRequested.value = it }
             }
             awaitCancellation()
         }
@@ -187,22 +215,15 @@ constructor(
         mutablePinInput.value = mutablePinInput.value.deleteLast()
     }
 
-    fun onBackspaceButtonPressed(view: View?) {
-        if (bouncerHapticPlayer?.isEnabled == true) {
-            bouncerHapticPlayer.playDeleteKeyPressFeedback()
-        } else {
-            view?.performHapticFeedback(
-                HapticFeedbackConstants.VIRTUAL_KEY,
-                HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING,
-            )
-        }
+    fun onBackspaceButtonPressed() {
+        onDown()
+
+        bouncerHapticPlayer.playDeleteKeyPressFeedback()
     }
 
     /** Notifies that the user long-pressed the backspace button. */
     fun onBackspaceButtonLongPressed() {
-        if (bouncerHapticPlayer?.isEnabled == true) {
-            bouncerHapticPlayer.playDeleteKeyLongPressedFeedback()
-        }
+        bouncerHapticPlayer.playDeleteKeyLongPressedFeedback()
         clearInput()
     }
 
@@ -252,33 +273,27 @@ constructor(
      * @return `true` when the [KeyEvent] was consumed as user input on bouncer; `false` otherwise.
      */
     override fun onKeyEvent(type: KeyEventType, keyCode: Int): Boolean {
-        return when (type) {
-            KeyEventType.KeyUp -> {
-                if (isConfirmKey(keyCode)) {
-                    onAuthenticateButtonClicked()
-                    true
-                } else {
-                    false
-                }
+        if (isConfirmKey(keyCode)) {
+            if (type == KeyEventType.KeyUp) {
+                onAuthenticateButtonClicked()
             }
-            KeyEventType.KeyDown -> {
-                when (keyCode) {
-                    KEYCODE_DEL -> {
-                        onBackspaceButtonClicked()
-                        true
-                    }
-                    in KEYCODE_0..KEYCODE_9 -> {
-                        onPinButtonClicked(keyCode - KEYCODE_0)
-                        true
-                    }
-                    in KEYCODE_NUMPAD_0..KEYCODE_NUMPAD_9 -> {
-                        onPinButtonClicked(keyCode - KEYCODE_NUMPAD_0)
-                        true
-                    }
-                    else -> {
-                        false
-                    }
-                }
+            return true
+        }
+
+        if (type != KeyEventType.KeyDown) return false
+
+        return when (keyCode) {
+            KEYCODE_DEL -> {
+                onBackspaceButtonClicked()
+                true
+            }
+            in KEYCODE_0..KEYCODE_9 -> {
+                onPinButtonClicked(keyCode - KEYCODE_0)
+                true
+            }
+            in KEYCODE_NUMPAD_0..KEYCODE_NUMPAD_9 -> {
+                onPinButtonClicked(keyCode - KEYCODE_NUMPAD_0)
+                true
             }
             else -> false
         }
@@ -286,22 +301,23 @@ constructor(
 
     /**
      * Notifies that the user has pressed down on a digit button. This function also performs haptic
-     * feedback on the view.
+     * feedback.
      */
-    fun onDigitButtonDown(view: View?) {
-        if (ComposeBouncerFlags.isOnlyComposeBouncerEnabled()) {
-            // Current PIN bouncer informs FalsingInteractor#avoidGesture() upon every Pin button
-            // touch.
-            super.onDown()
-        }
-        if (bouncerHapticPlayer?.isEnabled == true) {
-            bouncerHapticPlayer.playNumpadKeyFeedback()
-        } else {
-            view?.performHapticFeedback(
-                HapticFeedbackConstants.VIRTUAL_KEY,
-                HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING,
-            )
-        }
+    fun onDigitButtonDown() {
+        // This ends up calling FalsingInteractor#avoidGesture() each time a PIN button is touched.
+        // It helps make sure that legitimate touch in the PIN bouncer isn't treated as false touch.
+        super.onDown()
+
+        bouncerHapticPlayer.playNumpadKeyFeedback()
+    }
+
+    /**
+     * Invoked when keyboard focus state of PinBouncer changes.
+     *
+     * @param isFocused `true` means that that any element of PinBouncer has keyboard focus.
+     */
+    fun onFocusChanged(isFocused: Boolean) {
+        _isFocused.value = isFocused
     }
 
     @AssistedFactory

@@ -28,8 +28,10 @@ class UncaughtExceptionPreHandlerManager @Inject constructor() {
      * Verifies that the global handler is set in Thread. If not, sets is up.
      */
     private fun checkGlobalHandlerSetup() {
-        // CONV_MOD BEGIN: Thread.getUncaughtExceptionPreHandler 是 @UnsupportedAppUsage 隐藏 API，
-        // 无可用 jar 含此方法（hiddenapi 从所有 stub 移除），改用反射。见 docs/issues/2026-08-07-uncaught-exception-prehandler-reflection.md
+        // CONV_MOD BEGIN [task070] reason: Thread.get/setUncaughtExceptionPreHandler 仍为 @hide（libcore
+        // ojluni，hiddenapi 注解未摘），SysUISdk android.jar 的 java.lang.Thread 无此方法，改用反射。
+        // 依据：aosp17 libcore/ojluni/annotations/hiddenapi/java/lang/Thread.java L299/L305 + javap 实测。
+        // 见 docs/issues/2026-08-07-uncaught-exception-prehandler-reflection.md 与 task070 issue 文档
         // val currentHandler = Thread.getUncaughtExceptionPreHandler()
         val currentHandler = runCatching {
             Thread::class.java.getDeclaredMethod("getUncaughtExceptionPreHandler")
@@ -42,7 +44,7 @@ class UncaughtExceptionPreHandlerManager @Inject constructor() {
                 throw IllegalStateException("Two UncaughtExceptionPreHandlerManagers created")
             }
             currentHandler?.let { addHandler(it) }
-            // CONV_MOD BEGIN: Thread.setUncaughtExceptionPreHandler 同为隐藏 API，改用反射。
+            // CONV_MOD BEGIN [task070] reason: 同上，setUncaughtExceptionPreHandler 亦为隐藏 API，改用反射。
             // Thread.setUncaughtExceptionPreHandler(globalUncaughtExceptionPreHandler)
             runCatching {
                 Thread::class.java.getDeclaredMethod(

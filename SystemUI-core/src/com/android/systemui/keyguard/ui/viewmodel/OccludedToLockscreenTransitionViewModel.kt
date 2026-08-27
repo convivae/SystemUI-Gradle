@@ -29,12 +29,14 @@ import com.android.systemui.keyguard.shared.model.KeyguardState.OCCLUDED
 import com.android.systemui.keyguard.ui.KeyguardTransitionAnimationFlow
 import com.android.systemui.keyguard.ui.transitions.DeviceEntryIconTransition
 import com.android.systemui.res.R
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.util.kotlin.pairwise
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -44,7 +46,6 @@ import kotlinx.coroutines.flow.merge
  * Breaks down OCCLUDED->LOCKSCREEN transition into discrete steps for corresponding views to
  * consume.
  */
-@ExperimentalCoroutinesApi
 @SysUISingleton
 class OccludedToLockscreenTransitionViewModel
 @Inject
@@ -57,23 +58,31 @@ constructor(
 ) : DeviceEntryIconTransition {
 
     private val transitionAnimation =
-        animationFlow.setup(
-            duration = TO_LOCKSCREEN_DURATION,
-            edge = Edge.create(from = OCCLUDED, to = LOCKSCREEN),
-        )
+        animationFlow
+            .setup(
+                duration = TO_LOCKSCREEN_DURATION,
+                edge = Edge.create(from = Scenes.Occluded, to = LOCKSCREEN),
+            )
+            .setupWithoutSceneContainer(edge = Edge.create(from = OCCLUDED, to = LOCKSCREEN))
 
     /** Lockscreen views y-translation */
     val lockscreenTranslationY: Flow<Float> =
-        configurationInteractor
-            .dimensionPixelSize(R.dimen.occluded_to_lockscreen_transition_lockscreen_translation_y)
-            .flatMapLatest { translatePx ->
-                transitionAnimation.sharedFlow(
-                    duration = TO_LOCKSCREEN_DURATION,
-                    onStep = { value -> -translatePx + value * translatePx },
-                    interpolator = EMPHASIZED_DECELERATE,
-                    onCancel = { 0f },
+        if (SceneContainerFlag.isEnabled) {
+            emptyFlow()
+        } else {
+            configurationInteractor
+                .dimensionPixelSize(
+                    R.dimen.occluded_to_lockscreen_transition_lockscreen_translation_y
                 )
-            }
+                .flatMapLatest { translatePx ->
+                    transitionAnimation.sharedFlow(
+                        duration = TO_LOCKSCREEN_DURATION,
+                        onStep = { value -> -translatePx + value * translatePx },
+                        interpolator = EMPHASIZED_DECELERATE,
+                        onCancel = { 0f },
+                    )
+                }
+        }
 
     val shortcutsAlpha: Flow<Float> =
         transitionAnimation.sharedFlow(
@@ -89,7 +98,6 @@ constructor(
                 startTime = 233.milliseconds,
                 duration = 250.milliseconds,
                 onStep = { it },
-                name = "OCCLUDED->LOCKSCREEN: lockscreenAlpha",
             ),
             // Required to fix a bug where the shade expands while lockscreenAlpha=1f, due to a call
             // to setOccluded(false) triggering a reset() call in KeyguardViewMediator. The
@@ -98,14 +106,30 @@ constructor(
             // emit alpha = 0f for OCCLUDED -> LOCKSCREEN whenever isOccluded flips from true to
             // false while currentState == OCCLUDED, so that alpha = 0f when that expansion occurs.
             // TODO(b/332946323): Remove this once it's no longer needed.
-            keyguardInteractor.isKeyguardOccluded
-                .pairwise()
-                .filter { (wasOccluded, isOccluded) ->
-                    wasOccluded &&
-                        !isOccluded &&
-                        keyguardTransitionInteractor.getCurrentState() == OCCLUDED
-                }
-                .map { 0f },
+            if (SceneContainerFlag.isEnabled) {
+                emptyFlow()
+            } else {
+                keyguardInteractor.isKeyguardOccluded
+                    .pairwise()
+                    .filter { (wasOccluded, isOccluded) ->
+                        wasOccluded &&
+                            !isOccluded &&
+                            keyguardTransitionInteractor.getCurrentState() == OCCLUDED
+                    }
+                    .map { 0f }
+            },
+        )
+
+    /**
+     * Emit 0f to prevent overlap with non-keyguard status bars. Sending -1f onFinish indicates a
+     * reset.
+     */
+    val statusBarAlpha: Flow<Float> =
+        transitionAnimation.sharedFlow(
+            duration = TO_LOCKSCREEN_DURATION,
+            onStep = { 0f },
+            onCancel = { -1f },
+            onFinish = { -1f },
         )
 
     val deviceEntryBackgroundViewAlpha: Flow<Float> =

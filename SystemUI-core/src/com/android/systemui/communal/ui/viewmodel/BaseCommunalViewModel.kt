@@ -16,10 +16,8 @@
 
 package com.android.systemui.communal.ui.viewmodel
 
-import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.os.UserHandle
-import android.view.View
 import com.android.compose.animation.scene.ObservableTransitionState
 import com.android.compose.animation.scene.SceneKey
 import com.android.compose.animation.scene.TransitionKey
@@ -29,10 +27,15 @@ import com.android.systemui.communal.domain.model.CommunalContentModel
 import com.android.systemui.communal.shared.model.EditModeState
 import com.android.systemui.communal.widgets.WidgetConfigurator
 import com.android.systemui.keyguard.shared.model.KeyguardState
+import com.android.systemui.media.controls.domain.pipeline.interactor.MediaCarouselInteractor
 import com.android.systemui.media.controls.ui.controller.MediaCarouselController
 import com.android.systemui.media.controls.ui.view.MediaHost
+import com.android.systemui.media.remedia.ui.compose.MediaUiBehavior
+import com.android.systemui.media.remedia.ui.viewmodel.MediaCarouselVisibility
+import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
 import com.android.systemui.util.kotlin.BooleanFlowOperators.anyOf
 import com.android.systemui.util.kotlin.BooleanFlowOperators.not
+import dagger.Lazy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,8 +48,10 @@ abstract class BaseCommunalViewModel(
     private val communalInteractor: CommunalInteractor,
     val mediaHost: MediaHost,
     val mediaCarouselController: MediaCarouselController,
+    val mediaViewModelFactory: MediaViewModel.Factory,
+    val mediaCarouselInteractorLazy: Lazy<MediaCarouselInteractor>,
 ) {
-    val currentScene: Flow<SceneKey> = communalSceneInteractor.currentScene
+    val currentScene: StateFlow<SceneKey> = communalSceneInteractor.currentScene
 
     /** Used to animate showing or hiding the communal content. */
     open val isCommunalContentVisible: Flow<Boolean> = MutableStateFlow(false)
@@ -80,8 +85,18 @@ abstract class BaseCommunalViewModel(
      */
     val glanceableTouchAvailable: Flow<Boolean> = anyOf(not(isTouchConsumed), isNestedScrolling)
 
-    /** Accessibility delegate to be set on CommunalAppWidgetHostView. */
-    open val widgetAccessibilityDelegate: View.AccessibilityDelegate? = null
+    val mediaUiBehavior: MediaUiBehavior
+        get() =
+            MediaUiBehavior(
+                isCarouselDismissible = false,
+                isCarouselScrollingEnabled = false,
+                carouselVisibility = MediaCarouselVisibility.WhenAnyCardIsActive,
+            )
+
+    protected val _addingWidgetDragAction = MutableStateFlow(false)
+
+    /** Whether widgets are currently being added. */
+    open val addingWidgetDragAction: StateFlow<Boolean> = _addingWidgetDragAction.asStateFlow()
 
     /**
      * The up-to-date value of the grid scroll offset. persisted to interactor on
@@ -94,6 +109,12 @@ abstract class BaseCommunalViewModel(
      * {@link #persistScrollPosition}
      */
     private var currentScrollIndex = 0
+
+    /**
+     * Whether to show edit mode layout, like pushing the widgets down to make space for the toolbar
+     * on top.
+     */
+    abstract val shouldShowEditModeLayout: Flow<Boolean>
 
     fun signalUserInteraction() {
         communalInteractor.signalUserInteraction()
@@ -157,7 +178,7 @@ abstract class BaseCommunalViewModel(
     ) {}
 
     /** Called as the UI requests deleting a widget. */
-    open fun onDeleteWidget(id: Int, componentName: ComponentName, rank: Int) {}
+    open fun onDeleteWidget(id: Int, key: String, componentName: ComponentName, rank: Int) {}
 
     /** Called as the UI detects a tap event on the widget. */
     open fun onTapWidget(componentName: ComponentName, rank: Int) {}
@@ -195,7 +216,7 @@ abstract class BaseCommunalViewModel(
     open fun onDismissCtaTile() {}
 
     /** Called as the user starts dragging a widget to reorder. */
-    open fun onReorderWidgetStart() {}
+    open fun onReorderWidgetStart(draggingItemKey: String) {}
 
     /** Called as the user finishes dragging a widget to reorder. */
     open fun onReorderWidgetEnd() {}
@@ -206,8 +227,11 @@ abstract class BaseCommunalViewModel(
     /** Called as the user request to show the customize widget button. */
     open fun onLongClick() {}
 
-    /** Called as the UI determines that a new widget has been added to the grid. */
-    open fun onNewWidgetAdded(provider: AppWidgetProviderInfo) {}
+    /** Called as the user requests to switch to the previous player in UMO. */
+    open fun onShowPreviousMedia() {}
+
+    /** Called as the user requests to switch to the next player in UMO. */
+    open fun onShowNextMedia() {}
 
     /** Called when the grid scroll position has been updated. */
     open fun onScrollPositionUpdated(firstVisibleItemIndex: Int, firstVisibleItemScroll: Int) {
@@ -216,14 +240,22 @@ abstract class BaseCommunalViewModel(
     }
 
     /** Stores scroll values to interactor. */
-    protected fun persistScrollPosition() {
-        communalInteractor.setScrollPosition(currentScrollIndex, currentScrollOffset)
+    protected fun persistScrollPosition(reason: String) {
+        communalInteractor.setScrollPosition(currentScrollIndex, currentScrollOffset, reason)
     }
 
     /** Invoked after scroll values are used to initialize grid position. */
-    open fun clearPersistedScrollPosition() {
-        communalInteractor.setScrollPosition(0, 0)
+    open fun clearPersistedScrollPosition(reason: String) {
+        communalInteractor.clearScrollPosition(reason)
     }
+
+    /** Called when the user starts adding a new widget. */
+    open fun onAddWidgetDragAndDropStart() {}
+
+    /** Called when the user finishes or cancels adding a new widget. */
+    open fun onAddWidgetDragAndDropEnd() {}
+
+    open fun allocateWidgets() {}
 
     val savedFirstScrollIndex: Int
         get() = communalInteractor.firstVisibleItemIndex

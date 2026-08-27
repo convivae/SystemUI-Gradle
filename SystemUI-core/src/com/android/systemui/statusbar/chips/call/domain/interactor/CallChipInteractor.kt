@@ -19,17 +19,17 @@ package com.android.systemui.statusbar.chips.call.domain.interactor
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.log.LogBuffer
-import com.android.systemui.log.core.LogLevel
+import com.android.systemui.log.core.Logger
 import com.android.systemui.statusbar.chips.StatusBarChipLogTags.pad
 import com.android.systemui.statusbar.chips.StatusBarChipsLog
-import com.android.systemui.statusbar.phone.ongoingcall.data.repository.OngoingCallRepository
 import com.android.systemui.statusbar.phone.ongoingcall.domain.interactor.OngoingCallInteractor
-import com.android.systemui.statusbar.phone.ongoingcall.StatusBarChipsModernization
 import com.android.systemui.statusbar.phone.ongoingcall.shared.model.OngoingCallModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
@@ -40,29 +40,25 @@ class CallChipInteractor
 constructor(
     @Application private val scope: CoroutineScope,
     ongoingCallInteractor: OngoingCallInteractor,
-    repository: OngoingCallRepository,
-    @StatusBarChipsLog private val logger: LogBuffer,
+    @StatusBarChipsLog private val logBuffer: LogBuffer,
 ) {
-    val ongoingCallState: StateFlow<OngoingCallModel> =
-        (if (StatusBarChipsModernization.isEnabled)
-            ongoingCallInteractor.ongoingCallState
-        else
-            repository.ongoingCallState)
-            .onEach {
-                logger.log(
-                    TAG,
-                    LogLevel.INFO,
-                    { str1 = it::class.simpleName },
-                    { "State: $str1" }
-                )
-            }
-            .stateIn(
-                scope,
-                SharingStarted.Lazily,
-                OngoingCallModel.NoCall
-            )
+    private val logger = Logger(logBuffer, "CallChip".pad())
 
-    companion object {
-        private val TAG = "OngoingCall".pad()
-    }
+    val ongoingCallState: StateFlow<OngoingCallModel> =
+        ongoingCallInteractor.ongoingCallState
+            .map { state ->
+                if (state is OngoingCallModel.InCall && state.requestedPromotion) {
+                    // If this notification requested promotion, then the promoted notification
+                    // chips will handle everything and we don't ever need to show a call chip. See
+                    // b/414830065.
+                    OngoingCallModel.NoCall
+                } else {
+                    state
+                }
+            }
+            .distinctUntilChanged()
+            .onEach {
+                logger.d({ "Call chip state updated: newState=$str1" }) { str1 = it.logString() }
+            }
+            .stateIn(scope, SharingStarted.Lazily, OngoingCallModel.NoCall)
 }

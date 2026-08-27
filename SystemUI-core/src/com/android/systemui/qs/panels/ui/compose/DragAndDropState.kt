@@ -17,6 +17,7 @@
 package com.android.systemui.qs.panels.ui.compose
 
 import android.content.ClipData
+import android.view.View
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
@@ -35,7 +36,6 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.toRect
 import com.android.systemui.qs.panels.shared.model.SizedTile
 import com.android.systemui.qs.panels.ui.viewmodel.EditTileViewModel
@@ -44,17 +44,27 @@ import com.android.systemui.qs.pipeline.shared.TileSpec
 /** Holds the [TileSpec] of the tile being moved and receives drag and drop events. */
 interface DragAndDropState {
     val draggedCell: SizedTile<EditTileViewModel>?
+    val isDraggedCellRemovable: Boolean
+    val draggedPosition: Offset
     val dragInProgress: Boolean
+    val dragType: DragType?
 
     fun isMoving(tileSpec: TileSpec): Boolean
 
-    fun onStarted(cell: SizedTile<EditTileViewModel>)
+    fun onStarted(cell: SizedTile<EditTileViewModel>, dragType: DragType)
 
-    fun onMoved(target: Int, insertAfter: Boolean)
+    fun onTargeting(target: Int, insertAfter: Boolean)
+
+    fun onMoved(offset: Offset)
 
     fun movedOutOfBounds()
 
     fun onDrop()
+}
+
+enum class DragType {
+    Add,
+    Move,
 }
 
 /**
@@ -67,21 +77,21 @@ interface DragAndDropState {
 @Composable
 fun Modifier.dragAndDropRemoveZone(
     dragAndDropState: DragAndDropState,
-    onDrop: (TileSpec) -> Unit,
+    onDrop: (TileSpec, removalEnabled: Boolean) -> Unit,
 ): Modifier {
     val target =
         remember(dragAndDropState) {
             object : DragAndDropTarget {
+                override fun onMoved(event: DragAndDropEvent) {
+                    dragAndDropState.onMoved(event.toOffset())
+                }
+
                 override fun onDrop(event: DragAndDropEvent): Boolean {
                     return dragAndDropState.draggedCell?.let {
-                        onDrop(it.tile.tileSpec)
+                        onDrop(it.tile.tileSpec, dragAndDropState.isDraggedCellRemovable)
                         dragAndDropState.onDrop()
                         true
                     } ?: false
-                }
-
-                override fun onEntered(event: DragAndDropEvent) {
-                    dragAndDropState.movedOutOfBounds()
                 }
             }
         }
@@ -113,12 +123,22 @@ fun Modifier.dragAndDropTileList(
         remember(dragAndDropState) {
             object : DragAndDropTarget {
                 override fun onEnded(event: DragAndDropEvent) {
-                    dragAndDropState.onDrop()
+                    // Drop the tile if the drag ended with a cell still marked as dragged. This can
+                    // happen if no other drag listeners consumed the drop event.
+                    onDropInternal()
+                }
+
+                override fun onExited(event: DragAndDropEvent) {
+                    if (!dragAndDropState.isDraggedCellRemovable) return
+                    dragAndDropState.movedOutOfBounds()
                 }
 
                 override fun onMoved(event: DragAndDropEvent) {
+                    val offset = event.toOffset()
+                    dragAndDropState.onMoved(offset)
+
                     // Drag offset relative to the list's top left corner
-                    val relativeDragOffset = event.dragOffsetRelativeTo(contentOffset())
+                    val relativeDragOffset = offset - contentOffset()
                     val targetItem =
                         gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
                             // Check if the drag is on this item
@@ -126,11 +146,15 @@ fun Modifier.dragAndDropTileList(
                         }
 
                     targetItem?.let {
-                        dragAndDropState.onMoved(it.index, insertAfter(it, relativeDragOffset))
+                        dragAndDropState.onTargeting(it.index, insertAfter(it, relativeDragOffset))
                     }
                 }
 
                 override fun onDrop(event: DragAndDropEvent): Boolean {
+                    return onDropInternal()
+                }
+
+                private fun onDropInternal(): Boolean {
                     return dragAndDropState.draggedCell?.let {
                         onDrop(it.tile.tileSpec)
                         dragAndDropState.onDrop()
@@ -147,15 +171,15 @@ fun Modifier.dragAndDropTileList(
     )
 }
 
-private fun DragAndDropEvent.dragOffsetRelativeTo(offset: Offset): Offset {
-    return toAndroidDragEvent().run { Offset(x, y) } - offset
+private fun DragAndDropEvent.toOffset(): Offset {
+    return toAndroidDragEvent().run { Offset(x, y) }
 }
 
 private fun insertAfter(item: LazyGridItemInfo, offset: Offset): Boolean {
-    // We want to insert the tile after the target if we're aiming at the right side of a large tile
+    // We want to insert the tile after the target if we're aiming at the end of a large tile
     // TODO(ostonge): Verify this behavior in RTL
-    val itemCenter = item.offset + item.size.center
-    return item.span != 1 && offset.x > itemCenter.x
+    val itemCenter = item.offset.x + item.size.width * .5
+    return item.span != 1 && offset.x > itemCenter
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -163,6 +187,7 @@ private fun insertAfter(item: LazyGridItemInfo, offset: Offset): Boolean {
 fun Modifier.dragAndDropTileSource(
     sizedTile: SizedTile<EditTileViewModel>,
     dragAndDropState: DragAndDropState,
+    dragType: DragType,
     onDragStart: () -> Unit,
 ): Modifier {
     val dragState by rememberUpdatedState(dragAndDropState)
@@ -172,7 +197,9 @@ fun Modifier.dragAndDropTileSource(
             detectDragGesturesAfterLongPress(
                 onDrag = { _, _ -> },
                 onDragStart = {
-                    dragState.onStarted(sizedTile)
+                    check(!dragState.dragInProgress)
+
+                    dragState.onStarted(sizedTile, dragType)
                     onDragStart()
 
                     // The tilespec from the ClipData transferred isn't actually needed as we're
@@ -184,9 +211,17 @@ fun Modifier.dragAndDropTileSource(
                                 QsDragAndDrop.CLIPDATA_LABEL,
                                 arrayOf(QsDragAndDrop.TILESPEC_MIME_TYPE),
                                 ClipData.Item(sizedTile.tile.tileSpec.spec),
-                            )
+                            ),
+                            flags = View.DRAG_FLAG_OPAQUE,
                         )
                     )
+                },
+                onDragEnd = {
+                    check(dragState.dragInProgress)
+
+                    // onDragEnd is only called if the drag is ended before a drag and drop session
+                    // is started. In this case, we clear the drag state.
+                    dragState.onDrop()
                 },
             )
         }

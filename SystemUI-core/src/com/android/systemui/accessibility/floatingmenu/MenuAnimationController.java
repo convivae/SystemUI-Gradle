@@ -24,6 +24,7 @@ import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.OvershootInterpolator;
@@ -44,7 +45,7 @@ import java.util.HashMap;
  * Controls the interaction animations of the {@link MenuView}. Also, it will use the relative
  * coordinate based on the {@link MenuViewLayer} to compute the offset of the {@link MenuView}.
  */
-class MenuAnimationController {
+public class MenuAnimationController {
     private static final String TAG = "MenuAnimationController";
     private static final boolean DEBUG = false;
     private static final float MIN_PERCENT = 0.0f;
@@ -197,7 +198,7 @@ class MenuAnimationController {
         constrainPositionAndUpdate(position, /* writeToPosition = */ true);
     }
 
-    void flingMenuThenSpringToEdge(float x, float velocityX, float velocityY) {
+    void flingMenuThenSpringToEdge(PointF position, float velocityX, float velocityY) {
         final boolean shouldMenuFlingLeft = isOnLeftSide()
                 ? velocityX < ESCAPE_VELOCITY
                 : velocityX < -ESCAPE_VELOCITY;
@@ -205,9 +206,17 @@ class MenuAnimationController {
         final Rect draggableBounds = mMenuView.getMenuDraggableBounds();
         final float finalPositionX = shouldMenuFlingLeft
                 ? draggableBounds.left : draggableBounds.right;
-
+        final DisplayCutout displayCutout = mMenuViewAppearance.getDisplayCutout();
+        final float finalPositionY =
+                (displayCutout == null) ? position.y
+                        : mMenuViewAppearance.avoidVerticalDisplayCutout(
+                                position.y, draggableBounds,
+                                shouldMenuFlingLeft
+                                        ? displayCutout.getBoundingRectLeft()
+                                        : displayCutout.getBoundingRectRight()
+                        );
         final float minimumVelocityToReachEdge =
-                (finalPositionX - x) * (FLING_FRICTION_SCALAR * DEFAULT_FRICTION);
+                (finalPositionX - position.x) * (FLING_FRICTION_SCALAR * DEFAULT_FRICTION);
 
         final float startXVelocity = shouldMenuFlingLeft
                 ? Math.min(minimumVelocityToReachEdge, velocityX)
@@ -223,7 +232,7 @@ class MenuAnimationController {
                 velocityY,
                 FLING_FRICTION_SCALAR,
                 createSpringForce(),
-                /* finalPosition= */ null);
+                (finalPositionY != position.y) ? finalPositionY : null);
     }
 
     private void flingThenSpringMenuWith(DynamicAnimation.ViewProperty property, float velocity,
@@ -382,8 +391,18 @@ class MenuAnimationController {
     }
 
     void cancelAnimations() {
-        cancelAnimation(DynamicAnimation.TRANSLATION_X);
-        cancelAnimation(DynamicAnimation.TRANSLATION_Y);
+        for (DynamicAnimation.ViewProperty key : mPositionAnimations.keySet()) {
+            cancelAnimation(key);
+        }
+    }
+
+    boolean areAnimationsRunning() {
+        for (DynamicAnimation.ViewProperty key : mPositionAnimations.keySet()) {
+            if (mPositionAnimations.get(key).isRunning()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void cancelAnimation(DynamicAnimation.ViewProperty property) {
@@ -506,8 +525,9 @@ class MenuAnimationController {
         mHandler.removeCallbacksAndMessages(/* token= */ null);
     }
 
-    void startTuckedAnimationPreview() {
+    Animation startTuckedAnimationPreview() {
         fadeInNowIfEnabled();
+        mMenuView.clearAnimation();
 
         final float toXValue = isOnLeftSide()
                 ? -ANIMATION_TO_X_VALUE
@@ -520,10 +540,10 @@ class MenuAnimationController {
         animation.setDuration(ANIMATION_DURATION_MS);
         animation.setRepeatMode(Animation.REVERSE);
         animation.setInterpolator(new OvershootInterpolator());
-        animation.setRepeatCount(Animation.INFINITE);
         animation.setStartOffset(ANIMATION_START_OFFSET_MS);
 
         mMenuView.startAnimation(animation);
+        return animation;
     }
 
     private Handler createUiHandler() {

@@ -17,16 +17,19 @@
 package com.android.systemui.settings.brightness
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import com.android.compose.theme.PlatformTheme
 import com.android.systemui.brightness.ui.compose.BrightnessSliderContainer
+import com.android.systemui.brightness.ui.compose.BrightnessSliderDimensions
+import com.android.systemui.brightness.ui.compose.ContainerColors
 import com.android.systemui.brightness.ui.viewmodel.BrightnessSliderViewModel
 import com.android.systemui.lifecycle.rememberViewModel
-import com.android.systemui.qs.ui.composable.QuickSettingsShade
 
 object ComposeDialogComposableProvider {
 
@@ -40,7 +43,8 @@ object ComposeDialogComposableProvider {
 
 @Composable
 private fun BrightnessSliderForDialog(
-    brightnessSliderViewModelFactory: BrightnessSliderViewModel.Factory
+    brightnessSliderViewModelFactory: BrightnessSliderViewModel.Factory,
+    dimensions: BrightnessSliderDimensions = BrightnessSliderDimensions.Default,
 ) {
     val viewModel =
         rememberViewModel(traceName = "BrightnessDialog.viewModel") {
@@ -48,15 +52,38 @@ private fun BrightnessSliderForDialog(
         }
     BrightnessSliderContainer(
         viewModel = viewModel,
-        Modifier.fillMaxWidth().height(QuickSettingsShade.Dimensions.BrightnessSliderHeight),
+        containerColors = ContainerColors.singleColor(ContainerColors.defaultContainerColor),
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        dimensions = dimensions,
     )
 }
 
 class ComposableProvider(
-    private val brightnessSliderViewModelFactory: BrightnessSliderViewModel.Factory
+    private val brightnessSliderViewModelFactory: BrightnessSliderViewModel.Factory,
+    private val isExpandedAudioTileDetailsEnabled: Boolean,
 ) {
     @Composable
     fun ProvideComposableContent() {
-        BrightnessSliderForDialog(brightnessSliderViewModelFactory)
+        BrightnessSliderForDialog(
+            brightnessSliderViewModelFactory = brightnessSliderViewModelFactory,
+            dimensions =
+                if (isExpandedAudioTileDetailsEnabled) {
+                    expandedAudioDialogDimensions
+                } else {
+                    BrightnessSliderDimensions.Default
+                },
+        )
     }
 }
+
+private val expandedAudioDialogDimensions =
+    BrightnessSliderDimensions(
+        iconSize = DpSize(24.dp, 24.dp),
+        thumbHeight = 40.dp,
+        thumbWidth = 3.dp,
+        trackHeight = 32.dp,
+        verticalPadding = (-4).dp,
+        backgroundRoundedCorner = 28.dp,
+        backgroundFrameWidth = 12.dp,
+        backgroundFrameHeight = 4.dp,
+    )

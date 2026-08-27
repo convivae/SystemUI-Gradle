@@ -16,6 +16,7 @@
 
 package com.android.systemui.display.domain.interactor
 
+import android.view.WindowManager.LayoutParams.TYPE_BASE_APPLICATION
 import android.view.WindowManager.LayoutParams.TYPE_STATUS_BAR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.display.data.repository.DisplayWindowPropertiesRepository
@@ -33,7 +34,15 @@ interface DisplayWindowPropertiesInteractor {
      *
      * @throws IllegalArgumentException if no display with the given display id exists.
      */
-    fun getForStatusBar(displayId: Int): DisplayWindowProperties
+    fun getForStatusBar(displayId: Int): DisplayWindowProperties?
+
+    /**
+     * Returns a [DisplayWindowProperties] instance for a given display id, to be used for the base
+     * application.
+     *
+     * @throws IllegalArgumentException if no display with the given display id exists.
+     */
+    fun getForBaseApplication(displayId: Int): DisplayWindowProperties?
 }
 
 @SysUISingleton
@@ -42,8 +51,12 @@ class DisplayWindowPropertiesInteractorImpl
 constructor(private val repo: DisplayWindowPropertiesRepository) :
     DisplayWindowPropertiesInteractor {
 
-    override fun getForStatusBar(displayId: Int): DisplayWindowProperties {
+    override fun getForStatusBar(displayId: Int): DisplayWindowProperties? {
         return repo.get(displayId, TYPE_STATUS_BAR)
+    }
+
+    override fun getForBaseApplication(displayId: Int): DisplayWindowProperties? {
+        return repo.get(displayId, TYPE_BASE_APPLICATION)
     }
 }
 

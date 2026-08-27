@@ -19,6 +19,7 @@
 package com.android.systemui.keyguard.ui.view
 
 import android.graphics.Rect
+import android.os.DeadObjectException
 import android.util.Log
 import android.view.View
 import com.android.systemui.dagger.SysUISingleton
@@ -76,9 +77,8 @@ constructor(
     private var manualUnlockAmount: Float? = null
 
     /**
-     * Called from [OverviewProxyService] to provide us with the launcher unlock animation
-     * controller, which can be used to start and update the unlock animation in the launcher
-     * process.
+     * Called from Launcher to provide us with the launcher unlock animation controller, which can
+     * be used to start and update the unlock animation in the launcher process.
      */
     override fun setLauncherUnlockController(
         activityClass: String,
@@ -111,14 +111,18 @@ constructor(
     fun prepareForUnlock() {
         launcherAnimationController?.let { launcher ->
             if (!preparedForUnlock) {
+                try {
+                    launcher.prepareForUnlock(
+                        false,
+                        Rect(),
+                        0,
+                    ) // Smartspace animation is not supported. See b/293894758 for context.
+                } catch (e: DeadObjectException) {
+                    Log.e(TAG, "Failed to call launcher.prepareForUnlock()", e)
+                    return
+                }
                 preparedForUnlock = true
                 manualUnlockAmount = null
-
-                launcher.prepareForUnlock(
-                    false,
-                    Rect(),
-                    0
-                ) // TODO(b/293894758): Add smartspace animation support.
             }
         }
     }
@@ -134,14 +138,14 @@ constructor(
             Log.e(
                 TAG,
                 "Called prepareForUnlock(), but not playUnlockAnimation(). " +
-                    "Failing-safe by calling setUnlockAmount(1f)"
+                    "Failing-safe by calling setUnlockAmount(1f)",
             )
             setUnlockAmount(1f, forceIfAnimating = true)
         } else if (manualUnlockSetButNotFullyVisible) {
             Log.e(
                 TAG,
                 "Unlock has ended, but manual unlock amount != 1f. " +
-                    "Failing-safe by calling setUnlockAmount(1f)"
+                    "Failing-safe by calling setUnlockAmount(1f)",
             )
             setUnlockAmount(1f, forceIfAnimating = true)
         }
@@ -160,9 +164,13 @@ constructor(
         startDelay: Long = UNLOCK_START_DELAY,
     ) {
         if (preparedForUnlock) {
-            launcherAnimationController?.let { launcher ->
-                launcher.playUnlockAnimation(unlocked, duration, startDelay)
-                interactor.setStartedUnlockAnimation(true)
+            try {
+                launcherAnimationController?.let { launcher ->
+                    launcher.playUnlockAnimation(unlocked, duration, startDelay)
+                    interactor.setStartedUnlockAnimation(true)
+                }
+            } catch (e: DeadObjectException) {
+                Log.e(TAG, "Failed to call launcher.playUnlockAnimation()", e)
             }
         } else {
             Log.e(TAG, "Attempted to call playUnlockAnimation() before prepareToUnlock().")
@@ -193,7 +201,12 @@ constructor(
 
         launcherAnimationController?.let {
             manualUnlockAmount = amount
-            it.setUnlockAmount(amount, forceIfAnimating)
+
+            try {
+                it.setUnlockAmount(amount, forceIfAnimating)
+            } catch (e: DeadObjectException) {
+                Log.e(TAG, "DeadObjectException in setUnlockAmount($amount, $forceIfAnimating)", e)
+            }
         }
     }
 }

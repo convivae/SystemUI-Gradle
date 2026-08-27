@@ -19,6 +19,8 @@ package com.android.systemui.statusbar.pipeline.mobile.data
 import android.content.Intent
 import android.telephony.ServiceState
 import android.telephony.SignalStrength
+import android.telephony.SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX
+import android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID
 import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.telephony.satellite.NtnSignalStrength
@@ -83,12 +85,15 @@ class MobileInputLogger @Inject constructor(@MobileInputLog private val buffer: 
         )
     }
 
-    fun logNtnSignalStrengthChanged(signalStrength: NtnSignalStrength) {
+    fun logNtnSignalStrengthChanged(signalStrength: NtnSignalStrength, subId: Int) {
         buffer.log(
             TAG,
             LogLevel.INFO,
-            { int1 = signalStrength.level },
-            { "onCarrierRoamingNtnSignalStrengthChanged: level=$int1" },
+            {
+                int1 = signalStrength.level
+                int2 = subId
+            },
+            { "onCarrierRoamingNtnSignalStrengthChanged: subId=$int2 level=$int1" },
         )
     }
 
@@ -129,12 +134,15 @@ class MobileInputLogger @Inject constructor(@MobileInputLog private val buffer: 
         )
     }
 
-    fun logOnCarrierRoamingNtnModeChanged(active: Boolean) {
+    fun logOnCarrierRoamingNtnModeChanged(active: Boolean, subId: Int) {
         buffer.log(
             TAG,
             LogLevel.INFO,
-            { bool1 = active },
-            { "onCarrierRoamingNtnModeChanged: $bool1" },
+            {
+                int1 = subId
+                bool1 = active
+            },
+            { "onCarrierRoamingNtnModeChanged: subId=$int1 active=$bool1" },
         )
     }
 
@@ -198,6 +206,7 @@ class MobileInputLogger @Inject constructor(@MobileInputLog private val buffer: 
     }
 
     fun logServiceProvidersUpdatedBroadcast(intent: Intent) {
+        val subId = intent.getIntExtra(EXTRA_SUBSCRIPTION_INDEX, INVALID_SUBSCRIPTION_ID)
         val showSpn = intent.getBooleanExtra(TelephonyManager.EXTRA_SHOW_SPN, false)
         val spn = intent.getStringExtra(TelephonyManager.EXTRA_SPN)
         val dataSpn = intent.getStringExtra(TelephonyManager.EXTRA_DATA_SPN)
@@ -208,6 +217,7 @@ class MobileInputLogger @Inject constructor(@MobileInputLog private val buffer: 
             TAG,
             LogLevel.INFO,
             {
+                int1 = subId
                 bool1 = showSpn
                 str1 = spn
                 str2 = dataSpn
@@ -216,7 +226,35 @@ class MobileInputLogger @Inject constructor(@MobileInputLog private val buffer: 
             },
             {
                 "Intent: ACTION_SERVICE_PROVIDERS_UPDATED." +
-                    " showSpn=$bool1 spn=$str1 dataSpn=$str2 showPlmn=$bool2 plmn=$str3"
+                    " subId=$int1 showSpn=$bool1 spn=$str1 dataSpn=$str2 showPlmn=$bool2 plmn=$str3"
+            },
+        )
+    }
+
+    fun logServiceProvidersUpdatedBroadcastSkipped(subId: Int, intent: Intent) {
+        val intentSubId = intent.getIntExtra(EXTRA_SUBSCRIPTION_INDEX, INVALID_SUBSCRIPTION_ID)
+        val showSpn = intent.getBooleanExtra(TelephonyManager.EXTRA_SHOW_SPN, false)
+        val spn = intent.getStringExtra(TelephonyManager.EXTRA_SPN)
+        val dataSpn = intent.getStringExtra(TelephonyManager.EXTRA_DATA_SPN)
+        val showPlmn = intent.getBooleanExtra(TelephonyManager.EXTRA_SHOW_PLMN, false)
+        val plmn = intent.getStringExtra(TelephonyManager.EXTRA_PLMN)
+
+        buffer.log(
+            TAG,
+            LogLevel.INFO,
+            {
+                int1 = subId
+                int2 = intentSubId
+                bool1 = showSpn
+                str1 = spn
+                str2 = dataSpn
+                bool2 = showPlmn
+                str3 = plmn
+            },
+            {
+                "Intent: ACTION_SERVICE_PROVIDERS_UPDATED skipped. subId=$int1" +
+                    " intentSubId=$int2 showSpn=$bool1" +
+                    " spn=$str1 dataSpn=$str2 showPlmn=$bool2 plmn=$str3"
             },
         )
     }

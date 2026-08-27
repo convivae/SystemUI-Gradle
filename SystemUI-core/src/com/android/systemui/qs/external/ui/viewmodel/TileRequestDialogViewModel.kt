@@ -26,6 +26,7 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.lifecycle.ExclusiveActivatable
 import com.android.systemui.plugins.qs.QSTile
 import com.android.systemui.qs.external.TileData
+import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.tileimpl.QSTileImpl.DrawableIcon
 import com.android.systemui.qs.tileimpl.QSTileImpl.ResourceIcon
@@ -34,7 +35,6 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.withContext
 
 class TileRequestDialogViewModel
@@ -58,7 +58,9 @@ constructor(
 
     val uiState by derivedStateOf { state.toUiState(dialogContext.resources) }
 
-    override suspend fun onActivated(): Nothing {
+    val iconProvider by derivedStateOf { state.toIconProvider() }
+
+    override suspend fun onActivated() {
         withContext(backgroundDispatcher) {
             tileData.icon
                 ?.loadDrawableCheckingUriGrant(
@@ -69,7 +71,6 @@ constructor(
                 )
                 ?.run { _icon = DrawableIcon(this) }
         }
-        awaitCancellation()
     }
 
     @AssistedFactory

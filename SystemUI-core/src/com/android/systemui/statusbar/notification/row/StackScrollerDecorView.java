@@ -96,7 +96,7 @@ public abstract class StackScrollerDecorView extends ExpandableView {
                 if (visible) {
                     setVisibility(VISIBLE);
                     setWillBeGone(false);
-                    notifyHeightChanged(false /* needsAnimation */);
+                    notifyHeightChanged(true /* needsAnimation */, "SSDV.setVisible");
                 } else {
                     setWillBeGone(true);
                 }
@@ -105,7 +105,7 @@ public abstract class StackScrollerDecorView extends ExpandableView {
                 setVisibility(visible ? VISIBLE : GONE);
                 setContentVisible(visible, false /* animate */, onAnimationEnded);
                 setWillBeGone(false);
-                notifyHeightChanged(false /* needsAnimation */);
+                notifyHeightChanged(false /* needsAnimation */,  "SSDV.setVisible");
             }
         }
     }
@@ -154,7 +154,7 @@ public abstract class StackScrollerDecorView extends ExpandableView {
         if (getVisibility() != View.GONE && !mIsVisible) {
             setVisibility(GONE);
             setWillBeGone(false);
-            notifyHeightChanged(false /* needsAnimation */);
+            notifyHeightChanged(false /* needsAnimation */, "SSDV.onContentVisibilityAnimationEnd");
         }
     }
 
@@ -260,7 +260,7 @@ public abstract class StackScrollerDecorView extends ExpandableView {
     @Override
     public long performRemoveAnimation(long duration, long delay,
             float translationDirection, boolean isHeadsUpAnimation,
-            Runnable onStartedRunnable,
+            boolean isHeadsUpCycling, Runnable onStartedRunnable,
             Runnable onFinishedRunnable,
             AnimatorListenerAdapter animationListener, ClipSide clipSide) {
         // TODO: Use duration
@@ -279,7 +279,7 @@ public abstract class StackScrollerDecorView extends ExpandableView {
 
     @Override
     public void performAddAnimation(long delay, long duration, boolean isHeadsUpAppear,
-            Runnable endRunnable) {
+            boolean isHeadsUpCycling, Runnable endRunnable) {
         // TODO: use delay and duration
         setContentVisibleAnimated(true);
     }

@@ -21,10 +21,13 @@ import android.util.DisplayMetrics;
 import android.view.Display;
 
 import com.android.systemui.dagger.qualifiers.Application;
+import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.dump.DumpModule;
 import com.android.systemui.plugins.PluginsModule;
 import com.android.systemui.unfold.UnfoldTransitionModule;
 import com.android.systemui.util.concurrency.GlobalConcurrencyModule;
 import com.android.systemui.util.kotlin.GlobalCoroutinesModule;
+import com.android.systemui.util.time.TimeModule;
 
 import dagger.Module;
 import dagger.Provides;
@@ -46,11 +49,13 @@ import dagger.Provides;
  */
 @Module(includes = {
         AndroidInternalsModule.class,
+        DumpModule.class,
         FrameworkServicesModule.class,
         GlobalConcurrencyModule.class,
         GlobalCoroutinesModule.class,
         UnfoldTransitionModule.class,
         PluginsModule.class,
+        TimeModule.class,
 })
 public class GlobalModule {
     /**
@@ -60,6 +65,13 @@ public class GlobalModule {
     @Application
     public Context provideApplicationContext(Context context) {
         return context.getApplicationContext();
+    }
+
+    /** Provides the default content with the main annotation. */
+    @Provides
+    @Main
+    public Context provideMainContext(Context context) {
+        return context;
     }
 
     /**

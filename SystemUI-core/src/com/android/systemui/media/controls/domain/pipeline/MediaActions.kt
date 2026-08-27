@@ -16,6 +16,7 @@
 
 package com.android.systemui.media.controls.domain.pipeline
 
+import android.annotation.UserIdInt
 import android.annotation.WorkerThread
 import android.app.ActivityOptions
 import android.app.BroadcastOptions
@@ -29,6 +30,8 @@ import android.media.session.PlaybackState
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.media.utils.MediaConstants
+import com.android.systemui.media.NotificationMediaManager.isConnectingState
+import com.android.systemui.media.NotificationMediaManager.isPlayingState
 import com.android.systemui.media.controls.domain.pipeline.LegacyMediaDataManagerImpl.Companion.MAX_COMPACT_ACTIONS
 import com.android.systemui.media.controls.domain.pipeline.LegacyMediaDataManagerImpl.Companion.MAX_NOTIFICATION_ACTIONS
 import com.android.systemui.media.controls.shared.MediaControlDrawables
@@ -37,8 +40,6 @@ import com.android.systemui.media.controls.shared.model.MediaButton
 import com.android.systemui.media.controls.shared.model.MediaNotificationAction
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.res.R
-import com.android.systemui.statusbar.NotificationMediaManager.isConnectingState
-import com.android.systemui.statusbar.NotificationMediaManager.isPlayingState
 import com.android.systemui.util.kotlin.logI
 
 private const val TAG = "MediaActions"
@@ -56,6 +57,7 @@ fun createActionsFromState(
     context: Context,
     packageName: String,
     controller: MediaController,
+    @UserIdInt userId: Int,
 ): MediaButton? {
     val state = controller.playbackState ?: return null
     // First, check for standard actions
@@ -69,7 +71,7 @@ fun createActionsFromState(
                 drawable,
                 null, // no action to perform when clicked
                 context.getString(R.string.controls_media_button_connecting),
-                context.getDrawable(R.drawable.ic_media_connecting_container),
+                context.getDrawable(R.drawable.ic_media_connecting_button_container),
                 // Specify a rebind id to prevent the spinner from restarting on later binds.
                 com.android.internal.R.drawable.progress_small_material,
             )
@@ -88,7 +90,7 @@ fun createActionsFromState(
         state.customActions
             .asSequence()
             .filterNotNull()
-            .map { getCustomAction(context, packageName, controller, it) }
+            .map { getCustomAction(context, packageName, controller, it, userId) }
             .iterator()
     fun nextCustomAction() = if (customActions.hasNext()) customActions.next() else null
 
@@ -157,18 +159,18 @@ private fun getStandardAction(
     return when (action) {
         PlaybackState.ACTION_PLAY -> {
             MediaAction(
-                context.getDrawable(R.drawable.ic_media_play),
+                context.getDrawable(R.drawable.ic_media_play_button),
                 { controller.transportControls.play() },
                 context.getString(R.string.controls_media_button_play),
-                context.getDrawable(R.drawable.ic_media_play_container),
+                context.getDrawable(R.drawable.ic_media_play_button_container),
             )
         }
         PlaybackState.ACTION_PAUSE -> {
             MediaAction(
-                context.getDrawable(R.drawable.ic_media_pause),
+                context.getDrawable(R.drawable.ic_media_pause_button),
                 { controller.transportControls.pause() },
                 context.getString(R.string.controls_media_button_pause),
-                context.getDrawable(R.drawable.ic_media_pause_container),
+                context.getDrawable(R.drawable.ic_media_pause_button_container),
             )
         }
         PlaybackState.ACTION_SKIP_TO_PREVIOUS -> {
@@ -197,9 +199,10 @@ private fun getCustomAction(
     packageName: String,
     controller: MediaController,
     customAction: PlaybackState.CustomAction,
+    @UserIdInt userId: Int,
 ): MediaAction {
     return MediaAction(
-        Icon.createWithResource(packageName, customAction.icon).loadDrawable(context),
+        Icon.createWithResource(packageName, customAction.icon).loadDrawableAsUser(context, userId),
         { controller.transportControls.sendCustomAction(customAction, customAction.extras) },
         customAction.name,
         null,
@@ -225,17 +228,19 @@ fun createActionsFromNotification(
     val notif = sbn.notification
     val actionIcons: MutableList<MediaNotificationAction> = ArrayList()
     val actions = notif.actions
-    var actionsToShowCollapsed =
+    var compressedIndices =
         notif.extras.getIntArray(Notification.EXTRA_COMPACT_ACTIONS)?.toMutableList()
-            ?: mutableListOf()
-    if (actionsToShowCollapsed.size > MAX_COMPACT_ACTIONS) {
-        Log.e(
-            TAG,
-            "Too many compact actions for ${sbn.key}, limiting to first $MAX_COMPACT_ACTIONS",
-        )
-        actionsToShowCollapsed = actionsToShowCollapsed.subList(0, MAX_COMPACT_ACTIONS)
+    compressedIndices?.let {
+        if (it.size > MAX_COMPACT_ACTIONS) {
+            Log.e(
+                TAG,
+                "Too many compact actions for ${sbn.key}, limiting to first $MAX_COMPACT_ACTIONS",
+            )
+            compressedIndices = it.subList(0, MAX_COMPACT_ACTIONS)
+        }
     }
 
+    val compressedIndicesValidated = mutableListOf<Int>()
     actions?.let {
         if (it.size > MAX_NOTIFICATION_ACTIONS) {
             Log.w(
@@ -248,8 +253,11 @@ fun createActionsFromNotification(
         for ((index, action) in it.take(MAX_NOTIFICATION_ACTIONS).withIndex()) {
             if (action.getIcon() == null) {
                 logI(TAG) { "No icon for action $index ${action.title}" }
-                actionsToShowCollapsed.remove(index)
+                compressedIndices?.remove(index)
                 continue
+            }
+            if (compressedIndices?.contains(index) == true) {
+                compressedIndicesValidated.add(index)
             }
 
             val themeText =
@@ -266,7 +274,7 @@ fun createActionsFromNotification(
                         else -> action.getIcon()
                     }
                     .setTint(themeText)
-                    .loadDrawable(context)
+                    .loadDrawableAsUser(context, sbn.user.identifier)
 
             val mediaAction =
                 MediaNotificationAction(
@@ -278,7 +286,7 @@ fun createActionsFromNotification(
             actionIcons.add(mediaAction)
         }
     }
-    return Pair(actionIcons, actionsToShowCollapsed)
+    return Pair(actionIcons, compressedIndicesValidated)
 }
 
 /**

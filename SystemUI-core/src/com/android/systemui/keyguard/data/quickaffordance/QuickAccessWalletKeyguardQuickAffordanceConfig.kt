@@ -26,20 +26,18 @@ import android.service.quickaccesswallet.WalletCard
 import android.util.Log
 import com.android.systemui.animation.Expandable
 import com.android.systemui.common.coroutine.ChannelExt.trySendWithFailureLogging
-import com.android.systemui.common.coroutine.ConflatedCallbackFlow.conflatedCallbackFlow
 import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
 import com.android.systemui.wallet.controller.QuickAccessWalletController
 import com.android.systemui.wallet.util.getPaymentCards
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -64,7 +62,6 @@ constructor(
 
     override val pickerIconResourceId = R.drawable.ic_wallet_lockscreen
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     override val lockScreenState: Flow<KeyguardQuickAffordanceConfig.LockScreenState> =
         conflatedCallbackFlow {
                 val callback =
@@ -72,21 +69,15 @@ constructor(
                         override fun onWalletCardsRetrieved(response: GetWalletCardsResponse) {
                             val hasCards =
                                 getPaymentCards(response.walletCards)?.isNotEmpty() == true
-                            trySendWithFailureLogging(
-                                hasCards,
-                                TAG,
-                            )
+                            trySendWithFailureLogging(hasCards, TAG)
                         }
 
                         override fun onWalletCardRetrievalError(error: GetWalletCardsError) {
                             Log.e(
                                 TAG,
-                                "Wallet card retrieval error, message: \"${error?.message}\""
+                                "Wallet card retrieval error, message: \"${error?.message}\"",
                             )
-                            trySendWithFailureLogging(
-                                null,
-                                TAG,
-                            )
+                            trySendWithFailureLogging(null, TAG)
                         }
                     }
 
@@ -94,7 +85,7 @@ constructor(
                     callback,
                     QuickAccessWalletController.WalletChangeEvent.WALLET_PREFERENCE_CHANGE,
                     QuickAccessWalletController.WalletChangeEvent.DEFAULT_PAYMENT_APP_CHANGE,
-                    QuickAccessWalletController.WalletChangeEvent.DEFAULT_WALLET_APP_CHANGE
+                    QuickAccessWalletController.WalletChangeEvent.DEFAULT_WALLET_APP_CHANGE,
                 )
 
                 withContext(backgroundDispatcher) {
@@ -107,7 +98,7 @@ constructor(
                     walletController.unregisterWalletChangeObservers(
                         QuickAccessWalletController.WalletChangeEvent.WALLET_PREFERENCE_CHANGE,
                         QuickAccessWalletController.WalletChangeEvent.DEFAULT_PAYMENT_APP_CHANGE,
-                        QuickAccessWalletController.WalletChangeEvent.DEFAULT_WALLET_APP_CHANGE
+                        QuickAccessWalletController.WalletChangeEvent.DEFAULT_WALLET_APP_CHANGE,
                     )
                 }
             }
@@ -117,11 +108,7 @@ constructor(
                     if (hasCards == null) {
                         KeyguardQuickAffordanceConfig.LockScreenState.Hidden
                     } else {
-                        state(
-                            isWalletAvailable(),
-                            hasCards,
-                            walletController.walletClient.tileIcon,
-                        )
+                        state(isWalletAvailable(), hasCards, walletController.walletClient.tileIcon)
                     }
                 flowOf(state)
             }
@@ -130,33 +117,36 @@ constructor(
         return when {
             !walletController.walletClient.isWalletServiceAvailable ->
                 KeyguardQuickAffordanceConfig.PickerScreenState.UnavailableOnDevice
+
             !isWalletAvailable() ->
                 KeyguardQuickAffordanceConfig.PickerScreenState.Disabled(
                     explanation =
                         context.getString(
                             R.string.wallet_quick_affordance_unavailable_install_the_app
-                        ),
+                        )
                 )
+
             queryCards().isEmpty() ->
                 KeyguardQuickAffordanceConfig.PickerScreenState.Disabled(
                     explanation =
                         context.getString(
                             R.string.wallet_quick_affordance_unavailable_configure_the_app
-                        ),
+                        )
                 )
+
             else -> KeyguardQuickAffordanceConfig.PickerScreenState.Default()
         }
     }
 
     override fun onTriggered(
-        expandable: Expandable?,
+        expandable: Expandable?
     ): KeyguardQuickAffordanceConfig.OnTriggeredResult {
         walletController.startQuickAccessUiIntent(
             activityStarter,
             expandable?.activityTransitionController(),
             /* hasCard= */ true,
         )
-        return KeyguardQuickAffordanceConfig.OnTriggeredResult.Handled
+        return KeyguardQuickAffordanceConfig.OnTriggeredResult.Handled(true)
     }
 
     private suspend fun queryCards(): List<WalletCard> {
@@ -194,16 +184,22 @@ constructor(
         tileIcon: Drawable?,
     ): KeyguardQuickAffordanceConfig.LockScreenState {
         return if (isFeatureEnabled && hasCard && tileIcon != null) {
-            KeyguardQuickAffordanceConfig.LockScreenState.Visible(
-                icon =
+            val drawable = tileIcon.constantState?.newDrawable()
+            val icon =
+                if (drawable != null) {
                     Icon.Loaded(
-                        drawable = tileIcon,
+                        drawable = drawable,
                         contentDescription =
-                            ContentDescription.Resource(
-                                res = R.string.accessibility_wallet_button,
-                            ),
-                    ),
-            )
+                            ContentDescription.Resource(res = R.string.accessibility_wallet_button),
+                    )
+                } else {
+                    Icon.Resource(
+                        resId = R.drawable.ic_wallet_lockscreen,
+                        contentDescription =
+                            ContentDescription.Resource(res = R.string.accessibility_wallet_button),
+                    )
+                }
+            KeyguardQuickAffordanceConfig.LockScreenState.Visible(icon = icon)
         } else {
             KeyguardQuickAffordanceConfig.LockScreenState.Hidden
         }

@@ -17,11 +17,11 @@
 package com.android.systemui.statusbar.pipeline.airplane.ui.viewmodel
 
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.log.table.TableLogBuffer
 import com.android.systemui.log.table.logDiffsForTable
 import com.android.systemui.statusbar.pipeline.airplane.domain.interactor.AirplaneModeInteractor
-import com.android.systemui.statusbar.pipeline.dagger.AirplaneTableLog
+import com.android.systemui.statusbar.pipeline.airplane.shared.AirplaneTableLog
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,13 +42,17 @@ interface AirplaneModeViewModel {
     val isAirplaneModeIconVisible: StateFlow<Boolean>
 }
 
+@Deprecated(
+    message = "This view model will not be used once SystemStatusIconsInCompose is launched",
+    replaceWith = ReplaceWith("AirplaneModeIconViewModel"),
+)
 @SysUISingleton
 class AirplaneModeViewModelImpl
 @Inject
 constructor(
     interactor: AirplaneModeInteractor,
     @AirplaneTableLog logger: TableLogBuffer,
-    @Application private val scope: CoroutineScope,
+    @Background scope: CoroutineScope,
 ) : AirplaneModeViewModel {
     override val isAirplaneModeIconVisible: StateFlow<Boolean> =
         combine(interactor.isAirplaneMode, interactor.isForceHidden) {
@@ -59,7 +63,6 @@ constructor(
             .distinctUntilChanged()
             .logDiffsForTable(
                 logger,
-                columnPrefix = "",
                 columnName = "isAirplaneModeIconVisible",
                 initialValue = false,
             )

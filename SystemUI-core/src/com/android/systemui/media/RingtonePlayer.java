@@ -17,6 +17,7 @@
 package com.android.systemui.media;
 
 import android.annotation.Nullable;
+import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -118,6 +119,7 @@ public class RingtonePlayer implements CoreStartable {
                 throws RemoteException {
             playWithVolumeShaping(token, uri, aa, volume, looping, null);
         }
+
         @Override
         public void playWithVolumeShaping(IBinder token, Uri uri, AudioAttributes aa, float volume,
                 boolean looping, @Nullable VolumeShaper.Configuration volumeShaperConfig)
@@ -126,6 +128,8 @@ public class RingtonePlayer implements CoreStartable {
                 Log.d(TAG, "play(token=" + token + ", uri=" + uri + ", uid="
                         + Binder.getCallingUid() + ")");
             }
+            enforceUriUserId(uri, token);
+
             Client client;
             synchronized (mClients) {
                 client = mClients.get(token);
@@ -207,6 +211,7 @@ public class RingtonePlayer implements CoreStartable {
 
         @Override
         public String getTitle(Uri uri) {
+            enforceUriUserId(uri, null /*clientToken*/);
             final UserHandle user = Binder.getCallingUserHandle();
             return Ringtone.getTitle(getContextForUser(user), uri,
                     false /*followSettingsUri*/, false /*allowRemote*/);
@@ -214,6 +219,7 @@ public class RingtonePlayer implements CoreStartable {
 
         @Override
         public ParcelFileDescriptor openRingtone(Uri uri) {
+            enforceUriUserId(uri, null /*clientToken*/);
             final UserHandle user = Binder.getCallingUserHandle();
             final ContentResolver resolver = getContextForUser(user).getContentResolver();
 
@@ -238,6 +244,41 @@ public class RingtonePlayer implements CoreStartable {
                 }
             }
             throw new SecurityException("Uri is not ringtone, alarm, or notification: " + uri);
+        }
+
+        /**
+         * Must be called from the Binder calling thread.
+         * Ensures caller is from the same userId as the content they're trying to access.
+         *
+         * @param uri         the URI to check
+         * @param clientToken the Client token used for the current query, null if not available
+         *                    in the query (expected from calls other than the play* methods)
+         * @throws SecurityException when in a non-system call and userId in uri differs
+         *                           from the
+         *                           caller's userId
+         */
+        private void enforceUriUserId(Uri uri, @Nullable IBinder clientToken)
+                throws SecurityException {
+            final int uriUserId = ContentProvider.getUserIdFromUri(uri, UserHandle.myUserId());
+            // for a non-system call, verify the URI to play belongs to the same user as the caller
+            final int uid = Binder.getCallingUid();
+            final int pid = Binder.getCallingPid();
+            if (UserHandle.isApp(uid) && (UserHandle.myUserId() != uriUserId)) {
+                final String errorMessage = "Illegal access by uid:" + uid + " pid:" + pid
+                        + " to uri=" + uri
+                        + " content associated with user=" + uriUserId
+                        + ", current userID=" + UserHandle.myUserId();
+                if (android.media.audio.Flags.ringtoneUserUriCheck()) {
+                    if (clientToken != null) {
+                        // this client is accessing URIs it shouldn't access, stop it (which also
+                        // removes it from mClients in the outer class)
+                        stop(clientToken);
+                    }
+                    throw new SecurityException(errorMessage);
+                } else {
+                    Log.e(TAG, errorMessage, new Exception());
+                }
+            }
         }
     };
 

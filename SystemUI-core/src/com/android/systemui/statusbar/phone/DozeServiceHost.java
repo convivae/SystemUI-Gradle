@@ -20,7 +20,9 @@ import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_AWA
 import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_WAKING;
 
 import android.annotation.NonNull;
+import android.content.Context;
 import android.graphics.Point;
+import android.hardware.display.AmbientDisplayConfiguration;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -38,10 +40,14 @@ import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.systemui.assist.AssistManager;
 import com.android.systemui.biometrics.AuthController;
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.dagger.qualifiers.Application;
+import com.android.systemui.deviceentry.domain.interactor.DeviceEntryFingerprintAuthInteractor;
+import com.android.systemui.display.DisplayExtensionsKt;
 import com.android.systemui.doze.DozeHost;
 import com.android.systemui.doze.DozeLog;
 import com.android.systemui.doze.DozeReceiver;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
+import com.android.systemui.keyguard.domain.interactor.AodDimInteractor;
 import com.android.systemui.keyguard.domain.interactor.DozeInteractor;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shade.NotificationShadeWindowViewController;
@@ -52,26 +58,31 @@ import com.android.systemui.statusbar.StatusBarState;
 import com.android.systemui.statusbar.SysuiStatusBarStateController;
 import com.android.systemui.statusbar.notification.NotificationWakeUpCoordinator;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
-import com.android.systemui.statusbar.policy.BatteryController;
-import com.android.systemui.statusbar.policy.DeviceProvisionedController;
 import com.android.systemui.statusbar.notification.headsup.HeadsUpManager;
 import com.android.systemui.statusbar.notification.headsup.OnHeadsUpChangedListener;
+import com.android.systemui.statusbar.policy.BatteryController;
+import com.android.systemui.statusbar.policy.DeviceProvisionedController;
+import com.android.systemui.user.domain.interactor.SelectedUserInteractor;
 import com.android.systemui.util.Assert;
 import com.android.systemui.util.CopyOnLoopListenerSet;
 import com.android.systemui.util.IListenerSet;
+import com.android.systemui.util.kotlin.JavaAdapterKt;
 
 import dagger.Lazy;
 
 import kotlin.Unit;
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi;
+import kotlinx.coroutines.CoroutineScope;
+import kotlinx.coroutines.Job;
+
+import java.util.concurrent.CancellationException;
 
 import javax.inject.Inject;
 
 /**
  * Implementation of DozeHost for SystemUI.
  */
-@ExperimentalCoroutinesApi @SysUISingleton
+@SysUISingleton
 public final class DozeServiceHost implements DozeHost {
     private static final String TAG = "DozeServiceHost";
     private final IListenerSet<Callback> mCallbacks = new CopyOnLoopListenerSet<>();
@@ -112,6 +123,13 @@ public final class DozeServiceHost implements DozeHost {
     private boolean mAlwaysOnSuppressed;
     private boolean mPulsePending;
     private final DozeInteractor mDozeInteractor;
+    private final DeviceEntryFingerprintAuthInteractor mDeviceEntryFingerprintAuthInteractor;
+    private final CoroutineScope mScope;
+    private Job mUdfpsScreenOffFingerprintPulseEventCollectingJob = null;
+    private final Context mContext;
+    private final AmbientDisplayConfiguration mAmbientDisplayConfiguration;
+    private final AodDimInteractor mAodDimInteractor;
+    private final SelectedUserInteractor mSelectedUserInteractor;
 
     @Inject
     public DozeServiceHost(DozeLog dozeLog, PowerManager powerManager,
@@ -119,7 +137,7 @@ public final class DozeServiceHost implements DozeHost {
             SysuiStatusBarStateController statusBarStateController,
             DeviceProvisionedController deviceProvisionedController,
             HeadsUpManager headsUpManager, BatteryController batteryController,
-            ScrimController scrimController,
+            Lazy<ScrimController> scrimController,
             Lazy<BiometricUnlockController> biometricUnlockControllerLazy,
             Lazy<AssistManager> assistManagerLazy,
             DozeScrimController dozeScrimController, KeyguardUpdateMonitor keyguardUpdateMonitor,
@@ -128,7 +146,13 @@ public final class DozeServiceHost implements DozeHost {
             NotificationWakeUpCoordinator notificationWakeUpCoordinator,
             AuthController authController,
             ShadeLockscreenInteractor shadeLockscreenInteractor,
-            DozeInteractor dozeInteractor) {
+            DozeInteractor dozeInteractor,
+            DeviceEntryFingerprintAuthInteractor deviceEntryFingerprintAuthInteractor,
+            @Application CoroutineScope scope,
+            Context context,
+            AmbientDisplayConfiguration ambientDisplayConfiguration,
+            AodDimInteractor aodDimInteractor,
+            SelectedUserInteractor selectedUserInteractor) {
         super();
         mDozeLog = dozeLog;
         mPowerManager = powerManager;
@@ -137,7 +161,7 @@ public final class DozeServiceHost implements DozeHost {
         mDeviceProvisionedController = deviceProvisionedController;
         mHeadsUpManager = headsUpManager;
         mBatteryController = batteryController;
-        mScrimController = scrimController;
+        mScrimController = SceneContainerFlag.isEnabled() ? null : scrimController.get();
         mBiometricUnlockControllerLazy = biometricUnlockControllerLazy;
         mAssistManagerLazy = assistManagerLazy;
         mDozeScrimController = dozeScrimController;
@@ -149,6 +173,12 @@ public final class DozeServiceHost implements DozeHost {
         mShadeLockscreenInteractor = shadeLockscreenInteractor;
         mHeadsUpManager.addListener(mOnHeadsUpChangedListener);
         mDozeInteractor = dozeInteractor;
+        mDeviceEntryFingerprintAuthInteractor = deviceEntryFingerprintAuthInteractor;
+        mScope = scope;
+        mContext = context;
+        mAmbientDisplayConfiguration = ambientDisplayConfiguration;
+        mAodDimInteractor = aodDimInteractor;
+        mSelectedUserInteractor = selectedUserInteractor;
     }
 
     // TODO: we should try to not pass status bar in here if we can avoid it.
@@ -177,6 +207,14 @@ public final class DozeServiceHost implements DozeHost {
         Assert.isMainThread();
         for (Callback callback : mCallbacks) {
             callback.onPowerSaveChanged(active);
+        }
+
+        if (active) {
+            // listen for screen off fingerprint pulse events when battery saver
+            // is suppressing AOD
+            startCollectingScreenOffFingerprintPulseEvents();
+        } else if (!listenForScreenOffFingerprintPulseEvents()) {
+            stopCollectingUsUdfpsScreenOffPulseEvents();
         }
     }
 
@@ -231,8 +269,13 @@ public final class DozeServiceHost implements DozeHost {
         if (!mDozingRequested) {
             mDozingRequested = true;
             updateDozing();
+            startCollectingScreenOffFingerprintPulseEvents();
             mDozeLog.traceDozing(mStatusBarStateController.isDozing());
-            mCentralSurfaces.updateIsKeyguard();
+            // This is initialized in a CoreStartable, but binder calls from DreamManagerService can
+            // arrive earlier
+            if (mCentralSurfaces != null) {
+                mCentralSurfaces.updateIsKeyguard();
+            }
         }
     }
 
@@ -250,7 +293,7 @@ public final class DozeServiceHost implements DozeHost {
         // When in wake-and-unlock we may not have received a change to StatusBarState
         // but we still should not be dozing, manually set to false.
         if (mBiometricUnlockControllerLazy.get().getMode()
-                == BiometricUnlockController.MODE_WAKE_AND_UNLOCK) {
+                == BiometricUnlockController.MODE_WAKE_AND_DISMISS) {
             dozing = false;
         }
 
@@ -270,7 +313,7 @@ public final class DozeServiceHost implements DozeHost {
             return;
         }
 
-        if (reason == DozeLog.PULSE_REASON_SENSOR_WAKE_REACH) {
+        if (mScrimController != null && reason == DozeLog.PULSE_REASON_SENSOR_WAKE_REACH) {
             mScrimController.setWakeLockScreenSensorActive(true);
         }
 
@@ -293,7 +336,9 @@ public final class DozeServiceHost implements DozeHost {
                 mPulsing = false;
                 callback.onPulseFinished(); // requestState(DozeMachine.State.DOZE_PULSE_DONE)
                 mCentralSurfaces.updateNotificationPanelTouchState();
-                mScrimController.setWakeLockScreenSensorActive(false);
+                if (mScrimController != null) {
+                    mScrimController.setWakeLockScreenSensorActive(false);
+                }
                 setPulsing(false);
             }
 
@@ -320,6 +365,7 @@ public final class DozeServiceHost implements DozeHost {
         if (mDozingRequested) {
             mDozingRequested = false;
             updateDozing();
+            stopCollectingUsUdfpsScreenOffPulseEvents();
             mDozeLog.traceDozing(mStatusBarStateController.isDozing());
         }
     }
@@ -340,7 +386,6 @@ public final class DozeServiceHost implements DozeHost {
     public void dozeTimeTick() {
         TraceUtils.trace("DozeServiceHost#dozeTimeTick", () -> {
             mDozeInteractor.dozeTimeTick();
-            mShadeLockscreenInteractor.dozeTimeTick();
             mAuthController.dozeTimeTick();
             if (mAmbientIndicationContainer instanceof DozeReceiver) {
                 ((DozeReceiver) mAmbientIndicationContainer).dozeTimeTick();
@@ -357,7 +402,7 @@ public final class DozeServiceHost implements DozeHost {
     @Override
     public boolean isPulsingBlocked() {
         return mBiometricUnlockControllerLazy.get().getMode()
-                == BiometricUnlockController.MODE_WAKE_AND_UNLOCK;
+                == BiometricUnlockController.MODE_WAKE_AND_DISMISS;
     }
 
     @Override
@@ -368,7 +413,7 @@ public final class DozeServiceHost implements DozeHost {
 
     @Override
     public void extendPulse(int reason) {
-        if (reason == DozeLog.PULSE_REASON_SENSOR_WAKE_REACH) {
+        if (mScrimController != null && reason == DozeLog.PULSE_REASON_SENSOR_WAKE_REACH) {
             mScrimController.setWakeLockScreenSensorActive(true);
         }
         if (mDozeScrimController.isPulsing() && mHeadsUpManager.hasNotifications()) {
@@ -397,6 +442,11 @@ public final class DozeServiceHost implements DozeHost {
     @Override
     public void onSlpiTap(float screenX, float screenY) {
         if (screenX < 0 || screenY < 0) return;
+        // Coordinates are reported in the highest resolution;
+        // scale the coordinates to the current resolution
+        float scaleFactor = DisplayExtensionsKt.getDisplayScaleFactor(mContext.getDisplay());
+        screenX *= scaleFactor;
+        screenY *= scaleFactor;
         dispatchTouchEventToAmbientIndicationContainer(screenX, screenY);
 
         mDozeInteractor.setLastTapToWakePosition(new Point((int) screenX, (int) screenY));
@@ -427,20 +477,27 @@ public final class DozeServiceHost implements DozeHost {
     }
 
     @Override
-    public void setDozeScreenBrightness(int brightness) {
+    public void setDozeScreenBrightness(float brightness) {
         mNotificationShadeWindowController.setDozeScreenBrightness(brightness);
-    }
-
-
-    @Override
-    public void setDozeScreenBrightnessFloat(float brightness) {
-        mNotificationShadeWindowController.setDozeScreenBrightnessFloat(brightness);
     }
 
     @Override
     public void setAodDimmingScrim(float scrimOpacity) {
         mDozeLog.traceSetAodDimmingScrim(scrimOpacity);
-        mScrimController.setAodFrontScrimAlpha(scrimOpacity);
+        if (SceneContainerFlag.isEnabled()) {
+            mAodDimInteractor.setDimAmount(scrimOpacity);
+        } else {
+            mScrimController.setAodFrontScrimAlpha(scrimOpacity);
+        }
+    }
+
+    @Override
+    public void setAodWallpaperDimmingScrim(float scrimOpacity) {
+        if (!SceneContainerFlag.isEnabled()) {
+            return;
+        }
+        mDozeLog.traceSetAodWallpaperDimmingScrim(scrimOpacity);
+        mAodDimInteractor.setWallpaperDimAmount(scrimOpacity);
     }
 
     @Override
@@ -457,7 +514,7 @@ public final class DozeServiceHost implements DozeHost {
     public void cancelGentleSleep() {
         mPendingScreenOffCallback = null;
         mHasPendingScreenOffCallbackChangeListener.onHasPendingScreenOffCallbackChanged(false);
-        if (mScrimController.getState() == ScrimState.OFF) {
+        if (mScrimController != null && mScrimController.getState() == ScrimState.OFF) {
             mCentralSurfaces.updateScrimController();
         }
     }
@@ -539,6 +596,39 @@ public final class DozeServiceHost implements DozeHost {
      */
     public boolean isAlwaysOnSuppressed() {
         return mAlwaysOnSuppressed;
+    }
+
+    private boolean listenForScreenOffFingerprintPulseEvents() {
+        return mDeviceEntryFingerprintAuthInteractor.isSensorUnderDisplay().getValue()
+                && mAmbientDisplayConfiguration.screenOffUdfpsEnabled(
+                        mSelectedUserInteractor.getSelectedUserId())
+                && (!mAmbientDisplayConfiguration.alwaysOnEnabled(
+                        mSelectedUserInteractor.getSelectedUserId())
+                || isPowerSaveActive());
+    }
+
+    private void startCollectingScreenOffFingerprintPulseEvents() {
+        if (listenForScreenOffFingerprintPulseEvents()) {
+            if (mUdfpsScreenOffFingerprintPulseEventCollectingJob != null) return;
+            mUdfpsScreenOffFingerprintPulseEventCollectingJob = JavaAdapterKt.collectFlow(
+                    mScope,
+                    mScope.getCoroutineContext(),
+                    mDeviceEntryFingerprintAuthInteractor.getFingerprintHelp(),
+                    state -> {
+                        for (Callback callback : mCallbacks) {
+                            callback.onFingerprintPulseWhileScreenOff(state);
+                        }
+                    }
+            );
+        }
+    }
+
+    private void stopCollectingUsUdfpsScreenOffPulseEvents() {
+        if (mUdfpsScreenOffFingerprintPulseEventCollectingJob != null) {
+            mUdfpsScreenOffFingerprintPulseEventCollectingJob.cancel(
+                    new CancellationException("Stop monitoring"));
+            mUdfpsScreenOffFingerprintPulseEventCollectingJob = null;
+        }
     }
 
     final OnHeadsUpChangedListener mOnHeadsUpChangedListener = new OnHeadsUpChangedListener() {

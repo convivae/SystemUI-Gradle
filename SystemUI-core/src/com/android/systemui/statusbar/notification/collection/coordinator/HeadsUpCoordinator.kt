@@ -24,13 +24,14 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.statusbar.NotificationRemoteInputManager
 import com.android.systemui.statusbar.chips.notification.domain.interactor.StatusBarNotificationChipsInteractor
-import com.android.systemui.statusbar.chips.notification.shared.StatusBarNotifChips
-import com.android.systemui.statusbar.notification.NotifPipelineFlags
+import com.android.systemui.statusbar.chips.uievents.StatusBarChipsUiEventLogger
+import com.android.systemui.statusbar.notification.collection.BundleEntry
 import com.android.systemui.statusbar.notification.collection.GroupEntry
 import com.android.systemui.statusbar.notification.collection.ListEntry
 import com.android.systemui.statusbar.notification.collection.NotifCollection
 import com.android.systemui.statusbar.notification.collection.NotifPipeline
 import com.android.systemui.statusbar.notification.collection.NotificationEntry
+import com.android.systemui.statusbar.notification.collection.PipelineEntry
 import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
 import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifComparator
 import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifPromoter
@@ -38,18 +39,26 @@ import com.android.systemui.statusbar.notification.collection.listbuilder.plugga
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifCollectionListener
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifLifetimeExtender
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifLifetimeExtender.OnEndLifetimeExtensionCallback
+import com.android.systemui.statusbar.notification.collection.notifcollection.UpdateSource
 import com.android.systemui.statusbar.notification.collection.provider.LaunchFullScreenIntentProvider
 import com.android.systemui.statusbar.notification.collection.render.NodeController
 import com.android.systemui.statusbar.notification.dagger.IncomingHeader
 import com.android.systemui.statusbar.notification.headsup.HeadsUpManager
 import com.android.systemui.statusbar.notification.headsup.OnHeadsUpChangedListener
+import com.android.systemui.statusbar.notification.headsup.PinnedStatus
 import com.android.systemui.statusbar.notification.interruption.HeadsUpViewBinder
+import com.android.systemui.statusbar.notification.interruption.VisualInterruptionDecisionLogger
 import com.android.systemui.statusbar.notification.interruption.VisualInterruptionDecisionProvider
+import com.android.systemui.statusbar.notification.interruption.VisualInterruptionDecisionProviderImpl.DecisionImpl
+import com.android.systemui.statusbar.notification.interruption.VisualInterruptionType
 import com.android.systemui.statusbar.notification.logKey
+import com.android.systemui.statusbar.notification.row.NotificationActionClickManager
 import com.android.systemui.statusbar.notification.shared.GroupHunAnimationFix
+import com.android.systemui.statusbar.notification.shared.LaunchNewFsiOnUpdate
 import com.android.systemui.statusbar.notification.stack.BUCKET_HEADS_UP
 import com.android.systemui.util.concurrency.DelayableExecutor
 import com.android.systemui.util.time.SystemClock
+import com.android.systemui.Flags.extendHunsPinnedByUser
 import java.util.function.Consumer
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -75,15 +84,17 @@ class HeadsUpCoordinator
 constructor(
     @Application private val applicationScope: CoroutineScope,
     private val mLogger: HeadsUpCoordinatorLogger,
+    private val mInterruptLogger: VisualInterruptionDecisionLogger,
     private val mSystemClock: SystemClock,
     private val notifCollection: NotifCollection,
     private val mHeadsUpManager: HeadsUpManager,
     private val mHeadsUpViewBinder: HeadsUpViewBinder,
     private val mVisualInterruptionDecisionProvider: VisualInterruptionDecisionProvider,
     private val mRemoteInputManager: NotificationRemoteInputManager,
+    private val notificationActionClickManager: NotificationActionClickManager,
     private val mLaunchFullScreenIntentProvider: LaunchFullScreenIntentProvider,
-    private val mFlags: NotifPipelineFlags,
     private val statusBarNotificationChipsInteractor: StatusBarNotificationChipsInteractor,
+    private val statusBarChipsUiEventLogger: StatusBarChipsUiEventLogger,
     @IncomingHeader private val mIncomingHeaderController: NodeController,
     @Main private val mExecutor: DelayableExecutor,
 ) : Coordinator {
@@ -96,36 +107,39 @@ constructor(
     private val mPostedEntries = LinkedHashMap<String, PostedEntry>()
 
     // notifs we've extended the lifetime for with cancellation callbacks
-    private val mNotifsExtendingLifetime = ArrayMap<NotificationEntry, Runnable?>()
+    @VisibleForTesting
+    val mNotifsExtendingLifetime = ArrayMap<NotificationEntry, Runnable?>()
+
+    private fun checkForMismatchedEntry(location: String, entry: NotificationEntry) {
+        if (mHeadsUpManager.hasMismatchedEntry(entry)) {
+            mLogger.logNotifEntryMismatch(location, entry.key)
+        }
+    }
 
     override fun attach(pipeline: NotifPipeline) {
         mNotifPipeline = pipeline
         mHeadsUpManager.addListener(mOnHeadsUpChangedListener)
         pipeline.addCollectionListener(mNotifCollectionListener)
-        pipeline.addOnBeforeTransformGroupsListener(::onBeforeTransformGroups)
+        pipeline.addOnBeforeTransformGroupsListener { onBeforeTransformGroups() }
         pipeline.addOnBeforeFinalizeFilterListener(::onBeforeFinalizeFilter)
         pipeline.addPromoter(mNotifPromoter)
         pipeline.addNotificationLifetimeExtender(mLifetimeExtender)
-        mRemoteInputManager.addActionPressListener(mActionPressListener)
+        notificationActionClickManager.addActionClickListener(mActionPressListener)
 
-        if (StatusBarNotifChips.isEnabled) {
-            applicationScope.launch {
-                statusBarNotificationChipsInteractor.promotedNotificationChipTapEvent.collect {
-                    showPromotedNotificationHeadsUp(it)
-                }
+        applicationScope.launch {
+            statusBarNotificationChipsInteractor.promotedNotificationChipTapEvent.collect {
+                onPromotedNotificationChipTapEvent(it)
             }
         }
     }
 
     /**
-     * Shows the promoted notification with the given [key] as heads-up.
+     * Updates the heads-up state based on which promoted notification with the given [key] was
+     * tapped.
      *
      * Must be run on the main thread.
      */
-    private fun showPromotedNotificationHeadsUp(key: String) {
-        StatusBarNotifChips.assertInNewMode()
-        mLogger.logShowPromotedNotificationHeadsUp(key)
-
+    private fun onPromotedNotificationChipTapEvent(key: String) {
         val entry = notifCollection.getEntry(key)
         if (entry == null) {
             mLogger.logPromotedNotificationForHeadsUpNotFound(key)
@@ -134,29 +148,44 @@ constructor(
         // TODO(b/364653005): Validate that the given key indeed matches a promoted notification,
         // not just any notification.
 
+        val isCurrentlyHeadsUp = mHeadsUpManager.isHeadsUpEntry(entry.key)
+        val isPinnedByUser = mHeadsUpManager.isPinnedByUser(entry.key)
+
+        if (isCurrentlyHeadsUp) {
+            // If the chip's notif is currently showing as heads up, then we'll stop showing it.
+            statusBarChipsUiEventLogger.logChipTapToHide(key, entry.sbn.instanceId)
+        } else {
+            statusBarChipsUiEventLogger.logChipTapToShow(key, entry.sbn.instanceId)
+        }
+
         val posted =
             PostedEntry(
                 entry,
                 wasAdded = false,
-                wasUpdated = false,
-                // Force-set this notification to show heads-up.
-                // TODO(b/364653005): This means that if you tap on the second notification chip,
-                // then it moves to become the first chip because whatever notification is showing
-                // heads-up is considered to be the top notification.
-                shouldHeadsUpEver = true,
-                shouldHeadsUpAgain = true,
-                isHeadsUpEntry = mHeadsUpManager.isHeadsUpEntry(entry.key),
+                wasUpdatedBy = null,
+                // We want the chip to act as a toggle, so if the chip's notification is currently
+                // showing as heads up, then we should stop showing it.
+                shouldHeadsUpEver = !isCurrentlyHeadsUp,
+                shouldHeadsUpAgain = !isCurrentlyHeadsUp,
+                isFromUserAction = true,
+                isHeadsUpEntry = isCurrentlyHeadsUp,
+                isPinnedByUser = isPinnedByUser,
                 isBinding = isEntryBinding(entry),
             )
+        if (isCurrentlyHeadsUp) {
+            mLogger.logHidePromotedNotificationHeadsUp(key)
+        } else {
+            mLogger.logShowPromotedNotificationHeadsUp(key)
+        }
 
         mExecutor.execute {
             mPostedEntries[entry.key] = posted
-            mNotifPromoter.invalidateList("showPromotedNotificationHeadsUp: ${entry.logKey}")
+            mNotifPromoter.invalidateList("onPromotedNotificationChipTapEvent: ${entry.logKey}")
         }
     }
 
-    private fun onHeadsUpViewBound(entry: NotificationEntry) {
-        mHeadsUpManager.showNotification(entry)
+    private fun onHeadsUpViewBound(entry: NotificationEntry, isFromUserOpenAction: Boolean) {
+        mHeadsUpManager.showNotification(entry, isFromUserOpenAction)
         mEntriesBindingUntil.remove(entry.key)
     }
 
@@ -164,7 +193,7 @@ constructor(
      * Once the pipeline starts running, we can look through posted entries and quickly process any
      * that don't have groups, and thus will never gave a group heads up edge case.
      */
-    fun onBeforeTransformGroups(list: List<ListEntry>) {
+    fun onBeforeTransformGroups() {
         mNow = mSystemClock.currentTimeMillis()
         if (mPostedEntries.isEmpty()) {
             return
@@ -185,7 +214,7 @@ constructor(
      * we know that stability and [NotifPromoter]s have been applied, so we can use the location of
      * notifications in this list to determine what kind of group heads up behavior should happen.
      */
-    fun onBeforeFinalizeFilter(list: List<ListEntry>) =
+    fun onBeforeFinalizeFilter(list: List<PipelineEntry>) =
         mHeadsUpManager.modifyHuns { hunMutator ->
             // Nothing to do if there are no other adds/updates
             if (mPostedEntries.isEmpty()) {
@@ -265,6 +294,22 @@ constructor(
                     return@forEach
                 }
 
+                if (isDisqualifiedChild(childToReceiveParentHeadsUp)) {
+                    mInterruptLogger.logDecision(
+                        VisualInterruptionType.PEEK.name,
+                        childToReceiveParentHeadsUp,
+                        DecisionImpl(
+                            shouldInterrupt = false,
+                            logReason = "disqualified-transfer-target",
+                        ),
+                    )
+                    postedEntries.forEach {
+                        it.shouldHeadsUpEver = false
+                        it.shouldHeadsUpAgain = false
+                        handlePostedEntry(it, hunMutator, scenario = "disqualified-transfer-target")
+                    }
+                    return@forEach
+                }
                 // At this point we just need to initiate the transfer
                 val summaryUpdate = mPostedEntries[logicalSummary.key]
 
@@ -289,10 +334,11 @@ constructor(
                             ?: PostedEntry(
                                 logicalSummary,
                                 wasAdded = false,
-                                wasUpdated = false,
+                                wasUpdatedBy = null,
                                 shouldHeadsUpEver = false,
                                 shouldHeadsUpAgain = false,
                                 isHeadsUpEntry = mHeadsUpManager.isHeadsUpEntry(logicalSummary.key),
+                                isPinnedByUser = mHeadsUpManager.isPinnedByUser(logicalSummary.key),
                                 isBinding = isEntryBinding(logicalSummary),
                             )
                     // If we transfer the heads up notification and the summary isn't even attached,
@@ -346,11 +392,13 @@ constructor(
                         PostedEntry(
                             childToReceiveParentHeadsUp,
                             wasAdded = false,
-                            wasUpdated = false,
+                            wasUpdatedBy = null,
                             shouldHeadsUpEver = true,
                             shouldHeadsUpAgain = true,
                             isHeadsUpEntry =
                                 mHeadsUpManager.isHeadsUpEntry(childToReceiveParentHeadsUp.key),
+                            isPinnedByUser =
+                                mHeadsUpManager.isPinnedByUser(childToReceiveParentHeadsUp.key),
                             isBinding = isEntryBinding(childToReceiveParentHeadsUp),
                         )
                     handlePostedEntry(
@@ -366,6 +414,13 @@ constructor(
             // Also take this opportunity to clean up any stale entry update times
             cleanUpEntryTimes()
         }
+
+    private fun isDisqualifiedChild(entry: NotificationEntry): Boolean {
+        if (entry.channel == null || entry.channel.id == null) {
+            return false
+        }
+        return entry.isBundled
+    }
 
     /**
      * Find the posted child with the newest when, and return it if it is isolated and has
@@ -404,26 +459,37 @@ constructor(
             )
             .firstOrNull()
 
-    private fun getGroupLocationsByKey(list: List<ListEntry>): Map<String, GroupLocation> =
+    private fun getGroupLocationsByKey(list: List<PipelineEntry>): Map<String, GroupLocation> =
         mutableMapOf<String, GroupLocation>().also { map ->
             list.forEach { topLevelEntry ->
                 when (topLevelEntry) {
-                    is NotificationEntry -> map[topLevelEntry.key] = GroupLocation.Isolated
-                    is GroupEntry -> {
-                        topLevelEntry.summary?.let { summary ->
-                            map[summary.key] = GroupLocation.Summary
-                        }
-                        topLevelEntry.children.forEach { child ->
-                            map[child.key] = GroupLocation.Child
-                        }
+                    is BundleEntry -> {
+                        map[topLevelEntry.key] = GroupLocation.Bundle
                     }
-                    else -> error("unhandled type $topLevelEntry")
+                    is ListEntry -> {
+                        getGroupLocationsByKey(topLevelEntry, map)
+                    }
                 }
             }
         }
 
+    private fun getGroupLocationsByKey(entry: ListEntry, map: MutableMap<String, GroupLocation>) {
+        when (entry) {
+            is GroupEntry -> {
+                entry.summary?.let { summary -> map[summary.key] = GroupLocation.Summary }
+                entry.children.forEach { child -> map[child.key] = GroupLocation.Child }
+            }
+
+            is NotificationEntry -> {
+                map[entry.key] = GroupLocation.Isolated
+            }
+            else -> error("unhandled type $entry")
+        }
+    }
+
     private fun handlePostedEntry(posted: PostedEntry, hunMutator: HunMutator, scenario: String) {
         mLogger.logPostedEntryWillEvaluate(posted, scenario)
+
         if (posted.wasAdded) {
             if (posted.shouldHeadsUpEver) {
                 bindForAsyncHeadsUp(posted)
@@ -433,16 +499,51 @@ constructor(
                 // NOTE: This might be because we're showing heads up (i.e. tracked by
                 // HeadsUpManager) OR it could be because we're binding, and that will affect the
                 // next step.
-                if (posted.shouldHeadsUpEver) {
+                if (extendHunsPinnedByUser() && posted.isPinnedByUser && !posted.isFromUserAction) {
+                    // If the notification is already pinned by the user, and we're not handling an
+                    // update from a user action (user tapping the status bar chip to unpin), then
+                    // we can just post an update to ensure the notification stays updated and
+                    // pinned by the user.
+                    hunMutator.updateNotification(posted.key, PinnedStatus.PinnedByUser)
+                } else if (posted.shouldHeadsUpEver) {
                     // If showing heads up, we need to post an update. Otherwise we're still
                     // binding, and we can just let that finish.
                     if (posted.isHeadsUpEntry) {
-                        hunMutator.updateNotification(posted.key, posted.shouldHeadsUpAgain)
+                        val pinnedStatus =
+                            if (posted.shouldHeadsUpAgain) {
+                                if (posted.isFromUserAction) {
+                                    PinnedStatus.PinnedByUser
+                                } else {
+                                    PinnedStatus.PinnedBySystem
+                                }
+                            } else {
+                                PinnedStatus.NotPinned
+                            }
+                        hunMutator.updateNotification(posted.key, pinnedStatus)
                     }
-                } else {
+                } else { // shouldHeadsUpEver = false
                     if (posted.isHeadsUpEntry) {
-                        // We don't want this to be interrupting anymore, let's remove it
-                        hunMutator.removeNotification(posted.key, false /*removeImmediately*/)
+                        if (
+                            posted.isFromUserAction ||
+                                mHeadsUpManager.canRemoveImmediately(posted.entry.key)
+                        ) {
+                            // We don't want this to be interrupting anymore, let's remove it.
+                            // If the notification is pinned by the user, the only way a user
+                            // can un-pin it by tapping the status bar notification chip. Since
+                            // that's a clear user action, we should remove the HUN immediately
+                            // instead of waiting for any sort of minimum timeout.
+                            // TODO(b/401068530) Ensure that status bar chip HUNs are not
+                            //  removed for silent update
+                            // If we can remove the notification immediately, let's remove it in
+                            // this update.
+                            hunMutator.removeNotification(
+                                posted.key,
+                                /* releaseImmediately= */ true,
+                            )
+                        } else {
+                            // Do NOT remove HUN for non-user update.
+                            // Let the HUN show for its remaining duration.
+                        }
                     } else {
                         // Don't let the bind finish
                         cancelHeadsUpBind(posted.entry)
@@ -461,10 +562,31 @@ constructor(
     }
 
     private fun bindForAsyncHeadsUp(posted: PostedEntry) {
+        val isFromUserOpenAction = posted.isFromUserAction
         // TODO: Add a guarantee to bindHeadsUpView of some kind of callback if the bind is
         //  cancelled so that we don't need to have this sad timeout hack.
         mEntriesBindingUntil[posted.key] = mNow + BIND_TIMEOUT
-        mHeadsUpViewBinder.bindHeadsUpView(posted.entry, this::onHeadsUpViewBound)
+        mHeadsUpViewBinder.bindHeadsUpView(
+            posted.entry,
+            isFromUserOpenAction,
+            this::onHeadsUpViewBound,
+        )
+    }
+
+    private fun evaluateNewFullScreenIntent(entry: NotificationEntry) {
+        val fsiDecision =
+            mVisualInterruptionDecisionProvider.makeUnloggedFullScreenIntentDecision(entry)
+        mVisualInterruptionDecisionProvider.logFullScreenIntentDecision(fsiDecision)
+        if (fsiDecision.shouldInterrupt) {
+            mLaunchFullScreenIntentProvider.launchFullScreenIntent(entry)
+        } else if (fsiDecision.wouldInterruptWithoutDnd) {
+            // If DND was the only reason this entry was suppressed, note it for potential
+            // reconsideration on later ranking updates.
+            addForFSIReconsideration(entry, mSystemClock.currentTimeMillis())
+        }
+        if (LaunchNewFsiOnUpdate.isEnabled) {
+            entry.markFullScreenIntentEvaluated()
+        }
     }
 
     private val mNotifCollectionListener =
@@ -476,16 +598,7 @@ constructor(
             override fun onEntryAdded(entry: NotificationEntry) {
                 // First check whether this notification should launch a full screen intent, and
                 // launch it if needed.
-                val fsiDecision =
-                    mVisualInterruptionDecisionProvider.makeUnloggedFullScreenIntentDecision(entry)
-                mVisualInterruptionDecisionProvider.logFullScreenIntentDecision(fsiDecision)
-                if (fsiDecision.shouldInterrupt) {
-                    mLaunchFullScreenIntentProvider.launchFullScreenIntent(entry)
-                } else if (fsiDecision.wouldInterruptWithoutDnd) {
-                    // If DND was the only reason this entry was suppressed, note it for potential
-                    // reconsideration on later ranking updates.
-                    addForFSIReconsideration(entry, mSystemClock.currentTimeMillis())
-                }
+                evaluateNewFullScreenIntent(entry)
 
                 // makeAndLogHeadsUpDecision includes check for whether this notification should be
                 // filtered
@@ -497,10 +610,11 @@ constructor(
                     PostedEntry(
                         entry,
                         wasAdded = true,
-                        wasUpdated = false,
+                        wasUpdatedBy = null,
                         shouldHeadsUpEver = shouldHeadsUpEver,
                         shouldHeadsUpAgain = true,
                         isHeadsUpEntry = false,
+                        isPinnedByUser = false,
                         isBinding = false,
                     )
 
@@ -509,62 +623,93 @@ constructor(
             }
 
             /**
+             * Because this object implements update logic inside the 2-argument version of
+             * [onEntryUpdated], it needs to delegate to that version from this version to ensure
+             * the logic is consistent regardless of the method called.
+             *
+             * Because this version is a conveneience for *implementers*, and is not called by the
+             * [NotifCollection], this is mainly for tests.
+             */
+            override fun onEntryUpdated(entry: NotificationEntry) {
+                onEntryUpdated(entry, UpdateSource.App)
+            }
+
+            /**
              * Notification could've updated to be heads up or not heads up. Even if it did update
              * to heads up, if the notification specified that it only wants to heads up once, don't
              * heads up again.
              */
-            override fun onEntryUpdated(entry: NotificationEntry) {
-                val shouldHeadsUpEver =
-                    mVisualInterruptionDecisionProvider
-                        .makeAndLogHeadsUpDecision(entry)
-                        .shouldInterrupt
-                val shouldHeadsUpAgain = shouldHunAgain(entry)
+            override fun onEntryUpdated(entry: NotificationEntry, source: UpdateSource) {
+                // First check whether this notification should launch a full screen intent, and
+                // launch it if needed.
+                if (LaunchNewFsiOnUpdate.isEnabled && entry.isFullScreenIntentNewlyAdded()) {
+                    evaluateNewFullScreenIntent(entry)
+                }
+
+                // First check basic heads up state.
                 val isHeadsUpEntry = mHeadsUpManager.isHeadsUpEntry(entry.key)
+                val isPinnedByUser = mHeadsUpManager.isPinnedByUser(entry.key)
                 val isBinding = isEntryBinding(entry)
+                val isHeadsUpAlready = isHeadsUpEntry || isBinding
+                val isSilentSystemServerUpdateDuringHeadsUp =
+                    source == UpdateSource.SystemServer &&
+                        entry.sbn.notification.isSilent &&
+                        isHeadsUpAlready
+
+                if (isSilentSystemServerUpdateDuringHeadsUp) {
+                    mInterruptLogger.logSilentSystemServerUpdateDuringHeadsUp(entry)
+                }
+
+                // Determine if we can be heads up. If we get a silent system server update while
+                // heads up, we should not bother evaluating for interruption; just set the values
+                // to ensure we continue to show the heads up without starting it again.
+                val shouldHeadsUpEver =
+                    isSilentSystemServerUpdateDuringHeadsUp ||
+                        mVisualInterruptionDecisionProvider
+                            .makeAndLogHeadsUpDecision(entry)
+                            .shouldInterrupt
+                val shouldHeadsUpAgain =
+                    !isSilentSystemServerUpdateDuringHeadsUp && shouldHunAgain(entry)
+
                 val posted =
                     mPostedEntries.compute(entry.key) { _, value ->
                         value?.also { update ->
-                            update.wasUpdated = true
+                            update.wasUpdatedBy = source
                             update.shouldHeadsUpEver = shouldHeadsUpEver
                             update.shouldHeadsUpAgain =
                                 update.shouldHeadsUpAgain || shouldHeadsUpAgain
                             update.isHeadsUpEntry = isHeadsUpEntry
+                            update.isPinnedByUser = isPinnedByUser
                             update.isBinding = isBinding
                         }
                             ?: PostedEntry(
                                 entry,
                                 wasAdded = false,
-                                wasUpdated = true,
+                                wasUpdatedBy = source,
                                 shouldHeadsUpEver = shouldHeadsUpEver,
                                 shouldHeadsUpAgain = shouldHeadsUpAgain,
                                 isHeadsUpEntry = isHeadsUpEntry,
+                                isPinnedByUser = isPinnedByUser,
                                 isBinding = isBinding,
                             )
                     }
-                // Handle cancelling heads up here, rather than in the OnBeforeFinalizeFilter, so
-                // that
-                // work can be done before the ShadeListBuilder is run. This prevents re-entrant
-                // behavior between this Coordinator, HeadsUpManager, and VisualStabilityManager.
-                if (posted?.shouldHeadsUpEver == false) {
-                    if (posted.isHeadsUpEntry) {
-                        // We don't want this to be interrupting anymore, let's remove it
-                        mHeadsUpManager.removeNotification(
-                            posted.key,
-                            /* removeImmediately= */ false,
-                            "onEntryUpdated",
-                        )
-                    } else if (posted.isBinding) {
-                        // Don't let the bind finish
-                        cancelHeadsUpBind(posted.entry)
-                    }
+                // TODO(b/403703828) Move canceling to OnBeforeFinalizeFilter, since we are not
+                //  removing from HeadsUpManager and don't need to deal with re-entrant behavior
+                //  between HeadsUpCoordinator, HeadsUpManager, and VisualStabilityManager.
+                if (
+                    posted?.shouldHeadsUpEver == false && !posted.isHeadsUpEntry && posted.isBinding
+                ) {
+                    // Don't let the bind finish
+                    cancelHeadsUpBind(posted.entry)
                 }
-
                 // Update last updated time for this entry
                 setUpdateTime(entry, mSystemClock.currentTimeMillis())
             }
 
             /** Stop showing as heads up once removed from the notification collection */
             override fun onEntryRemoved(entry: NotificationEntry, reason: Int) {
+                checkForMismatchedEntry("onEntryRemoved", entry)
+
                 mPostedEntries.remove(entry.key)
                 mEntriesUpdateTimes.remove(entry.key)
                 cancelHeadsUpBind(entry)
@@ -585,6 +730,7 @@ constructor(
             }
 
             override fun onEntryCleanUp(entry: NotificationEntry) {
+                mNotifsExtendingLifetime.remove(entry)
                 mHeadsUpViewBinder.abortBindCallback(entry)
             }
 
@@ -603,16 +749,13 @@ constructor(
                 for (entry in mNotifPipeline.allNotifs) {
                     // Only consider entries that are recent enough, since we want to apply a fairly
                     // strict threshold for when an entry should be updated via only ranking and not
-                    // an
-                    // app-provided notification update.
+                    // an app-provided notification update.
                     if (!isNewEnoughForRankingUpdate(entry)) continue
 
                     // The only entries we consider heads up for here are entries that have never
                     // interrupted and that now say they should heads up or FSI; if they've heads
-                    // uped in
-                    // the past, we don't want to incorrectly heads up a second time if there wasn't
-                    // an
-                    // explicit notification update.
+                    // uped in the past, we don't want to incorrectly heads up a second time if
+                    // there wasn't an explicit notification update.
                     if (entry.hasInterrupted()) continue
 
                     // Before potentially allowing heads-up, check for any candidates for a FSI
@@ -656,15 +799,15 @@ constructor(
 
                     // The cases where we should consider this notification to be updated:
                     // - if this entry is not present in PostedEntries, and is now in a
-                    // shouldHeadsUp
-                    //   state
+                    //   shouldHeadsUp state
                     // - if it is present in PostedEntries and the previous state of shouldHeadsUp
                     //   differs from the updated one
                     val decision =
                         mVisualInterruptionDecisionProvider.makeUnloggedHeadsUpDecision(entry)
                     val shouldHeadsUpEver = decision.shouldInterrupt
-                    val postedShouldHeadsUpEver =
-                        mPostedEntries[entry.key]?.shouldHeadsUpEver ?: false
+                    val postedEntry = mPostedEntries[entry.key]
+                    val postedShouldHeadsUpEver = postedEntry?.shouldHeadsUpEver ?: false
+                    val updatedSource = postedEntry?.wasUpdatedBy ?: UpdateSource.SystemServer
                     val shouldUpdateEntry = postedShouldHeadsUpEver != shouldHeadsUpEver
 
                     if (shouldUpdateEntry) {
@@ -673,7 +816,7 @@ constructor(
                             shouldHeadsUpEver,
                             decision.logReason,
                         )
-                        onEntryUpdated(entry)
+                        onEntryUpdated(entry, source = updatedSource)
                     }
                 }
             }
@@ -719,7 +862,8 @@ constructor(
      * The time window is the same as for ranking update, but this doesn't allow a potential update
      * to an entry with full screen intent to count for timing purposes.
      */
-    private fun isCandidateForFSIReconsideration(entry: NotificationEntry): Boolean {
+    @VisibleForTesting
+    fun isCandidateForFSIReconsideration(entry: NotificationEntry): Boolean {
         val addedTime = mFSIUpdateCandidates[entry.key] ?: return false
         return (mSystemClock.currentTimeMillis() - addedTime) <= MAX_RANKING_UPDATE_DELAY_MS
     }
@@ -758,7 +902,7 @@ constructor(
      */
     private val mActionPressListener =
         Consumer<NotificationEntry> { entry ->
-            mHeadsUpManager.setUserActionMayIndirectlyRemove(entry)
+            mHeadsUpManager.setUserActionMayIndirectlyRemove(entry.key)
             mExecutor.execute { endNotifLifetimeExtensionIfExtended(entry) }
         }
 
@@ -771,6 +915,8 @@ constructor(
             }
 
             override fun maybeExtendLifetime(entry: NotificationEntry, reason: Int): Boolean {
+                checkForMismatchedEntry("maybeExtendLifetime", entry)
+
                 if (mHeadsUpManager.canRemoveImmediately(entry.key)) {
                     return false
                 }
@@ -779,6 +925,8 @@ constructor(
                     mNotifsExtendingLifetime[entry] =
                         mExecutor.executeDelayed(
                             {
+                                checkForMismatchedEntry("removeNotification timeout", entry)
+
                                 mHeadsUpManager.removeNotification(
                                     entry.key, /* releaseImmediately */
                                     true,
@@ -790,6 +938,8 @@ constructor(
                         )
                 } else {
                     mExecutor.execute {
+                        checkForMismatchedEntry("removeNotification execute", entry)
+
                         mHeadsUpManager.removeNotification(
                             entry.key, /* releaseImmediately */
                             false,
@@ -815,14 +965,21 @@ constructor(
 
     val sectioner =
         object : NotifSectioner("HeadsUp", BUCKET_HEADS_UP) {
-            override fun isInSection(entry: ListEntry): Boolean =
+            override fun isInSection(entry: PipelineEntry): Boolean {
+                if (BundleUtil.isClassified(entry)) {
+                    return false
+                }
                 // TODO: This check won't notice if a child of the group is going to HUN...
-                isGoingToShowHunNoRetract(entry)
+                return isGoingToShowHunNoRetract(entry)
+            }
 
             override fun getComparator(): NotifComparator {
                 return object : NotifComparator("HeadsUp") {
-                    override fun compare(o1: ListEntry, o2: ListEntry): Int =
-                        mHeadsUpManager.compare(o1.representativeEntry, o2.representativeEntry)
+                    override fun compare(o1: PipelineEntry, o2: PipelineEntry): Int =
+                        mHeadsUpManager.compare(
+                            o1.asListEntry()?.representativeEntry,
+                            o2.asListEntry()?.representativeEntry,
+                        )
                 }
             }
 
@@ -836,20 +993,24 @@ constructor(
         object : OnHeadsUpChangedListener {
             override fun onHeadsUpStateChanged(entry: NotificationEntry, isHeadsUp: Boolean) {
                 if (!isHeadsUp) {
-                    mNotifPromoter.invalidateList("headsUpEnded: ${entry.logKey}")
-                    mHeadsUpViewBinder.unbindHeadsUpView(entry)
-                    endNotifLifetimeExtensionIfExtended(entry)
+                    mExecutor.execute {
+                        mNotifPromoter.invalidateList("headsUpEnded: ${entry.logKey}")
+                        mHeadsUpViewBinder.unbindHeadsUpView(entry)
+                        endNotifLifetimeExtensionIfExtended(entry)
+                    }
                 }
             }
 
             override fun onHeadsUpAnimatingAwayEnded(entry: NotificationEntry) {
-                mNotifPromoter.invalidateList("headsUpAnimatingAwayEnded: ${entry.logKey}")
+                mExecutor.execute {
+                    mNotifPromoter.invalidateList("headsUpAnimatingAwayEnded: ${entry.logKey}")
+                }
             }
         }
 
     private fun isSticky(entry: NotificationEntry) = mHeadsUpManager.isSticky(entry.key)
 
-    private fun isEntryBinding(entry: ListEntry): Boolean {
+    private fun isEntryBinding(entry: PipelineEntry): Boolean {
         val bindingUntil = mEntriesBindingUntil[entry.key]
         return bindingUntil != null && bindingUntil >= mNow
     }
@@ -857,14 +1018,14 @@ constructor(
     /**
      * Whether the notification is already heads up or binding so that it can imminently heads up
      */
-    private fun isAttemptingToShowHun(entry: ListEntry) =
+    private fun isAttemptingToShowHun(entry: PipelineEntry) =
         mHeadsUpManager.isHeadsUpEntry(entry.key) ||
             isEntryBinding(entry) ||
             isHeadsUpAnimatingAway(entry)
 
-    private fun isHeadsUpAnimatingAway(entry: ListEntry): Boolean {
+    private fun isHeadsUpAnimatingAway(entry: PipelineEntry): Boolean {
         if (!GroupHunAnimationFix.isEnabled) return false
-        return entry.representativeEntry?.row?.isHeadsUpAnimatingAway ?: false
+        return entry.asListEntry()?.representativeEntry?.row?.isHeadsUpAnimatingAway ?: false
     }
 
     /**
@@ -873,7 +1034,7 @@ constructor(
      * returns `true` even if the update would (in isolation of its group) cause the heads up to be
      * retracted. This is important for not retracting transferred group heads ups.
      */
-    private fun isGoingToShowHunNoRetract(entry: ListEntry) =
+    private fun isGoingToShowHunNoRetract(entry: PipelineEntry) =
         mPostedEntries[entry.key]?.calculateShouldBeHeadsUpNoRetract ?: isAttemptingToShowHun(entry)
 
     /**
@@ -882,7 +1043,7 @@ constructor(
      * strict because any update which would revoke the heads up supersedes the current heads
      * up/binding state.
      */
-    private fun isGoingToShowHunStrict(entry: ListEntry) =
+    private fun isGoingToShowHunStrict(entry: PipelineEntry) =
         mPostedEntries[entry.key]?.calculateShouldBeHeadsUpStrict ?: isAttemptingToShowHun(entry)
 
     private fun endNotifLifetimeExtensionIfExtended(entry: NotificationEntry) {
@@ -903,13 +1064,18 @@ constructor(
     data class PostedEntry(
         val entry: NotificationEntry,
         val wasAdded: Boolean,
-        var wasUpdated: Boolean,
+        var wasUpdatedBy: UpdateSource?,
         var shouldHeadsUpEver: Boolean,
         var shouldHeadsUpAgain: Boolean,
+        var isFromUserAction: Boolean = false,
         var isHeadsUpEntry: Boolean,
+        var isPinnedByUser: Boolean,
         var isBinding: Boolean,
     ) {
         val key = entry.key
+        val wasUpdated: Boolean
+            get() = wasUpdatedBy != null
+
         val isHeadsUpAlready: Boolean
             get() = isHeadsUpEntry || isBinding
 
@@ -926,6 +1092,7 @@ private enum class GroupLocation {
     Isolated,
     Summary,
     Child,
+    Bundle,
 }
 
 private fun Map<String, GroupLocation>.getLocation(key: String): GroupLocation =
@@ -943,7 +1110,7 @@ private fun <R> HeadsUpManager.modifyHuns(block: (HunMutator) -> R): R {
 
 /** Mutates the HeadsUp state of notifications. */
 private interface HunMutator {
-    fun updateNotification(key: String, shouldHeadsUpAgain: Boolean)
+    fun updateNotification(key: String, requestedPinnedStatus: PinnedStatus)
 
     fun removeNotification(key: String, releaseImmediately: Boolean)
 }
@@ -955,8 +1122,8 @@ private interface HunMutator {
 private class HunMutatorImpl(private val headsUpManager: HeadsUpManager) : HunMutator {
     private val deferred = mutableListOf<Pair<String, Boolean>>()
 
-    override fun updateNotification(key: String, shouldHeadsUpAgain: Boolean) {
-        headsUpManager.updateNotification(key, shouldHeadsUpAgain)
+    override fun updateNotification(key: String, requestedPinnedStatus: PinnedStatus) {
+        headsUpManager.updateNotification(key, requestedPinnedStatus)
     }
 
     override fun removeNotification(key: String, releaseImmediately: Boolean) {

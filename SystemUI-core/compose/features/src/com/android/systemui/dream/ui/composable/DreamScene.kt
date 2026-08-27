@@ -18,13 +18,9 @@ package com.android.systemui.dream.ui.composable
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.android.compose.animation.scene.SceneScope
+import com.android.compose.animation.scene.ContentScope
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
 import com.android.systemui.dagger.SysUISingleton
@@ -49,18 +45,14 @@ constructor(private val actionsViewModelFactory: DreamUserActionsViewModel.Facto
 
     override val userActions: Flow<Map<UserAction, UserActionResult>> = actionsViewModel.actions
 
-    override suspend fun onActivated(): Nothing {
+    override val alwaysCompose: Boolean = false
+
+    override suspend fun onActivated() {
         actionsViewModel.activate()
     }
 
     @Composable
-    override fun SceneScope.Content(modifier: Modifier) {
-        Box(modifier = modifier.fillMaxSize()) {
-            // Render a sleep emoji to make the scene appear visible.
-            Text(
-                modifier = Modifier.padding(16.dp).align(Alignment.BottomStart),
-                text = "\uD83D\uDCA4",
-            )
-        }
+    override fun ContentScope.Content(modifier: Modifier) {
+        Box(modifier = modifier.fillMaxSize()) {}
     }
 }

@@ -21,4 +21,4 @@ import javax.inject.Qualifier
 @Qualifier
 @MustBeDocumented
 @Retention(AnnotationRetention.RUNTIME)
-annotation class NotifInflation
+public annotation class NotifInflation

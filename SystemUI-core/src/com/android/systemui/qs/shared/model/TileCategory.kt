@@ -16,23 +16,66 @@
 
 package com.android.systemui.qs.shared.model
 
+import android.service.quicksettings.TileService.CATEGORY_ACCESSIBILITY
+import android.service.quicksettings.TileService.CATEGORY_CONNECTIVITY
+import android.service.quicksettings.TileService.CATEGORY_DISPLAY
+import android.service.quicksettings.TileService.CATEGORY_PRIVACY
+import android.service.quicksettings.TileService.CATEGORY_UTILITIES
+import android.service.quicksettings.TileService.Categories
 import com.android.systemui.common.shared.model.Text
 import com.android.systemui.res.R
 
 /** Categories for tiles. This can be used to sort tiles in edit mode. */
-enum class TileCategory(val label: Text) {
-    CONNECTIVITY(Text.Resource(R.string.qs_edit_mode_category_connectivity)),
-    UTILITIES(Text.Resource(R.string.qs_edit_mode_category_utilities)),
-    DISPLAY(Text.Resource(R.string.qs_edit_mode_category_display)),
-    PRIVACY(Text.Resource(R.string.qs_edit_mode_category_privacy)),
-    ACCESSIBILITY(Text.Resource(R.string.qs_edit_mode_category_accessibility)),
-    PROVIDED_BY_APP(Text.Resource(R.string.qs_edit_mode_category_providedByApps)),
-    UNKNOWN(Text.Resource(R.string.qs_edit_mode_category_unknown)),
+enum class TileCategory(val label: Text, val iconId: Int) {
+    CONNECTIVITY(
+        Text.Resource(R.string.qs_edit_mode_category_connectivity),
+        R.drawable.ic_qs_category_connectivty,
+    ),
+    UTILITIES(
+        Text.Resource(R.string.qs_edit_mode_category_utilities),
+        R.drawable.ic_qs_category_utilities,
+    ),
+    DISPLAY(
+        Text.Resource(R.string.qs_edit_mode_category_display),
+        R.drawable.ic_qs_category_display,
+    ),
+    PRIVACY(
+        Text.Resource(R.string.qs_edit_mode_category_privacy),
+        R.drawable.ic_qs_category_privacy,
+    ),
+    ACCESSIBILITY(
+        Text.Resource(R.string.qs_edit_mode_category_accessibility),
+        R.drawable.ic_qs_category_accessibility,
+    ),
+    PROVIDED_BY_SYSTEM_APP(
+        Text.Resource(R.string.qs_edit_mode_category_providedBySystemApps),
+        R.drawable.ic_qs_category_system_apps,
+    ),
+    PROVIDED_BY_APP(
+        Text.Resource(R.string.qs_edit_mode_category_providedByApps),
+        R.drawable.ic_qs_category_provided_by_apps,
+    ),
+    UNKNOWN(
+        Text.Resource(R.string.qs_edit_mode_category_unknown),
+        R.drawable.ic_qs_category_unknown,
+    ),
 }
 
 interface CategoryAndName {
     val category: TileCategory
     val name: String
+}
+
+/** Returns the [TileCategory] for the [Categories] received. */
+fun tileCategoryFor(@Categories value: String): TileCategory? {
+    return when (value) {
+        CATEGORY_CONNECTIVITY -> TileCategory.CONNECTIVITY
+        CATEGORY_UTILITIES -> TileCategory.UTILITIES
+        CATEGORY_DISPLAY -> TileCategory.DISPLAY
+        CATEGORY_PRIVACY -> TileCategory.PRIVACY
+        CATEGORY_ACCESSIBILITY -> TileCategory.ACCESSIBILITY
+        else -> null
+    }
 }
 
 /**

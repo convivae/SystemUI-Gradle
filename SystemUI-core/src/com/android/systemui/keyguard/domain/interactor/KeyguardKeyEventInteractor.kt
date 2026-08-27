@@ -19,23 +19,23 @@ package com.android.systemui.keyguard.domain.interactor
 import android.content.Context
 import android.media.AudioManager
 import android.view.KeyEvent
+import com.android.systemui.Flags
 import com.android.systemui.back.domain.interactor.BackActionInteractor
-import com.android.systemui.bouncer.shared.flag.ComposeBouncerFlags
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor
 import com.android.systemui.keyevent.domain.interactor.SysUIKeyEventHandler.Companion.handleAction
 import com.android.systemui.media.controls.util.MediaSessionLegacyHelperWrapper
 import com.android.systemui.plugins.ActivityStarter.OnDismissAction
 import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.power.domain.interactor.PowerInteractor
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.ShadeController
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.StatusBarState
 import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /** Handles key events arriving when the keyguard is showing or device is dozing. */
-@ExperimentalCoroutinesApi
 @SysUISingleton
 class KeyguardKeyEventInteractor
 @Inject
@@ -46,6 +46,7 @@ constructor(
     private val shadeController: ShadeController,
     private val mediaSessionLegacyHelperWrapper: MediaSessionLegacyHelperWrapper,
     private val backActionInteractor: BackActionInteractor,
+    private val deviceEntryInteractor: DeviceEntryInteractor,
     private val powerInteractor: PowerInteractor,
     private val keyguardMediaKeyInteractor: KeyguardMediaKeyInteractor,
 ) {
@@ -61,11 +62,17 @@ constructor(
         if (event.handleAction()) {
             if (KeyEvent.isConfirmKey(event.keyCode)) {
                 if (isDeviceAwake()) {
-                    return collapseShadeLockedOrShowPrimaryBouncer()
+                    return collapseShadeLockedOrShowPrimaryBouncer(loggingReason = "Confirm key")
                 }
             }
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MENU -> return dispatchMenuKeyEvent()
+            }
+            if (
+                (Flags.pressAnyKeyToAccessBouncer() || Flags.pressAnyKeyToAccessBouncer2()) &&
+                    isDeviceAwake()
+            ) {
+                return collapseShadeLockedOrShowPrimaryBouncer(loggingReason = "Key pressed")
             }
         }
         return false
@@ -101,7 +108,7 @@ constructor(
     fun interceptMediaKey(event: KeyEvent): Boolean {
         return when (statusBarStateController.state) {
             StatusBarState.KEYGUARD ->
-                if (ComposeBouncerFlags.isEnabled) {
+                if (SceneContainerFlag.isEnabled) {
                     keyguardMediaKeyInteractor.processMediaKeyEvent(event)
                 } else {
                     statusBarKeyguardViewManager.interceptMediaKey(event)
@@ -130,7 +137,7 @@ constructor(
         return false
     }
 
-    private fun collapseShadeLockedOrShowPrimaryBouncer(): Boolean {
+    private fun collapseShadeLockedOrShowPrimaryBouncer(loggingReason: String): Boolean {
         when (statusBarStateController.state) {
             StatusBarState.SHADE -> return false
             StatusBarState.SHADE_LOCKED -> {
@@ -138,7 +145,14 @@ constructor(
                 return true
             }
             StatusBarState.KEYGUARD -> {
-                statusBarKeyguardViewManager.showPrimaryBouncer(true)
+                if (SceneContainerFlag.isEnabled) {
+                    deviceEntryInteractor.attemptDeviceEntry(loggingReason)
+                } else {
+                    statusBarKeyguardViewManager.showPrimaryBouncer(
+                        true,
+                        "KeyguardKeyEventInteractor#collapseShadeLockedOrShowPrimaryBouncer",
+                    )
+                }
                 return true
             }
         }

@@ -25,36 +25,37 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.airbnb.lottie.LottieAnimationView
 import com.airbnb.lottie.LottieComposition
 import com.airbnb.lottie.LottieProperty
 import com.android.app.animation.Interpolators
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.keyguard.KeyguardPINView
 import com.android.systemui.CoreStartable
 import com.android.systemui.biometrics.domain.interactor.BiometricStatusInteractor
-import com.android.systemui.biometrics.domain.interactor.DisplayStateInteractor
 import com.android.systemui.biometrics.domain.interactor.SideFpsSensorInteractor
 import com.android.systemui.biometrics.shared.model.AuthenticationReason.NotRunning
 import com.android.systemui.biometrics.shared.model.LottieCallback
 import com.android.systemui.biometrics.ui.viewmodel.SideFpsOverlayViewModel
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.display.domain.interactor.DisplayStateInteractor
 import com.android.systemui.keyguard.domain.interactor.DeviceEntrySideFpsOverlayInteractor
 import com.android.systemui.keyguard.ui.viewmodel.SideFpsProgressBarViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.power.domain.interactor.PowerInteractor
 import com.android.systemui.res.R
-import com.android.systemui.util.kotlin.sample
 import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 /** Binds the side fingerprint sensor indicator view to [SideFpsOverlayViewModel]. */
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class SideFpsOverlayViewBinder
 @Inject
@@ -67,51 +68,120 @@ constructor(
     private val layoutInflater: Lazy<LayoutInflater>,
     private val sideFpsProgressBarViewModel: Lazy<SideFpsProgressBarViewModel>,
     private val sfpsSensorInteractor: Lazy<SideFpsSensorInteractor>,
-    private val windowManager: Lazy<WindowManager>
+    private val windowManager: Lazy<WindowManager>,
+    private val powerInteractor: Lazy<PowerInteractor>,
 ) : CoreStartable {
+    private val pauseDelegate: AccessibilityDelegateCompat =
+        object : AccessibilityDelegateCompat() {
+            override fun onInitializeAccessibilityNodeInfo(
+                host: View,
+                info: AccessibilityNodeInfoCompat,
+            ) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.addAction(
+                    AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                        AccessibilityNodeInfoCompat.ACTION_CLICK,
+                        host.context.getString(R.string.pause_animation),
+                    )
+                )
+            }
 
-    override fun start() {
-        applicationScope
-            .launch {
-                sfpsSensorInteractor.get().isAvailable.collect { isSfpsAvailable ->
-                    if (isSfpsAvailable) {
-                        combine(
-                                biometricStatusInteractor.get().sfpsAuthenticationReason,
-                                deviceEntrySideFpsOverlayInteractor
-                                    .get()
-                                    .showIndicatorForDeviceEntry,
-                                sideFpsProgressBarViewModel.get().isVisible,
-                                ::Triple
-                            )
-                            .sample(displayStateInteractor.get().isInRearDisplayMode, ::Pair)
-                            .collect { (combinedFlows, isInRearDisplayMode: Boolean) ->
-                                val (
-                                    systemServerAuthReason,
-                                    showIndicatorForDeviceEntry,
-                                    progressBarIsVisible) =
-                                    combinedFlows
-                                Log.d(
-                                    TAG,
-                                    "systemServerAuthReason = $systemServerAuthReason, " +
-                                        "showIndicatorForDeviceEntry = " +
-                                        "$showIndicatorForDeviceEntry, " +
-                                        "progressBarIsVisible = $progressBarIsVisible"
-                                )
-                                if (!isInRearDisplayMode) {
-                                    if (progressBarIsVisible) {
-                                        hide()
-                                    } else if (systemServerAuthReason != NotRunning) {
-                                        show()
-                                    } else if (showIndicatorForDeviceEntry) {
-                                        show()
-                                    } else {
-                                        hide()
-                                    }
-                                }
-                            }
-                    }
+            override fun dispatchPopulateAccessibilityEvent(
+                host: View,
+                event: AccessibilityEvent,
+            ): Boolean {
+                return if (event.getEventType() === AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                    true
+                } else {
+                    super.dispatchPopulateAccessibilityEvent(host, event)
                 }
             }
+        }
+
+    private val resumeDelegate: AccessibilityDelegateCompat =
+        object : AccessibilityDelegateCompat() {
+            override fun onInitializeAccessibilityNodeInfo(
+                host: View,
+                info: AccessibilityNodeInfoCompat,
+            ) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.addAction(
+                    AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                        AccessibilityNodeInfoCompat.ACTION_CLICK,
+                        host.context.getString(R.string.resume_animation),
+                    )
+                )
+            }
+
+            override fun dispatchPopulateAccessibilityEvent(
+                host: View,
+                event: AccessibilityEvent,
+            ): Boolean {
+                return if (event.getEventType() === AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                    true
+                } else {
+                    super.dispatchPopulateAccessibilityEvent(host, event)
+                }
+            }
+        }
+
+    override fun start() {
+        applicationScope.launch {
+            sfpsSensorInteractor.get().isAvailable.collect { isSfpsAvailable ->
+                if (isSfpsAvailable) {
+                    combine(
+                            biometricStatusInteractor.get().sfpsAuthenticationReason,
+                            deviceEntrySideFpsOverlayInteractor.get().showIndicatorForDeviceEntry,
+                            sideFpsProgressBarViewModel.get().isVisible,
+                            displayStateInteractor.get().isInRearDisplayMode,
+                            powerInteractor.get().isAsleep,
+                        ) {
+                            systemServerAuthReason,
+                            showIndicatorForDeviceEntry,
+                            progressBarIsVisible,
+                            isInRearDisplayMode,
+                            isAsleep ->
+                            Log.d(
+                                TAG,
+                                "systemServerAuthReason = $systemServerAuthReason, " +
+                                    "showIndicatorForDeviceEntry = " +
+                                    "$showIndicatorForDeviceEntry, " +
+                                    "progressBarIsVisible = $progressBarIsVisible, " +
+                                    "isInRearDisplayMode = $isInRearDisplayMode " +
+                                    "isAsleep = $isAsleep",
+                            )
+                            if (isInRearDisplayMode || progressBarIsVisible) {
+                                hide()
+                            } else if (systemServerAuthReason != NotRunning) {
+                                if (isAsleep) {
+                                    Log.e(
+                                        TAG,
+                                        "requesting SideFpsIndicator for " +
+                                            "$systemServerAuthReason while asleep.",
+                                    )
+                                    hide()
+                                } else {
+                                    show()
+                                }
+                            } else if (showIndicatorForDeviceEntry) {
+                                if (isAsleep) {
+                                    Log.e(
+                                        TAG,
+                                        "requesting SideFpsIndicator for " +
+                                            "DeviceEntry while asleep.",
+                                    )
+                                    hide()
+                                } else {
+                                    show()
+                                }
+                            } else {
+                                hide()
+                            }
+                        }
+                        .collect {}
+                }
+            }
+        }
     }
 
     private var overlayView: View? = null
@@ -121,7 +191,7 @@ constructor(
         if (overlayView?.isAttachedToWindow == true) {
             Log.d(
                 TAG,
-                "show(): overlayView $overlayView isAttachedToWindow already, ignoring show request"
+                "show(): overlayView $overlayView isAttachedToWindow already, ignoring show request",
             )
             return
         }
@@ -137,21 +207,20 @@ constructor(
             )
         bind(overlayView!!, overlayViewModel, windowManager.get())
         overlayView!!.visibility = View.INVISIBLE
+        overlayView!!.setOnClickListener { v ->
+            v.requireViewById<LottieAnimationView>(R.id.sidefps_animation).toggleAnimation()
+        }
+        ViewCompat.setAccessibilityDelegate(overlayView!!, pauseDelegate)
         Log.d(TAG, "show(): adding overlayView $overlayView")
         windowManager.get().addView(overlayView, overlayViewModel.defaultOverlayViewParams)
-        overlayView!!.announceForAccessibility(
-            applicationContext.resources.getString(
-                R.string.accessibility_side_fingerprint_indicator_label
-            )
-        )
     }
 
     /** Hide the side fingerprint sensor indicator */
     private fun hide() {
         if (overlayView != null) {
             val lottie = overlayView!!.requireViewById<LottieAnimationView>(R.id.sidefps_animation)
-            lottie.pauseAnimation()
             lottie.removeAllLottieOnCompositionLoadedListener()
+            lottie.pauseAnimation()
             Log.d(TAG, "hide(): removing overlayView $overlayView, setting to null")
             windowManager.get().removeView(overlayView)
             overlayView = null
@@ -165,14 +234,13 @@ constructor(
         fun bind(
             overlayView: View,
             viewModel: SideFpsOverlayViewModel,
-            windowManager: WindowManager
+            windowManager: WindowManager,
         ) {
             overlayView.repeatWhenAttached {
                 val lottie = it.requireViewById<LottieAnimationView>(R.id.sidefps_animation)
                 lottie.addLottieOnCompositionLoadedListener { composition: LottieComposition ->
                     if (overlayView.visibility != View.VISIBLE) {
                         viewModel.setLottieBounds(composition.bounds)
-                        overlayView.visibility = View.VISIBLE
                     }
                 }
                 it.alpha = 0f
@@ -184,26 +252,7 @@ constructor(
 
                 overlayShowAnimator.start()
 
-                it.setAccessibilityDelegate(
-                    object : View.AccessibilityDelegate() {
-                        override fun dispatchPopulateAccessibilityEvent(
-                            host: View,
-                            event: AccessibilityEvent
-                        ): Boolean {
-                            return if (
-                                event.getEventType() ===
-                                    android.view.accessibility.AccessibilityEvent
-                                        .TYPE_WINDOW_STATE_CHANGED
-                            ) {
-                                true
-                            } else {
-                                super.dispatchPopulateAccessibilityEvent(host, event)
-                            }
-                        }
-                    }
-                )
-
-                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                repeatOnLifecycle(Lifecycle.State.CREATED) {
                     launch {
                         viewModel.lottieCallbacks.collect { callbacks ->
                             lottie.addOverlayDynamicColor(callbacks)
@@ -214,6 +263,7 @@ constructor(
                         viewModel.overlayViewParams.collect { params ->
                             windowManager.updateViewLayout(it, params)
                             lottie.resumeAnimation()
+                            overlayView.visibility = View.VISIBLE
                         }
                     }
 
@@ -225,6 +275,16 @@ constructor(
                     }
                 }
             }
+        }
+    }
+
+    private fun LottieAnimationView.toggleAnimation() {
+        if (isAnimating) {
+            pauseAnimation()
+            ViewCompat.setAccessibilityDelegate(this, resumeDelegate)
+        } else {
+            resumeAnimation()
+            ViewCompat.setAccessibilityDelegate(this, pauseDelegate)
         }
     }
 }

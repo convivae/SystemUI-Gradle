@@ -16,7 +16,6 @@
 
 package com.android.systemui.qs.panels.ui.compose
 
-import android.view.MotionEvent
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,24 +23,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import com.android.compose.animation.scene.SceneScope
+import com.android.compose.animation.scene.ContentScope
 import com.android.compose.modifiers.padding
+import com.android.systemui.common.ui.compose.PagerDots
 import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.development.ui.compose.BuildNumber
 import com.android.systemui.development.ui.viewmodel.BuildNumberViewModel
@@ -53,7 +53,7 @@ import com.android.systemui.qs.panels.ui.compose.toolbar.EditModeButton
 import com.android.systemui.qs.panels.ui.viewmodel.PaginatedGridViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.EditModeButtonViewModel
-import com.android.systemui.qs.ui.compose.borderOnFocus
+import com.android.systemui.res.R
 import javax.inject.Inject
 
 class PaginatedGridLayout
@@ -63,33 +63,48 @@ constructor(
     @PaginatedBaseLayoutType private val delegateGridLayout: PaginatableGridLayout,
 ) : GridLayout by delegateGridLayout {
     @Composable
-    override fun SceneScope.TileGrid(tiles: List<TileViewModel>, modifier: Modifier) {
+    override fun ContentScope.TileGrid(
+        tiles: List<TileViewModel>,
+        modifier: Modifier,
+        listening: () -> Boolean,
+        enableRevealEffect: Boolean,
+    ) {
         val viewModel =
             rememberViewModel(traceName = "PaginatedGridLayout-TileGrid") {
                 viewModelFactory.create()
             }
+        val delegateGridViewModel =
+            rememberViewModel(traceName = "PaginatedGridLayout-TileGrid") {
+                delegateGridLayout.viewModelFactory.create()
+            }
 
-        DisposableEffect(tiles) {
-            val token = Any()
-            tiles.forEach { it.startListening(token) }
-            onDispose { tiles.forEach { it.stopListening(token) } }
-        }
-        val columns = viewModel.columns
-        val rows = viewModel.rows
-
+        val rows = integerResource(R.integer.quick_settings_paginated_grid_num_rows)
         val pages =
-            remember(tiles, columns, rows) {
-                delegateGridLayout.splitIntoPages(tiles, rows = rows, columns = columns)
+            remember(tiles, rows, *delegateGridViewModel.pageKeys) {
+                delegateGridViewModel.splitIntoPages(tiles, rows)
             }
 
         val pagerState = rememberPagerState(0) { pages.size }
+
+        LaunchedEffect(listening, pagerState) {
+            snapshotFlow { listening() }
+                .collect {
+                    // Whenever we go from not listening to listening, we should be in the first
+                    // page. If we did this when going from listening to not listening, opening
+                    // edit mode in second page will cause it to go to first page during the
+                    // transition.
+                    if (listening()) {
+                        pagerState.scrollToPage(0)
+                    }
+                }
+        }
 
         // Used to track if this is currently in the first page or not, for animations
         LaunchedEffect(key1 = pagerState) {
             snapshotFlow { pagerState.currentPage == 0 }.collect { viewModel.inFirstPage = it }
         }
 
-        Column {
+        Column(modifier) {
             val contentPaddingValue =
                 if (pages.size > 1) {
                     InterPageSpacing
@@ -97,6 +112,15 @@ constructor(
                     0.dp
                 }
             val contentPadding = PaddingValues(horizontal = contentPaddingValue)
+            val nestedScrollConnection =
+                remember(viewModel) {
+                    object : NestedScrollConnection {
+                        override suspend fun onPreFling(available: Velocity): Velocity {
+                            viewModel.registerSideSwipeGesture()
+                            return Velocity.Zero
+                        }
+                    }
+                }
 
             /* Use negative padding equal with value equal to content padding. That way, each page
              * layout extends to the sides, but the content is as if there was no padding. That
@@ -107,12 +131,7 @@ constructor(
                 modifier =
                     Modifier.sysuiResTag("qs_pager")
                         .padding(horizontal = { -contentPaddingValue.roundToPx() })
-                        .pointerInteropFilter { event ->
-                            if (event.actionMasked == MotionEvent.ACTION_UP) {
-                                viewModel.registerSideSwipeGesture()
-                            }
-                            false
-                        },
+                        .nestedScroll(nestedScrollConnection),
                 contentPadding = contentPadding,
                 pageSpacing = if (pages.size > 1) InterPageSpacing else 0.dp,
                 beyondViewportPageCount = 1,
@@ -120,12 +139,21 @@ constructor(
             ) {
                 val page = pages[it]
 
-                with(delegateGridLayout) { TileGrid(tiles = page, modifier = Modifier) }
+                with(delegateGridLayout) {
+                    TileGrid(
+                        tiles = page,
+                        modifier = Modifier,
+                        listening = listening,
+                        enableRevealEffect = false,
+                    )
+                }
             }
             FooterBar(
                 buildNumberViewModelFactory = viewModel.buildNumberViewModelFactory,
                 pagerState = pagerState,
+                showArrowsInPager = viewModel.showArrowsInPagerDots,
                 editButtonViewModelFactory = viewModel.editModeButtonViewModelFactory,
+                isVisible = { listening() && layoutState.isIdle() },
             )
         }
     }
@@ -140,14 +168,21 @@ private object Dimensions {
 private fun FooterBar(
     buildNumberViewModelFactory: BuildNumberViewModel.Factory,
     pagerState: PagerState,
+    showArrowsInPager: Boolean,
     editButtonViewModelFactory: EditModeButtonViewModel.Factory,
+    isVisible: () -> Boolean = { true },
 ) {
+    val editButtonViewModel =
+        rememberViewModel(traceName = "PaginatedGridLayout-editButtonViewModel") {
+            editButtonViewModelFactory.create()
+        }
+
     // Use requiredHeight so it won't be squished if the view doesn't quite fit. As this is
     // expected to be inside a scrollable container, this should not be an issue.
     // Also, we construct the layout this way to do the following:
     // * PagerDots is centered in the row, taking as much space as it needs.
     // * On the start side, we place the BuildNumber, taking as much space as it needs, but
-    //   constrained by the available space left over after PagerDots
+    //   constrained by the available space left over after PagerDots.
     // * On the end side, we place the edit mode button, with the same constraints as for
     //   BuildNumber (but it will usually fit, as it's just a square button).
     Row(
@@ -156,27 +191,20 @@ private fun FooterBar(
         horizontalArrangement = spacedBy(8.dp),
     ) {
         Row(Modifier.weight(1f)) {
-            BuildNumber(
-                viewModelFactory = buildNumberViewModelFactory,
-                textColor = MaterialTheme.colorScheme.onSurface,
-                modifier =
-                    Modifier.borderOnFocus(
-                            color = MaterialTheme.colorScheme.secondary,
-                            cornerSize = CornerSize(1.dp),
-                        )
-                        .wrapContentSize(),
-            )
+            BuildNumber(viewModelFactory = buildNumberViewModelFactory)
             Spacer(modifier = Modifier.weight(1f))
         }
         PagerDots(
             pagerState = pagerState,
-            activeColor = MaterialTheme.colorScheme.primary,
-            nonActiveColor = MaterialTheme.colorScheme.surfaceVariant,
+            activeColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            nonActiveColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .5f),
             modifier = Modifier.wrapContentWidth(),
+            showArrows = showArrowsInPager,
+            clickToCyclePages = !showArrowsInPager,
         )
         Row(Modifier.weight(1f)) {
             Spacer(modifier = Modifier.weight(1f))
-            EditModeButton(viewModelFactory = editButtonViewModelFactory)
+            EditModeButton(viewModel = editButtonViewModel, isVisible = isVisible())
         }
     }
 }

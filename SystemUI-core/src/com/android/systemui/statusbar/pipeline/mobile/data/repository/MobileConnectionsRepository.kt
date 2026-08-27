@@ -48,8 +48,8 @@ interface MobileConnectionsRepository {
      */
     val activeSubChangedInGroupEvent: Flow<Unit>
 
-    /** Tracks [SubscriptionManager.getDefaultDataSubscriptionId] */
-    val defaultDataSubId: StateFlow<Int>
+    /** Tracks [SubscriptionManager.getDefaultDataSubscriptionId]. Null if there is no default */
+    val defaultDataSubId: StateFlow<Int?>
 
     /**
      * True if the default network connection is a mobile-like connection and false otherwise.
@@ -78,12 +78,14 @@ interface MobileConnectionsRepository {
      * In the case of [MobileMappings], it's hard-coded to check the default data subscription's
      * config, so this will apply to every icon that we care about.
      *
+     * Starts as null until the first configuration is fetched.
+     *
      * Relevant bits in the config are things like
      * [CarrierConfigManager.KEY_SHOW_4G_FOR_LTE_DATA_ICON_BOOL]
      *
      * This flow will produce whenever the default data subscription or the carrier config changes.
      */
-    val defaultDataSubRatConfig: StateFlow<Config>
+    val defaultDataSubRatConfig: StateFlow<Config?>
 
     /** The icon mapping from network type to [MobileIconGroup] for the default subscription */
     val defaultMobileIconMapping: Flow<Map<String, MobileIconGroup>>

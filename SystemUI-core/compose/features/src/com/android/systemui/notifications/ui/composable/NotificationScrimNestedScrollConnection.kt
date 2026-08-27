@@ -34,15 +34,13 @@ import com.android.compose.nestedscroll.ScrollController
  * - If you **scroll down**, it **first allows scrolling of the children** (usually the content) and
  *   then resets the [scrimOffset] to [maxScrimOffset].
  */
-fun NotificationScrimNestedScrollConnection(
+fun notificationScrimNestedScrollConnection(
     scrimOffset: () -> Float,
     snapScrimOffset: (Float) -> Unit,
     animateScrimOffset: (Float) -> Unit,
     minScrimOffset: () -> Float,
     maxScrimOffset: Float,
-    contentHeight: () -> Float,
-    minVisibleScrimHeight: () -> Float,
-    isCurrentGestureOverscroll: () -> Boolean,
+    canOverscrollContent: () -> Boolean,
     onStart: (Float) -> Unit = {},
     onStop: (Float) -> Unit = {},
     flingBehavior: FlingBehavior,
@@ -51,18 +49,14 @@ fun NotificationScrimNestedScrollConnection(
         orientation = Orientation.Vertical,
         // scrolling up and inner content is taller than the scrim, so scrim needs to
         // expand; content can scroll once scrim is at the minScrimOffset.
-        canStartPreScroll = { offsetAvailable, offsetBeforeStart, _ ->
-            offsetAvailable < 0 &&
-                offsetBeforeStart == 0f &&
-                contentHeight() > minVisibleScrimHeight() &&
-                scrimOffset() > minScrimOffset()
+        canStartPreScroll = { offsetAvailable, _, _ ->
+            offsetAvailable < 0 && canOverscrollContent() && scrimOffset() > minScrimOffset()
         },
         // scrolling down and content is done scrolling to top. After that, the scrim
         // needs to collapse; collapse the scrim until it is at the maxScrimOffset.
         canStartPostScroll = { offsetAvailable, _, _ ->
-            offsetAvailable > 0 && (scrimOffset() < maxScrimOffset || isCurrentGestureOverscroll())
+            offsetAvailable > 0 && (scrimOffset() < maxScrimOffset)
         },
-        canStartPostFling = { false },
         onStart = { firstScroll ->
             onStart(firstScroll)
             object : ScrollController {

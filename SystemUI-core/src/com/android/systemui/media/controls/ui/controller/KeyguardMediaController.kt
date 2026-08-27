@@ -18,18 +18,43 @@ package com.android.systemui.media.controls.ui.controller
 
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Rect
+import android.util.MathUtils
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.VisibleForTesting
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.android.systemui.Dumpable
+import com.android.systemui.classifier.Classifier
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dump.DumpManager
-import com.android.systemui.keyguard.MigrateClocksToBlueprint
+import com.android.systemui.initOnBackPressedDispatcherOwner
+import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.media.controls.domain.pipeline.interactor.MediaCarouselInteractor
 import com.android.systemui.media.controls.ui.view.MediaHost
 import com.android.systemui.media.controls.ui.view.MediaHostState
-import com.android.systemui.media.dagger.MediaModule.KEYGUARD
+import com.android.systemui.media.dagger.MediaModule
+import com.android.systemui.media.remedia.shared.flag.MediaControlsInComposeFlag
+import com.android.systemui.media.remedia.ui.compose.Media
+import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
+import com.android.systemui.media.remedia.ui.compose.MediaUiBehavior
+import com.android.systemui.media.remedia.ui.viewmodel.MediaCarouselVisibility
+import com.android.systemui.media.remedia.ui.viewmodel.MediaFalsingSystem
+import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
 import com.android.systemui.plugins.statusbar.StatusBarStateController
+import com.android.systemui.res.R
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.StatusBarState
 import com.android.systemui.statusbar.SysuiStatusBarStateController
 import com.android.systemui.statusbar.notification.stack.MediaContainerView
@@ -37,11 +62,15 @@ import com.android.systemui.statusbar.phone.KeyguardBypassController
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.statusbar.policy.SplitShadeStateController
 import com.android.systemui.util.asIndenting
+import com.android.systemui.util.boundsOnScreen
 import com.android.systemui.util.println
 import com.android.systemui.util.withIncreasedIndent
 import java.io.PrintWriter
 import javax.inject.Inject
 import javax.inject.Named
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 
 /**
  * Controls the media notifications on the lock screen, handles its visibility and placement -
@@ -51,19 +80,80 @@ import javax.inject.Named
 class KeyguardMediaController
 @Inject
 constructor(
-    @param:Named(KEYGUARD) private val mediaHost: MediaHost,
+    @param:Named(MediaModule.KEYGUARD) private val mediaHost: MediaHost,
+    @Application private val applicationScope: CoroutineScope,
     private val bypassController: KeyguardBypassController,
     private val statusBarStateController: SysuiStatusBarStateController,
-    private val context: Context,
-    configurationController: ConfigurationController,
+    @ShadeDisplayAware private val context: Context,
+    @ShadeDisplayAware private val configurationController: ConfigurationController,
     private val splitShadeStateController: SplitShadeStateController,
     private val logger: KeyguardMediaControllerLogger,
     dumpManager: DumpManager,
+    private val mediaViewModelFactory: MediaViewModel.Factory,
+    private val mediaCarouselInteractor: MediaCarouselInteractor,
+    private val falsingSystem: MediaFalsingSystem,
 ) : Dumpable {
     private var lastUsedStatusBarState = -1
 
+    /** Is the media player visible? */
+    var visible by mutableStateOf(false)
+        private set
+
+    private var distanceForFullShadeTransition = 0
+    private var fullShadeTransitionProgress: Float by mutableStateOf(0.0f)
+
+    private val composeView =
+        ComposeView(context).apply {
+            repeatWhenAttached {
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.CREATED) {
+                        initOnBackPressedDispatcherOwner(this@repeatWhenAttached.lifecycle)
+                        setComposeContent(this@apply)
+                    }
+                }
+            }
+        }
+
+    private val _isMediaVisibleOnLockscreen = mutableStateOf(false)
+    private var isMediaVisibleOnLockscreen: Boolean
+        get() = _isMediaVisibleOnLockscreen.value
+        set(value) {
+            _isMediaVisibleOnLockscreen.value = value
+            onMediaHostVisibilityChanged(value)
+        }
+
     init {
         dumpManager.registerDumpable(this)
+        setUpListenersAndCallbacks()
+    }
+
+    private fun setUpListenersAndCallbacks() {
+        if (SceneContainerFlag.isEnabled) return
+
+        if (!MediaControlsInComposeFlag.isEnabled) {
+            // First let's set the desired state that we want for this host
+            mediaHost.expansion = MediaHostState.EXPANDED
+            mediaHost.showsOnlyActiveMedia = true
+            mediaHost.falsingProtectionNeeded = true
+
+            // Let's now initialize this view, which also creates the host view for us.
+            mediaHost.init(MediaHierarchyManager.LOCATION_LOCKSCREEN)
+        } else {
+            applicationScope.launch {
+                combine(
+                        mediaCarouselInteractor.allowMediaOnLockscreen,
+                        mediaCarouselInteractor.hasActiveMedia,
+                        mediaCarouselInteractor.isOnLockscreen,
+                    ) { allowMediaOnLockscreen, activeMedia, isOnLockscreen ->
+                        if (allowMediaOnLockscreen && isOnLockscreen) {
+                            activeMedia
+                        } else {
+                            false
+                        }
+                    }
+                    .collect { isMediaVisibleOnLockscreen = it }
+            }
+        }
         statusBarStateController.addCallback(
             object : StatusBarStateController.StateListener {
                 override fun onStateChanged(newState: Int) {
@@ -82,18 +172,40 @@ constructor(
                 }
             }
         )
-
-        // First let's set the desired state that we want for this host
-        mediaHost.expansion = MediaHostState.EXPANDED
-        mediaHost.showsOnlyActiveMedia = true
-        mediaHost.falsingProtectionNeeded = true
-
-        // Let's now initialize this view, which also creates the host view for us.
-        mediaHost.init(MediaHierarchyManager.LOCATION_LOCKSCREEN)
         updateResources()
     }
 
+    private fun setComposeContent(composeView: ComposeView) {
+        composeView.setContent {
+            val transitionAlpha by remember {
+                derivedStateOf {
+                    // This maps the 0.0 -> 0.25 progress to 1.0 -> 0.0 Alpha
+                    (1f - (fullShadeTransitionProgress / 0.25f)).coerceIn(0f, 1f)
+                }
+            }
+            Media(
+                viewModelFactory = mediaViewModelFactory,
+                presentationStyle = MediaPresentationStyle.Default,
+                behavior =
+                    MediaUiBehavior(
+                        carouselVisibility = MediaCarouselVisibility.WhenAnyCardIsActive,
+                        isCarouselScrollFalseTouch = {
+                            falsingSystem.isFalseTouch(Classifier.MEDIA_CAROUSEL_SWIPE)
+                        },
+                    ),
+                onDismissed = { mediaCarouselInteractor.onSwipeToDismiss() },
+                modifier = Modifier.graphicsLayer { alpha = transitionAlpha },
+                visible = { visible },
+                location = Media.Location.LOCKSCREEN,
+            )
+        }
+    }
+
     private fun updateResources() {
+        distanceForFullShadeTransition =
+            context.resources.getDimensionPixelSize(
+                R.dimen.lockscreen_shade_media_transition_distance
+            )
         useSplitShade = splitShadeStateController.shouldUseSplitNotificationShade(context.resources)
     }
 
@@ -108,20 +220,7 @@ constructor(
             refreshMediaPosition(reason = "useSplitShade changed")
         }
 
-    /** Is the media player visible? */
-    var visible = false
-        private set
-
     var visibilityChangedListener: ((Boolean) -> Unit)? = null
-
-    /**
-     * Whether the doze wake up animation is delayed and we are currently waiting for it to start.
-     */
-    var isDozeWakeUpAnimationWaiting: Boolean = false
-        set(value) {
-            field = value
-            refreshMediaPosition(reason = "isDozeWakeUpAnimationWaiting changed")
-        }
 
     /** single pane media container placed at the top of the notifications list */
     var singlePaneContainer: MediaContainerView? = null
@@ -133,35 +232,51 @@ constructor(
      * Attaches media container in single pane mode, situated at the top of the notifications list
      */
     fun attachSinglePaneContainer(mediaView: MediaContainerView?) {
-        val needsListener = singlePaneContainer == null
-        singlePaneContainer = mediaView
-        if (needsListener) {
-            // On reinflation we don't want to add another listener
-            mediaHost.addVisibilityChangeListener(this::onMediaHostVisibilityChanged)
+        SceneContainerFlag.assertInLegacyMode()
+        if (MediaControlsInComposeFlag.isEnabled) {
+            singlePaneContainer = mediaView
+            reattachHostView()
+            onMediaHostVisibilityChanged(isMediaVisibleOnLockscreen)
+        } else {
+            val needsListener = singlePaneContainer == null
+            singlePaneContainer = mediaView
+            if (needsListener) {
+                // On reinflation we don't want to add another listener
+                mediaHost.addVisibilityChangeListener(this::onMediaHostVisibilityChanged)
+            }
+            reattachHostView()
+            onMediaHostVisibilityChanged(mediaHost.visible)
         }
-        reattachHostView()
-        onMediaHostVisibilityChanged(mediaHost.visible)
 
         singlePaneContainer?.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     /** Called whenever the media hosts visibility changes */
-    private fun onMediaHostVisibilityChanged(visible: Boolean) {
+    @VisibleForTesting
+    fun onMediaHostVisibilityChanged(visible: Boolean) {
         refreshMediaPosition(reason = "onMediaHostVisibilityChanged")
 
         if (visible) {
-            if (MigrateClocksToBlueprint.isEnabled && useSplitShade) {
+            if (useSplitShade) {
                 return
             }
-            mediaHost.hostView.layoutParams.apply {
-                height = ViewGroup.LayoutParams.WRAP_CONTENT
-                width = ViewGroup.LayoutParams.MATCH_PARENT
+            if (MediaControlsInComposeFlag.isEnabled) {
+                composeView.layoutParams.apply {
+                    height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    width = ViewGroup.LayoutParams.MATCH_PARENT
+                }
+            } else {
+                mediaHost.hostView.layoutParams.apply {
+                    height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    width = ViewGroup.LayoutParams.MATCH_PARENT
+                }
             }
         }
     }
 
     /** Attaches media container in split shade mode, situated to the left of notifications */
     fun attachSplitShadeContainer(container: ViewGroup) {
+        SceneContainerFlag.assertInLegacyMode()
         splitShadeContainer = container
         reattachHostView()
         refreshMediaPosition(reason = "attachSplitShadeContainer")
@@ -181,25 +296,42 @@ constructor(
             inactiveContainer.removeAllViews()
         }
         if (activeContainer?.childCount == 0) {
-            // Detach the hostView from its parent view if exists
-            mediaHost.hostView.parent?.let { (it as? ViewGroup)?.removeView(mediaHost.hostView) }
-            activeContainer.addView(mediaHost.hostView)
+            if (MediaControlsInComposeFlag.isEnabled) {
+                composeView.parent?.let { (it as? ViewGroup)?.removeView(composeView) }
+                activeContainer.addView(composeView)
+                composeView.layoutParams.apply {
+                    height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    width = ViewGroup.LayoutParams.MATCH_PARENT
+                }
+            } else {
+                // Detach the hostView from its parent view if exists
+                mediaHost.hostView.parent?.let {
+                    (it as? ViewGroup)?.removeView(mediaHost.hostView)
+                }
+                activeContainer.addView(mediaHost.hostView)
+            }
         }
     }
 
     fun isWithinMediaViewBounds(x: Int, y: Int): Boolean {
-        val bounds = Rect()
-        mediaHost.hostView.getBoundsOnScreen(bounds)
-
-        return bounds.contains(x, y)
+        if (MediaControlsInComposeFlag.isEnabled) {
+            return composeView.boundsOnScreen.contains(x, y)
+        }
+        return mediaHost.visible && mediaHost.hostView.boundsOnScreen.contains(x, y)
     }
 
     fun refreshMediaPosition(reason: String) {
+        SceneContainerFlag.assertInLegacyMode()
         val currentState = statusBarStateController.state
 
         val keyguardOrUserSwitcher = (currentState == StatusBarState.KEYGUARD)
         // mediaHost.visible required for proper animations handling
-        val isMediaHostVisible = mediaHost.visible
+        val isMediaHostVisible =
+            if (MediaControlsInComposeFlag.isEnabled) {
+                isMediaVisibleOnLockscreen
+            } else {
+                mediaHost.visible
+            }
         val isBypassNotEnabled = !bypassController.bypassEnabled
         val useSplitShade = useSplitShade
         val shouldBeVisibleForSplitShade = shouldBeVisibleForSplitShade()
@@ -231,6 +363,13 @@ constructor(
         lastUsedStatusBarState = currentState
     }
 
+    fun setTransitionToFullShadeAmount(transitionAmount: Float) {
+        val progress = MathUtils.saturate(transitionAmount / distanceForFullShadeTransition)
+        if (progress <= 1.0f || progress >= 0.0f) {
+            fullShadeTransitionProgress = progress
+        }
+    }
+
     private fun shouldBeVisibleForSplitShade(): Boolean {
         if (!useSplitShade) {
             return true
@@ -241,13 +380,7 @@ constructor(
         // by the clock. This is not the case for single-line clock though.
         // For single shade, we don't need to do it, because media is a child of NSSL, which already
         // gets hidden on AOD.
-        // Media also has to be hidden when waking up from dozing, and the doze wake up animation is
-        // delayed and waiting to be started.
-        // This is to stay in sync with the delaying of the horizontal alignment of the rest of the
-        // keyguard container, that is also delayed until the "wait" is over.
-        // If we show media during this waiting period, the shade will still be centered, and using
-        // the entire width of the screen, and making media show fully stretched.
-        return !statusBarStateController.isDozing && !isDozeWakeUpAnimationWaiting
+        return !statusBarStateController.isDozing
     }
 
     private fun showMediaPlayer() {
@@ -291,18 +424,17 @@ constructor(
                 println("visible", visible)
                 println("useSplitShade", useSplitShade)
                 println("bypassController.bypassEnabled", bypassController.bypassEnabled)
-                println("isDozeWakeUpAnimationWaiting", isDozeWakeUpAnimationWaiting)
                 println("singlePaneContainer", singlePaneContainer)
                 println("splitShadeContainer", splitShadeContainer)
                 if (lastUsedStatusBarState != -1) {
                     println(
                         "lastUsedStatusBarState",
-                        StatusBarState.toString(lastUsedStatusBarState)
+                        StatusBarState.toString(lastUsedStatusBarState),
                     )
                 }
                 println(
                     "statusBarStateController.state",
-                    StatusBarState.toString(statusBarStateController.state)
+                    StatusBarState.toString(statusBarStateController.state),
                 )
             }
         }

@@ -22,7 +22,9 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.view.Gravity
 import android.view.WindowManager
+import android.widget.EditText
 import android.widget.TextView
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
@@ -31,17 +33,22 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,21 +61,34 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.accessibilityClassName
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isEditable
+import androidx.compose.ui.semantics.password
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.PlatformOutlinedButton
 import com.android.compose.animation.Easings
+import com.android.compose.animation.scene.ContentScope
+import com.android.compose.modifiers.thenIf
 import com.android.keyguard.PinShapeAdapter
+import com.android.systemui.bouncer.shared.constants.PinBouncerConstants
 import com.android.systemui.bouncer.ui.viewmodel.EntryToken.Digit
 import com.android.systemui.bouncer.ui.viewmodel.PinBouncerViewModel
 import com.android.systemui.bouncer.ui.viewmodel.PinInputViewModel
@@ -83,12 +103,32 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
 @Composable
-fun PinInputDisplay(
-    viewModel: PinBouncerViewModel,
-    modifier: Modifier = Modifier,
-) {
+fun ContentScope.PinInputDisplay(viewModel: PinBouncerViewModel, modifier: Modifier = Modifier) {
     val hintedPinLength: Int? by viewModel.hintedPinLength.collectAsStateWithLifecycle()
     val shapeAnimations = rememberShapeAnimations(viewModel.pinShapes)
+
+    val isPinDisplayBorderVisible by
+        viewModel.isPinDisplayBorderVisible.collectAsStateWithLifecycle(initialValue = false)
+    val borderColor = colorResource(R.color.bouncer_password_focus_color)
+    val pinInputHeight = dimensionResource(id = R.dimen.keyguard_password_field_height)
+    val pinInputWidth = dimensionResource(id = R.dimen.keyguard_password_field_width)
+    val roundedShape = remember { RoundedCornerShape(16.dp) }
+    val accessibilityLabel = stringResource(R.string.keyguard_accessibility_pin_area)
+    val pinInputModifier =
+        modifier
+            .thenIf(isPinDisplayBorderVisible) {
+                Modifier.border(width = 3.dp, color = borderColor, shape = roundedShape)
+                    .height(pinInputHeight)
+                    .width(pinInputWidth)
+                    .clip(roundedShape)
+            }
+            .semantics {
+                contentDescription = accessibilityLabel
+                text = AnnotatedString(PinInputBullet.repeat(viewModel.enteredPinLength))
+                accessibilityClassName = EditText::class.qualifiedName!!
+                isEditable = true
+                password()
+            }
 
     // The display comes in two different flavors:
     // 1) hinting: shows a circle (◦) per expected pin input, and dot (●) per entered digit.
@@ -101,9 +141,13 @@ fun PinInputDisplay(
     // Because of all these differences, there are two separate implementations, rather than
     // unifying into a single, more complex implementation.
 
-    when (val length = hintedPinLength) {
-        null -> RegularPinInputDisplay(viewModel, shapeAnimations, modifier)
-        else -> HintingPinInputDisplay(viewModel, shapeAnimations, length, modifier)
+    // Override the layout direction to LTR because, even in RTL locales, digits are written from
+    // left to right.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        when (val length = hintedPinLength) {
+            null -> RegularPinInputDisplay(viewModel, shapeAnimations, pinInputModifier)
+            else -> HintingPinInputDisplay(viewModel, shapeAnimations, length, pinInputModifier)
+        }
     }
 }
 
@@ -172,24 +216,32 @@ private fun HintingPinInputDisplay(
     var playAnimation by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { playAnimation = true }
 
-    val dotColor = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(modifier = modifier.heightIn(min = shapeAnimations.shapeSize)) {
-        pinEntryDrawable.forEachIndexed { index, drawable ->
-            // Key the loop by [index] and [drawable], so that updating a shape drawable at the same
+    val dotColor = MaterialTheme.colorScheme.onSurface
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier.height(shapeAnimations.shapeSize),
+    ) {
+        pinEntryDrawable.forEachIndexed { index, loadableAnimation ->
+            // Key the loop by [index] and [loadableAnimation], so that updating a shape drawable at
             // index will play the new animation (by remembering a new [atEnd]).
-            key(index, drawable) {
+            key(index, loadableAnimation) {
                 // [rememberAnimatedVectorPainter] requires a `atEnd` boolean to switch from `false`
                 // to `true` for the animation to play. This animation is suppressed when
                 // playAnimation is false, always rendering the end-state of the animation.
                 var atEnd by remember { mutableStateOf(!playAnimation) }
                 LaunchedEffect(Unit) { atEnd = true }
 
-                Image(
-                    painter = rememberAnimatedVectorPainter(drawable, atEnd),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    colorFilter = ColorFilter.tint(dotColor),
-                )
+                if (loadableAnimation is LoadableAnimation.Loaded) {
+                    Image(
+                        painter = rememberAnimatedVectorPainter(loadableAnimation.animation, atEnd),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        colorFilter = ColorFilter.tint(dotColor),
+                    )
+                } else {
+                    Box(Modifier.size(shapeAnimations.shapeSize))
+                }
             }
         }
     }
@@ -316,17 +368,15 @@ private fun SimArea(viewModel: PinBouncerViewModel) {
     Box(modifier = Modifier.padding(bottom = 20.dp)) {
         // If isLockedEsim is null, then we do not show anything.
         if (isLockedEsim == true) {
-            PlatformOutlinedButton(
-                onClick = { viewModel.onDisableEsimButtonClicked() },
-            ) {
+            PlatformOutlinedButton(onClick = { viewModel.onDisableEsimButtonClicked() }) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_no_sim),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
                     )
                     Text(
                         text = stringResource(R.string.disable_carrier_button_text),
@@ -339,15 +389,13 @@ private fun SimArea(viewModel: PinBouncerViewModel) {
             Image(
                 painter = painterResource(id = R.drawable.ic_lockscreen_sim),
                 contentDescription = null,
-                colorFilter = ColorFilter.tint(colorResource(id = R.color.background_protected))
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
             )
         }
     }
 }
 
-private class PinInputRow(
-    val shapeAnimations: ShapeAnimations,
-) {
+private class PinInputRow(val shapeAnimations: ShapeAnimations) {
     private val entries = mutableStateListOf<PinInputEntry>()
 
     @Composable
@@ -355,14 +403,15 @@ private class PinInputRow(
 
         // Wrap PIN entry in a Box so it is visible to accessibility (even if empty).
         Box(
-            modifier = modifier.fillMaxWidth().wrapContentHeight(),
+            modifier = modifier.fillMaxWidth().heightIn(min = shapeAnimations.shapeSize),
             contentAlignment = Alignment.Center,
         ) {
             Row(
-                modifier
-                    .heightIn(min = shapeAnimations.shapeSize)
-                    // Pins overflowing horizontally should still be shown as scrolling.
-                    .wrapContentSize(unbounded = true)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier.height(shapeAnimations.shapeSize)
+                        // Pins overflowing horizontally should still be shown as scrolling.
+                        .wrapContentSize(unbounded = true),
             ) {
                 entries.forEach { entry -> key(entry.digit) { entry.Content() } }
             }
@@ -386,7 +435,7 @@ private class PinInputRow(
      * The function return immediately, playing the animations in the background.
      *
      * Removed entries have to be [prune]d once the exit animation completes, [hasUnusedEntries] can
-     * be used in a [SnapshotFlow] to discover when its time to do so.
+     * be used in a [snapshotFlow] to discover when it's time to do so.
      */
     fun updateDigits(updated: List<Digit>, scope: CoroutineScope) {
         val incoming = updated.minus(entries.map { it.digit }.toSet()).toList()
@@ -439,10 +488,7 @@ private class PinInputRow(
     }
 }
 
-private class PinInputEntry(
-    val digit: Digit,
-    val shapeAnimations: ShapeAnimations,
-) {
+private class PinInputEntry(val digit: Digit, val shapeAnimations: ShapeAnimations) {
     private val shape = shapeAnimations.getShapeToDot(digit.sequenceNumber)
     // horizontal space occupied, used to shift contents as individual digits are animated in/out
     private val entryWidth =
@@ -474,7 +520,7 @@ private class PinInputEntry(
     suspend fun animateRemoval() = coroutineScope {
         awaitAll(
             async { entryWidth.animateTo(0.dp, shapeAnimations.inputShiftAnimationSpec) },
-            async { shapeSize.animateTo(0.dp, shapeAnimations.deleteShapeSizeAnimationSpec) }
+            async { shapeSize.animateTo(0.dp, shapeAnimations.deleteShapeSizeAnimationSpec) },
         )
     }
 
@@ -488,29 +534,40 @@ private class PinInputEntry(
         val animatedShapeSize by shapeSize.asState()
         val animatedEntryWidth by entryWidth.asState()
 
-        val dotColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val dotColor = MaterialTheme.colorScheme.onSurface
         val shapeHeight = shapeAnimations.shapeSize
         var atEnd by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { atEnd = true }
-        Image(
-            painter = rememberAnimatedVectorPainter(shape, atEnd),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            colorFilter = ColorFilter.tint(dotColor),
-            modifier =
-                Modifier.layout { measurable, _ ->
-                    val shapeSizePx = animatedShapeSize.roundToPx()
-                    val placeable = measurable.measure(Constraints.fixed(shapeSizePx, shapeSizePx))
+        if (shape is LoadableAnimation.Loaded) {
+            Image(
+                painter = rememberAnimatedVectorPainter(shape.animation, atEnd),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                colorFilter = ColorFilter.tint(dotColor),
+                modifier =
+                    Modifier.layout { measurable, _ ->
+                        val shapeSizePx = animatedShapeSize.roundToPx()
+                        val placeable =
+                            measurable.measure(Constraints.fixed(shapeSizePx, shapeSizePx))
 
-                    layout(animatedEntryWidth.roundToPx(), shapeHeight.roundToPx()) {
-                        placeable.place(
-                            ((animatedEntryWidth - animatedShapeSize) / 2f).roundToPx(),
-                            ((shapeHeight - animatedShapeSize) / 2f).roundToPx()
-                        )
-                    }
-                },
-        )
+                        layout(animatedEntryWidth.roundToPx(), shapeHeight.roundToPx()) {
+                            placeable.place(
+                                ((animatedEntryWidth - animatedShapeSize) / 2f).roundToPx(),
+                                ((shapeHeight - animatedShapeSize) / 2f).roundToPx(),
+                            )
+                        }
+                    },
+            )
+        } else {
+            Box(Modifier.size(shapeAnimations.shapeSize))
+        }
     }
+}
+
+private sealed interface LoadableAnimation {
+    data object NotLoaded : LoadableAnimation
+
+    data class Loaded(val animation: AnimatedImageVector) : LoadableAnimation
 }
 
 /** Animated Vector Drawables used to render the pin input. */
@@ -518,14 +575,14 @@ private class ShapeAnimations(
     /** Width and height for all the animation images listed here. */
     val shapeSize: Dp,
     /** Transitions from the dot (●) to the circle (◦). Used for the hinting pin input only. */
-    val dotToCircle: AnimatedImageVector,
+    val dotToCircle: LoadableAnimation,
     /** Each of the animations transition from nothing via a shape to the dot (●). */
-    private val shapesToDot: List<AnimatedImageVector>,
+    private val shapesToDot: List<LoadableAnimation>,
 ) {
     /**
      * Returns a transition from nothing via shape to the dot (●)., specific to the input position.
      */
-    fun getShapeToDot(position: Int): AnimatedImageVector {
+    fun getShapeToDot(position: Int): LoadableAnimation {
         return shapesToDot[position.mod(shapesToDot.size)]
     }
 
@@ -535,7 +592,7 @@ private class ShapeAnimations(
      *
      * `false` if the shape's end state is the circle (◦).
      */
-    fun isDotShape(shapeAnimation: AnimatedImageVector): Boolean {
+    fun isDotShape(shapeAnimation: LoadableAnimation): Boolean {
         return shapeAnimation != dotToCircle
     }
 
@@ -548,13 +605,37 @@ private class ShapeAnimations(
 }
 
 @Composable
-private fun rememberShapeAnimations(pinShapes: PinShapeAdapter): ShapeAnimations {
-    // NOTE: `animatedVectorResource` does remember the returned AnimatedImageVector.
-    val dotToCircle = AnimatedImageVector.animatedVectorResource(R.drawable.pin_dot_delete_avd)
-    val shapesToDot = pinShapes.shapes.map { AnimatedImageVector.animatedVectorResource(it) }
+private fun ContentScope.rememberShapeAnimations(pinShapes: PinShapeAdapter): ShapeAnimations {
+    val dotToCircle: LoadableAnimation = rememberShapeAnimation(PinBouncerConstants.pinDotAvd)
+    val shapesToDot: List<LoadableAnimation> = pinShapes.shapes.map { rememberShapeAnimation(it) }
     val shapeSize = dimensionResource(R.dimen.password_shape_size)
 
     return remember(dotToCircle, shapesToDot, shapeSize) {
         ShapeAnimations(shapeSize, dotToCircle, shapesToDot)
     }
+}
+
+/**
+ * Returns a [LoadableAnimation] for the given [resourceId].
+ *
+ * The returned animation will either be loaded or not loaded, depending on the current transition
+ * state. If the transition into the bouncer has ended and the scene is idle, it will load the
+ * animation (which is an expensive operation) and remember it until the resource ID changes or the
+ * function leaves the composition.
+ *
+ * If the transition isn't idle yet (still transitioning), either a previously-loaded animation or
+ * the [LoadableAnimation.NotLoaded] will be returned. Once the animation is loaded, it will
+ * continue to be returned, even if a transition (to leave the bouncer) starts.
+ */
+@Composable
+private fun ContentScope.rememberShapeAnimation(@DrawableRes resourceId: Int): LoadableAnimation {
+    var loadableAnimation: LoadableAnimation by
+        remember(resourceId) { mutableStateOf(LoadableAnimation.NotLoaded) }
+
+    if (loadableAnimation is LoadableAnimation.NotLoaded && layoutState.isIdle()) {
+        loadableAnimation =
+            LoadableAnimation.Loaded(AnimatedImageVector.animatedVectorResource(resourceId))
+    }
+
+    return loadableAnimation
 }

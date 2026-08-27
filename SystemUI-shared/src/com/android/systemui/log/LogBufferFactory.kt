@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,44 @@
 
 package com.android.systemui.log
 
-import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.dump.DumpManager
-import com.android.systemui.log.LogBufferHelper.Companion.adjustMaxSize
-import com.android.systemui.log.echo.LogcatEchoTrackerAlways
-import javax.inject.Inject
+/** Allows creating new independent [LogBuffer] */
+public interface LogBufferFactory {
+    public fun create(
+        /**
+         * Identifier for the [LogBuffer], it will be the title of its section in the dump.
+         *
+         * @see LogBuffer
+         */
+        name: String,
+        /**
+         * Maximum size of log messages that will be kept in the buffer.
+         *
+         * @see LogBuffer
+         */
+        maxSize: Int,
+        /** Whether log messages are included in system traces */
+        systrace: Boolean = true,
+        /** Whether log messages are outputted to logcat. */
+        alwaysLogToLogcat: Boolean = false,
+        /** Track name used for logging messages in the system trace. */
+        systraceTrackName: String = LogBuffer.DEFAULT_LOGBUFFER_TRACK_NAME,
+    ): LogBuffer
 
-@SysUISingleton
-class LogBufferFactory
-@Inject
-constructor(
-    private val dumpManager: DumpManager,
-    private val logcatEchoTracker: LogcatEchoTracker
-) {
-    @JvmOverloads
-    fun create(
+    /**
+     * Retrieves an existing [LogBuffer] associated with the given [name], or creates and returns a
+     * new one if it doesn't exist. The new instance is configured with the provided parameters.
+     *
+     * This function ensures that only one instance of [LogBuffer] exists per unique name.
+     *
+     * For the parameters' description, see [create]
+     *
+     * @return The existing or newly created [LogBuffer] instance.
+     */
+    public fun getOrCreate(
         name: String,
         maxSize: Int,
         systrace: Boolean = true,
         alwaysLogToLogcat: Boolean = false,
-    ): LogBuffer {
-        val echoTracker = if (alwaysLogToLogcat) LogcatEchoTrackerAlways else logcatEchoTracker
-        val buffer = LogBuffer(name, adjustMaxSize(maxSize), echoTracker, systrace)
-        dumpManager.registerBuffer(name, buffer)
-        return buffer
-    }
+        systraceTrackName: String = LogBuffer.DEFAULT_LOGBUFFER_TRACK_NAME,
+    ): LogBuffer
 }

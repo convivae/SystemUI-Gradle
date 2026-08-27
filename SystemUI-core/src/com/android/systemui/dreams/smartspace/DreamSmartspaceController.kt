@@ -81,6 +81,10 @@ constructor(
     var preconditionListener =
         object : SmartspacePrecondition.Listener {
             override fun onCriteriaChanged() {
+                if (session == null) {
+                    connectSession()
+                    return
+                }
                 reloadSmartspace()
             }
         }
@@ -187,6 +191,17 @@ constructor(
             unfilteredListeners.isNotEmpty()
     }
 
+    private fun attemptSessionCreation(): SmartspaceSession? {
+        return try {
+            userSmartspaceManager?.createSmartspaceSession(
+                SmartspaceConfig.Builder(userTracker.userContext, UI_SURFACE_DREAM).build()
+            )
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Failed to create Smartspace session, underlying service may be missing", e)
+            null
+        }
+    }
+
     private fun connectSession() {
         if (userSmartspaceManager == null) {
             userSmartspaceManager =
@@ -206,16 +221,18 @@ constructor(
             return
         }
 
-        val newSession =
-            userSmartspaceManager?.createSmartspaceSession(
-                SmartspaceConfig.Builder(userTracker.userContext, UI_SURFACE_DREAM).build()
-            )
+        val newSession = attemptSessionCreation()
+        if (newSession == null) {
+            session = null
+            return
+        }
+
         Log.d(TAG, "Starting smartspace session for dream")
-        newSession?.addOnTargetsAvailableListener(uiExecutor, sessionListener)
+        newSession.addOnTargetsAvailableListener(uiExecutor, sessionListener)
         this.session = newSession
 
-        weatherPlugin?.registerSmartspaceEventNotifier { e -> session?.notifySmartspaceEvent(e) }
-        plugin?.registerSmartspaceEventNotifier { e -> session?.notifySmartspaceEvent(e) }
+        weatherPlugin?.setEventDispatcher { e -> session?.notifySmartspaceEvent(e) }
+        plugin?.setEventDispatcher { e -> session?.notifySmartspaceEvent(e) }
 
         reloadSmartspace()
     }
@@ -237,10 +254,10 @@ constructor(
 
         session = null
 
-        weatherPlugin?.registerSmartspaceEventNotifier(null)
+        weatherPlugin?.setEventDispatcher(null)
         weatherPlugin?.onTargetsAvailable(emptyList())
 
-        plugin?.registerSmartspaceEventNotifier(null)
+        plugin?.setEventDispatcher(null)
         plugin?.onTargetsAvailable(emptyList())
         Log.d(TAG, "Ending smartspace session for dream")
     }

@@ -16,27 +16,35 @@
 
 package com.android.systemui.statusbar.notification.stack.ui.viewbinder
 
+import android.view.View
+import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.compose.animation.scene.Scale
 import com.android.systemui.Flags
 import com.android.systemui.common.ui.view.onLayoutChanged
 import com.android.systemui.communal.domain.interactor.CommunalSettingsInteractor
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.AndroidUi
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
 import com.android.systemui.keyguard.ui.viewmodel.ViewStateAccessor
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
-import com.android.systemui.statusbar.notification.footer.shared.FooterViewRefactor
+import com.android.systemui.shared.Flags.extendedWallpaperEffects
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController
 import com.android.systemui.statusbar.notification.stack.NotificationStackSizeCalculator
 import com.android.systemui.statusbar.notification.stack.ui.view.SharedNotificationContainer
 import com.android.systemui.statusbar.notification.stack.ui.viewmodel.SharedNotificationContainerViewModel
 import com.android.systemui.util.kotlin.DisposableHandles
+import com.android.systemui.util.kotlin.buildDisposableHandle
 import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.DisposableHandle
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /** Binds the shared notification container to its view-model. */
 @SysUISingleton
@@ -47,6 +55,7 @@ constructor(
     private val notificationStackSizeCalculator: NotificationStackSizeCalculator,
     private val notificationScrollViewBinder: NotificationScrollViewBinder,
     private val communalSettingsInteractor: CommunalSettingsInteractor,
+    @AndroidUi private val androidUiDispatcher: CoroutineContext,
     @Main private val mainImmediateDispatcher: CoroutineDispatcher,
     val keyguardInteractor: KeyguardInteractor,
 ) {
@@ -77,13 +86,11 @@ constructor(
                                 marginTop = it.marginTop,
                                 marginEnd = it.marginEnd,
                                 marginBottom = it.marginBottom,
+                                nsslAlpha = controller.alpha,
                             )
 
                             controller.setOverExpansion(0f)
                             controller.setOverScrollAmount(0)
-                            if (!FooterViewRefactor.isEnabled) {
-                                controller.updateFooter()
-                            }
                         }
                     }
                 }
@@ -96,7 +103,9 @@ constructor(
          * instead of doing a post() to the main thread. This extra delay can cause visible jitter.
          */
         disposables +=
-            view.repeatWhenAttached(mainImmediateDispatcher) {
+            view.repeatWhenAttached(
+                if (SceneContainerFlag.isEnabled) androidUiDispatcher else mainImmediateDispatcher
+            ) {
                 repeatOnLifecycle(Lifecycle.State.CREATED) {
                     if (!SceneContainerFlag.isEnabled) {
                         launch {
@@ -117,13 +126,11 @@ constructor(
                         }
                     }
 
-                    launch {
-                        viewModel.getLockscreenDisplayConfig(calculateMaxNotifications).collect {
-                            (isOnLockscreen, maxNotifications) ->
-                            if (SceneContainerFlag.isEnabled) {
-                                controller.setOnLockscreen(isOnLockscreen)
+                    if (!SceneContainerFlag.isEnabled) {
+                        launch {
+                            viewModel.getMaxNotifications(calculateMaxNotifications).collect {
+                                controller.setMaxDisplayedNotifications(it)
                             }
-                            controller.setMaxDisplayedNotifications(maxNotifications)
                         }
                     }
 
@@ -144,23 +151,27 @@ constructor(
                     }
 
                     if (!SceneContainerFlag.isEnabled) {
-                        if (Flags.magicPortraitWallpapers()) {
+                        if (extendedWallpaperEffects()) {
                             launch {
-                                viewModel
-                                    .getNotificationStackAbsoluteBottom(
-                                        calculateMaxNotifications = calculateMaxNotifications,
-                                        calculateHeight = { maxNotifications ->
-                                            notificationStackSizeCalculator.computeHeight(
-                                                maxNotifs = maxNotifications,
-                                                shelfHeight = controller.getShelfHeight().toFloat(),
-                                                stack = controller.view,
-                                            )
-                                        },
-                                        controller.getShelfHeight().toFloat(),
+                                combine(
+                                        viewModel.getNotificationStackAbsoluteBottomOnLockscreen(
+                                            calculateMaxNotifications = calculateMaxNotifications,
+                                            calculateHeight = { maxNotifications ->
+                                                notificationStackSizeCalculator.computeHeight(
+                                                    maxNotifs = maxNotifications,
+                                                    shelfHeight =
+                                                        controller.getShelfHeight().toFloat(),
+                                                    stack = controller.view,
+                                                    reason = "getStackAbsoluteBottomOnLockscreen",
+                                                )
+                                            },
+                                        ),
+                                        viewModel.configurationBasedDimensions.map { it.marginTop },
+                                        ::Pair,
                                     )
-                                    .collect { bottom ->
+                                    .collect { (bottom: Float, marginTop: Int) ->
                                         keyguardInteractor.setNotificationStackAbsoluteBottom(
-                                            bottom
+                                            marginTop + bottom
                                         )
                                     }
                             }
@@ -183,10 +194,28 @@ constructor(
                         }
                     }
 
-                    if (communalSettingsInteractor.isCommunalFlagEnabled()) {
+                    if (Flags.bouncerUiRevamp()) {
+                        launch { viewModel.blurRadius.collect { controller.setBlurRadius(it) } }
+                    }
+
+                    // When SceneContainer is enabled. fading keyguard elements during this
+                    // transition is controlled by STL transitions.
+                    if (
+                        !SceneContainerFlag.isEnabled &&
+                            communalSettingsInteractor.isCommunalFlagEnabled()
+                    ) {
                         launch {
                             viewModel.glanceableHubAlpha.collect {
                                 controller.setMaxAlphaForGlanceableHub(it)
+                            }
+                        }
+
+                        if (Flags.gestureBetweenHubAndLockscreenMotion()) {
+                            launch {
+                                viewModel.viewScale.collect {
+                                    view.scaleX = it
+                                    view.scaleY = it
+                                }
                             }
                         }
                     }
@@ -195,12 +224,46 @@ constructor(
 
         if (SceneContainerFlag.isEnabled) {
             disposables += notificationScrollViewBinder.bindWhileAttached()
+            disposables += buildDisposableHandle {
+                register(
+                    viewModel.containerScale.observe { drawScale ->
+                        // Applying the scale directly on the View, because with SceneContainer,
+                        // this is the only place where SharedContainer's scale is modified.
+                        view.setDrawScale(drawScale)
+                    }
+                )
+            }
         }
 
         controller.setOnHeightChangedRunnable { viewModel.notificationStackChanged() }
         disposables += DisposableHandle { controller.setOnHeightChangedRunnable(null) }
+
+        controller.setOnKeyguardTopLevelNotificationRemovedRunnable {
+            viewModel.notificationStackChangedInstant()
+        }
+        disposables += DisposableHandle {
+            controller.setOnKeyguardTopLevelNotificationRemovedRunnable(null)
+        }
+
         disposables += view.onLayoutChanged { viewModel.notificationStackChanged() }
 
         return disposables
+    }
+}
+
+/** Sets an STL [Scale] on a regular [View]. */
+private fun View.setDrawScale(drawScale: Scale) {
+    scaleX = drawScale.scaleX
+    scaleY = drawScale.scaleY
+    applyPivot(drawScale.pivot)
+}
+
+/** Sets a fraction based pivot on the [View]. */
+private fun View.applyPivot(pivot: Offset) {
+    if (pivot != Offset.Unspecified) {
+        pivotX = width * pivot.x
+        pivotY = height * pivot.y
+    } else if (isPivotSet) {
+        resetPivot()
     }
 }

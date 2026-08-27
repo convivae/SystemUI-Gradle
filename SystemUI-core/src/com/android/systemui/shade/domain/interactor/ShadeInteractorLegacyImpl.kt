@@ -16,24 +16,31 @@
 
 package com.android.systemui.shade.domain.interactor
 
-import com.android.app.tracing.FlowTracing.traceAsCounter
+import android.graphics.Rect
 import com.android.compose.animation.scene.TransitionKey
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.data.repository.KeyguardRepository
+import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
+import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.keyguard.shared.model.StatusBarState
+import com.android.systemui.keyguard.shared.model.StatusBarState.KEYGUARD
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.shade.ShadeOverlayBoundsListener
+import com.android.systemui.shade.data.repository.ShadeConfigRepository
 import com.android.systemui.shade.data.repository.ShadeRepository
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 
@@ -44,7 +51,9 @@ class ShadeInteractorLegacyImpl
 constructor(
     @Application val scope: CoroutineScope,
     keyguardRepository: KeyguardRepository,
-    repository: ShadeRepository,
+    keyguardTransitionInteractor: KeyguardTransitionInteractor,
+    private val repository: ShadeRepository,
+    shadeConfigRepository: ShadeConfigRepository,
 ) : BaseShadeInteractor {
     init {
         SceneContainerFlag.assertInLegacyMode()
@@ -60,27 +69,29 @@ constructor(
                 keyguardRepository.statusBarState,
                 repository.legacyShadeExpansion,
                 repository.qsExpansion,
-                repository.isShadeLayoutWide,
+                shadeConfigRepository.legacyUseSplitShade,
             ) {
                 lockscreenShadeExpansion,
                 statusBarState,
                 legacyShadeExpansion,
                 qsExpansion,
-                isShadeLayoutWide ->
+                useSplitShade ->
                 when (statusBarState) {
                     // legacyShadeExpansion is 1 instead of 0 when QS is expanded
                     StatusBarState.SHADE ->
-                        if (!isShadeLayoutWide && qsExpansion > 0f) 1f - qsExpansion
+                        if (!useSplitShade && qsExpansion > 0f) 1f - qsExpansion
                         else legacyShadeExpansion
-                    StatusBarState.KEYGUARD -> lockscreenShadeExpansion
+                    KEYGUARD -> lockscreenShadeExpansion
                     // dragDownAmount, which drives lockscreenShadeExpansion resets to 0f when
                     // the pointer is lifted and the lockscreen shade is fully expanded
                     StatusBarState.SHADE_LOCKED -> 1f
                 }
             }
             .distinctUntilChanged()
-            .traceAsCounter("panel_expansion") { (it * 100f).toInt() }
             .stateIn(scope, SharingStarted.Eagerly, 0f)
+
+    @Deprecated("Do not use. isNotificationsExpanded is only relevant in SceneContainer")
+    override val isNotificationsExpanded: StateFlow<Boolean> = MutableStateFlow(false)
 
     override val qsExpansion: StateFlow<Float> = repository.qsExpansion
 
@@ -99,12 +110,18 @@ constructor(
             false,
         )
 
+    @Deprecated("consider using isAnyExpanded instead")
+    override val isAnyExpansionGreaterThanZero: StateFlow<Boolean> =
+        anyExpansion.map { it > 0f }.stateIn(scope, SharingStarted.Eagerly, false)
+
     override val isUserInteractingWithShade: Flow<Boolean> =
         combine(
             userInteractingFlow(repository.legacyShadeTracking, repository.legacyShadeExpansion),
             repository.legacyLockscreenShadeTracking,
-        ) { legacyShadeTracking, legacyLockscreenShadeTracking ->
-            legacyShadeTracking || legacyLockscreenShadeTracking
+            keyguardTransitionInteractor.currentKeyguardState,
+        ) { legacyShadeTracking, legacyLockscreenShadeTracking, keyguardState ->
+            legacyShadeTracking ||
+                (legacyLockscreenShadeTracking && keyguardState != KeyguardState.GONE)
         }
 
     override val isUserInteractingWithQs: Flow<Boolean> =
@@ -138,11 +155,34 @@ constructor(
         )
     }
 
+    override fun toggleNotificationsShade(loggingReason: String, transitionKey: TransitionKey?) {
+        throw UnsupportedOperationException(
+            "toggleNotificationShade() is not supported in legacy shade"
+        )
+    }
+
+    override fun toggleQuickSettingsShade(loggingReason: String, transitionKey: TransitionKey?) {
+        throw UnsupportedOperationException(
+            "toggleQuickSettingsShade() is not supported in legacy shade"
+        )
+    }
+
     override fun collapseEitherShade(loggingReason: String, transitionKey: TransitionKey?) {
         throw UnsupportedOperationException(
             "collapseEitherShade() is not supported in legacy shade"
         )
     }
+
+    override fun setShadeOverlayBounds(bounds: Rect?) {
+        if (SceneContainerFlag.isUnexpectedlyInLegacyMode()) {
+            return
+        }
+        repository.setShadeOverlayBounds(bounds)
+    }
+
+    override fun addShadeOverlayBoundsListener(listener: ShadeOverlayBoundsListener) {}
+
+    override fun removeShadeOverlayBoundsListener(listener: ShadeOverlayBoundsListener) {}
 
     /**
      * Return a flow for whether a user is interacting with an expandable shade component using

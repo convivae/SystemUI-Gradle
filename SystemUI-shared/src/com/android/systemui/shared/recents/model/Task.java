@@ -25,6 +25,7 @@ import static com.android.wm.shell.shared.split.SplitScreenConstants.CONTROLLED_
 import android.app.ActivityManager;
 import android.app.ActivityManager.TaskDescription;
 import android.app.TaskInfo;
+import android.app.WindowConfiguration;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.graphics.Point;
@@ -72,12 +73,43 @@ public class Task {
         @ViewDebug.ExportedProperty(category = "recents")
         public final int displayId;
 
+        /**
+         * The component of the first activity in the task, can be considered the "application" of
+         * this task.
+         */
+        @Nullable
+        public ComponentName baseActivity;
+        /**
+         * The number of activities in this task (including running).
+         */
+        public int numActivities;
+        /**
+         * Whether the top activity is to be displayed. See {@link android.R.attr#windowNoDisplay}.
+         */
+        public boolean isTopActivityNoDisplay;
+        /**
+         * Whether fillsParent() is false for every activity in the tasks stack.
+         */
+        public boolean isActivityStackTransparent;
+        /**
+         * The type of the top most activity.
+         */
+        public @WindowConfiguration.ActivityType int topActivityType;
+        /**
+         * Whether the top activity fillsParent() is false. This is used to determine if the
+         * activity is translucent.
+         */
+        public boolean isTopActivityTransparent;
+
         // The source component name which started this task
         public final ComponentName sourceComponent;
 
         private int mHashCode;
 
         public TaskKey(TaskInfo t) {
+            this(t, t.displayId);
+        }
+        public TaskKey(TaskInfo t, int displayIdOverride) {
             ComponentName sourceComponent = t.origActivity != null
                     // Activity alias if there is one
                     ? t.origActivity
@@ -89,7 +121,13 @@ public class Task {
             this.sourceComponent = sourceComponent;
             this.userId = t.userId;
             this.lastActiveTime = t.lastActiveTime;
-            this.displayId = t.displayId;
+            this.displayId = displayIdOverride;
+            this.baseActivity = t.baseActivity;
+            this.numActivities = t.numActivities;
+            this.isTopActivityNoDisplay = t.isTopActivityNoDisplay;
+            this.isActivityStackTransparent = t.isActivityStackTransparent;
+            this.topActivityType = t.topActivityType;
+            this.isTopActivityTransparent = t.isTopActivityTransparent;
             updateHashCode();
         }
 
@@ -106,7 +144,11 @@ public class Task {
         }
 
         public TaskKey(int id, int windowingMode, @NonNull Intent intent,
-                ComponentName sourceComponent, int userId, long lastActiveTime, int displayId) {
+                ComponentName sourceComponent, int userId, long lastActiveTime, int displayId,
+                @Nullable ComponentName baseActivity, int numActivities,
+                boolean isTopActivityNoDisplay, boolean isActivityStackTransparent,
+                @WindowConfiguration.ActivityType int topActivityType,
+                boolean isTopActivityTransparent) {
             this.id = id;
             this.windowingMode = windowingMode;
             this.baseIntent = intent;
@@ -114,6 +156,12 @@ public class Task {
             this.userId = userId;
             this.lastActiveTime = lastActiveTime;
             this.displayId = displayId;
+            this.baseActivity = baseActivity;
+            this.numActivities = numActivities;
+            this.isTopActivityNoDisplay = isTopActivityNoDisplay;
+            this.isActivityStackTransparent = isActivityStackTransparent;
+            this.topActivityType = topActivityType;
+            this.isTopActivityTransparent = isTopActivityTransparent;
             updateHashCode();
         }
 
@@ -185,6 +233,12 @@ public class Task {
             parcel.writeLong(lastActiveTime);
             parcel.writeInt(displayId);
             parcel.writeTypedObject(sourceComponent, flags);
+            parcel.writeTypedObject(baseActivity, flags);
+            parcel.writeInt(numActivities);
+            parcel.writeBoolean(isTopActivityNoDisplay);
+            parcel.writeBoolean(isActivityStackTransparent);
+            parcel.writeInt(topActivityType);
+            parcel.writeBoolean(isTopActivityTransparent);
         }
 
         private static TaskKey readFromParcel(Parcel parcel) {
@@ -195,9 +249,15 @@ public class Task {
             long lastActiveTime = parcel.readLong();
             int displayId = parcel.readInt();
             ComponentName sourceComponent = parcel.readTypedObject(ComponentName.CREATOR);
-
+            ComponentName baseActivity = parcel.readTypedObject(ComponentName.CREATOR);
+            int numActivities = parcel.readInt();
+            boolean isTopActivityNoDisplay = parcel.readBoolean();
+            boolean isActivityStackTransparent = parcel.readBoolean();
+            int topActivityType = parcel.readInt();
+            boolean isTopActivityTransparent = parcel.readBoolean();
             return new TaskKey(id, windowingMode, baseIntent, sourceComponent, userId,
-                    lastActiveTime, displayId);
+                    lastActiveTime, displayId, baseActivity, numActivities, isTopActivityNoDisplay,
+                    isActivityStackTransparent, topActivityType, isTopActivityTransparent);
         }
 
         @Override
@@ -239,6 +299,11 @@ public class Task {
     @ViewDebug.ExportedProperty(category="recents")
     public boolean isLocked;
 
+    // TODO(b/464299436): Consider using the App Lock locked state instead of the App Lock enabled
+    //  state for recents.
+    @ViewDebug.ExportedProperty(category = "recents")
+    public boolean isAppLockEnabled;
+
     public Point positionInParent;
 
     public Rect appBounds;
@@ -260,15 +325,25 @@ public class Task {
         ActivityManager.TaskDescription td = taskInfo.taskDescription;
         // Also consider undefined activity type to include tasks in overview right after rebooting
         // the device.
-        final boolean isDockable = taskInfo.supportsMultiWindow
+        final boolean isDockable = taskInfo.supportsMultiWindowWithoutConstraints
                 && ArrayUtils.contains(
                         CONTROLLED_WINDOWING_MODES_WHEN_ACTIVE, taskInfo.getWindowingMode())
                 && (taskInfo.getActivityType() == ACTIVITY_TYPE_UNDEFINED
                 || ArrayUtils.contains(CONTROLLED_ACTIVITY_TYPES, taskInfo.getActivityType()));
-        return new Task(taskKey,
+        Task result = new Task(taskKey,
                 td != null ? td.getPrimaryColor() : 0,
                 td != null ? td.getBackgroundColor() : 0, isDockable , isLocked, td,
                 taskInfo.topActivity);
+        result.appBounds = taskInfo.configuration.windowConfiguration.getAppBounds();
+        result.isAppLockEnabled = taskInfo.isRealActivityAppLockEnabled;
+        return result;
+    }
+
+    /**
+     * Creates a task object from the given [taskInfo].
+     */
+    public static Task from(TaskInfo taskInfo) {
+        return from(new TaskKey(taskInfo), taskInfo, /* isLocked= */ false);
     }
 
     public Task(TaskKey key) {
@@ -283,6 +358,7 @@ public class Task {
         appBounds = other.appBounds;
         isVisible = other.isVisible;
         isMinimized = other.isMinimized;
+        isAppLockEnabled = other.isAppLockEnabled;
     }
 
     /**
@@ -330,6 +406,11 @@ public class Task {
     }
 
     @Override
+    public int hashCode() {
+        return key.hashCode();
+    }
+
+    @Override
     public String toString() {
         return "[" + key.toString() + "] " + title;
     }
@@ -341,6 +422,9 @@ public class Task {
         }
         if (isLocked) {
             writer.print(" locked=Y");
+        }
+        if (isAppLockEnabled) {
+            writer.print(" appLockEnabled=Y");
         }
         writer.print(" "); writer.print(title);
         writer.println();

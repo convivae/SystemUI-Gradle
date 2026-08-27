@@ -22,8 +22,8 @@ import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.LogLevel
 import com.android.systemui.log.core.LogMessage
 import com.android.systemui.log.dagger.PrivacyLog
-import com.android.systemui.privacy.PrivacyDialog
-import com.android.systemui.privacy.PrivacyDialogV2
+import com.android.systemui.privacy.PrivacyDialogDelegate
+import com.android.systemui.privacy.PrivacyDialogDelegateV2
 import com.android.systemui.privacy.PrivacyItem
 import java.util.Locale
 import javax.inject.Inject
@@ -43,6 +43,26 @@ class PrivacyLogger @Inject constructor(
         }, {
             "App Op: $int1 for $str1($int2), active=$bool1"
         })
+    }
+
+    fun logLocationAppOps(
+        uid: Int,
+        packageName: String,
+        importance: Int,
+        isForeground: Boolean,
+        isSystemApp: Boolean
+    ) {
+        log(
+            LogLevel.INFO, {
+                int1 = uid
+                int2 = importance
+                str1 = packageName
+                bool1 = isForeground
+                bool2 = isSystemApp
+            },
+            {
+                "Location Op: $str1($int1) importance=$int2 isFg=$bool1 isSystem=$bool2"
+            })
     }
 
     fun logUpdatedItemFromMediaProjection(uid: Int, packageName: String, active: Boolean) {
@@ -119,7 +139,7 @@ class PrivacyLogger @Inject constructor(
         })
     }
 
-    fun logShowDialogContents(contents: List<PrivacyDialog.PrivacyElement>) {
+    fun logShowDialogContents(contents: List<PrivacyDialogDelegate.PrivacyElement>) {
         log(LogLevel.INFO, {
             str1 = contents.toString()
         }, {
@@ -127,7 +147,7 @@ class PrivacyLogger @Inject constructor(
         })
     }
 
-    fun logShowDialogV2Contents(contents: List<PrivacyDialogV2.PrivacyElement>) {
+    fun logShowDialogV2Contents(contents: List<PrivacyDialogDelegateV2.PrivacyElement>) {
         log(LogLevel.INFO, {
             str1 = contents.toString()
         }, {

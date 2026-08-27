@@ -16,18 +16,29 @@
 
 package com.android.systemui.qs.panels.ui.viewmodel
 
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import com.android.internal.logging.UiEventLogger
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.plugins.qs.QSTile
 import com.android.systemui.plugins.qs.TileDetailsViewModel
+import com.android.systemui.qs.QSEvent
 import com.android.systemui.qs.pipeline.domain.interactor.CurrentTilesInteractor
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.tiles.dialog.AudioDetailsViewModel
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import javax.inject.Inject
-import kotlinx.coroutines.flow.StateFlow
 
 @SysUISingleton
+@Stable
 class DetailsViewModel
-@Inject constructor(val currentTilesInteractor: CurrentTilesInteractor) {
+@Inject
+constructor(
+    val currentTilesInteractor: CurrentTilesInteractor,
+    val shadeModeInteractor: ShadeModeInteractor,
+    val uiEventLogger: UiEventLogger,
+) {
 
     /**
      * The current active [TileDetailsViewModel]. If it's `null`, it means the qs overlay is not
@@ -35,31 +46,84 @@ class DetailsViewModel
      */
     private val _activeTileDetails = mutableStateOf<TileDetailsViewModel?>(null)
     val activeTileDetails by _activeTileDetails
+    private var _activeTile: QSTile? = null
 
     /**
      * Update the active [TileDetailsViewModel] to `null`.
+     *
      * @see activeTileDetails
      */
     fun closeDetailedView() {
+        if (_activeTileDetails.value != null) {
+            _activeTile?.let {
+                uiEventLogger.logWithInstanceId(
+                    QSEvent.QS_DETAILS_CLOSE,
+                    0,
+                    it.metricsSpec,
+                    it.instanceId,
+                )
+            }
+        }
         _activeTileDetails.value = null
+        _activeTile = null
     }
 
     /**
-     * Update the active [TileDetailsViewModel] to the `spec`'s corresponding view model.
-     * Return if the [TileDetailsViewModel] is successfully found.
+     * Update the active [TileDetailsViewModel] to the `spec`'s corresponding view model. Return if
+     * the [TileDetailsViewModel] is successfully handled.
+     *
      * @see activeTileDetails
      */
     fun onTileClicked(spec: TileSpec?): Boolean {
+        if (!shadeModeInteractor.isDualShade) {
+            return false
+        }
+
         if (spec == null) {
             _activeTileDetails.value = null
             return false
         }
 
-        _activeTileDetails.value = currentTilesInteractor
-            .currentQSTiles
-            .firstOrNull { it.tileSpec == spec.spec }
-            ?.detailsViewModel
+        val currentTile =
+            currentTilesInteractor.currentQSTiles.firstOrNull { it.tileSpec == spec.spec }
 
-        return _activeTileDetails.value != null
+        return currentTile?.getDetailsViewModel { detailsViewModel ->
+            if (_activeTileDetails.value != null) {
+                _activeTile?.let {
+                    uiEventLogger.logWithInstanceId(
+                        QSEvent.QS_DETAILS_CLOSE,
+                        0,
+                        it.metricsSpec,
+                        it.instanceId,
+                    )
+                }
+            }
+            _activeTileDetails.value = detailsViewModel
+            _activeTile = currentTile
+            uiEventLogger.logWithInstanceId(
+                QSEvent.QS_DETAILS_OPEN,
+                0,
+                currentTile.metricsSpec,
+                currentTile.instanceId,
+            )
+        } ?: false
+    }
+
+    /** Update the active [TileDetailsViewModel] to [AudioDetailsViewModel]. */
+    fun onVolumeSettingsButtonClicked(audioDetailsViewModel: AudioDetailsViewModel?) {
+        if (shadeModeInteractor.isDualShade) {
+            _activeTileDetails.value = audioDetailsViewModel
+        }
+    }
+
+    fun logOnSettingsClicked() {
+        _activeTile?.let {
+            uiEventLogger.logWithInstanceId(
+                QSEvent.QS_DETAILS_SETTINGS_CLICK,
+                0,
+                it.metricsSpec,
+                it.instanceId,
+            )
+        }
     }
 }

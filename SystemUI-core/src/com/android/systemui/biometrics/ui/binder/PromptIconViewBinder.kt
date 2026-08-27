@@ -22,17 +22,13 @@ import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.airbnb.lottie.LottieAnimationView
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.settingslib.widget.LottieColorUtils
+import com.android.systemui.biometrics.BiometricAuthIconAssets
+import com.android.systemui.biometrics.ui.viewmodel.BiometricAuthIconViewModel
 import com.android.systemui.biometrics.ui.viewmodel.PromptIconViewModel
-import com.android.systemui.biometrics.ui.viewmodel.PromptIconViewModel.AuthType
 import com.android.systemui.biometrics.ui.viewmodel.PromptViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.res.R
-import com.android.systemui.util.kotlin.Quad
-import com.android.systemui.util.kotlin.Utils.Companion.toQuint
-import com.android.systemui.util.kotlin.sample
-import kotlinx.coroutines.flow.combine
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 private const val TAG = "PromptIconViewBinder"
 
@@ -40,56 +36,32 @@ private const val TAG = "PromptIconViewBinder"
 object PromptIconViewBinder {
     /** Binds [BiometricPromptLayout.iconView] to [PromptIconViewModel]. */
     @JvmStatic
-    fun bind(
-        iconView: LottieAnimationView,
-        promptViewModel: PromptViewModel
-    ) {
+    fun bind(iconView: LottieAnimationView, promptViewModel: PromptViewModel) {
         val viewModel = promptViewModel.iconViewModel
         iconView.repeatWhenAttached {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.onConfigurationChanged(iconView.context.resources.configuration)
 
                 launch {
-                    viewModel.iconAsset
-                        .sample(
-                            combine(
-                                viewModel.activeAuthType,
-                                viewModel.shouldAnimateIconView,
-                                viewModel.shouldLoopIconView,
-                                viewModel.showingError,
-                                ::Quad
-                            ),
-                            ::toQuint
-                        )
-                        .collect {
-                            (
-                                iconAsset,
-                                activeAuthType,
-                                shouldAnimateIconView,
-                                shouldLoopIconView,
-                                showingError) ->
-                            if (iconAsset != -1) {
-                                iconView.updateAsset(
-                                    "iconAsset",
-                                    iconAsset,
-                                    shouldAnimateIconView,
-                                    shouldLoopIconView,
-                                    activeAuthType
-                                )
-                                viewModel.setPreviousIconWasError(showingError)
-                            }
+                    viewModel.iconState.collect { state ->
+                        if (state.asset != -1) {
+                            iconView.updateAsset(
+                                "iconAsset",
+                                state.asset,
+                                state.shouldAnimate,
+                                state.shouldLoop,
+                                state.activeBiometricAuthType,
+                            )
                         }
-                }
 
-                launch {
-                    viewModel.iconViewRotation.collect { rotation -> iconView.rotation = rotation }
-                }
-
-                launch {
-                    viewModel.contentDescriptionId.collect { id ->
-                        if (id != -1) {
-                            iconView.contentDescription = iconView.context.getString(id)
+                        if (state.contentDescriptionId != -1) {
+                            iconView.contentDescription =
+                                iconView.context.getString(state.contentDescriptionId)
                         }
+
+                        iconView.rotation = state.rotation
+
+                        viewModel.setPreviousIconWasError(state.showingError)
                     }
                 }
             }
@@ -102,12 +74,14 @@ fun LottieAnimationView.updateAsset(
     asset: Int,
     shouldAnimateIconView: Boolean,
     shouldLoopIconView: Boolean,
-    activeAuthType: AuthType
+    activeBiometricAuthType: BiometricAuthIconViewModel.BiometricAuthModalities,
 ) {
-    setFailureListener(type, asset, activeAuthType)
+    setFailureListener(type, asset, activeBiometricAuthType)
     pauseAnimation()
     setAnimation(asset)
-    if (animatingFromSfpsAuthenticating(asset)) {
+    val animatingFromSfpsAuthenticating =
+        BiometricAuthIconAssets.animatingFromSfpsAuthenticating(asset)
+    if (animatingFromSfpsAuthenticating) {
         // Skipping to error / success / unlock segment of animation
         setMinFrame(158)
     } else {
@@ -118,48 +92,14 @@ fun LottieAnimationView.updateAsset(
         playAnimation()
     }
     LottieColorUtils.applyDynamicColors(context, this)
+    LottieColorUtils.applyMaterialColor(context, this)
 }
 
-private fun animatingFromSfpsAuthenticating(asset: Int): Boolean =
-    asset in sfpsFpToErrorAssets || asset in sfpsFpToUnlockAssets || asset in sfpsFpToSuccessAssets
-
-private val sfpsFpToErrorAssets: List<Int> =
-    listOf(
-        R.raw.biometricprompt_sfps_fingerprint_to_error,
-        R.raw.biometricprompt_sfps_fingerprint_to_error_90,
-        R.raw.biometricprompt_sfps_fingerprint_to_error_180,
-        R.raw.biometricprompt_sfps_fingerprint_to_error_270,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_error,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_error_90,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_error_180,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_error_270,
-    )
-
-private val sfpsFpToUnlockAssets: List<Int> =
-    listOf(
-        R.raw.biometricprompt_sfps_fingerprint_to_unlock,
-        R.raw.biometricprompt_sfps_fingerprint_to_unlock_90,
-        R.raw.biometricprompt_sfps_fingerprint_to_unlock_180,
-        R.raw.biometricprompt_sfps_fingerprint_to_unlock_270,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_unlock,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_unlock_90,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_unlock_180,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_unlock_270,
-    )
-
-private val sfpsFpToSuccessAssets: List<Int> =
-    listOf(
-        R.raw.biometricprompt_sfps_fingerprint_to_success,
-        R.raw.biometricprompt_sfps_fingerprint_to_success_90,
-        R.raw.biometricprompt_sfps_fingerprint_to_success_180,
-        R.raw.biometricprompt_sfps_fingerprint_to_success_270,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_success,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_success_90,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_success_180,
-        R.raw.biometricprompt_sfps_rear_display_fingerprint_to_success_270,
-    )
-
-private fun LottieAnimationView.setFailureListener(type: String, asset: Int, authType: AuthType) {
+private fun LottieAnimationView.setFailureListener(
+    type: String,
+    asset: Int,
+    activeBiometricAuthType: BiometricAuthIconViewModel.BiometricAuthModalities,
+) {
     val assetName =
         try {
             context.resources.getResourceEntryName(asset)
@@ -170,11 +110,9 @@ private fun LottieAnimationView.setFailureListener(type: String, asset: Int, aut
     setFailureListener { result: Throwable? ->
         Log.d(
             TAG,
-            "Collecting $type | " +
-                "activeAuthType = $authType | " +
-                "Invalid resource id: $asset, " +
-                "name $assetName",
-            result
+            "Collecting $type: activeBiometricAuthType = $activeBiometricAuthType, invalid " +
+                "resource id: $asset, name $assetName",
+            result,
         )
     }
 }

@@ -26,17 +26,16 @@ import com.android.systemui.keyguard.ui.KeyguardTransitionAnimationFlow
 import com.android.systemui.keyguard.ui.transitions.DeviceEntryIconTransition
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class LockscreenToDozingTransitionViewModel
 @Inject
 constructor(
     deviceEntryUdfpsInteractor: DeviceEntryUdfpsInteractor,
     animationFlow: KeyguardTransitionAnimationFlow,
+    dozingTransitionFlows: DozingTransitionFlows,
 ) : DeviceEntryIconTransition {
 
     private val transitionAnimation =
@@ -45,7 +44,9 @@ constructor(
             edge = Edge.create(from = LOCKSCREEN, to = DOZING),
         )
 
-    val lockscreenAlpha: Flow<Float> = transitionAnimation.immediatelyTransitionTo(1f)
+    val lockscreenAlpha: Flow<Float> = dozingTransitionFlows.lockscreenAlpha(from = LOCKSCREEN)
+
+    val nonAuthUIAlpha: Flow<Float> = dozingTransitionFlows.nonAuthUIAlpha(from = LOCKSCREEN)
 
     val shortcutsAlpha: Flow<Float> =
         transitionAnimation.sharedFlow(
@@ -56,7 +57,12 @@ constructor(
         )
 
     val deviceEntryBackgroundViewAlpha: Flow<Float> =
-        transitionAnimation.immediatelyTransitionTo(0f)
+        transitionAnimation.sharedFlow(
+            duration = TO_DOZING_DURATION,
+            onStep = { null },
+            onFinish = { 0f },
+            onCancel = { 0f },
+        )
 
     override val deviceEntryParentViewAlpha: Flow<Float> =
         deviceEntryUdfpsInteractor.isUdfpsEnrolledAndEnabled.flatMapLatest {
@@ -64,7 +70,11 @@ constructor(
             if (isUdfpsEnrolledAndEnabled) {
                 transitionAnimation.immediatelyTransitionTo(1f)
             } else {
-                transitionAnimation.sharedFlow(duration = 250.milliseconds, onStep = { 1f - it })
+                transitionAnimation.sharedFlow(
+                    duration = 250.milliseconds,
+                    onStep = { 1f - it },
+                    onCancel = { 0f },
+                )
             }
         }
 }

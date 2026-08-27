@@ -132,7 +132,7 @@ public class AccessPointControllerImpl implements AccessPointController,
         }
 
         if (mWifiPickerTracker != null) {
-            mWifiPickerTracker.onStop();
+            mWifiPickerTracker.close();
         }
         Context context = mContext.createContextAsUser(UserHandle.of(newUserId), /* flags= */ 0);
         mWifiPickerTracker = mWifiPickerTrackerFactory.create(context, mLifecycle, this, TAG);
@@ -183,10 +183,15 @@ public class AccessPointControllerImpl implements AccessPointController,
     @Override
     public MergedCarrierEntry getMergedCarrierEntry() {
         if (mWifiPickerTracker == null) {
+            Log.w(TAG, "WifiPickerTracker is null!");
             fireAccessPointsCallback(Collections.emptyList());
             return null;
         }
-        return mWifiPickerTracker.getMergedCarrierEntry();
+        MergedCarrierEntry entry = mWifiPickerTracker.getMergedCarrierEntry();
+        if (mWifiPickerTracker.isVerboseLoggingEnabled()) {
+            Log.d(TAG, "WifiPickerTracker: getMergedCarrierEntry()=" + entry);
+        }
+        return entry;
     }
 
     @Override

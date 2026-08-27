@@ -19,6 +19,7 @@ package com.android.systemui.statusbar.notification.collection;
 import static android.service.notification.NotificationListenerService.REASON_APP_CANCEL;
 import static android.service.notification.NotificationListenerService.REASON_APP_CANCEL_ALL;
 import static android.service.notification.NotificationListenerService.REASON_ASSISTANT_CANCEL;
+import static android.service.notification.NotificationListenerService.REASON_BUNDLE_DISMISSED;
 import static android.service.notification.NotificationListenerService.REASON_CANCEL;
 import static android.service.notification.NotificationListenerService.REASON_CANCEL_ALL;
 import static android.service.notification.NotificationListenerService.REASON_CHANNEL_BANNED;
@@ -39,7 +40,6 @@ import static android.service.notification.NotificationListenerService.REASON_TI
 import static android.service.notification.NotificationListenerService.REASON_UNAUTOBUNDLED;
 import static android.service.notification.NotificationListenerService.REASON_USER_STOPPED;
 
-import static com.android.systemui.Flags.notificationsDismissPrunedSummaries;
 import static com.android.systemui.statusbar.notification.NotificationUtils.logKey;
 import static com.android.systemui.statusbar.notification.collection.NotificationEntry.DismissState.DISMISSED;
 import static com.android.systemui.statusbar.notification.collection.NotificationEntry.DismissState.NOT_DISMISSED;
@@ -70,12 +70,13 @@ import androidx.annotation.Nullable;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.statusbar.IStatusBarService;
 import com.android.systemui.Dumpable;
+import com.android.systemui.Flags;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.dump.LogBufferEulogizer;
-import com.android.systemui.statusbar.notification.NotifPipelineFlags;
+import com.android.systemui.statusbar.notification.BundleInteractionLogger;
 import com.android.systemui.statusbar.notification.collection.coalescer.CoalescedEvent;
 import com.android.systemui.statusbar.notification.collection.coalescer.GroupCoalescer;
 import com.android.systemui.statusbar.notification.collection.coalescer.GroupCoalescer.BatchableNotificationHandler;
@@ -97,6 +98,7 @@ import com.android.systemui.statusbar.notification.collection.notifcollection.No
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifLifetimeExtender;
 import com.android.systemui.statusbar.notification.collection.notifcollection.RankingAppliedEvent;
 import com.android.systemui.statusbar.notification.collection.notifcollection.RankingUpdatedEvent;
+import com.android.systemui.statusbar.notification.collection.notifcollection.UpdateSource;
 import com.android.systemui.statusbar.notification.collection.provider.NotificationDismissibilityProvider;
 import com.android.systemui.util.Assert;
 import com.android.systemui.util.NamedListenerSet;
@@ -116,6 +118,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -148,7 +151,6 @@ import javax.inject.Inject;
 public class NotifCollection implements Dumpable, PipelineDumpable {
     private final IStatusBarService mStatusBarService;
     private final SystemClock mClock;
-    private final NotifPipelineFlags mNotifPipelineFlags;
     private final NotifCollectionLogger mLogger;
     private final Handler mMainHandler;
     private final Executor mBgExecutor;
@@ -156,8 +158,10 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
     private final DumpManager mDumpManager;
     private final NotifCollectionInconsistencyTracker mInconsistencyTracker;
     private final NotificationDismissibilityProvider mDismissibilityProvider;
+    private final BundleInteractionLogger mBundleLogger;
 
-    private final Map<String, NotificationEntry> mNotificationSet = new ArrayMap<>();
+    private final Map<String, NotificationEntry> mNotificationSet =
+            Flags.doNotUseRunBlocking() ? new ConcurrentHashMap<>() : new ArrayMap<>();
     private final Collection<NotificationEntry> mReadOnlyNotificationSet =
             Collections.unmodifiableCollection(mNotificationSet.values());
     private final HashMap<String, FutureDismissal> mFutureDismissals = new HashMap<>();
@@ -184,16 +188,15 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
     public NotifCollection(
             IStatusBarService statusBarService,
             SystemClock clock,
-            NotifPipelineFlags notifPipelineFlags,
             NotifCollectionLogger logger,
             @Main Handler mainHandler,
             @Background Executor bgExecutor,
             LogBufferEulogizer logBufferEulogizer,
             DumpManager dumpManager,
-            NotificationDismissibilityProvider dismissibilityProvider) {
+            NotificationDismissibilityProvider dismissibilityProvider,
+            BundleInteractionLogger bundleLogger) {
         mStatusBarService = statusBarService;
         mClock = clock;
-        mNotifPipelineFlags = notifPipelineFlags;
         mLogger = logger;
         mMainHandler = mainHandler;
         mBgExecutor = bgExecutor;
@@ -201,6 +204,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         mDumpManager = dumpManager;
         mInconsistencyTracker = new NotifCollectionInconsistencyTracker(mLogger);
         mDismissibilityProvider = dismissibilityProvider;
+        mBundleLogger = bundleLogger;
     }
 
     /** Initializes the NotifCollection and registers it to receive notification events. */
@@ -232,7 +236,9 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
 
     /** @see NotifPipeline#getAllNotifs() */
     Collection<NotificationEntry> getAllNotifs() {
-        Assert.isMainThread();
+        if (!Flags.doNotUseRunBlocking()) {
+            Assert.isMainThread();
+        }
         return mReadOnlyNotificationSet;
     }
 
@@ -274,70 +280,70 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
      * Dismisses multiple notifications on behalf of the user.
      */
     public void dismissNotifications(
-            List<EntryWithDismissStats> entriesToDismiss) {
+            List<EntryWithDismissStats> entriesToDismiss, boolean fromBundle) {
         Assert.isMainThread();
         checkForReentrantCall();
 
-        if (notificationsDismissPrunedSummaries()) {
-            entriesToDismiss = includeSummariesToDismiss(entriesToDismiss);
-        }
+        entriesToDismiss = includeSummariesToDismiss(entriesToDismiss);
 
         final int entryCount = entriesToDismiss.size();
         final List<NotificationEntry> entriesToLocallyDismiss = new ArrayList<>();
         for (int i = 0; i < entriesToDismiss.size(); i++) {
-            NotificationEntry entry = entriesToDismiss.get(i).getEntry();
-            DismissedByUserStats stats = entriesToDismiss.get(i).getStats();
-
-            requireNonNull(stats);
-            NotificationEntry storedEntry = mNotificationSet.get(entry.getKey());
+            final EntryWithDismissStats entryWithDismissStats = entriesToDismiss.get(i);
+            final String key = entryWithDismissStats.getKey();
+            final int hashCode = entryWithDismissStats.getEntryHashCode();
+            final DismissedByUserStats stats = requireNonNull(entryWithDismissStats.getStats());
+            final NotificationEntry storedEntry = mNotificationSet.get(key);
             if (storedEntry == null) {
-                mLogger.logDismissNonExistentNotif(entry, i, entryCount);
+                mLogger.logDismissNonExistentNotif(key, i, entryCount);
                 continue;
             }
-            if (entry != storedEntry) {
+            if (hashCode != storedEntry.hashCode()) {
                 throw mEulogizer.record(
                         new IllegalStateException("Invalid entry: "
-                                + "different stored and dismissed entries for " + logKey(entry)
+                                + "different stored and dismissed entries for " + logKey(key)
                                 + " (" + i + "/" + entryCount + ")"
-                                + " dismissed=@" + Integer.toHexString(entry.hashCode())
+                                + " dismissed=@" + Integer.toHexString(hashCode)
                                 + " stored=@" + Integer.toHexString(storedEntry.hashCode())));
             }
 
-            if (entry.getDismissState() == DISMISSED) {
-                mLogger.logDismissAlreadyDismissedNotif(entry, i, entryCount);
+            if (storedEntry.getDismissState() == DISMISSED) {
+                mLogger.logDismissAlreadyDismissedNotif(storedEntry, i, entryCount);
                 continue;
-            } else if (entry.getDismissState() == PARENT_DISMISSED) {
-                mLogger.logDismissAlreadyParentDismissedNotif(entry, i, entryCount);
+            } else if (storedEntry.getDismissState() == PARENT_DISMISSED) {
+                mLogger.logDismissAlreadyParentDismissedNotif(storedEntry, i, entryCount);
             }
 
-            updateDismissInterceptors(entry);
-            if (isDismissIntercepted(entry)) {
-                mLogger.logNotifDismissedIntercepted(entry, i, entryCount);
+            updateDismissInterceptors(storedEntry);
+            if (isDismissIntercepted(storedEntry)) {
+                mLogger.logNotifDismissedIntercepted(storedEntry, i, entryCount);
                 continue;
             }
 
-            entriesToLocallyDismiss.add(entry);
-            if (!entry.isCanceled()) {
-                int finalI = i;
+            entriesToLocallyDismiss.add(storedEntry);
+            if (!storedEntry.isCanceled()) {
+                final int finalI = i;
                 // send message to system server if this notification hasn't already been cancelled
                 mBgExecutor.execute(() -> {
                     try {
                         mStatusBarService.onNotificationClear(
-                                entry.getSbn().getPackageName(),
-                                entry.getSbn().getUser().getIdentifier(),
-                                entry.getSbn().getKey(),
+                                storedEntry.getSbn().getPackageName(),
+                                storedEntry.getSbn().getUser().getIdentifier(),
+                                storedEntry.getSbn().getKey(),
                                 stats.dismissalSurface,
                                 stats.dismissalSentiment,
-                                stats.notificationVisibility);
+                                stats.notificationVisibility,
+                                fromBundle);
                     } catch (RemoteException e) {
                         // system process is dead if we're here.
-                        mLogger.logRemoteExceptionOnNotificationClear(entry, finalI, entryCount, e);
+                        mLogger.logRemoteExceptionOnNotificationClear(
+                                storedEntry, finalI, entryCount, e);
                     }
                 });
             }
         }
 
-        locallyDismissNotifications(entriesToLocallyDismiss);
+        locallyDismissNotifications(entriesToLocallyDismiss, fromBundle);
         dispatchEventsAndRebuildList("dismissNotifications");
     }
 
@@ -345,19 +351,29 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
             List<EntryWithDismissStats> entriesToDismiss) {
         final HashSet<NotificationEntry> entriesSet = new HashSet<>(entriesToDismiss.size());
         for (EntryWithDismissStats entryToStats : entriesToDismiss) {
-            entriesSet.add(entryToStats.getEntry());
+            NotificationEntry entry = getEntryFromDismissalStats(entryToStats);
+            if (entry != null) {
+                entriesSet.add(entry);
+            }
         }
 
         final List<EntryWithDismissStats> entriesPlusSummaries =
                 new ArrayList<>(entriesToDismiss.size() + 1);
         for (EntryWithDismissStats entryToStats : entriesToDismiss) {
             entriesPlusSummaries.add(entryToStats);
-            NotificationEntry summary = fetchSummaryToDismiss(entryToStats.getEntry());
-            if (summary != null && !entriesSet.contains(summary)) {
-                entriesPlusSummaries.add(entryToStats.copyForEntry(summary));
+            NotificationEntry entry = getEntryFromDismissalStats(entryToStats);
+            if (entry != null) {
+                NotificationEntry summary = fetchSummaryToDismiss(entry);
+                if (summary != null && !entriesSet.contains(summary)) {
+                    entriesPlusSummaries.add(entryToStats.copyForEntry(summary));
+                }
             }
         }
         return entriesPlusSummaries;
+    }
+
+    private NotificationEntry getEntryFromDismissalStats(EntryWithDismissStats stats) {
+        return mNotificationSet.get(stats.getKey());
     }
 
     /**
@@ -366,7 +382,9 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
     public void dismissNotification(
             NotificationEntry entry,
             @NonNull DismissedByUserStats stats) {
-        dismissNotifications(List.of(new EntryWithDismissStats(entry, stats)));
+        final EntryWithDismissStats withStats = new EntryWithDismissStats(
+                stats, entry.getKey(), entry.hashCode());
+        dismissNotifications(List.of(withStats), /* fromBundle= */ false);
     }
 
     /**
@@ -402,7 +420,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
             }
         }
 
-        locallyDismissNotifications(entries);
+        locallyDismissNotifications(entries, /* fromBundle= */ false);
         dispatchEventsAndRebuildList("dismissAllNotifications");
     }
 
@@ -410,7 +428,8 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
      * Optimistically marks the given notifications as dismissed -- we'll wait for the signal
      * from system server before removing it from our notification set.
      */
-    private void locallyDismissNotifications(List<NotificationEntry> entries) {
+    private void locallyDismissNotifications(List<NotificationEntry> entries,
+            boolean fromBundle) {
         final List<NotificationEntry> canceledEntries = new ArrayList<>();
         final int entryCount = entries.size();
         for (int i = 0; i < entries.size(); i++) {
@@ -429,7 +448,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
                 mLogger.logLocallyDismissAlreadyParentDismissedNotif(entry, i, entryCount);
             }
 
-            entry.setDismissState(DISMISSED);
+            entry.setDismissState(fromBundle ? PARENT_DISMISSED : DISMISSED);
             mLogger.logLocallyDismissed(entry, i, entryCount);
 
             if (entry.isCanceled()) {
@@ -524,7 +543,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
     }
 
     private void onNotificationsInitialized() {
-        mInitializedTimestamp = mClock.uptimeMillis();
+        mInitializedTimestamp = mClock.elapsedRealtime();
     }
 
     private void postNotification(
@@ -534,7 +553,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
 
         if (entry == null) {
             // A new notification!
-            entry = new NotificationEntry(sbn, ranking, mClock.uptimeMillis());
+            entry = new NotificationEntry(sbn, ranking, mClock.elapsedRealtime());
             mEventQueue.add(new InitEntryEvent(entry));
             mEventQueue.add(new BindEntryEvent(entry, sbn));
             mNotificationSet.put(sbn.getKey(), entry);
@@ -550,6 +569,12 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
             // TODO: If a coalesced event ever gets here, it's possible to lose track of children,
             //  since their rankings might have been updated earlier (and thus we may no longer
             //  think a child is associated with this locally-dismissed entry).
+            // If the postTime remains the same, we can assume the update is from SystemServer, not
+            // the app.
+            long lastUpdateTime = entry.getSbn().getPostTime();
+            UpdateSource source = sbn.getPostTime() == lastUpdateTime
+                    ? UpdateSource.SystemServer
+                    : UpdateSource.App;
             cancelLocalDismissal(entry);
             cancelLifetimeExtension(entry);
             cancelDismissInterception(entry);
@@ -559,7 +584,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
             mEventQueue.add(new BindEntryEvent(entry, sbn));
 
             mLogger.logNotifUpdated(entry);
-            mEventQueue.add(new EntryUpdatedEvent(entry, true /* fromSystem */));
+            mEventQueue.add(new EntryUpdatedEvent(entry, source));
         }
     }
 
@@ -623,7 +648,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
     }
 
     private boolean isDismissable(NotificationEntry entry) {
-        return mDismissibilityProvider.isDismissable(entry);
+        return mDismissibilityProvider.isDismissable(entry.getKey());
     }
 
     /**
@@ -794,9 +819,9 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
 
     private void cancelLocalDismissal(NotificationEntry entry) {
         if (entry.getDismissState() == NOT_DISMISSED) {
-            mLogger.logCancelLocalDismissalNotDismissedNotif(entry);
             return;
         }
+        mLogger.logCancelLocalDismissal(entry);
         entry.setDismissState(NOT_DISMISSED);
         if (entry.getSbn().getNotification().isGroupSummary()) {
             for (NotificationEntry otherEntry : mNotificationSet.values()) {
@@ -857,8 +882,8 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
     // messages from system server.
     private void crashIfNotInitializing(RuntimeException exception) {
         final boolean isRecentlyInitialized = mInitializedTimestamp == 0
-                || mClock.uptimeMillis() - mInitializedTimestamp
-                        < INITIALIZATION_FORGIVENESS_WINDOW;
+                || mClock.elapsedRealtime() - mInitializedTimestamp
+                < INITIALIZATION_FORGIVENESS_WINDOW;
 
         if (isRecentlyInitialized) {
             mLogger.logIgnoredError(exception.getMessage());
@@ -899,6 +924,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         return entry.getSbn().getGroupKey().equals(dismissedGroupKey)
                 && !entry.getSbn().getNotification().isGroupSummary()
                 && !hasFlag(entry, Notification.FLAG_ONGOING_EVENT)
+                && !hasFlag(entry, Notification.FLAG_PROMOTED_ONGOING)
                 && !hasFlag(entry, Notification.FLAG_BUBBLE)
                 && !hasFlag(entry, Notification.FLAG_NO_CLEAR)
                 && (entry.getChannel() == null || !entry.getChannel().isImportantConversation())
@@ -1048,7 +1074,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         mEventQueue.add(new BindEntryEvent(entry, sbn));
 
         mLogger.logNotifUpdated(entry);
-        mEventQueue.add(new EntryUpdatedEvent(entry, false /* fromSystem */));
+        mEventQueue.add(new EntryUpdatedEvent(entry, UpdateSource.SystemUi));
 
         // Skip the applyRanking step and go straight to dispatching the events
         dispatchEventsAndRebuildList("updateNotificationInternally");
@@ -1058,7 +1084,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
      * A method to alert the collection that an async operation is happening, at the end of which a
      * dismissal request will be made.  This method has the additional guarantee that if a parent
      * notification exists for a single child, then that notification will also be dismissed.
-     *
+     * <p>
      * The runnable returned must be run at the end of the async operation to enact the cancellation
      *
      * @param entry the notification we want to dismiss
@@ -1077,6 +1103,29 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         mFutureDismissals.put(entry.getKey(), dismissal);
         mLogger.logFutureDismissalRegistered(dismissal);
         return dismissal;
+    }
+
+    /**
+     * A method to alert the collection that an async operation is happening, at the end of which a
+     * dismissal request will be made.
+     * <p>
+     * The runnable returned must be run at the end of the async operation to enact the cancellation
+     *
+     * @param bundleEntry the notification bundle we want to dismiss
+     * @param statsCreator the callback for generating the stats for an entry
+     * @return the runnable to be run when the dismissal is ready to happen
+     */
+    public Runnable registerFutureDismissal(BundleEntry bundleEntry,
+            DismissedByUserStatsCreator statsCreator) {
+        // For Bundles, we don't need to go through a FutureDismissal because there is no need for
+        // coordination with the system server. We just return a Runnable that, when invoked, will
+        // perform the dismissals.
+        @CancellationReason final int cancellationReason = REASON_BUNDLE_DISMISSED;
+        BundleDismissalRunnable runnable = new BundleDismissalRunnable(bundleEntry,
+                cancellationReason, statsCreator);
+        mLogger.logBundleDismissalRegistered(runnable);
+        mBundleLogger.logBundleDismissed(bundleEntry);
+        return runnable;
     }
 
     private void handleFutureDismissal(NotificationEntry entry) {
@@ -1101,18 +1150,34 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         DismissedByUserStats createDismissedByUserStats(NotificationEntry entry);
     }
 
+    public abstract class DismissalRunnable implements Runnable {
+        private boolean mDidRun;
+
+        @Override
+        public void run() {
+            Assert.isMainThread();
+            if (mDidRun) {
+                mLogger.logFutureDismissalDoubleRun(this);
+                return;
+            }
+            mDidRun = true;
+            onUiCancel();
+        }
+
+        /** called when the dismissal should be completed */
+        protected abstract void onUiCancel();
+        /** label used to identify this dismissal request for logging */
+        public abstract String getLabel();
+    }
+
     /** A class which tracks the double dismissal events coming in from both the system server and
      * the ui */
-    public class FutureDismissal implements Runnable {
+    public class FutureDismissal extends DismissalRunnable {
+        private boolean mDidSystemServerCancel;
+        private final String mLabel;
         private final NotificationEntry mEntry;
         private final DismissedByUserStatsCreator mStatsCreator;
-
-        @Nullable
-        private final NotificationEntry mSummaryToDismiss;
-        private final String mLabel;
-
-        private boolean mDidRun;
-        private boolean mDidSystemServerCancel;
+        @Nullable private final NotificationEntry mSummaryToDismiss;
 
         private FutureDismissal(NotificationEntry entry, @CancellationReason int cancellationReason,
                 DismissedByUserStatsCreator statsCreator) {
@@ -1138,7 +1203,8 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
             // TODO: Internally dismiss the summary now instead of waiting for onUiCancel
         }
 
-        private void onUiCancel() {
+        @Override
+        protected void onUiCancel() {
             mFutureDismissals.remove(mEntry.getKey());
             final NotificationEntry currentEntry = getEntry(mEntry.getKey());
             // generate stats for the entry before dismissing summary, which could affect state
@@ -1165,19 +1231,8 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
             }
         }
 
-        /** called when the dismissal should be completed */
-        @Override
-        public void run() {
-            Assert.isMainThread();
-            if (mDidRun) {
-                mLogger.logFutureDismissalDoubleRun(this);
-                return;
-            }
-            mDidRun = true;
-            onUiCancel();
-        }
-
         /** provides a debug label for this instance */
+        @Override
         public String getLabel() {
             return mLabel;
         }
@@ -1212,8 +1267,60 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
     @Retention(RetentionPolicy.SOURCE)
     public @interface CancellationReason {}
 
+    public static final int REASON_PLUGIN = -2;
     static final int REASON_NOT_CANCELED = -1;
     public static final int REASON_UNKNOWN = 0;
 
     private static final long INITIALIZATION_FORGIVENESS_WINDOW = TimeUnit.SECONDS.toMillis(5);
+
+    private class BundleDismissalRunnable extends DismissalRunnable {
+        private final String mLabel;
+        private final BundleEntry mBundleEntry;
+        private final DismissedByUserStatsCreator mStatsCreator;
+
+        BundleDismissalRunnable(BundleEntry bundleEntry, int cancellationReason,
+                DismissedByUserStatsCreator statsCreator) {
+            mBundleEntry = bundleEntry;
+            mStatsCreator = statsCreator;
+            mLabel = "<FutureBundleDismissal@" + Integer.toHexString(hashCode())
+                    + " key=" + bundleEntry.getKey()
+                    + " reason=" + cancellationReasonDebugString(cancellationReason)
+                    + ">";
+        }
+
+        @Override
+        public String getLabel() {
+            return mLabel;
+        }
+
+        @Override
+        protected void onUiCancel() {
+            final ArrayList<EntryWithDismissStats> toDismiss = new ArrayList<>();
+            for (ListEntry child : mBundleEntry.getChildren()) {
+                final NotificationEntry childEntry = child.getRepresentativeEntry();
+                if (childEntry == null) {
+                    continue;
+                }
+                // dismiss the summary (if it exists)
+                final NotificationEntry summaryToDismiss = fetchSummaryToDismiss(childEntry);
+                if (summaryToDismiss != null) {
+                    mLogger.logBundleDismissal(this, summaryToDismiss, "summary");
+                    final DismissedByUserStats stats =
+                            mStatsCreator.createDismissedByUserStats(summaryToDismiss);
+                    final EntryWithDismissStats entryAndStats =
+                            new EntryWithDismissStats(stats,
+                                    summaryToDismiss.getKey(), summaryToDismiss.hashCode());
+                    toDismiss.add(entryAndStats);
+                }
+                mLogger.logBundleDismissal(this, childEntry, "entry");
+                final DismissedByUserStats stats =
+                        mStatsCreator.createDismissedByUserStats(childEntry);
+                final EntryWithDismissStats entryAndStats =
+                        new EntryWithDismissStats(stats, childEntry.getKey(),
+                                childEntry.hashCode());
+                toDismiss.add(entryAndStats);
+            }
+            dismissNotifications(toDismiss, /* fromBundle= */ true);
+        }
+    }
 }

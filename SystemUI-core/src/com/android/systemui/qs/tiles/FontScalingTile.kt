@@ -25,6 +25,7 @@ import com.android.systemui.accessibility.fontscaling.FontScalingDialogDelegate
 import com.android.systemui.animation.DialogCuj
 import com.android.systemui.animation.DialogTransitionAnimator
 import com.android.systemui.animation.Expandable
+import com.android.systemui.animation.TransitionAnimator
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.plugins.ActivityStarter
@@ -34,6 +35,7 @@ import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.qs.QSHost
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.logging.QSLogger
+import com.android.systemui.qs.shared.QSSettingsPackageRepository
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.SystemUIDialog
@@ -56,6 +58,7 @@ constructor(
     private val keyguardStateController: KeyguardStateController,
     private val dialogTransitionAnimator: DialogTransitionAnimator,
     private val fontScalingDialogDelegateProvider: Provider<FontScalingDialogDelegate>,
+    private val settingsPackageRepository: QSSettingsPackageRepository,
 ) :
     QSTileImpl<QSTile.State?>(
         host,
@@ -89,8 +92,17 @@ constructor(
                             INTERACTION_JANK_TAG,
                         )
                     )
-                controller?.let { dialogTransitionAnimator.show(dialog, controller) }
-                    ?: dialog.show()
+                controller?.let {
+                    if (TransitionAnimator.dynamicTargetResolutionEnabled()) {
+                        dialogTransitionAnimator.show(
+                            dialog,
+                            expandable::dialogTransitionController,
+                            it.cuj,
+                        )
+                    } else {
+                        dialogTransitionAnimator.show(dialog, it)
+                    }
+                } ?: dialog.show()
             } else {
                 dialog.show()
             }
@@ -118,6 +130,7 @@ constructor(
 
     override fun getLongClickIntent(): Intent? {
         return Intent(Settings.ACTION_TEXT_READING_SETTINGS)
+            .setPackage(settingsPackageRepository.getSettingsPackageName())
     }
 
     override fun getTileLabel(): CharSequence {

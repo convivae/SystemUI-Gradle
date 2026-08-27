@@ -20,11 +20,11 @@ import android.view.View
 import androidx.lifecycle.lifecycleScope
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.internal.jank.InteractionJankMonitor
+import com.android.systemui.Flags.notificationShadeBlur
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.statusbar.notification.NotificationActivityStarter
 import com.android.systemui.statusbar.notification.NotificationActivityStarter.SettingsIntent
-import com.android.systemui.statusbar.notification.emptyshade.shared.ModesEmptyShadeFix
-import com.android.systemui.statusbar.notification.footer.shared.NotifRedesignFooter
 import com.android.systemui.statusbar.notification.footer.ui.view.FooterView
 import com.android.systemui.statusbar.notification.footer.ui.viewmodel.FooterViewModel
 import com.android.systemui.util.ui.isAnimating
@@ -39,20 +39,12 @@ object FooterViewBinder {
         footer: FooterView,
         viewModel: FooterViewModel,
         clearAllNotifications: View.OnClickListener,
-        launchNotificationSettings: View.OnClickListener,
-        launchNotificationHistory: View.OnClickListener,
         notificationActivityStarter: NotificationActivityStarter,
     ): DisposableHandle {
+        SceneContainerFlag.assertInLegacyMode()
         return footer.repeatWhenAttached {
             lifecycleScope.launch {
-                bind(
-                    footer,
-                    viewModel,
-                    clearAllNotifications,
-                    launchNotificationSettings,
-                    launchNotificationHistory,
-                    notificationActivityStarter,
-                )
+                bind(footer, viewModel, clearAllNotifications, notificationActivityStarter)
             }
         }
     }
@@ -61,26 +53,20 @@ object FooterViewBinder {
         footer: FooterView,
         viewModel: FooterViewModel,
         clearAllNotifications: View.OnClickListener,
-        launchNotificationSettings: View.OnClickListener,
-        launchNotificationHistory: View.OnClickListener,
         notificationActivityStarter: NotificationActivityStarter,
     ) = coroutineScope {
         launch { bindClearAllButton(footer, viewModel, clearAllNotifications) }
-        if (!NotifRedesignFooter.isEnabled) {
-            launch {
-                bindManageOrHistoryButton(
-                    footer,
-                    viewModel,
-                    launchNotificationSettings,
-                    launchNotificationHistory,
-                    notificationActivityStarter,
-                )
-            }
-        } else {
-            launch { bindSettingsButton(footer, viewModel, notificationActivityStarter) }
-            launch { bindHistoryButton(footer, viewModel, notificationActivityStarter) }
-        }
+        launch { bindSettingsButton(footer, viewModel, notificationActivityStarter) }
+        launch { bindHistoryButton(footer, viewModel, notificationActivityStarter) }
         launch { bindMessage(footer, viewModel) }
+
+        if (notificationShadeBlur()) {
+            launch {
+                viewModel.isBlurSupported.collect { supported ->
+                    footer.setIsBlurSupported(supported)
+                }
+            }
+        }
     }
 
     private suspend fun bindClearAllButton(
@@ -163,54 +149,6 @@ object FooterViewBinder {
             // special about the onClickListener here, since we're changing the visibility to
             // GONE so it won't be clickable anyway.
             viewModel.historyButtonVisible.collect { footer.setHistoryButtonVisible(it) }
-        }
-    }
-
-    private suspend fun bindManageOrHistoryButton(
-        footer: FooterView,
-        viewModel: FooterViewModel,
-        launchNotificationSettings: View.OnClickListener,
-        launchNotificationHistory: View.OnClickListener,
-        notificationActivityStarter: NotificationActivityStarter,
-    ) = coroutineScope {
-        launch {
-            if (ModesEmptyShadeFix.isEnabled) {
-                viewModel.manageOrHistoryButtonClick.collect { settingsIntent ->
-                    val onClickListener = { view: View ->
-                        notificationActivityStarter.startSettingsIntent(view, settingsIntent)
-                    }
-                    footer.setManageButtonClickListener(onClickListener)
-                }
-            } else {
-                viewModel.manageButtonShouldLaunchHistory.collect { shouldLaunchHistory ->
-                    if (shouldLaunchHistory) {
-                        footer.setManageButtonClickListener(launchNotificationHistory)
-                    } else {
-                        footer.setManageButtonClickListener(launchNotificationSettings)
-                    }
-                }
-            }
-        }
-
-        launch {
-            viewModel.manageOrHistoryButton.labelId.collect { textId ->
-                footer.setManageOrHistoryButtonText(textId)
-            }
-        }
-
-        launch {
-            viewModel.manageOrHistoryButton.accessibilityDescriptionId.collect { textId ->
-                footer.setManageOrHistoryButtonDescription(textId)
-            }
-        }
-
-        launch {
-            viewModel.manageOrHistoryButton.isVisible.collect { isVisible ->
-                // NOTE: This visibility change is never animated. We also don't need to do anything
-                // special about the onClickListener here, since we're changing the visibility to
-                // GONE so it won't be clickable anyway.
-                footer.setManageOrHistoryButtonVisible(isVisible.value)
-            }
         }
     }
 

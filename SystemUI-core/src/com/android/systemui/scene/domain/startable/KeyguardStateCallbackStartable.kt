@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.android.systemui.scene.domain.startable
 
 import android.os.DeadObjectException
 import android.os.RemoteException
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.internal.policy.IKeyguardStateCallback
 import com.android.systemui.CoreStartable
 import com.android.systemui.bouncer.domain.interactor.SimBouncerInteractor
@@ -35,13 +34,11 @@ import com.android.systemui.user.domain.interactor.SelectedUserInteractor
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
-import com.android.app.tracing.coroutines.launchTraced as launch
 import kotlinx.coroutines.withContext
 
 /** Keeps all [IKeyguardStateCallback]s hydrated with the latest state. */
@@ -72,7 +69,7 @@ constructor(
     }
 
     fun addCallback(callback: IKeyguardStateCallback) {
-        SceneContainerFlag.assertInNewMode()
+        SceneContainerFlag.unsafeAssertInNewMode()
 
         callbacks.add(callback)
 
@@ -93,7 +90,7 @@ constructor(
             combine(
                     selectedUserInteractor.selectedUser,
                     deviceEntryInteractor.isDeviceEntered,
-                    ::Pair
+                    ::Pair,
                 )
                 .collectLatest { (selectedUserId, isDeviceEntered) ->
                     val iterator = callbacks.iterator()
@@ -140,7 +137,7 @@ constructor(
             // This is equivalent to isDeviceEntered but it waits for the full transition animation
             // to finish before emitting a new value and not just for the current scene to be
             // switched.
-            sceneInteractor.transitionState
+            sceneInteractor.transitionStateFlow
                 .filter { it.isIdle(Scenes.Gone) || it.isIdle(Scenes.Lockscreen) }
                 .map { it.isIdle(Scenes.Lockscreen) }
                 .distinctUntilChanged()

@@ -15,14 +15,14 @@
  */
 package com.android.keyguard;
 
-import static com.android.settingslib.Utils.getColorAttrDefaultColor;
-import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BACKGROUND;
-import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BACKGROUND_PRESSED;
-import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BUTTON;
-import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_KEY;
-import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_PRESSED;
-import static com.android.systemui.util.ColorUtilKt.getPrivateAttrColorIfUnset;
+import static android.security.Flags.lockscreenTimeoutDeactivatePinPad;
 
+import static com.android.keyguard.NumPadAnimatableKt.DISABLED_BACKGROUND_ALPHA;
+import static com.android.keyguard.NumPadAnimatableKt.DISABLED_FOREGROUND_ALPHA;
+import static com.android.systemui.bouncer.shared.constants.KeyguardBouncerConstants.ColorId.NUM_PAD_BACKGROUND;
+
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
@@ -33,11 +33,18 @@ import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.ContextThemeWrapper;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.StyleRes;
 
-import com.android.app.animation.Interpolators;
+import com.android.systemui.Flags;
+import com.android.systemui.bouncer.shared.constants.PinBouncerConstants.Animation;
+import com.android.systemui.bouncer.shared.constants.PinBouncerConstants.Color;
+import com.android.systemui.bouncer.ui.BouncerColors;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Provides background color and radius animations for key pad buttons.
@@ -47,9 +54,12 @@ class NumPadAnimator {
     private AnimatorSet mExpandAnimatorSet;
     private ValueAnimator mContractAnimator;
     private AnimatorSet mContractAnimatorSet;
+    private ValueAnimator mEnableAnimator;
+    private ValueAnimator mDisableAnimator;
     private GradientDrawable mBackground;
     private Drawable mImageButton;
     private TextView mDigitTextView;
+    private NumPadAnimatable mAnimatable;
     private int mNormalBackgroundColor;
     private int mPressedBackgroundColor;
     private int mTextColorPrimary;
@@ -59,23 +69,27 @@ class NumPadAnimator {
     private float mEndRadius;
     private int mHeight;
     private int mWidth;
-
-    private static final int EXPAND_ANIMATION_MS = 100;
-    private static final int EXPAND_COLOR_ANIMATION_MS = 50;
-    private static final int CONTRACT_ANIMATION_DELAY_MS = 33;
-    private static final int CONTRACT_ANIMATION_MS = 417;
+    private final HardwareLayerResetListener mHardwareLayerResetListener =
+            new HardwareLayerResetListener();
 
     NumPadAnimator(Context context, final Drawable drawable,
-            @StyleRes int style, Drawable buttonImage) {
-        this(context, drawable, style, null, buttonImage);
+            @StyleRes int style, Drawable buttonImage, NumPadAnimatable animatable) {
+        this(context, drawable, style, null, buttonImage, animatable);
     }
 
-    NumPadAnimator(Context context, final Drawable drawable, @StyleRes int style,
-            @Nullable TextView digitTextView, @Nullable Drawable buttonImage) {
+    NumPadAnimator(
+            Context context,
+            final Drawable drawable,
+            @StyleRes int style,
+            @Nullable TextView digitTextView,
+            @Nullable Drawable buttonImage,
+            NumPadAnimatable animatable
+    ) {
         mStyle = style;
         mBackground = (GradientDrawable) drawable;
         mDigitTextView = digitTextView;
         mImageButton = buttonImage;
+        mAnimatable = animatable;
 
         reloadColors(context);
     }
@@ -92,7 +106,7 @@ class NumPadAnimator {
         mContractAnimatorSet.start();
     }
 
-    public void setProgress(float progress) {
+    public void setProgress(float progress, boolean isEnabled) {
         mBackground.setCornerRadius(mEndRadius + (mStartRadius - mEndRadius) * progress);
         int height = (int) (mHeight * 0.7f + mHeight * 0.3 * progress);
         int difference = mHeight - height;
@@ -102,6 +116,28 @@ class NumPadAnimator {
         int right = mWidth;
         int bottom = mHeight - difference / 2;
         mBackground.setBounds(left, top, right, bottom);
+
+        if (lockscreenTimeoutDeactivatePinPad()) {
+            float fgAlpha = progress * (isEnabled ? 1f : DISABLED_FOREGROUND_ALPHA);
+            float bgAlpha = progress * (isEnabled ? 1f : DISABLED_BACKGROUND_ALPHA);
+            mAnimatable.setAlpha(fgAlpha, bgAlpha);
+        }
+    }
+
+    public void enable() {
+        mEnableAnimator.cancel();
+        mDisableAnimator.cancel();
+
+        mHardwareLayerResetListener.onBeforeAnimation();
+        mEnableAnimator.start();
+    }
+
+    public void disable() {
+        mEnableAnimator.cancel();
+        mDisableAnimator.cancel();
+
+        mHardwareLayerResetListener.onBeforeAnimation();
+        mDisableAnimator.start();
     }
 
     void onLayout(int width, int height) {
@@ -124,43 +160,48 @@ class NumPadAnimator {
     void reloadColors(Context context) {
         boolean isNumPadKey = mImageButton == null;
 
-        int[] customAttrs = {android.R.attr.colorControlNormal};
-        ContextThemeWrapper ctw = new ContextThemeWrapper(context, mStyle);
-        @SuppressLint("ResourceType") TypedArray a = ctw.obtainStyledAttributes(customAttrs);
-        mNormalBackgroundColor = getPrivateAttrColorIfUnset(ctw, a, 0, 0,
-                NUM_PAD_BACKGROUND);
-        a.recycle();
+        if (!Flags.bouncerUiRevamp2()) {
+            int[] customAttrs = {android.R.attr.colorControlNormal};
+            ContextThemeWrapper ctw = new ContextThemeWrapper(context, mStyle);
+            @SuppressLint("ResourceType") TypedArray a = ctw.obtainStyledAttributes(customAttrs);
 
-        mPressedBackgroundColor = getColorAttrDefaultColor(context, NUM_PAD_BACKGROUND_PRESSED);
-        mTextColorPressed = getColorAttrDefaultColor(context, NUM_PAD_PRESSED);
+            mNormalBackgroundColor = a.getColor(0, context.getColor(NUM_PAD_BACKGROUND));
+
+            a.recycle();
+        } else {
+            mNormalBackgroundColor = isNumPadKey ? BouncerColors.pinDigitBg(context)
+                            : BouncerColors.pinActionBg(context);
+        }
+
+        mPressedBackgroundColor = context.getColor(Color.bgPressed);
+        mTextColorPressed = context.getColor(Color.digitPressed);
 
         mBackground.setColor(mNormalBackgroundColor);
-        mTextColorPrimary = isNumPadKey
-                ? getColorAttrDefaultColor(context, NUM_PAD_KEY)
-                : getColorAttrDefaultColor(context, NUM_PAD_BUTTON);
+        mTextColorPrimary = context.getColor(isNumPadKey ? Color.digit : Color.action);
         createAnimators();
     }
 
     private void createAnimators() {
         // Actual values will be updated later, usually during an onLayout() call
         mExpandAnimator = ValueAnimator.ofFloat(0f, 1f);
-        mExpandAnimator.setDuration(EXPAND_ANIMATION_MS);
-        mExpandAnimator.setInterpolator(Interpolators.LINEAR);
+        mExpandAnimator.setDuration(Animation.expansionDuration);
+        mExpandAnimator.setInterpolator(Animation.expansionInterpolator);
         mExpandAnimator.addUpdateListener(
                 anim -> mBackground.setCornerRadius((float) anim.getAnimatedValue()));
 
+        List<Animator> expandAnimators = new ArrayList<>();
         ValueAnimator expandBackgroundColorAnimator = ValueAnimator.ofObject(new ArgbEvaluator(),
                 mNormalBackgroundColor, mPressedBackgroundColor);
-        expandBackgroundColorAnimator.setDuration(EXPAND_COLOR_ANIMATION_MS);
-        expandBackgroundColorAnimator.setInterpolator(Interpolators.LINEAR);
+        expandBackgroundColorAnimator.setDuration(Animation.expansionColorDuration);
+        expandBackgroundColorAnimator.setInterpolator(Animation.expansionInterpolator);
         expandBackgroundColorAnimator.addUpdateListener(
                 animator -> mBackground.setColor((int) animator.getAnimatedValue()));
 
         ValueAnimator expandTextColorAnimator =
                 ValueAnimator.ofObject(new ArgbEvaluator(),
                 mTextColorPrimary, mTextColorPressed);
-        expandTextColorAnimator.setInterpolator(Interpolators.LINEAR);
-        expandTextColorAnimator.setDuration(EXPAND_COLOR_ANIMATION_MS);
+        expandTextColorAnimator.setInterpolator(Animation.expansionInterpolator);
+        expandTextColorAnimator.setDuration(Animation.expansionColorDuration);
         expandTextColorAnimator.addUpdateListener(valueAnimator -> {
             if (mDigitTextView != null) {
                 mDigitTextView.setTextColor((int) valueAnimator.getAnimatedValue());
@@ -170,30 +211,47 @@ class NumPadAnimator {
             }
         });
 
-        mExpandAnimatorSet = new AnimatorSet();
-        mExpandAnimatorSet.playTogether(mExpandAnimator,
-                expandBackgroundColorAnimator, expandTextColorAnimator);
+        expandAnimators.add(mExpandAnimator);
+        expandAnimators.add(expandBackgroundColorAnimator);
+        expandAnimators.add(expandTextColorAnimator);
 
+        if (Flags.bouncerUiRevamp2()) {
+            ValueAnimator expandTextScaleAnimator = ValueAnimator.ofFloat(
+                    Animation.normalTextScaleX, Animation.pressedTextScaleX);
+            expandTextScaleAnimator.setInterpolator(Animation.expansionInterpolator);
+            expandTextScaleAnimator.setDuration(Animation.expansionDuration);
+            expandTextScaleAnimator.addUpdateListener(valueAnimator -> {
+                if (mDigitTextView != null) {
+                    mDigitTextView.setTextScaleX((Float) valueAnimator.getAnimatedValue());
+                }
+            });
+            expandAnimators.add(expandTextScaleAnimator);
+        }
+
+        mExpandAnimatorSet = new AnimatorSet();
+        mExpandAnimatorSet.playTogether(expandAnimators);
+
+        List<Animator> contractAnimators = new ArrayList<>();
         mContractAnimator = ValueAnimator.ofFloat(1f, 0f);
-        mContractAnimator.setStartDelay(CONTRACT_ANIMATION_DELAY_MS);
-        mContractAnimator.setDuration(CONTRACT_ANIMATION_MS);
-        mContractAnimator.setInterpolator(Interpolators.FAST_OUT_SLOW_IN);
+        mContractAnimator.setStartDelay(Animation.contractionStartDelay);
+        mContractAnimator.setDuration(Animation.contractionDuration);
+        mContractAnimator.setInterpolator(Animation.contractionRadiusInterpolator);
         mContractAnimator.addUpdateListener(
                 anim -> mBackground.setCornerRadius((float) anim.getAnimatedValue()));
         ValueAnimator contractBackgroundColorAnimator = ValueAnimator.ofObject(new ArgbEvaluator(),
                 mPressedBackgroundColor, mNormalBackgroundColor);
-        contractBackgroundColorAnimator.setInterpolator(Interpolators.LINEAR);
-        contractBackgroundColorAnimator.setStartDelay(CONTRACT_ANIMATION_DELAY_MS);
-        contractBackgroundColorAnimator.setDuration(CONTRACT_ANIMATION_MS);
+        contractBackgroundColorAnimator.setInterpolator(Animation.contractionColorInterpolator);
+        contractBackgroundColorAnimator.setStartDelay(Animation.contractionStartDelay);
+        contractBackgroundColorAnimator.setDuration(Animation.contractionDuration);
         contractBackgroundColorAnimator.addUpdateListener(
                 animator -> mBackground.setColor((int) animator.getAnimatedValue()));
 
         ValueAnimator contractTextColorAnimator =
                 ValueAnimator.ofObject(new ArgbEvaluator(), mTextColorPressed,
                 mTextColorPrimary);
-        contractTextColorAnimator.setInterpolator(Interpolators.LINEAR);
-        contractTextColorAnimator.setStartDelay(CONTRACT_ANIMATION_DELAY_MS);
-        contractTextColorAnimator.setDuration(CONTRACT_ANIMATION_MS);
+        contractTextColorAnimator.setInterpolator(Animation.contractionColorInterpolator);
+        contractTextColorAnimator.setStartDelay(Animation.contractionStartDelay);
+        contractTextColorAnimator.setDuration(Animation.contractionDuration);
         contractTextColorAnimator.addUpdateListener(valueAnimator -> {
             if (mDigitTextView != null) {
                 mDigitTextView.setTextColor((int) valueAnimator.getAnimatedValue());
@@ -203,9 +261,72 @@ class NumPadAnimator {
             }
         });
 
+        contractAnimators.add(mContractAnimator);
+        contractAnimators.add(contractBackgroundColorAnimator);
+        contractAnimators.add(contractTextColorAnimator);
+
+        if (Flags.bouncerUiRevamp2()) {
+            ValueAnimator contractTextScaleAnimator = ValueAnimator.ofFloat(
+                    Animation.pressedTextScaleX, Animation.normalTextScaleX);
+            contractTextScaleAnimator.setInterpolator(Animation.contractionRadiusInterpolator);
+            contractTextScaleAnimator.setDuration(Animation.contractionDuration);
+            contractTextScaleAnimator.addUpdateListener(valueAnimator -> {
+                if (mDigitTextView != null) {
+                    mDigitTextView.setTextScaleX((Float) valueAnimator.getAnimatedValue());
+                }
+            });
+            contractAnimators.add(contractTextScaleAnimator);
+        }
         mContractAnimatorSet = new AnimatorSet();
-        mContractAnimatorSet.playTogether(mContractAnimator,
-                contractBackgroundColorAnimator, contractTextColorAnimator);
+        mContractAnimatorSet.playTogether(contractAnimators);
+
+        mEnableAnimator = ValueAnimator.ofFloat(0f, 1f);
+        mEnableAnimator.setInterpolator(Animation.enableInterpolator);
+        if (lockscreenTimeoutDeactivatePinPad()) {
+            mEnableAnimator.addUpdateListener(this::setEnabledAlpha);
+            mEnableAnimator.addListener(mHardwareLayerResetListener);
+        }
+
+        mDisableAnimator = ValueAnimator.ofFloat(1f, 0f);
+        mDisableAnimator.setInterpolator(Animation.disableInterpolator);
+        if (lockscreenTimeoutDeactivatePinPad()) {
+            mDisableAnimator.addUpdateListener(this::setEnabledAlpha);
+            mDisableAnimator.addListener(mHardwareLayerResetListener);
+        }
+    }
+
+    private void setEnabledAlpha(ValueAnimator animator) {
+        float progress = (float) animator.getAnimatedValue();
+        float fgAlpha = progress + DISABLED_FOREGROUND_ALPHA * (1 - progress);
+        float bgAlpha = progress + DISABLED_BACKGROUND_ALPHA * (1 - progress);
+        mAnimatable.setAlpha(fgAlpha, bgAlpha);
+    }
+
+    /**
+     * Handles setting the hardware layer type when animating the digit text view. This improves
+     * efficiency of alpha animation.
+     */
+    private final class HardwareLayerResetListener extends AnimatorListenerAdapter {
+        void onBeforeAnimation() {
+            if (mDigitTextView != null
+                    && mDigitTextView.getLayerType() != View.LAYER_TYPE_HARDWARE) {
+                mDigitTextView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            }
+        }
+
+        @Override
+        public void onAnimationEnd(Animator animation) {
+            if (mDigitTextView != null && mDigitTextView.getLayerType() != View.LAYER_TYPE_NONE) {
+                mDigitTextView.setLayerType(View.LAYER_TYPE_NONE, null);
+            }
+        }
+
+        @Override
+        public void onAnimationCancel(Animator animation) {
+            if (mDigitTextView != null && mDigitTextView.getLayerType() != View.LAYER_TYPE_NONE) {
+                mDigitTextView.setLayerType(View.LAYER_TYPE_NONE, null);
+            }
+        }
     }
 }
 

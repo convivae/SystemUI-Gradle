@@ -55,21 +55,20 @@ import com.android.systemui.keyguard.ui.view.DeviceEntryIconView
 import com.android.systemui.keyguard.ui.viewmodel.AlternateBouncerDependencies
 import com.android.systemui.keyguard.ui.viewmodel.AlternateBouncerMessageAreaViewModel
 import com.android.systemui.keyguard.ui.viewmodel.AlternateBouncerUdfpsIconViewModel
-import com.android.systemui.log.LongPressHandlingViewLogger
+import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.log.TouchHandlingViewLogger
 import com.android.systemui.res.R
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
-@ExperimentalCoroutinesApi
 @Composable
 fun AlternateBouncer(
     alternateBouncerDependencies: AlternateBouncerDependencies,
     onHideAnimationFinished: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-
-    val isVisible by
-        alternateBouncerDependencies.viewModel.isVisible.collectAsStateWithLifecycle(true)
-    val visibleState = remember { MutableTransitionState(isVisible) }
+    val alternateBouncerViewModel =
+        rememberViewModel("AlternateBouncerViewModel") { alternateBouncerDependencies.viewModel }
+    val isVisible by alternateBouncerViewModel.isVisible.collectAsStateWithLifecycle(true)
+    val visibleState = remember { MutableTransitionState(false) }
 
     // Feeds the isVisible value to the MutableTransitionState used by AnimatedVisibility below.
     LaunchedEffect(isVisible) { visibleState.targetState = isVisible }
@@ -100,7 +99,7 @@ fun AlternateBouncer(
                 Modifier.background(color = Colors.AlternateBouncerBackgroundColor).pointerInput(
                     Unit
                 ) {
-                    detectTapGestures(onTap = { alternateBouncerDependencies.viewModel.onTapped() })
+                    detectTapGestures(onTap = { alternateBouncerViewModel.onTapped() })
                 },
         ) {
             StatusMessage(viewModel = alternateBouncerDependencies.messageAreaViewModel)
@@ -127,7 +126,6 @@ fun AlternateBouncer(
     }
 }
 
-@ExperimentalCoroutinesApi
 @Composable
 private fun StatusMessage(
     viewModel: AlternateBouncerMessageAreaViewModel,
@@ -156,11 +154,10 @@ private fun StatusMessage(
     }
 }
 
-@ExperimentalCoroutinesApi
 @Composable
 private fun DeviceEntryIcon(
     viewModel: AlternateBouncerUdfpsIconViewModel,
-    logger: LongPressHandlingViewLogger,
+    logger: TouchHandlingViewLogger,
     modifier: Modifier = Modifier,
 ) {
     AndroidView(
@@ -179,7 +176,6 @@ private fun DeviceEntryIcon(
 }
 
 /** TODO (b/353955910): Validate accessibility CUJs */
-@ExperimentalCoroutinesApi
 @Composable
 private fun UdfpsA11yOverlay(
     viewModel: AlternateBouncerUdfpsAccessibilityOverlayViewModel,

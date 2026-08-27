@@ -22,19 +22,30 @@ import com.android.systemui.camera.CameraGestureHelper
 import com.android.systemui.classifier.FalsingCollector
 import com.android.systemui.classifier.FalsingCollectorActual
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor
+import com.android.systemui.log.table.TableLogBuffer
+import com.android.systemui.log.table.logDiffsForTable
 import com.android.systemui.plugins.statusbar.StatusBarStateController
+import com.android.systemui.power.data.model.PowerButtonLaunchEvent
 import com.android.systemui.power.data.repository.PowerRepository
+import com.android.systemui.power.shared.model.DozeScreenStateModel
 import com.android.systemui.power.shared.model.ScreenPowerState
 import com.android.systemui.power.shared.model.WakeSleepReason
 import com.android.systemui.power.shared.model.WakefulnessModel
 import com.android.systemui.power.shared.model.WakefulnessState
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.statusbar.phone.ScreenOffAnimationController
+import dagger.Lazy
 import javax.inject.Inject
 import javax.inject.Provider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 
 /** Hosts business logic for interacting with the power system. */
 @SysUISingleton
@@ -45,15 +56,21 @@ constructor(
     @FalsingCollectorActual private val falsingCollector: FalsingCollector,
     private val screenOffAnimationController: ScreenOffAnimationController,
     private val statusBarStateController: StatusBarStateController,
-    private val cameraGestureHelper: Provider<CameraGestureHelper>,
+    private val cameraGestureHelper: Provider<CameraGestureHelper?>,
+    // Unused if Flexiglass is disabled.
+    private val deviceEntryInteractor: Lazy<DeviceEntryInteractor?> = Lazy { null },
 ) {
     /** Whether the screen is on or off. */
-    val isInteractive: Flow<Boolean> = repository.isInteractive
+    val isInteractive: StateFlow<Boolean> = repository.isInteractive
 
     /**
      * Whether we're awake or asleep, along with additional information about why we're awake/asleep
      * and whether the power button gesture has been triggered (a special case that affects
      * wakefulness).
+     *
+     * This is a StateFlow. Intermediate events may be dropped if the system is under high load or
+     * the wakefulness changes quickly. If you absolutely need to receive all events in order, you
+     * can collect from [detailedWakefulnessEvents].
      *
      * Unless you need to respond differently to different [WakeSleepReason]s, you should use
      * [isAwake].
@@ -61,18 +78,59 @@ constructor(
     val detailedWakefulness: StateFlow<WakefulnessModel> = repository.wakefulness
 
     /**
+     * SharedFlow that emits all* wakefulness events in order. This should only be used by
+     * collectors that absolutely need to receive all events - if you just need to know if we're
+     * currently awake/asleep, collect from the [detailedWakefulness] StateFlow instead.
+     * * This flow has a buffer size of 4, ensuring that one each of the wakefulness event
+     *   enumeration will eventually be received (STARTED/FINISHED_WAKING_UP ->
+     *   STARTED/FINISHED_GOING_TO_SLEEP, or the opposite order).
+     */
+    val detailedWakefulnessEvents: SharedFlow<WakefulnessModel> = repository.wakefulnessEvents
+
+    /**
      * Whether we're awake (screen is on and responding to user touch) or asleep (screen is off, or
      * on AOD).
+     *
+     * Note: This is derived from a StateFlow. You are not guaranteed to receive each individual
+     * change to wakefulness (for example, if the device very quickly goes to sleep and then wakes
+     * back up, isAwake may simply remain true the entire time). If you need the intermediate events
+     * collect from [detailedWakefulnessEvents].
      */
     val isAwake =
         repository.wakefulness
             .map { it.isAwake() }
             .distinctUntilChanged(checkEquivalentUnlessEmitDuplicatesUnderTest)
 
+    /**
+     * A stricter version of [isAwake] intended for triggering animations.
+     *
+     * This flow only emits `true` when the device is fully [WakefulnessState.AWAKE], excluding the
+     * [WakefulnessState.STARTING_TO_WAKE] state.
+     */
+    val isAwakeForAnimations =
+        repository.wakefulness
+            .map { it.isAwakeForAnimations() }
+            .distinctUntilChanged(checkEquivalentUnlessEmitDuplicatesUnderTest)
+
     /** Helper flow in case "isAsleep" reads better than "!isAwake". */
     val isAsleep = isAwake.map { !it }
 
-    val screenPowerState = repository.screenPowerState
+    /** The physical on/off state of the display. */
+    val screenPowerState: StateFlow<ScreenPowerState> = repository.screenPowerState
+
+    /** The screen state, related to power and controlled by [DozeScreenState] */
+    val dozeScreenState: StateFlow<DozeScreenStateModel> = repository.dozeScreenState.asStateFlow()
+
+    /**
+     * Emits when a double-tap power button launch gesture is detected, with additional information
+     * about the entry status of the device when the gesture was originally initiated.
+     *
+     * Only valid with Flexiglass enabled.
+     */
+    val powerButtonLaunchEvents: Flow<PowerButtonLaunchEvent> =
+        repository.powerButtonLaunchEvents.onStart {
+            SceneContainerFlag.isUnexpectedlyInLegacyMode()
+        }
 
     /**
      * Notifies the power interactor that a user touch happened.
@@ -145,8 +203,9 @@ constructor(
         // or onFinishedGoingToSleep(), carry that state forward. It will be reset by the next
         // onStartedGoingToSleep.
         val powerButtonLaunchGestureTriggered =
-            powerButtonLaunchGestureTriggeredOnWakeUp ||
-                repository.wakefulness.value.powerButtonLaunchGestureTriggered
+            !isPowerButtonGestureSuppressed() &&
+                (powerButtonLaunchGestureTriggeredOnWakeUp ||
+                    repository.wakefulness.value.powerButtonLaunchGestureTriggered)
 
         repository.updateWakefulness(
             rawState = WakefulnessState.STARTING_TO_WAKE,
@@ -164,7 +223,11 @@ constructor(
      * directly.
      */
     fun onFinishedWakingUp() {
-        repository.updateWakefulness(rawState = WakefulnessState.AWAKE)
+        repository.updateWakefulness(
+            rawState = WakefulnessState.AWAKE,
+            // No longer asleep or STARTING_TO_WAKE, clear this value.
+            asleepOrWakingFromPreviouslyEnteredDevice = false,
+        )
     }
 
     /**
@@ -180,6 +243,12 @@ constructor(
             rawState = WakefulnessState.STARTING_TO_SLEEP,
             lastSleepReason = WakeSleepReason.fromPowerManagerSleepReason(reason),
             powerButtonLaunchGestureTriggered = false,
+            asleepOrWakingFromPreviouslyEnteredDevice =
+                if (SceneContainerFlag.isEnabled) {
+                    deviceEntryInteractor.get()?.isDeviceEntered?.value ?: false
+                } else {
+                    false
+                },
         )
     }
 
@@ -195,8 +264,9 @@ constructor(
         // If the launch gesture was previously detected via onCameraLaunchGestureDetected, carry
         // that state forward. It will be reset by the next onStartedGoingToSleep.
         val powerButtonLaunchGestureTriggered =
-            powerButtonLaunchGestureTriggeredDuringSleep ||
-                repository.wakefulness.value.powerButtonLaunchGestureTriggered
+            !isPowerButtonGestureSuppressed() &&
+                (powerButtonLaunchGestureTriggeredDuringSleep ||
+                    repository.wakefulness.value.powerButtonLaunchGestureTriggered)
 
         repository.updateWakefulness(
             rawState = WakefulnessState.ASLEEP,
@@ -204,18 +274,97 @@ constructor(
         )
     }
 
+    /**
+     * There are two orthogonal aspects to the power launch gesture: whether it was started when the
+     * device was awake vs. asleep, and whether the device was entered at the time (or not).
+     *
+     * If we're asleep, the sequence is as follows:
+     * - First power button tap triggers onStartedWakingUp(gestureTriggered=false). The first tap of
+     *   a double-tap definitionally cannot trigger the double tap gesture because 1 < 2.
+     * - onFinishedWakingUp() is called. This method does not have a gestureTriggered param since
+     *   it's not possible to double tap the button fast enough to trigger the gesture between
+     *   onStarted/onFinishedWakingUp. asleepOrWakingFromPreviouslyEnteredDevice is cleared at this
+     *   point since we're fully awake, not 'asleep or waking'.
+     * - The second tap triggers onCameraLaunchGestureDetected() and we emit a
+     *   PowerButtonLaunchEvent.
+     *
+     * Launches started while asleep will always be LAUNCH_FROM_NOT_ENTERED, and the value of
+     * asleepOrWakingFromPreviouslyEnteredDevice is not read in this sequence.
+     *
+     * If we're awake, the sequence is as follows:
+     * - First power button tap triggers onStartedGoingToSleep().
+     * - Depending on the timing of the second tap, it triggers either:
+     *     - onFinishedGoingToSleep(gestureTriggered=true). This happens with a very fast tap.
+     *     - onStartedWakingUp(gestureTriggered=true). This happens with slower taps.
+     * - In either case, onCameraLaunchGestureDetected() is immediately triggered. Here, we use
+     *   asleepOrWakingFromPreviouslyEnteredDevice to determine whether the device was entered when
+     *   the gesture started, and emit the appropriate PowerButtonLaunchEvent.
+     * - onFinishedWakingUp() is called, which clears asleepOrWakingFromPreviouslyEnteredDevice.
+     *
+     * For launches while awake, the second tap will always arrive prior to onFinishedWakingUp since
+     * the second tap is *why* we woke up in the first place. This is why it's safe to clear
+     * asleepOrWakingFromPreviouslyEnteredDevice in onFinishedWakingUp.
+     *
+     * The tricky part here is that if we go to sleep from an entered device without triggering the
+     * power gesture, asleepOrWakingFromPreviouslyEnteredDevice will remain true the entire time we
+     * are asleep (until cleared in onFinishedWakingUp). This obviates the need to set a timeout for
+     * the double-tap duration and clear the value when that elapses (which would introduce all
+     * kinds of race conditions). It may seem like this would result in us going back to Gone if the
+     * power gesture is triggered we're asleep and this value remains true. However, a gesture
+     * started while asleep will always follow the "if we're asleep" path above, which does not use
+     * (and then clears) asleepOrWakingFromPreviouslyEnteredDevice.
+     */
+    private fun emitPowerButtonLaunchEvent() {
+        if (repository.wakefulness.value.asleepOrWakingFromPreviouslyEnteredDevice() == true) {
+            repository.onPowerButtonLaunchEvent(PowerButtonLaunchEvent.LAUNCH_FROM_ENTERED)
+        } else {
+            repository.onPowerButtonLaunchEvent(PowerButtonLaunchEvent.LAUNCH_FROM_NOT_ENTERED)
+        }
+    }
+
     fun onScreenPowerStateUpdated(state: ScreenPowerState) {
         repository.setScreenPowerState(state)
     }
 
     fun onCameraLaunchGestureDetected() {
-        if (
-            cameraGestureHelper
-                .get()
-                .canCameraGestureBeLaunched(statusBarStateController.getState())
-        ) {
-            repository.updateWakefulness(powerButtonLaunchGestureTriggered = true)
+        if (!isPowerButtonGestureSuppressed()) {
+            repository.updateWakefulness(
+                powerButtonLaunchGestureTriggered = true,
+                lastSleepReason = WakeSleepReason.POWER_BUTTON,
+            )
+
+            if (SceneContainerFlag.isEnabled) {
+                // onCameraLaunchGestureDetected is called first for all gesture timings. Depending
+                // on the timing, this may be followed by
+                // onFinishedGoingToSleep(gestureTriggered=true) or
+                // onStartedWakingUp(gestureTriggered=true), but that's not always true. In any
+                // case, this is reliably the earliest signal, so emit the launch event here.
+                emitPowerButtonLaunchEvent()
+            }
         }
+    }
+
+    fun onWalletLaunchGestureDetected() {
+        repository.updateWakefulness(powerButtonLaunchGestureTriggered = true)
+    }
+
+    suspend fun hydrateTableLogBuffer(tableLogBuffer: TableLogBuffer) {
+        detailedWakefulness
+            .logDiffsForTable(
+                tableLogBuffer = tableLogBuffer,
+                initialValue = detailedWakefulness.value,
+            )
+            .collect()
+    }
+
+    /**
+     * Whether the power button gesture isn't allowed to launch anything even if a double tap is
+     * detected.
+     */
+    private fun isPowerButtonGestureSuppressed(): Boolean {
+        return cameraGestureHelper
+            .get()
+            ?.canCameraGestureBeLaunched(statusBarStateController.state) == false
     }
 
     companion object {
@@ -255,13 +404,14 @@ constructor(
         @JvmOverloads
         fun PowerInteractor.setAwakeForTest(
             @PowerManager.WakeReason reason: Int = PowerManager.WAKE_REASON_UNKNOWN,
+            powerButtonGestureTriggered: Boolean = false,
             forceEmit: Boolean = false,
         ) {
             emitDuplicateWakefulnessValue = forceEmit
 
             this.onStartedWakingUp(
                 reason = reason,
-                powerButtonLaunchGestureTriggeredOnWakeUp = false,
+                powerButtonLaunchGestureTriggeredOnWakeUp = powerButtonGestureTriggered,
             )
             this.onFinishedWakingUp()
         }
@@ -281,12 +431,15 @@ constructor(
         @JvmOverloads
         fun PowerInteractor.setAsleepForTest(
             @PowerManager.GoToSleepReason sleepReason: Int = PowerManager.GO_TO_SLEEP_REASON_MIN,
+            powerButtonGestureTriggered: Boolean = false,
             forceEmit: Boolean = false,
         ) {
             emitDuplicateWakefulnessValue = forceEmit
 
             this.onStartedGoingToSleep(reason = sleepReason)
-            this.onFinishedGoingToSleep(powerButtonLaunchGestureTriggeredDuringSleep = false)
+            this.onFinishedGoingToSleep(
+                powerButtonLaunchGestureTriggeredDuringSleep = powerButtonGestureTriggered
+            )
         }
 
         /** Helper method for tests to simulate the device screen state change event. */

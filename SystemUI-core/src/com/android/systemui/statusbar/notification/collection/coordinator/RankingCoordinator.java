@@ -18,12 +18,16 @@ package com.android.systemui.statusbar.notification.collection.coordinator;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.app.NotificationChannel;
 
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
+import com.android.systemui.statusbar.notification.collection.BundleEntry;
 import com.android.systemui.statusbar.notification.collection.ListEntry;
 import com.android.systemui.statusbar.notification.collection.NotifPipeline;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.collection.PipelineEntry;
 import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope;
+import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifComparator;
 import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifFilter;
 import com.android.systemui.statusbar.notification.collection.listbuilder.pluggable.NotifSectioner;
 import com.android.systemui.statusbar.notification.collection.provider.HighPriorityProvider;
@@ -31,9 +35,12 @@ import com.android.systemui.statusbar.notification.collection.render.NodeControl
 import com.android.systemui.statusbar.notification.collection.render.SectionHeaderController;
 import com.android.systemui.statusbar.notification.dagger.AlertingHeader;
 import com.android.systemui.statusbar.notification.dagger.SilentHeader;
+import com.android.systemui.statusbar.notification.shared.NmContextualDisplay;
 import com.android.systemui.statusbar.notification.stack.NotificationPriorityBucketKt;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -55,6 +62,16 @@ public class RankingCoordinator implements Coordinator {
     private boolean mHasSilentEntries;
     private boolean mHasMinimizedEntries;
 
+    // Define the explicit sort order for bundle keys
+    private static final Map<String, Integer> BUNDLE_KEY_SORT_ORDER = new HashMap<>();
+    static {
+        BUNDLE_KEY_SORT_ORDER.put(NotificationChannel.SOCIAL_MEDIA_ID, 1);
+        BUNDLE_KEY_SORT_ORDER.put(NotificationChannel.NEWS_ID, 2);
+        BUNDLE_KEY_SORT_ORDER.put(NotificationChannel.RECS_ID, 3);
+        BUNDLE_KEY_SORT_ORDER.put(NotificationChannel.PROMOTIONS_ID, 4);
+        BUNDLE_KEY_SORT_ORDER.put("debug_bundle", 99);
+    }
+
     @Inject
     public RankingCoordinator(
             StatusBarStateController statusBarStateController,
@@ -74,7 +91,12 @@ public class RankingCoordinator implements Coordinator {
         mStatusBarStateController.addCallback(mStatusBarStateCallback);
 
         pipeline.addPreGroupFilter(mSuspendedFilter);
-        pipeline.addPreGroupFilter(mDndVisualEffectsFilter);
+        if (com.android.systemui.Flags.notificationAmbientSuppressionAfterInflation()) {
+            pipeline.addPreGroupFilter(mDndPreGroupFilter);
+            pipeline.addFinalizeFilter(mDndVisualEffectsFilter);
+        } else {
+            pipeline.addPreGroupFilter(mDndVisualEffectsFilter);
+        }
     }
 
     public NotifSectioner getAlertingSectioner() {
@@ -92,7 +114,10 @@ public class RankingCoordinator implements Coordinator {
     private final NotifSectioner mAlertingNotifSectioner = new NotifSectioner("Alerting",
             NotificationPriorityBucketKt.BUCKET_ALERTING) {
         @Override
-        public boolean isInSection(ListEntry entry) {
+        public boolean isInSection(PipelineEntry entry) {
+            if (BundleUtil.Companion.isClassified(entry)) {
+                return false;
+            }
             return mHighPriorityProvider.isHighPriority(entry);
         }
 
@@ -110,9 +135,17 @@ public class RankingCoordinator implements Coordinator {
     private final NotifSectioner mSilentNotifSectioner = new NotifSectioner("Silent",
             NotificationPriorityBucketKt.BUCKET_SILENT) {
         @Override
-        public boolean isInSection(ListEntry entry) {
-            return !mHighPriorityProvider.isHighPriority(entry)
-                    && !entry.getRepresentativeEntry().isAmbient();
+        public boolean isInSection(PipelineEntry entry) {
+            final ListEntry listEntry = entry.asListEntry();
+            if (listEntry == null) {
+                return entry instanceof BundleEntry;
+            }
+            if (BundleUtil.Companion.isClassified(listEntry)) {
+                return NmContextualDisplay.isEnabled() ? true : false;
+            }
+            return !mHighPriorityProvider.isHighPriority(listEntry)
+                    && listEntry.getRepresentativeEntry() != null
+                    && !listEntry.getRepresentativeEntry().isAmbient();
         }
 
         @Nullable
@@ -121,12 +154,26 @@ public class RankingCoordinator implements Coordinator {
             return mSilentNodeController;
         }
 
-        @Nullable
         @Override
-        public void onEntriesUpdated(@NonNull List<ListEntry> entries) {
+        public void onEntriesUpdated(@NonNull List<PipelineEntry> entries) {
             mHasSilentEntries = false;
             for (int i = 0; i < entries.size(); i++) {
-                if (entries.get(i).getRepresentativeEntry().getSbn().isClearable()) {
+                final PipelineEntry pipelineEntry = entries.get(i);
+                final ListEntry listEntry = pipelineEntry.asListEntry();
+                if (listEntry == null) {
+                    if (pipelineEntry instanceof BundleEntry bundleEntry) {
+                        if (bundleEntry.isClearable()) {
+                            mHasSilentEntries = true;
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                final NotificationEntry notifEntry = listEntry.getRepresentativeEntry();
+                if (notifEntry == null) {
+                    continue;
+                }
+                if (notifEntry.getSbn().isClearable()) {
                     mHasSilentEntries = true;
                     break;
                 }
@@ -134,14 +181,55 @@ public class RankingCoordinator implements Coordinator {
             mSilentHeaderController.setClearSectionEnabled(
                     mHasSilentEntries | mHasMinimizedEntries);
         }
+
+        private final NotifComparator mSilentSectionComparator = new NotifComparator(
+                "SilentSectionComparator") {
+            @Override
+            public int compare(@NonNull PipelineEntry o1, @NonNull PipelineEntry o2) {
+                boolean isBundle1 = o1 instanceof BundleEntry;
+                boolean isBundle2 = o2 instanceof BundleEntry;
+                if (isBundle1 && isBundle2) {
+                    final String key1 = o1.getKey();
+                    final String key2 = o2.getKey();
+                    // When both are bundles, use the BUNDLE_KEY_SORT_ORDER map to get rankings for
+                    // the keys, which are guaranteed to be in fixed order. Default to large value
+                    // for unknown bundle keys to sort them last.
+                    int rank1 = BUNDLE_KEY_SORT_ORDER.getOrDefault(key1, Integer.MAX_VALUE);
+                    int rank2 = BUNDLE_KEY_SORT_ORDER.getOrDefault(key2, Integer.MAX_VALUE);
+                    int rankComparison = Integer.compare(rank1, rank2);
+                    if (rankComparison != 0) {
+                        return rankComparison;
+                    }
+                    return key1.compareTo(key2);
+                }
+                // Order bundles before non-bundles
+                return -1 * Boolean.compare(isBundle1, isBundle2);
+            }
+        };
+
+
+        @Nullable
+        @Override
+        public NotifComparator getComparator() {
+            return mSilentSectionComparator;
+        }
     };
 
     private final NotifSectioner mMinimizedNotifSectioner = new NotifSectioner("Minimized",
             NotificationPriorityBucketKt.BUCKET_SILENT) {
         @Override
-        public boolean isInSection(ListEntry entry) {
-            return !mHighPriorityProvider.isHighPriority(entry)
-                    && entry.getRepresentativeEntry().isAmbient();
+        public boolean isInSection(PipelineEntry entry) {
+            final ListEntry listEntry = entry.asListEntry();
+            if (listEntry == null) {
+                // Bundles are never minimized.
+                return false;
+            }
+            if (BundleUtil.Companion.isClassified(listEntry)) {
+                return false;
+            }
+            return !mHighPriorityProvider.isHighPriority(listEntry)
+                    && listEntry.getRepresentativeEntry() != null
+                    && listEntry.getRepresentativeEntry().isAmbient();
         }
 
         @Nullable
@@ -150,12 +238,22 @@ public class RankingCoordinator implements Coordinator {
             return mSilentNodeController;
         }
 
-        @Nullable
         @Override
-        public void onEntriesUpdated(@NonNull List<ListEntry> entries) {
+        public void onEntriesUpdated(@NonNull List<PipelineEntry> entries) {
             mHasMinimizedEntries = false;
             for (int i = 0; i < entries.size(); i++) {
-                if (entries.get(i).getRepresentativeEntry().getSbn().isClearable()) {
+                final PipelineEntry pipelineEntry = entries.get(i);
+                final ListEntry listEntry = pipelineEntry.asListEntry();
+                if (listEntry == null) {
+                    // Bundles are never minimized
+                    throw new IllegalStateException(
+                            "non-ListEntry in minimized notif section: " + pipelineEntry.getKey());
+                }
+                final NotificationEntry notifEntry = listEntry.getRepresentativeEntry();
+                if (notifEntry == null) {
+                    continue;
+                }
+                if (notifEntry.getSbn().isClearable()) {
                     mHasMinimizedEntries = true;
                     break;
                 }
@@ -188,6 +286,16 @@ public class RankingCoordinator implements Coordinator {
             }
 
             return !mStatusBarStateController.isDozing() && entry.shouldSuppressNotificationList();
+        }
+    };
+
+    private final NotifFilter mDndPreGroupFilter = new NotifFilter("DndPreGroupFilter") {
+        @Override
+        public boolean shouldFilterOut(NotificationEntry entry, long now) {
+            // Entries with both flags set should be suppressed ASAP regardless of dozing state.
+            // As a result of being doze-independent, they can also be suppressed early in the
+            // pipeline.
+            return entry.shouldSuppressNotificationList() && entry.shouldSuppressAmbient();
         }
     };
 

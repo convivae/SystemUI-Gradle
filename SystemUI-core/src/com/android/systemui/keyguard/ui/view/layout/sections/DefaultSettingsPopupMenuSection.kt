@@ -31,7 +31,6 @@ import androidx.constraintlayout.widget.ConstraintSet.WRAP_CONTENT
 import androidx.core.view.isVisible
 import com.android.systemui.animation.view.LaunchableLinearLayout
 import com.android.systemui.dagger.qualifiers.Main
-import com.android.systemui.keyguard.KeyguardBottomAreaRefactor
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.keyguard.ui.binder.KeyguardSettingsViewBinder
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardRootViewModel
@@ -48,7 +47,7 @@ class DefaultSettingsPopupMenuSection
 constructor(
     @Main private val resources: Resources,
     private val keyguardSettingsMenuViewModel: KeyguardSettingsMenuViewModel,
-    private val keyguardTouchHandlingViewModel: KeyguardTouchHandlingViewModel,
+    private val keyguardTouchHandlingViewModelFactory: KeyguardTouchHandlingViewModel.Factory,
     private val keyguardRootViewModel: KeyguardRootViewModel,
     private val vibratorHelper: VibratorHelper,
     private val activityStarter: ActivityStarter,
@@ -56,9 +55,6 @@ constructor(
     private var settingsPopupMenuHandle: DisposableHandle? = null
 
     override fun addViews(constraintLayout: ConstraintLayout) {
-        if (!KeyguardBottomAreaRefactor.isEnabled) {
-            return
-        }
         val view =
             LayoutInflater.from(constraintLayout.context)
                 .inflate(R.layout.keyguard_settings_popup_menu, constraintLayout, false)
@@ -71,17 +67,15 @@ constructor(
     }
 
     override fun bindData(constraintLayout: ConstraintLayout) {
-        if (KeyguardBottomAreaRefactor.isEnabled) {
-            settingsPopupMenuHandle =
-                KeyguardSettingsViewBinder.bind(
-                    constraintLayout.requireViewById<View>(R.id.keyguard_settings_button),
-                    keyguardSettingsMenuViewModel,
-                    keyguardTouchHandlingViewModel,
-                    keyguardRootViewModel,
-                    vibratorHelper,
-                    activityStarter,
-                )
-        }
+        settingsPopupMenuHandle =
+            KeyguardSettingsViewBinder.bind(
+                constraintLayout.requireViewById<View>(R.id.keyguard_settings_button),
+                keyguardSettingsMenuViewModel,
+                keyguardTouchHandlingViewModelFactory,
+                keyguardRootViewModel,
+                vibratorHelper,
+                activityStarter,
+            )
     }
 
     override fun applyConstraints(constraintSet: ConstraintSet) {
@@ -93,7 +87,7 @@ constructor(
             constrainHeight(R.id.keyguard_settings_button, WRAP_CONTENT)
             constrainMinHeight(
                 R.id.keyguard_settings_button,
-                resources.getDimensionPixelSize(R.dimen.keyguard_affordance_fixed_height)
+                resources.getDimensionPixelSize(R.dimen.keyguard_affordance_fixed_height),
             )
             connect(R.id.keyguard_settings_button, START, PARENT_ID, START, horizontalOffsetMargin)
             connect(R.id.keyguard_settings_button, END, PARENT_ID, END, horizontalOffsetMargin)
@@ -102,7 +96,7 @@ constructor(
                 BOTTOM,
                 PARENT_ID,
                 BOTTOM,
-                resources.getDimensionPixelSize(R.dimen.keyguard_affordance_vertical_offset)
+                resources.getDimensionPixelSize(R.dimen.keyguard_affordance_vertical_offset),
             )
             // Ignore ConstrainSet's default visibility, and let the view choose
             setVisibilityMode(R.id.keyguard_settings_button, VISIBILITY_MODE_IGNORE)

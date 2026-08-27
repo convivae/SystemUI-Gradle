@@ -19,37 +19,29 @@ package com.android.systemui.keyguard.domain.interactor
 import android.animation.ValueAnimator
 import com.android.app.animation.Interpolators
 import com.android.app.tracing.coroutines.launchTraced as launch
-import com.android.systemui.Flags.communalSceneKtfRefactor
 import com.android.systemui.communal.domain.interactor.CommunalSceneInteractor
 import com.android.systemui.communal.domain.interactor.CommunalSettingsInteractor
 import com.android.systemui.communal.shared.model.CommunalScenes
 import com.android.systemui.communal.shared.model.CommunalTransitionKeys
-import com.android.systemui.communal.shared.model.EditModeState
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.keyguard.KeyguardWmStateRefactor
 import com.android.systemui.keyguard.data.repository.KeyguardTransitionRepository
 import com.android.systemui.keyguard.shared.model.KeyguardState
-import com.android.systemui.keyguard.shared.model.TransitionModeOnCanceled
 import com.android.systemui.power.domain.interactor.PowerInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.util.kotlin.BooleanFlowOperators.allOf
 import com.android.systemui.util.kotlin.BooleanFlowOperators.noneOf
-import com.android.systemui.util.kotlin.BooleanFlowOperators.not
 import com.android.systemui.util.kotlin.Utils.Companion.sampleFilter
-import com.android.systemui.util.kotlin.sample
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import com.android.app.tracing.coroutines.launchTraced as launch
-import kotlinx.coroutines.withContext
 
 @OptIn(FlowPreview::class)
 @SysUISingleton
@@ -59,7 +51,6 @@ constructor(
     @Background private val scope: CoroutineScope,
     @Main mainDispatcher: CoroutineDispatcher,
     @Background bgDispatcher: CoroutineDispatcher,
-    private val glanceableHubTransitions: GlanceableHubTransitions,
     private val communalSettingsInteractor: CommunalSettingsInteractor,
     keyguardInteractor: KeyguardInteractor,
     private val communalSceneInteractor: CommunalSceneInteractor,
@@ -84,14 +75,12 @@ constructor(
         if (!communalSettingsInteractor.isCommunalFlagEnabled()) {
             return
         }
-        if (!communalSceneKtfRefactor()) {
-            listenForHubToLockscreenOrDreaming()
-        }
-        listenForHubToDozing()
+        listenForHubToAodOrDozing()
         listenForHubToPrimaryBouncer()
         listenForHubToAlternateBouncer()
         listenForHubToOccluded()
         listenForHubToGone()
+        listenForHubToDreaming()
     }
 
     override fun getDefaultAnimatorForTransitionsToState(toState: KeyguardState): ValueAnimator {
@@ -105,30 +94,6 @@ constructor(
                     KeyguardState.PRIMARY_BOUNCER -> TO_BOUNCER_DURATION
                     else -> DEFAULT_DURATION
                 }.inWholeMilliseconds
-        }
-    }
-
-    /**
-     * Listens for the glanceable hub transition to lock screen and directly drives the keyguard
-     * transition.
-     */
-    private fun listenForHubToLockscreenOrDreaming() {
-        scope.launch("$TAG#listenForGlanceableHubToLockscreenOrDream") {
-            keyguardInteractor.isDreaming.collectLatest { dreaming ->
-                withContext(mainDispatcher) {
-                    val toState =
-                        if (dreaming) {
-                            KeyguardState.DREAMING
-                        } else {
-                            KeyguardState.LOCKSCREEN
-                        }
-                    glanceableHubTransitions.listenForGlanceableHubTransition(
-                        transitionOwnerName = TAG,
-                        fromState = KeyguardState.GLANCEABLE_HUB,
-                        toState = toState,
-                    )
-                }
-            }
         }
     }
 
@@ -156,23 +121,37 @@ constructor(
         }
     }
 
-    private fun listenForHubToDozing() {
+    private fun listenForHubToAodOrDozing() {
         scope.launch {
             powerInteractor.isAsleep
                 .filterRelevantKeyguardStateAnd { isAsleep -> isAsleep }
                 .collect {
-                    if (communalSceneKtfRefactor()) {
-                        communalSceneInteractor.snapToScene(
-                            newScene = CommunalScenes.Blank,
-                            loggingReason = "hub to dozing",
-                            keyguardState = KeyguardState.DOZING,
-                        )
-                    } else {
-                        startTransitionTo(
-                            toState = KeyguardState.DOZING,
-                            modeOnCanceled = TransitionModeOnCanceled.LAST_VALUE,
-                        )
-                    }
+                    // Snap to blank immediately when asleep so that KTF can transition
+                    // correctly if the power button is pressed quickly in succession, ex.
+                    // pressing twice should end up on lock screen.
+                    communalSceneInteractor.snapToScene(
+                        newScene = CommunalScenes.Blank,
+                        loggingReason = "hub to sleep",
+                        keyguardState = keyguardInteractor.asleepKeyguardState.value,
+                    )
+                }
+        }
+    }
+
+    private fun listenForHubToDreaming() {
+        if (!communalSettingsInteractor.isV2FlagEnabled()) {
+            return
+        }
+
+        scope.launch {
+            keyguardInteractor.isDreamingNotDozing
+                .filterRelevantKeyguardStateAnd { isDreamingNotDozing -> isDreamingNotDozing }
+                .collect {
+                    communalSceneInteractor.changeScene(
+                        newScene = CommunalScenes.Blank,
+                        loggingReason = "hub to dreaming",
+                        keyguardState = KeyguardState.DREAMING,
+                    )
                 }
         }
     }
@@ -184,21 +163,17 @@ constructor(
                     .filterRelevantKeyguardStateAnd { onTop -> onTop }
                     .collect {
                         maybeStartTransitionToOccludedOrInsecureCamera { state, reason ->
-                            if (communalSceneKtfRefactor()) {
-                                communalSceneInteractor.changeScene(
-                                    newScene = CommunalScenes.Blank,
-                                    loggingReason = "hub to occluded (KeyguardWmStateRefactor)",
-                                    transitionKey = CommunalTransitionKeys.SimpleFade,
-                                    keyguardState = state,
-                                )
-                                null
-                            } else {
-                                startTransitionTo(state, ownerReason = reason)
-                            }
+                            communalSceneInteractor.changeScene(
+                                newScene = CommunalScenes.Blank,
+                                loggingReason = "hub to occluded (KeyguardWmStateRefactor)",
+                                transitionKey = CommunalTransitionKeys.SimpleFade,
+                                keyguardState = state,
+                            )
+                            null
                         }
                     }
             }
-        } else if (communalSceneKtfRefactor()) {
+        } else {
             scope.launch {
                 combine(
                         keyguardInteractor.isKeyguardOccluded,
@@ -230,56 +205,36 @@ constructor(
                         )
                     }
             }
-        } else {
-            scope.launch {
-                allOf(keyguardInteractor.isKeyguardOccluded, not(keyguardInteractor.isDreaming))
-                    .filterRelevantKeyguardStateAnd { isOccludedAndNotDreaming ->
-                        isOccludedAndNotDreaming
-                    }
-                    .collect { _ -> startTransitionTo(KeyguardState.OCCLUDED) }
-            }
         }
     }
 
     private fun listenForHubToGone() {
         if (SceneContainerFlag.isEnabled) return
-        if (communalSceneKtfRefactor()) {
-            scope.launch {
-                allOf(
-                        keyguardInteractor.isKeyguardGoingAway,
-                        // TODO(b/327225415): Handle edit mode opening here to avoid going to GONE
-                        // state until after edit mode is ready to be shown.
-                        noneOf(
-                            // When launching activities from widgets on the hub, we wait to change
-                            // scenes until the activity launch is complete.
-                            communalSceneInteractor.isLaunchingWidget
-                        ),
-                    )
-                    .filterRelevantKeyguardStateAnd { isKeyguardGoingAway -> isKeyguardGoingAway }
-                    .sample(communalSceneInteractor.editModeState, ::Pair)
-                    .collect { (_, editModeState) ->
-                        if (
-                            editModeState == EditModeState.STARTING ||
-                                editModeState == EditModeState.SHOWING
-                        ) {
-                            // Don't change scenes here as that is handled by the edit activity.
-                            startTransitionTo(KeyguardState.GONE)
-                        } else {
-                            communalSceneInteractor.changeScene(
-                                newScene = CommunalScenes.Blank,
-                                loggingReason = "hub to gone",
-                                transitionKey = CommunalTransitionKeys.SimpleFade,
-                                keyguardState = KeyguardState.GONE,
-                            )
-                        }
+        scope.launch {
+            allOf(
+                    keyguardInteractor.isKeyguardGoingAway,
+                    noneOf(
+                        // When launching activities from widgets on the hub, we wait to change
+                        // scenes until the activity launch is complete.
+                        communalSceneInteractor.isLaunchingWidget
+                    ),
+                )
+                .filterRelevantKeyguardStateAnd { isKeyguardGoingAway -> isKeyguardGoingAway }
+                .collect {
+                    val editModeState = communalSceneInteractor.editModeState.value
+                    if (editModeState != null) {
+                        // If transitioning to edit mode, do nothing here. Scene change is
+                        // handled by the edit mode activity.
+                        return@collect
+                    } else {
+                        communalSceneInteractor.changeScene(
+                            newScene = CommunalScenes.Blank,
+                            loggingReason = "hub to gone",
+                            transitionKey = CommunalTransitionKeys.SimpleFade,
+                            keyguardState = KeyguardState.GONE,
+                        )
                     }
-            }
-        } else {
-            scope.launch {
-                keyguardInteractor.isKeyguardGoingAway
-                    .filterRelevantKeyguardStateAnd { isKeyguardGoingAway -> isKeyguardGoingAway }
-                    .collect { startTransitionTo(KeyguardState.GONE) }
-            }
+                }
         }
     }
 
@@ -293,8 +248,11 @@ constructor(
          * Set at 400ms for parity with [FromLockscreenTransitionInteractor]
          */
         val DEFAULT_DURATION = 400.milliseconds
+        // To lockscreen duration must be at least 500ms to allow for potential screen rotation
+        // during the transition while the animation begins after 500ms.
         val TO_LOCKSCREEN_DURATION = 1.seconds
         val TO_BOUNCER_DURATION = 400.milliseconds
         val TO_OCCLUDED_DURATION = 450.milliseconds
+        val TO_AOD_DURATION = 500.milliseconds
     }
 }

@@ -14,172 +14,255 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalLayoutApi::class)
-
 package com.android.systemui.shade.ui.composable
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
-import androidx.compose.foundation.layout.waterfall
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.overscroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.approachLayout
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.android.compose.animation.scene.ContentScope
 import com.android.compose.animation.scene.ElementKey
 import com.android.compose.animation.scene.LowestZIndexContentPicker
-import com.android.compose.animation.scene.SceneScope
-import com.android.compose.windowsizeclass.LocalWindowSizeClass
+import com.android.compose.modifiers.thenIf
+import com.android.mechanics.behavior.VerticalExpandContainerSpec
+import com.android.mechanics.behavior.verticalExpandContainerBackground
+import com.android.mechanics.compose.modifier.motionDriver
+import com.android.systemui.qs.ui.composable.TileRevealFlag
 import com.android.systemui.res.R
+import com.android.systemui.scene.ui.composable.LocalSceneContainerPreloadedResources
+import com.android.systemui.shade.ui.ShadeColors.shadePanel
+import com.android.systemui.shade.ui.ShadeColors.shadePanelScrimBehind
+import com.android.systemui.shade.ui.composable.OverlayShade.Colors
+import com.android.systemui.shade.ui.composable.OverlayShade.Dimensions
+import com.android.systemui.shade.ui.composable.OverlayShade.rememberShadeExpansionMotion
+import kotlin.math.min
 
 /** Renders a lightweight shade UI container, as an overlay. */
 @Composable
-fun SceneScope.OverlayShade(
+fun ContentScope.OverlayShade(
+    panelElement: ElementKey,
+    alignmentOnWideScreens: Alignment.Horizontal,
+    statusBarHeightPx: Int,
+    enableTransparency: Boolean,
     onScrimClicked: () -> Unit,
     modifier: Modifier = Modifier,
+    onBackgroundPlaced: (bounds: Rect, topCornerRadius: Float, bottomCornerRadius: Float) -> Unit =
+        { _, _, _ ->
+        },
+    header: @Composable () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier) {
-        Scrim(onClicked = onScrimClicked)
+    val isFullWidth = LocalSceneContainerPreloadedResources.current.isFullWidthShade
+    val panelSpec = rememberShadeExpansionMotion(isFullWidth)
+    val panelCornerRadiusPx = with(LocalDensity.current) { panelSpec.radius.toPx() }
+    val panelAlignment =
+        when {
+            isFullWidth -> Alignment.TopCenter
+            alignmentOnWideScreens == Alignment.End -> Alignment.TopEnd
+            else -> Alignment.TopStart
+        }
 
-        Box(modifier = Modifier.fillMaxSize().panelPadding(), contentAlignment = Alignment.TopEnd) {
+    Box(modifier) {
+        OverlayScrim(showBackgroundColor = enableTransparency, onClicked = onScrimClicked)
+
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .panelContainerPadding(isFullWidth, alignmentOnWideScreens, statusBarHeightPx),
+            contentAlignment = panelAlignment,
+        ) {
             Panel(
-                modifier = Modifier.element(OverlayShade.Elements.Panel).panelSize(),
-                content = content,
+                enableTransparency = enableTransparency,
+                spec = panelSpec,
+                modifier =
+                    Modifier.overscroll(verticalOverscrollEffect)
+                        .element(panelElement)
+                        .thenIf(TileRevealFlag.isEnabled) {
+                            Modifier.motionDriver(
+                                contentScope = this@OverlayShade,
+                                label = "OverlayShade",
+                            )
+                        }
+                        .width(Dimensions.PanelWidth)
+                        // TODO(440566878): Investigate if this can be optimized by replacing with
+                        // onLayoutRectChanged.
+                        .onPlaced { coordinates ->
+                            val bounds = coordinates.boundsInWindow()
+                            val isTopRounded = panelSpec.isFloating
+                            val bottomCornerRadius: Float =
+                                if (isTopRounded) {
+                                    min(panelCornerRadiusPx, bounds.height / 2)
+                                } else {
+                                    min(panelCornerRadiusPx, bounds.height)
+                                }
+                            val topCornerRadius = if (isTopRounded) bottomCornerRadius else 0f
+                            onBackgroundPlaced(bounds, topCornerRadius, bottomCornerRadius)
+                        },
+                header = header.takeIf { isFullWidth },
+                content = {
+                    Box(
+                        Modifier
+                            // Prevent this element from resizing during the container reveal
+                            // animation. The parent clips the content, so remeasuring the
+                            // children (especially text) on every frame is unnecessary and
+                            // can cause performance issues (jank).
+                            .approachLayout(
+                                isMeasurementApproachInProgress = { layoutState.isTransitioning() }
+                            ) { measurable, constraints ->
+                                if (layoutState.currentTransition == null) {
+                                    return@approachLayout measurable.measure(constraints).run {
+                                        layout(width, height) { place(0, 0) }
+                                    }
+                                }
+
+                                // Make sure that this layout node has the same size than when we
+                                // are at rest.
+                                val widthAtRest = lookaheadSize.width
+                                val fixedWidthConstraints =
+                                    constraints.copy(minWidth = widthAtRest, maxWidth = widthAtRest)
+                                measurable.measure(fixedWidthConstraints).run {
+                                    layout(width, height) { place(IntOffset.Zero) }
+                                }
+                            }
+                    ) {
+                        content()
+                    }
+                },
             )
         }
+
+        if (!isFullWidth) {
+            header()
+        }
     }
 }
 
 @Composable
-private fun SceneScope.Scrim(onClicked: () -> Unit, modifier: Modifier = Modifier) {
-    Spacer(
+private fun ContentScope.Panel(
+    enableTransparency: Boolean,
+    spec: VerticalExpandContainerSpec,
+    modifier: Modifier = Modifier,
+    header: (@Composable () -> Unit)?,
+    content: @Composable () -> Unit,
+) {
+    Box(
         modifier =
             modifier
-                .element(OverlayShade.Elements.Scrim)
-                .fillMaxSize()
-                .background(OverlayShade.Colors.ScrimBackground)
-                .clickable(onClick = onClicked, interactionSource = null, indication = null)
-    )
-}
-
-@Composable
-private fun SceneScope.Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Box(modifier = modifier.clip(OverlayShade.Shapes.RoundedCornerPanel)) {
-        Spacer(
-            modifier =
-                Modifier.element(OverlayShade.Elements.PanelBackground)
-                    .matchParentSize()
-                    .background(
-                        color = OverlayShade.Colors.PanelBackground,
-                        shape = OverlayShade.Shapes.RoundedCornerPanel,
-                    )
-        )
-
-        // This content is intentionally rendered as a separate element from the background in order
-        // to allow for more flexibility when defining transitions.
-        content()
-    }
-}
-
-@Composable
-private fun Modifier.panelSize(): Modifier {
-    val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
-    return this.then(
-        if (widthSizeClass == WindowWidthSizeClass.Compact) {
-            Modifier.fillMaxWidth()
-        } else {
-            Modifier.width(dimensionResource(id = R.dimen.shade_panel_width))
+                .disableSwipesWhenScrolling()
+                .verticalExpandContainerBackground(Colors.panelBackground(enableTransparency), spec)
+    ) {
+        Column {
+            header?.invoke()
+            content()
         }
+    }
+}
+
+@Composable
+@ReadOnlyComposable
+@SuppressLint("ConfigurationScreenWidthHeight")
+private fun getHalfScreenWidth() = LocalConfiguration.current.screenWidthDp.dp / 2
+
+@Composable
+private fun Modifier.panelContainerPadding(
+    isFullWidthPanel: Boolean,
+    alignment: Alignment.Horizontal,
+    statusBarHeightPx: Int,
+): Modifier {
+    if (isFullWidthPanel) {
+        return this
+    }
+    // On wide screens, the shade panel width is limited to half the screen width.
+    val halfScreenWidth = getHalfScreenWidth()
+    val (startPadding, endPadding) =
+        when (alignment) {
+            Alignment.Start -> Dimensions.PanelPaddingHorizontal to halfScreenWidth
+            Alignment.End -> halfScreenWidth to Dimensions.PanelPaddingHorizontal
+            else -> Dimensions.PanelPaddingHorizontal to Dimensions.PanelPaddingHorizontal
+        }
+    val paddings = PaddingValues(start = startPadding, end = endPadding)
+    val layoutDirection = LocalLayoutDirection.current
+    return windowInsetsPadding(
+        WindowInsets.safeDrawing
+            .union(WindowInsets(top = statusBarHeightPx))
+            .union(
+                WindowInsets(
+                    left = paddings.calculateLeftPadding(layoutDirection),
+                    right = paddings.calculateRightPadding(layoutDirection),
+                )
+            )
     )
-}
-
-@Composable
-private fun Modifier.panelPadding(): Modifier {
-    val widthSizeClass = LocalWindowSizeClass.current.widthSizeClass
-    val systemBars = WindowInsets.systemBarsIgnoringVisibility
-    val displayCutout = WindowInsets.displayCutout
-    val waterfall = WindowInsets.waterfall
-    val horizontalPadding =
-        PaddingValues(horizontal = dimensionResource(id = R.dimen.shade_panel_margin_horizontal))
-
-    val combinedPadding =
-        combinePaddings(
-            systemBars.asPaddingValues(),
-            displayCutout.asPaddingValues(),
-            waterfall.asPaddingValues(),
-            horizontalPadding,
-        )
-
-    return if (widthSizeClass == WindowWidthSizeClass.Compact) {
-        padding(bottom = combinedPadding.calculateBottomPadding())
-    } else {
-        padding(combinedPadding)
-    }
-}
-
-/** Creates a union of [paddingValues] by using the max padding of each edge. */
-@Composable
-private fun combinePaddings(vararg paddingValues: PaddingValues): PaddingValues {
-    return if (paddingValues.isEmpty()) {
-        PaddingValues(0.dp)
-    } else {
-        val layoutDirection = LocalLayoutDirection.current
-        PaddingValues(
-            start = paddingValues.maxOf { it.calculateStartPadding(layoutDirection) },
-            top = paddingValues.maxOf { it.calculateTopPadding() },
-            end = paddingValues.maxOf { it.calculateEndPadding(layoutDirection) },
-            bottom = paddingValues.maxOf { it.calculateBottomPadding() },
-        )
-    }
 }
 
 object OverlayShade {
     object Elements {
         val Scrim = ElementKey("OverlayShadeScrim", contentPicker = LowestZIndexContentPicker)
-        val Panel =
-            ElementKey(
-                "OverlayShadePanel",
-                contentPicker = LowestZIndexContentPicker,
-                placeAllCopies = true,
-            )
-        val PanelBackground =
-            ElementKey("OverlayShadePanelBackground", contentPicker = LowestZIndexContentPicker)
     }
 
     object Colors {
-        val ScrimBackground = Color(0f, 0f, 0f, alpha = 0.2f)
-        val PanelBackground: Color
-            @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.surfaceContainer
+        val ScrimBackground: Color
+            @Composable
+            @ReadOnlyComposable
+            get() = Color(shadePanelScrimBehind(LocalContext.current))
+
+        @Composable
+        @ReadOnlyComposable
+        fun panelBackground(transparencyEnabled: Boolean): Color {
+            return Color(
+                shadePanel(
+                    context = LocalContext.current,
+                    blurSupported = transparencyEnabled,
+                    withScrim = false,
+                )
+            )
+        }
     }
 
     object Dimensions {
-        val PanelCornerRadius = 46.dp
-        val OverscrollLimit = 32.dp
+        val PanelCornerRadius: Dp
+            @Composable
+            @ReadOnlyComposable
+            get() = dimensionResource(R.dimen.overlay_shade_panel_shape_radius)
+
+        val PanelPaddingHorizontal: Dp
+            @Composable
+            @ReadOnlyComposable
+            get() = dimensionResource(R.dimen.shade_panel_margin_horizontal)
+
+        val PanelWidth: Dp
+            @Composable @ReadOnlyComposable get() = dimensionResource(R.dimen.shade_panel_width)
     }
 
-    object Shapes {
-        val RoundedCornerPanel = RoundedCornerShape(Dimensions.PanelCornerRadius)
+    @Composable
+    fun rememberShadeExpansionMotion(isFullWidth: Boolean): VerticalExpandContainerSpec {
+        val radius = Dimensions.PanelCornerRadius
+        return remember(radius, isFullWidth) {
+            VerticalExpandContainerSpec(isFloating = !isFullWidth, radius = radius)
+        }
     }
 }

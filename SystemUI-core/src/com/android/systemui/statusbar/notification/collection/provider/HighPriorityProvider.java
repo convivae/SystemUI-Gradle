@@ -25,6 +25,7 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.statusbar.notification.collection.GroupEntry;
 import com.android.systemui.statusbar.notification.collection.ListEntry;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
+import com.android.systemui.statusbar.notification.collection.PipelineEntry;
 import com.android.systemui.statusbar.notification.collection.render.GroupMembershipManager;
 import com.android.systemui.statusbar.notification.people.PeopleNotificationIdentifier;
 
@@ -52,7 +53,7 @@ public class HighPriorityProvider {
     }
 
     /**
-     * @return true if the ListEntry is high priority, else false
+     * @return true if the PipelineEntry is high priority, else false
      *
      * A NotificationEntry is considered high priority if it:
      *  - has importance greater than or equal to IMPORTANCE_DEFAULT
@@ -66,12 +67,12 @@ public class HighPriorityProvider {
      * A GroupEntry is considered high priority if its representativeEntry (summary) or any of its
      * children are high priority.
      */
-    public boolean isHighPriority(@Nullable ListEntry entry) {
+    public boolean isHighPriority(@Nullable PipelineEntry entry) {
         return isHighPriority(entry, /* allowImplicit = */ true);
     }
 
     /**
-     * @return true if the ListEntry is explicitly high priority, else false
+     * @return true if the PipelineEntry is explicitly high priority, else false
      *
      * A NotificationEntry is considered explicitly high priority if has importance greater than or
      * equal to IMPORTANCE_DEFAULT.
@@ -79,16 +80,22 @@ public class HighPriorityProvider {
      * A GroupEntry is considered explicitly high priority if its representativeEntry (summary) or
      * any of its children are explicitly high priority.
      */
-    public boolean isExplicitlyHighPriority(@Nullable ListEntry entry) {
+    public boolean isExplicitlyHighPriority(@Nullable PipelineEntry entry) {
         return isHighPriority(entry, /* allowImplicit= */ false);
     }
 
-    private boolean isHighPriority(@Nullable ListEntry entry, boolean allowImplicit) {
+    private boolean isHighPriority(@Nullable PipelineEntry entry, boolean allowImplicit) {
         if (entry == null) {
             return false;
         }
 
-        final NotificationEntry notifEntry = entry.getRepresentativeEntry();
+        final ListEntry listEntry = entry.asListEntry();
+        if (listEntry == null) {
+            // Bundles are never high priority.
+            return false;
+        }
+
+        final NotificationEntry notifEntry = listEntry.getRepresentativeEntry();
         if (notifEntry == null) {
             return false;
         }
@@ -99,10 +106,15 @@ public class HighPriorityProvider {
     }
 
     /**
-     * @return true if the ListEntry is high priority conversation, else false
+     * @return true if the PipelineEntry is high priority conversation, else false
      */
-    public boolean isHighPriorityConversation(@NonNull ListEntry entry) {
-        final NotificationEntry notifEntry = entry.getRepresentativeEntry();
+    public boolean isHighPriorityConversation(@NonNull PipelineEntry entry) {
+        final ListEntry listEntry = entry.asListEntry();
+        if (listEntry == null) {
+            // Bundles are never conversations, nor high priority.
+            return false;
+        }
+        final NotificationEntry notifEntry = listEntry.getRepresentativeEntry();
         if (notifEntry == null) {
             return  false;
         }
@@ -118,32 +130,50 @@ public class HighPriorityProvider {
         return isNotificationEntryWithAtLeastOneImportantChild(entry);
     }
 
-    private boolean isNotificationEntryWithAtLeastOneImportantChild(@NonNull ListEntry entry) {
-        if (!(entry instanceof GroupEntry)) {
+    private boolean isNotificationEntryWithAtLeastOneImportantChild(@NonNull PipelineEntry entry) {
+        final ListEntry listEntry = entry.asListEntry();
+        if (listEntry == null) {
+            // Bundles do not have important children.
             return false;
         }
-        final GroupEntry groupEntry = (GroupEntry) entry;
+        if (!(listEntry instanceof GroupEntry groupEntry)) {
+            return false;
+        }
         return groupEntry.getChildren().stream().anyMatch(
                 childEntry ->
                         childEntry.getRanking().getImportance()
                                 >= NotificationManager.IMPORTANCE_DEFAULT);
     }
 
-    private boolean hasHighPriorityChild(ListEntry entry, boolean allowImplicit) {
-        if (entry instanceof NotificationEntry
-                && !mGroupMembershipManager.isGroupSummary((NotificationEntry) entry)) {
+    /**
+     * Returns whether the given ListEntry has a high priority child or is in a group with a child
+     * that's high priority
+     */
+    private boolean hasHighPriorityChild(PipelineEntry entry, boolean allowImplicit) {
+        final ListEntry listEntry = entry.asListEntry();
+        if (listEntry == null) {
+            // Bundles do not have high priority children.
             return false;
         }
+        final GroupEntry representativeGroupEntry = getRepresentativeGroupEntry(listEntry);
+        return representativeGroupEntry != null &&
+                representativeGroupEntry.getChildren().stream().anyMatch(
+                        childEntry -> isHighPriority(childEntry, allowImplicit));
+    }
 
-        List<NotificationEntry> children = mGroupMembershipManager.getChildren(entry);
-        if (children != null) {
-            for (NotificationEntry child : children) {
-                if (child != entry && isHighPriority(child, allowImplicit)) {
-                    return true;
-                }
+    @Nullable
+    private static GroupEntry getRepresentativeGroupEntry(ListEntry entry) {
+        if (entry instanceof GroupEntry groupEntry) {
+            return groupEntry;
+        } else if (entry instanceof NotificationEntry notificationEntry) {
+            if (notificationEntry.getParent() != null
+                    && notificationEntry.getParent() instanceof GroupEntry parent
+                    && parent.getSummary() != null
+                    && parent.getSummary() == notificationEntry) {
+                return parent;
             }
         }
-        return false;
+        return null;
     }
 
     private boolean hasHighPriorityCharacteristics(NotificationEntry entry) {

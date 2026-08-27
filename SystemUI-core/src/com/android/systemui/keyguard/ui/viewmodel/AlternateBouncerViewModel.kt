@@ -18,38 +18,48 @@
 package com.android.systemui.keyguard.ui.viewmodel
 
 import android.graphics.Color
+import com.android.keyguard.KeyguardViewController
 import com.android.systemui.bouncer.domain.interactor.AlternateBouncerInteractor
 import com.android.systemui.bouncer.domain.interactor.PrimaryBouncerInteractor
+import com.android.systemui.deviceentry.domain.interactor.DeviceEntryBiometricsAllowedInteractor
+import com.android.systemui.deviceentry.domain.interactor.SystemUIDeviceEntryFaceAuthInteractor
 import com.android.systemui.keyguard.DismissCallbackRegistry
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState.ALTERNATE_BOUNCER
+import com.android.systemui.lifecycle.ExclusiveActivatable
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
-import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager
 import dagger.Lazy
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 
-@ExperimentalCoroutinesApi
 class AlternateBouncerViewModel
 @Inject
 constructor(
-    private val statusBarKeyguardViewManager: StatusBarKeyguardViewManager,
+    private val keyguardViewController: KeyguardViewController,
     keyguardTransitionInteractor: KeyguardTransitionInteractor,
     private val dismissCallbackRegistry: DismissCallbackRegistry,
     alternateBouncerInteractor: Lazy<AlternateBouncerInteractor>,
     private val primaryBouncerInteractor: PrimaryBouncerInteractor,
-) {
+    deviceEntryBiometricsAllowedInteractor: DeviceEntryBiometricsAllowedInteractor,
+    deviceEntryFaceAuthInteractor: SystemUIDeviceEntryFaceAuthInteractor,
+) : ExclusiveActivatable() {
     // When we're fully transitioned to the AlternateBouncer, the alpha of the scrim should be:
     private val alternateBouncerScrimAlpha = .66f
 
     /** Reports the alternate bouncer visible state if the scene container flag is enabled. */
     val isVisible: Flow<Boolean> =
-        alternateBouncerInteractor.get().isVisible.onEach { SceneContainerFlag.assertInNewMode() }
+        alternateBouncerInteractor.get().isVisible.onEach {
+            SceneContainerFlag.unsafeAssertInNewMode()
+        }
 
     /** Progress to a fully transitioned alternate bouncer. 1f represents fully transitioned. */
     val transitionToAlternateBouncerProgress: Flow<Float> =
@@ -64,17 +74,44 @@ constructor(
     val registerForDismissGestures: Flow<Boolean> =
         transitionToAlternateBouncerProgress.map { it == 1f }.distinctUntilChanged()
 
+    val strongFaceAuthLockout =
+        deviceEntryBiometricsAllowedInteractor.isStrongFaceAuth.flatMapLatest { isStrongFaceAuth ->
+            if (isStrongFaceAuth) {
+                deviceEntryFaceAuthInteractor.isLockedOut.filter { it }.map {} // Unit
+            } else {
+                emptyFlow()
+            }
+        }
+
+    override suspend fun onActivated() {
+        SceneContainerFlag.isUnexpectedlyInLegacyMode()
+        coroutineScope { launch { strongFaceAuthLockout.collect { onStrongFaceAuthLockout() } } }
+    }
+
     fun onTapped() {
-        statusBarKeyguardViewManager.showPrimaryBouncer(/* scrimmed */ true)
+        keyguardViewController.showPrimaryBouncer(
+            /* scrimmed */ true,
+            "AlternateBouncerViewModel#onTapped",
+        )
     }
 
     fun onRemovedFromWindow() {
-        statusBarKeyguardViewManager.hideAlternateBouncer(false)
+        keyguardViewController.hideAlternateBouncer(
+            /* updateScrim */ false,
+            /* clearDismissAction */ false,
+        )
     }
 
     fun onBackRequested() {
-        statusBarKeyguardViewManager.hideAlternateBouncer(false)
+        keyguardViewController.hideAlternateBouncer(
+            /* updateScrim */ false,
+            /* clearDismissAction */ true,
+        )
         dismissCallbackRegistry.notifyDismissCancelled()
         primaryBouncerInteractor.setDismissAction(null, null)
+    }
+
+    fun onStrongFaceAuthLockout() {
+        keyguardViewController.showPrimaryBouncer(true, "strongFaceAuthLockout")
     }
 }

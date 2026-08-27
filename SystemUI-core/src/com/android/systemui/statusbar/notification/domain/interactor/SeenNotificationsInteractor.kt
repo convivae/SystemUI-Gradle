@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -83,19 +84,28 @@ constructor(
             printSection("SeenNotificationsInteractor") {
                 print(
                     "hasFilteredOutSeenNotifications",
-                    notificationListRepository.hasFilteredOutSeenNotifications.value
+                    notificationListRepository.hasFilteredOutSeenNotifications.value,
                 )
                 print(
                     "topOngoingNotificationKey",
-                    notificationListRepository.topOngoingNotificationKey.value
+                    notificationListRepository.topOngoingNotificationKey.value,
                 )
                 print(
                     "topUnseenNotificationKey",
-                    notificationListRepository.topUnseenNotificationKey.value
+                    notificationListRepository.topUnseenNotificationKey.value,
                 )
             }
         }
 
+    /**
+     * There are three states for LOCK_SCREEN_SHOW_ONLY_UNSEEN_NOTIFICATIONS.
+     *
+     * 0: unset_off, default value for phones.
+     *
+     * 1: on, default value for tablets.
+     *
+     * 2: off.
+     */
     fun isLockScreenShowOnlyUnseenNotificationsEnabled(): Flow<Boolean> =
         secureSettings
             // emit whenever the setting has changed
@@ -109,7 +119,7 @@ constructor(
             .map {
                 secureSettings.getIntForUser(
                     name = Settings.Secure.LOCK_SCREEN_SHOW_ONLY_UNSEEN_NOTIFICATIONS,
-                    default = 0,
+                    default = 0, // 0 is unset_off, which should be treated as off
                     userHandle = UserHandle.USER_CURRENT,
                 ) == 1
             }
@@ -122,27 +132,31 @@ constructor(
             .conflate()
 
     fun isLockScreenNotificationMinimalismEnabled(): Flow<Boolean> =
-        secureSettings
-            // emit whenever the setting has changed
-            .observerFlow(
-                UserHandle.USER_ALL,
-                Settings.Secure.LOCK_SCREEN_NOTIFICATION_MINIMALISM,
-            )
-            // perform a query immediately
-            .onStart { emit(Unit) }
-            // for each change, lookup the new value
-            .map {
-                secureSettings.getIntForUser(
-                    name = Settings.Secure.LOCK_SCREEN_NOTIFICATION_MINIMALISM,
-                    default = 1,
-                    userHandle = UserHandle.USER_CURRENT,
-                ) == 1
-            }
-            // don't emit anything if nothing has changed
-            .distinctUntilChanged()
-            // perform lookups on the bg thread pool
-            .flowOn(bgDispatcher)
-            // only track the most recent emission, if events are happening faster than they can be
-            // consumed
-            .conflate()
+        if (!NotificationMinimalism.isEnabled) {
+            flowOf(false)
+        } else {
+            secureSettings
+                // emit whenever the setting has changed
+                .observerFlow(
+                    UserHandle.USER_ALL,
+                    Settings.Secure.LOCK_SCREEN_NOTIFICATION_MINIMALISM,
+                )
+                // perform a query immediately
+                .onStart { emit(Unit) }
+                // for each change, lookup the new value
+                .map {
+                    secureSettings.getIntForUser(
+                        name = Settings.Secure.LOCK_SCREEN_NOTIFICATION_MINIMALISM,
+                        default = 1,
+                        userHandle = UserHandle.USER_CURRENT,
+                    ) == 1
+                }
+                // don't emit anything if nothing has changed
+                .distinctUntilChanged()
+                // perform lookups on the bg thread pool
+                .flowOn(bgDispatcher)
+                // only track the most recent emission, if events are happening faster than they can
+                // be consumed
+                .conflate()
+        }
 }

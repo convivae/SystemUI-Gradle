@@ -18,7 +18,7 @@ package com.android.systemui.keyguard.domain.interactor
 
 import android.animation.ValueAnimator
 import com.android.app.animation.Interpolators
-import com.android.systemui.Flags.communalSceneKtfRefactor
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.Flags.restartDreamOnUnocclude
 import com.android.systemui.communal.domain.interactor.CommunalInteractor
 import com.android.systemui.communal.domain.interactor.CommunalSceneInteractor
@@ -33,12 +33,10 @@ import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.power.domain.interactor.PowerInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.util.kotlin.Utils.Companion.sample
-import com.android.systemui.util.kotlin.sample
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 @SysUISingleton
 class FromOccludedTransitionInteractor
@@ -67,6 +65,7 @@ constructor(
     ) {
 
     override fun start() {
+        if (SceneContainerFlag.isEnabled) return
         listenForOccludedToLockscreenOrHub()
         listenForOccludedToDreaming()
         listenForOccludedToAsleep()
@@ -76,7 +75,6 @@ constructor(
     }
 
     private fun listenForOccludedToPrimaryBouncer() {
-        if (SceneContainerFlag.isEnabled) return
         scope.launch {
             keyguardInteractor.primaryBouncerShowing
                 .filterRelevantKeyguardStateAnd { isBouncerShowing -> isBouncerShowing }
@@ -85,14 +83,16 @@ constructor(
     }
 
     private fun listenForOccludedToDreaming() {
+        if (SceneContainerFlag.isEnabled) return
         scope.launch {
-            keyguardInteractor.isAbleToDream
-                .filterRelevantKeyguardStateAnd { isAbleToDream -> isAbleToDream }
+            keyguardInteractor.isDreamingNotDozing
+                .filterRelevantKeyguardStateAnd { isDreamingNotDozing -> isDreamingNotDozing }
                 .collect { startTransitionTo(KeyguardState.DREAMING) }
         }
     }
 
     private fun listenForOccludedToLockscreenOrHub() {
+        if (SceneContainerFlag.isEnabled) return
         if (KeyguardWmStateRefactor.isEnabled) {
             scope.launch {
                 keyguardOcclusionInteractor.isShowWhenLockedActivityOnTop
@@ -141,17 +141,14 @@ constructor(
     ) {
         if (restartDreamOnUnocclude() && dreamFromOccluded) {
             startTransitionTo(KeyguardState.DREAMING)
+        } else if (SceneContainerFlag.isEnabled) {
+            return
         } else if (isIdleOnCommunal || showCommunalFromOccluded) {
-            if (SceneContainerFlag.isEnabled) return
-            if (communalSceneKtfRefactor()) {
-                communalSceneInteractor.changeScene(
-                    newScene = CommunalScenes.Communal,
-                    loggingReason = "occluded to hub",
-                    transitionKey = CommunalTransitionKeys.SimpleFade,
-                )
-            } else {
-                startTransitionTo(KeyguardState.GLANCEABLE_HUB)
-            }
+            communalSceneInteractor.changeScene(
+                newScene = CommunalScenes.Communal,
+                loggingReason = "occluded to hub",
+                transitionKey = CommunalTransitionKeys.SimpleFade,
+            )
         } else {
             startTransitionTo(KeyguardState.LOCKSCREEN)
         }
@@ -176,8 +173,9 @@ constructor(
         if (SceneContainerFlag.isEnabled) return
         scope.launch {
             keyguardInteractor.isKeyguardOccluded
-                .sample(keyguardInteractor.isKeyguardShowing, ::Pair)
-                .filterRelevantKeyguardStateAnd { (occluded, showing) -> !occluded && !showing }
+                .filterRelevantKeyguardStateAnd { occluded ->
+                    !occluded && !keyguardInteractor.isKeyguardShowing.value
+                }
                 .collect {
                     // Occlusion signals come from the framework, and should interrupt any
                     // existing transition
@@ -222,6 +220,7 @@ constructor(
         const val TAG = "FromOccludedTransitionInteractor"
         private val DEFAULT_DURATION = 500.milliseconds
         val TO_ALTERNATE_BOUNCER_DURATION = DEFAULT_DURATION
+        val TO_PRIMARY_BOUNCER_DURATION = DEFAULT_DURATION
         val TO_AOD_DURATION = DEFAULT_DURATION
         val TO_DOZING_DURATION = DEFAULT_DURATION
         val TO_GLANCEABLE_HUB_DURATION = 250.milliseconds

@@ -78,7 +78,7 @@ public class NotifInflaterImpl implements NotifInflater {
             requireBinder().inflateViews(
                     entry,
                     params,
-                    wrapInflationCallback(callback));
+                    wrapInflationCallback(entry, callback));
         } catch (InflationException e) {
             mLogger.logInflationException(entry, e);
             mNotifErrorManager.setInflationError(entry, e);
@@ -101,17 +101,16 @@ public class NotifInflaterImpl implements NotifInflater {
     }
 
     private NotificationRowContentBinder.InflationCallback wrapInflationCallback(
+            final NotificationEntry entry,
             InflationCallback callback) {
         return new NotificationRowContentBinder.InflationCallback() {
             @Override
-            public void handleInflationException(
-                    NotificationEntry entry,
-                    Exception e) {
+            public void handleInflationException(Exception e) {
                 mNotifErrorManager.setInflationError(entry, e);
             }
 
             @Override
-            public void onAsyncInflationFinished(NotificationEntry entry) {
+            public void onAsyncInflationFinished() {
                 mNotifErrorManager.clearInflationError(entry);
                 if (callback != null) {
                     callback.onInflationFinished(entry, entry.getRowController());

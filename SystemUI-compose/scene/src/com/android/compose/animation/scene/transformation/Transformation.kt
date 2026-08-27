@@ -18,7 +18,8 @@ package com.android.compose.animation.scene.transformation
 
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MotionScheme
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -29,7 +30,6 @@ import com.android.compose.animation.scene.ContentKey
 import com.android.compose.animation.scene.ElementKey
 import com.android.compose.animation.scene.ElementMatcher
 import com.android.compose.animation.scene.ElementStateScope
-import com.android.compose.animation.scene.Scale
 import com.android.compose.animation.scene.content.state.TransitionState
 import kotlinx.coroutines.CoroutineScope
 
@@ -83,11 +83,14 @@ sealed interface PropertyTransformation<T> : Transformation {
     }
 }
 
+/** A transformation applied to an element that is not shared. */
+sealed interface TransformedElementPropertyTransformation<T> : PropertyTransformation<T>
+
 /**
  * A transformation to a target/transformed value that is automatically interpolated using the
  * transition progress and transformation range.
  */
-interface InterpolatedPropertyTransformation<T> : PropertyTransformation<T> {
+interface InterpolatedPropertyTransformation<T> : TransformedElementPropertyTransformation<T> {
     /**
      * Return the transformed value for the given property, i.e.:
      * - the value at progress = 0% for elements that are entering the layout (i.e. elements in the
@@ -106,7 +109,7 @@ interface InterpolatedPropertyTransformation<T> : PropertyTransformation<T> {
     ): T
 }
 
-interface CustomPropertyTransformation<T> : PropertyTransformation<T> {
+interface CustomPropertyTransformation<T> : TransformedElementPropertyTransformation<T> {
     /**
      * Return the value that the property should have in the current frame for the given [content]
      * and [element].
@@ -126,9 +129,56 @@ interface CustomPropertyTransformation<T> : PropertyTransformation<T> {
     ): T
 }
 
+/** A transformation applied to a shared element. */
+sealed interface SharedElementPropertyTransformation<T> : PropertyTransformation<T>
+
+/**
+ * A transformation to a target/transformed value that is automatically interpolated using the
+ * transition *preview progress*.
+ *
+ * Important: This type of shared transformation can only be used inside previews. During the
+ * preview stage, i.e. when the user is swiping, we will seek to the value returned by
+ * [targetPreviewValue] using the preview progress. When the user release their finger, we will
+ * animate from the last preview value to the final target value.
+ */
+interface InterpolatedSharedPropertyTransformation<T> : SharedElementPropertyTransformation<T> {
+    /** Return the target preview value to which we should animate during the preview stage. */
+    fun PropertyTransformationScope.targetPreviewValue(
+        element: ElementKey,
+        transition: TransitionState.Transition,
+        fromValue: T,
+        toValue: T,
+    ): T
+}
+
+interface CustomSharedPropertyTransformation<T> : SharedElementPropertyTransformation<T> {
+    /**
+     * Return the value that the property should have in the current frame for the given [content]
+     * and shared [element].
+     *
+     * This transformation can use [transitionScope] to launch animations associated to
+     * [transition], which will not finish until at least one animation/job is still running in the
+     * scope.
+     *
+     * Important: Make sure to never launch long-running jobs in [transitionScope], otherwise
+     * [transition] will never be considered as finished.
+     */
+    fun PropertyTransformationScope.transform(
+        element: ElementKey,
+        transition: TransitionState.Transition,
+        transitionScope: CoroutineScope,
+        fromValue: T,
+        toValue: T,
+    ): T
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 interface PropertyTransformationScope : Density, ElementStateScope {
     /** The current [direction][LayoutDirection] of the layout. */
     val layoutDirection: LayoutDirection
+
+    /** The [MotionScheme] in use by the [SceneTransitionLayout]. */
+    val motionScheme: MotionScheme
 }
 
 /** Defines the transformation-type to be applied to all elements matching [matcher]. */

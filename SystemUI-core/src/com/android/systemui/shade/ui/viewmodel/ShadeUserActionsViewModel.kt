@@ -16,16 +16,18 @@
 
 package com.android.systemui.shade.ui.viewmodel
 
+import com.android.compose.animation.scene.Back
+import com.android.compose.animation.scene.Edge
 import com.android.compose.animation.scene.Swipe
 import com.android.compose.animation.scene.UserAction
 import com.android.compose.animation.scene.UserActionResult
-import com.android.systemui.qs.ui.adapter.QSSceneAdapter
+import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
 import com.android.systemui.scene.domain.interactor.SceneBackInteractor
 import com.android.systemui.scene.shared.model.SceneFamilies
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.scene.shared.model.TransitionKeys.ToSplitShade
 import com.android.systemui.scene.ui.viewmodel.UserActionsViewModel
-import com.android.systemui.shade.domain.interactor.ShadeInteractor
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shade.shared.model.ShadeMode
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -41,27 +43,29 @@ import kotlinx.coroutines.flow.map
 class ShadeUserActionsViewModel
 @AssistedInject
 constructor(
-    private val qsSceneAdapter: QSSceneAdapter,
-    private val shadeInteractor: ShadeInteractor,
+    private val editModeViewModel: EditModeViewModel,
+    private val shadeModeInteractor: ShadeModeInteractor,
     private val sceneBackInteractor: SceneBackInteractor,
 ) : UserActionsViewModel() {
 
     override suspend fun hydrateActions(setActions: (Map<UserAction, UserActionResult>) -> Unit) {
         combine(
-                shadeInteractor.shadeMode,
-                qsSceneAdapter.isCustomizerShowing,
+                shadeModeInteractor.shadeMode,
+                editModeViewModel.isEditing,
                 sceneBackInteractor.backScene
                     .filter { it != Scenes.Shade }
                     .map { it ?: SceneFamilies.Home },
             ) { shadeMode, isCustomizerShowing, backScene ->
                 buildMap<UserAction, UserActionResult> {
                     if (!isCustomizerShowing) {
+                        val backSceneTransitionKey =
+                            ToSplitShade.takeIf { shadeMode is ShadeMode.Split }
+                        set(Swipe.Up, UserActionResult(backScene, backSceneTransitionKey))
+                        set(Back, UserActionResult(backScene, backSceneTransitionKey))
+                    } else {
                         set(
-                            Swipe.Up,
-                            UserActionResult(
-                                backScene,
-                                ToSplitShade.takeIf { shadeMode is ShadeMode.Split },
-                            ),
+                            Swipe.Up(fromSource = Edge.Bottom),
+                            UserActionResult(SceneFamilies.Home),
                         )
                     }
 

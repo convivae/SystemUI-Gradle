@@ -20,6 +20,7 @@ import android.app.Flags;
 import android.app.Notification;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
+import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
@@ -29,13 +30,13 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.VisibleForTesting;
+
 import com.android.internal.R;
 import com.android.internal.widget.CachingIconView;
-import com.android.internal.widget.ConversationLayout;
 import com.android.internal.widget.ImageFloatingTextView;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 import com.android.systemui.statusbar.notification.row.NotificationContentView;
-import com.android.systemui.statusbar.notification.row.shared.AsyncGroupHeaderViewInflation;
 import com.android.systemui.statusbar.notification.row.wrapper.NotificationViewWrapper;
 
 import java.util.ArrayList;
@@ -53,12 +54,16 @@ public class NotificationGroupingUtil {
     private static final TextViewComparator APP_NAME_COMPARATOR = new AppNameComparator();
     private static final ViewComparator BADGE_COMPARATOR = new BadgeComparator();
     private static final VisibilityApplicator VISIBILITY_APPLICATOR = new VisibilityApplicator();
-    private static final VisibilityApplicator APP_NAME_APPLICATOR = new AppNameApplicator();
     private static final ResultApplicator LEFT_ICON_APPLICATOR = new LeftIconApplicator();
-    private static final DataExtractor ICON_EXTRACTOR = new DataExtractor() {
+
+    @VisibleForTesting
+    static final DataExtractor ICON_EXTRACTOR = new DataExtractor() {
         @Override
         public Object extractData(ExpandableNotificationRow row) {
-            return row.getEntry().getSbn().getNotification();
+            if (row.getEntryAdapter().getSbn() != null) {
+                return row.getEntryAdapter().getSbn().getNotification();
+            }
+            return null;
         }
     };
 
@@ -70,9 +75,10 @@ public class NotificationGroupingUtil {
         mRow = row;
 
         final IconComparator iconVisibilityComparator = new IconComparator() {
+            @Override
             public boolean compare(View parent, View child, Object parentData,
                     Object childData) {
-                if (Flags.notificationsRedesignAppIcons() && mRow.isShowingAppIcon()) {
+                if (mRow.isShowingAppIcon()) {
                     // Icon is always the same when we're showing the app icon.
                     return true;
                 }
@@ -81,9 +87,10 @@ public class NotificationGroupingUtil {
             }
         };
         final IconComparator greyComparator = new IconComparator() {
+            @Override
             public boolean compare(View parent, View child, Object parentData,
                     Object childData) {
-                if (Flags.notificationsRedesignAppIcons() && mRow.isShowingAppIcon()) {
+                if (mRow.isShowingAppIcon()) {
                     return false;
                 }
                 return !hasSameIcon(parentData, childData)
@@ -93,7 +100,7 @@ public class NotificationGroupingUtil {
         final ResultApplicator greyApplicator = new ResultApplicator() {
             @Override
             public void apply(View parent, View view, boolean apply, boolean reset) {
-                if (Flags.notificationsRedesignAppIcons() && mRow.isShowingAppIcon()) {
+                if (mRow.isShowingAppIcon()) {
                     // Do nothing.
                     return;
                 }
@@ -110,12 +117,6 @@ public class NotificationGroupingUtil {
                 ICON_EXTRACTOR,
                 iconVisibilityComparator,
                 VISIBILITY_APPLICATOR));
-        // To grey out the icons when they are not the same, or they have the same color
-        mProcessors.add(new Processor(mRow,
-                com.android.internal.R.id.status_bar_latest_event_content,
-                ICON_EXTRACTOR,
-                greyComparator,
-                greyApplicator));
         // To show the large icon on the left side instead if all the small icons are the same
         mProcessors.add(new Processor(mRow,
                 com.android.internal.R.id.status_bar_latest_event_content,
@@ -133,10 +134,13 @@ public class NotificationGroupingUtil {
                 com.android.internal.R.id.app_name_text,
                 null,
                 APP_NAME_COMPARATOR,
-                APP_NAME_APPLICATOR));
+                VISIBILITY_APPLICATOR));
         // To hide the header text if it's the same
         mProcessors.add(Processor.forTextView(mRow, com.android.internal.R.id.header_text));
 
+        if (Flags.apiMetricStyle()) {
+            mDividers.add(com.android.internal.R.id.app_name_text_divider);
+        }
         mDividers.add(com.android.internal.R.id.header_text_divider);
         mDividers.add(com.android.internal.R.id.header_text_secondary_divider);
         mDividers.add(com.android.internal.R.id.time_divider);
@@ -210,7 +214,7 @@ public class NotificationGroupingUtil {
         }
         // in case no view is visible we make sure the time is visible
         int timeVisibility = !hasVisibleText
-                || row.getEntry().getSbn().getNotification().showsTime()
+                || showsTime(row)
                 ? View.VISIBLE : View.GONE;
         time.setVisibility(timeVisibility);
         View left = null;
@@ -239,10 +243,21 @@ public class NotificationGroupingUtil {
         }
     }
 
+    @VisibleForTesting
+    boolean showsTime(ExpandableNotificationRow row) {
+        StatusBarNotification sbn =
+                row.getEntryAdapter() != null ? row.getEntryAdapter().getSbn() : null;
+
+        return (sbn != null && sbn.getNotification().showsTime());
+    }
+
     /**
      * Reset the modifications to this row for removing it from the group.
      */
     public void restoreChildNotification(ExpandableNotificationRow row) {
+        if (row.getNotificationViewWrapper() == null) {
+            return;
+        }
         for (int compI = 0; compI < mProcessors.size(); compI++) {
             mProcessors.get(compI).apply(row, true /* reset */);
         }
@@ -338,7 +353,8 @@ public class NotificationGroupingUtil {
         boolean isEmpty(View view);
     }
 
-    private interface DataExtractor {
+    @VisibleForTesting
+    interface DataExtractor {
         Object extractData(ExpandableNotificationRow row);
     }
 
@@ -350,7 +366,7 @@ public class NotificationGroupingUtil {
 
         @Override
         public boolean isEmpty(View view) {
-            if (AsyncGroupHeaderViewInflation.isEnabled() && view == null) {
+            if (view == null) {
                 return true;
             }
             if (view instanceof ImageView) {
@@ -376,13 +392,17 @@ public class NotificationGroupingUtil {
         }
     }
 
-    private abstract static class IconComparator implements ViewComparator {
+    @VisibleForTesting
+    static class IconComparator implements ViewComparator {
         @Override
         public boolean compare(View parent, View child, Object parentData, Object childData) {
             return false;
         }
 
         protected boolean hasSameIcon(Object parentData, Object childData) {
+            if (parentData == null || childData == null) {
+                return false;
+            }
             Icon parentIcon = ((Notification) parentData).getSmallIcon();
             Icon childIcon = ((Notification) childData).getSmallIcon();
             return parentIcon.sameAs(childIcon);
@@ -392,6 +412,10 @@ public class NotificationGroupingUtil {
          * @return whether two ImageViews have the same colorFilterSet or none at all
          */
         protected boolean hasSameColor(Object parentData, Object childData) {
+            if ((parentData == null && childData != null)
+                    || (parentData != null && childData == null)) {
+                return false;
+            }
             int parentColor = ((Notification) parentData).color;
             int childColor = ((Notification) childData).color;
             return parentColor == childColor;
@@ -423,18 +447,6 @@ public class NotificationGroupingUtil {
         }
     }
 
-    private static class AppNameApplicator extends VisibilityApplicator {
-
-        @Override
-        public void apply(View parent, View view, boolean apply, boolean reset) {
-            if (reset && parent instanceof ConversationLayout) {
-                ConversationLayout layout = (ConversationLayout) parent;
-                apply = layout.shouldHideAppName();
-            }
-            super.apply(parent, view, apply, reset);
-        }
-    }
-
     private static class AppNameComparator extends TextViewComparator {
         @Override
         public boolean compare(View parent, View child, Object parentData, Object childData) {
@@ -455,10 +467,12 @@ public class NotificationGroupingUtil {
                 R.id.big_text,
                 R.id.title,
                 R.id.notification_main_column,
-                R.id.notification_header};
+                R.id.notification_header,
+                R.id.notification_top_line
+        };
 
         @Override
-        public void apply(View parent, View child, boolean showLeftIcon, boolean reset) {
+        public void apply(View parent, View child, boolean apply, boolean reset) {
             ImageView leftIcon = child.findViewById(com.android.internal.R.id.left_icon);
             if (leftIcon == null) {
                 return;
@@ -471,13 +485,14 @@ public class NotificationGroupingUtil {
             if (leftIconUsesRightIconDrawable) {
                 // Use the right drawable when showing the left, unless the right is being kept
                 Drawable rightDrawable = rightIcon == null ? null : rightIcon.getDrawable();
-                leftIcon.setImageDrawable(showLeftIcon && !keepRightIcon ? rightDrawable : null);
+                leftIcon.setImageDrawable(apply && !keepRightIcon ? rightDrawable : null);
             }
-            leftIcon.setVisibility(showLeftIcon ? View.VISIBLE : View.GONE);
+            boolean shouldShowLeftIcon = apply && leftIcon.getDrawable() != null;
+            leftIcon.setVisibility(shouldShowLeftIcon ? View.VISIBLE : View.GONE);
 
             // update the right icon as well
             if (rightIcon != null) {
-                boolean showRightIcon = (keepRightIcon || !showLeftIcon)
+                boolean showRightIcon = (keepRightIcon || !apply)
                         && rightIcon.getDrawable() != null;
                 rightIcon.setVisibility(showRightIcon ? View.VISIBLE : View.GONE);
                 for (int viewId : MARGIN_ADJUSTED_VIEWS) {

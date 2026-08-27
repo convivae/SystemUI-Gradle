@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade
 
+import android.view.MotionEvent
+
 interface QuickSettingsController {
     /** Returns whether or not QuickSettings is expanded. */
     val expanded: Boolean
@@ -25,7 +27,7 @@ interface QuickSettingsController {
 
     /** Returns Whether we should intercept a gesture to open Quick Settings. */
     @Deprecated("specific to legacy touch handling")
-    fun shouldQuickSettingsIntercept(x: Float, y: Float, yDiff: Float): Boolean
+    fun shouldQuickSettingsIntercept(x: Float, y: Float, yDiff: Float, event: MotionEvent?): Boolean
 
     /** Closes the Qs customizer. */
     fun closeQsCustomizer()
@@ -48,4 +50,6 @@ interface QuickSettingsController {
     /** Calculate height of QS panel */
     @Deprecated("specific to legacy DebugDrawable")
     fun calculatePanelHeightExpanded(stackScrollerPadding: Int): Int
+
+    fun setPanelExpanded(panelExpanded: Boolean)
 }

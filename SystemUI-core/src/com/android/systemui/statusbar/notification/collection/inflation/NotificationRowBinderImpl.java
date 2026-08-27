@@ -16,7 +16,7 @@
 
 package com.android.systemui.statusbar.notification.collection.inflation;
 
-import static com.android.server.notification.Flags.screenshareNotificationHiding;
+import static com.android.systemui.statusbar.NotificationLockscreenUserManager.REDACTION_TYPE_NONE;
 import static com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_CONTRACTED;
 import static com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_EXPANDED;
 import static com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_PUBLIC;
@@ -54,9 +54,6 @@ import com.android.systemui.statusbar.notification.row.RowContentBindParams;
 import com.android.systemui.statusbar.notification.row.RowContentBindStage;
 import com.android.systemui.statusbar.notification.row.RowInflaterTask;
 import com.android.systemui.statusbar.notification.row.dagger.ExpandableNotificationRowComponent;
-import com.android.systemui.statusbar.notification.row.shared.AsyncGroupHeaderViewInflation;
-import com.android.systemui.statusbar.notification.row.shared.AsyncHybridViewInflation;
-import com.android.systemui.statusbar.notification.row.shared.LockscreenOtpRedaction;
 import com.android.systemui.statusbar.notification.stack.NotificationListContainer;
 
 import javax.inject.Inject;
@@ -135,9 +132,7 @@ public class NotificationRowBinderImpl implements NotificationRowBinder {
             @NonNull NotifInflater.Params params,
             NotificationRowContentBinder.InflationCallback callback)
             throws InflationException {
-        //TODO(b/217799515): Remove the entry parameter from getViewParentForNotification(), this
-        // function returns the NotificationStackScrollLayout regardless of the entry.
-        ViewGroup parent = mListContainer.getViewParentForNotification(entry);
+        ViewGroup parent = mListContainer.getViewParentForNotification();
 
         if (entry.rowExists()) {
             mLogger.logUpdatingRow(entry, params);
@@ -157,7 +152,7 @@ public class NotificationRowBinderImpl implements NotificationRowBinder {
                         ExpandableNotificationRowComponent component =
                                 mExpandableNotificationRowComponentBuilder
                                         .expandableNotificationRow(row)
-                                        .notificationEntry(entry)
+                                        .pipelineEntry(entry)
                                         .onExpandClickListener(mPresenter)
                                         .build();
                         ExpandableNotificationRowController rowController =
@@ -184,9 +179,8 @@ public class NotificationRowBinderImpl implements NotificationRowBinder {
         params.markContentViewsFreeable(FLAG_CONTENT_VIEW_CONTRACTED);
         params.markContentViewsFreeable(FLAG_CONTENT_VIEW_EXPANDED);
         params.markContentViewsFreeable(FLAG_CONTENT_VIEW_PUBLIC);
-        if (AsyncHybridViewInflation.isEnabled()) {
-            params.markContentViewsFreeable(FLAG_CONTENT_VIEW_SINGLE_LINE);
-        }
+        params.markContentViewsFreeable(FLAG_CONTENT_VIEW_SINGLE_LINE);
+        params.markContentViewsFreeable(FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE);
         mRowContentBindStage.requestRebind(entry, null);
     }
 
@@ -244,8 +238,6 @@ public class NotificationRowBinderImpl implements NotificationRowBinder {
             @NonNull NotifInflater.Params inflaterParams,
             ExpandableNotificationRow row,
             @Nullable NotificationRowContentBinder.InflationCallback inflationCallback) {
-        final boolean useIncreasedCollapsedHeight =
-                mMessagingUtil.isImportantMessaging(entry.getSbn(), entry.getImportance());
         final boolean isMinimized = inflaterParams.isMinimized();
 
         // Set show snooze action
@@ -254,54 +246,42 @@ public class NotificationRowBinderImpl implements NotificationRowBinder {
         RowContentBindParams params = mRowContentBindStage.getStageParams(entry);
         params.requireContentViews(FLAG_CONTENT_VIEW_CONTRACTED);
         params.requireContentViews(FLAG_CONTENT_VIEW_EXPANDED);
-        params.setUseIncreasedCollapsedHeight(useIncreasedCollapsedHeight);
         params.setUseMinimized(isMinimized);
-        boolean needsRedaction = screenshareNotificationHiding()
-                ? inflaterParams.getNeedsRedaction()
-                : mNotificationLockscreenUserManager.needsRedaction(entry);
+        int redactionType = inflaterParams.getRedactionType();
 
-        if (needsRedaction) {
+        params.setRedactionType(redactionType);
+        if (redactionType != REDACTION_TYPE_NONE) {
             params.requireContentViews(FLAG_CONTENT_VIEW_PUBLIC);
         } else {
             params.markContentViewsFreeable(FLAG_CONTENT_VIEW_PUBLIC);
         }
 
-        if (AsyncHybridViewInflation.isEnabled()) {
-            if (inflaterParams.isChildInGroup()) {
-                params.requireContentViews(FLAG_CONTENT_VIEW_SINGLE_LINE);
-            } else {
-                // TODO(b/217799515): here we decide whether to free the single-line view
-                //  when the group status changes
-                params.markContentViewsFreeable(FLAG_CONTENT_VIEW_SINGLE_LINE);
-            }
+        if (inflaterParams.isChildInGroup()) {
+            params.requireContentViews(FLAG_CONTENT_VIEW_SINGLE_LINE);
+        } else {
+            params.markContentViewsFreeable(FLAG_CONTENT_VIEW_SINGLE_LINE);
+        }
+        if (inflaterParams.isChildInGroup() && redactionType != REDACTION_TYPE_NONE) {
+            params.requireContentViews(FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE);
+        } else {
+            params.markContentViewsFreeable(FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE);
         }
 
-        if (LockscreenOtpRedaction.isSingleLineViewEnabled()) {
-
-            if (inflaterParams.isChildInGroup() && needsRedaction) {
-                params.requireContentViews(FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE);
-            } else {
-                params.markContentViewsFreeable(FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE);
+        if (inflaterParams.isGroupSummary()) {
+            params.requireContentViews(FLAG_GROUP_SUMMARY_HEADER);
+            if (isMinimized) {
+                params.requireContentViews(FLAG_LOW_PRIORITY_GROUP_SUMMARY_HEADER);
             }
-        }
-
-        if (AsyncGroupHeaderViewInflation.isEnabled()) {
-            if (inflaterParams.isGroupSummary()) {
-                params.requireContentViews(FLAG_GROUP_SUMMARY_HEADER);
-                if (isMinimized) {
-                    params.requireContentViews(FLAG_LOW_PRIORITY_GROUP_SUMMARY_HEADER);
-                }
-            } else {
-                params.markContentViewsFreeable(FLAG_GROUP_SUMMARY_HEADER);
-                params.markContentViewsFreeable(FLAG_LOW_PRIORITY_GROUP_SUMMARY_HEADER);
-            }
+        } else {
+            params.markContentViewsFreeable(FLAG_GROUP_SUMMARY_HEADER);
+            params.markContentViewsFreeable(FLAG_LOW_PRIORITY_GROUP_SUMMARY_HEADER);
         }
         params.rebindAllContentViews();
         mLogger.logRequestingRebind(entry, inflaterParams);
         mRowContentBindStage.requestRebind(entry, en -> {
             mLogger.logRebindComplete(entry);
-            row.setUsesIncreasedCollapsedHeight(useIncreasedCollapsedHeight);
             row.setIsMinimized(isMinimized);
+            row.setRedactionType(redactionType);
             if (inflationCallback != null) {
                 inflationCallback.onAsyncInflationFinished(en);
             }

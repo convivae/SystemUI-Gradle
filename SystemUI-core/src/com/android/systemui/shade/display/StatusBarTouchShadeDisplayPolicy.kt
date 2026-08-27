@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,45 +22,70 @@ import com.android.app.tracing.coroutines.launchTraced
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.display.data.repository.DisplayRepository
-import com.android.systemui.shade.shared.flag.ShadeWindowGoesAround
+import com.android.systemui.shade.domain.interactor.ShadeExpandedStateInteractor.ShadeElement
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-/**
- * Moves the shade on the last display that received a status bar touch.
- *
- * If the display is removed, falls back to the default one.
- */
+/** Manages the state for the shade's target display and expansion intent. */
 @SysUISingleton
 class StatusBarTouchShadeDisplayPolicy
 @Inject
-constructor(displayRepository: DisplayRepository, @Background val backgroundScope: CoroutineScope) :
-    ShadeDisplayPolicy {
-    override val name: String
-        get() = "status_bar_latest_touch"
+constructor(
+    displayRepository: DisplayRepository,
+    @Background private val backgroundScope: CoroutineScope,
+) : ShadeDisplayPolicy, ShadeExpansionIntent {
+    override val name: String = "status_bar_latest_touch"
 
     private val currentDisplayId = MutableStateFlow(Display.DEFAULT_DISPLAY)
     private val availableDisplayIds: StateFlow<Set<Int>> = displayRepository.displayIds
 
-    override val displayId: StateFlow<Int>
-        get() = currentDisplayId
+    private var latestIntent = AtomicReference<ShadeElement?>()
+    private var timeoutJob: Job? = null
+
+    override val displayId: StateFlow<Int> = currentDisplayId
 
     private var removalListener: Job? = null
 
-    /** Called when the status bar on the given display is touched. */
-    fun onStatusBarTouched(statusBarDisplayId: Int) {
-        ShadeWindowGoesAround.isUnexpectedlyInLegacyMode()
-        if (statusBarDisplayId !in availableDisplayIds.value) {
-            Log.e(TAG, "Got touch on unknown display $statusBarDisplayId")
+    /**
+     * Sets the expansion intent for the notification shade.
+     *
+     * It updates the target display for the shade, if necessary, and registers which element should
+     * be made visible upon expansion.
+     */
+    fun setExpansionIntentForElement(element: ShadeElement, displayId: Int) {
+        updateShadeDisplayIfNeeded(displayId)
+        updateExpansionIntent(element)
+    }
+
+    override fun consumeExpansionIntent(): ShadeElement? {
+        return latestIntent.getAndSet(null)
+    }
+
+    private fun updateExpansionIntent(element: ShadeElement) {
+        latestIntent.set(element)
+        timeoutJob?.cancel()
+        timeoutJob =
+            backgroundScope.launchTraced("StatusBarTouchDisplayPolicy#intentTimeout") {
+                delay(EXPANSION_INTENT_EXPIRY)
+                latestIntent.set(null)
+            }
+    }
+
+    fun updateShadeDisplayIfNeeded(newDisplayId: Int) {
+        if (newDisplayId !in availableDisplayIds.value) {
+            Log.e(TAG, "Cannot update display id to unknown display $newDisplayId")
             return
         }
-        currentDisplayId.value = statusBarDisplayId
+        currentDisplayId.value = newDisplayId
         if (removalListener == null) {
             // Lazy start this at the first invocation. it's fine to let it run also when the policy
             // is not selected anymore, as the job doesn't do anything until someone subscribes to
@@ -91,5 +116,6 @@ constructor(displayRepository: DisplayRepository, @Background val backgroundScop
 
     private companion object {
         const val TAG = "StatusBarTouchDisplayPolicy"
+        val EXPANSION_INTENT_EXPIRY = 2.seconds
     }
 }

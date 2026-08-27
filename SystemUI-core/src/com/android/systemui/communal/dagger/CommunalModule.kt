@@ -28,9 +28,17 @@ import com.android.systemui.communal.data.repository.CommunalSettingsRepositoryM
 import com.android.systemui.communal.data.repository.CommunalSmartspaceRepositoryModule
 import com.android.systemui.communal.data.repository.CommunalTutorialRepositoryModule
 import com.android.systemui.communal.data.repository.CommunalWidgetRepositoryModule
+import com.android.systemui.communal.domain.definition.ContextualSetupDefinition
+import com.android.systemui.communal.domain.definition.UprightChargingSetupDefinition
 import com.android.systemui.communal.domain.interactor.CommunalSceneTransitionInteractor
+import com.android.systemui.communal.domain.interactor.UprightChargingInteractor
+import com.android.systemui.communal.domain.interactor.UprightChargingInteractorImpl
+import com.android.systemui.communal.domain.preconditions.CommonSetupPreconditions
+import com.android.systemui.communal.domain.preconditions.CommonSetupPreconditionsImpl
+import com.android.systemui.communal.domain.suppression.dagger.CommunalSuppressionModule
 import com.android.systemui.communal.shared.log.CommunalMetricsLogger
 import com.android.systemui.communal.shared.log.CommunalStatsLogProxyImpl
+import com.android.systemui.communal.shared.model.CommunalSceneDataSourceDelegator
 import com.android.systemui.communal.shared.model.CommunalScenes
 import com.android.systemui.communal.shared.model.GlanceableHubMultiUserHelper
 import com.android.systemui.communal.shared.model.GlanceableHubMultiUserHelperImpl
@@ -45,13 +53,13 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.res.R
 import com.android.systemui.scene.shared.model.SceneContainerConfig
-import com.android.systemui.scene.shared.model.SceneDataSource
-import com.android.systemui.scene.shared.model.SceneDataSourceDelegator
+import com.android.systemui.scene.ui.composable.ConstantSceneContainerTransitionsBuilder
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
+import dagger.multibindings.IntoSet
 import javax.inject.Named
 import kotlinx.coroutines.CoroutineScope
 
@@ -69,6 +77,7 @@ import kotlinx.coroutines.CoroutineScope
             CommunalSmartspaceRepositoryModule::class,
             CommunalStartableModule::class,
             GlanceableHubWidgetManagerModule::class,
+            CommunalSuppressionModule::class,
         ]
 )
 interface CommunalModule {
@@ -76,10 +85,6 @@ interface CommunalModule {
     fun bindEditWidgetsActivityStarter(
         starter: EditWidgetsActivityStarterImpl
     ): EditWidgetsActivityStarter
-
-    @Binds
-    @Communal
-    fun bindCommunalSceneDataSource(@Communal delegator: SceneDataSourceDelegator): SceneDataSource
 
     @Binds fun bindCommunalColors(impl: CommunalColorsImpl): CommunalColors
 
@@ -100,25 +105,43 @@ interface CommunalModule {
         impl: GlanceableHubMultiUserHelperImpl
     ): GlanceableHubMultiUserHelper
 
+    @Binds
+    @IntoSet
+    fun bindUprightChargingSetupDefinition(
+        impl: UprightChargingSetupDefinition
+    ): ContextualSetupDefinition
+
+    @Binds
+    fun bindUprightChargingInteractor(
+        impl: UprightChargingInteractorImpl
+    ): UprightChargingInteractor
+
+    @Binds
+    fun bindCommonSetupPreconditions(impl: CommonSetupPreconditionsImpl): CommonSetupPreconditions
+
     companion object {
         const val LOGGABLE_PREFIXES = "loggable_prefixes"
         const val LAUNCHER_PACKAGE = "launcher_package"
+        const val SWIPE_TO_HUB = "swipe_to_hub"
+        const val SHOW_UMO = "show_umo"
+        const val TOUCH_NOTIFICATION_RATE_LIMIT = "TOUCH_NOTIFICATION_RATE_LIMIT"
+
+        const val TOUCH_NOTIFIFCATION_RATE_LIMIT_MS = 100
 
         @Provides
-        @Communal
         @SysUISingleton
         fun providesCommunalSceneDataSourceDelegator(
             @Application applicationScope: CoroutineScope
-        ): SceneDataSourceDelegator {
+        ): CommunalSceneDataSourceDelegator {
             val config =
                 SceneContainerConfig(
                     sceneKeys = listOf(CommunalScenes.Blank, CommunalScenes.Communal),
                     initialSceneKey = CommunalScenes.Blank,
-                    transitions = sceneTransitions,
                     navigationDistances =
                         mapOf(CommunalScenes.Blank to 0, CommunalScenes.Communal to 1),
+                    transitionsBuilder = ConstantSceneContainerTransitionsBuilder(sceneTransitions),
                 )
-            return SceneDataSourceDelegator(applicationScope, config)
+            return CommunalSceneDataSourceDelegator(applicationScope, config)
         }
 
         @Provides
@@ -141,6 +164,24 @@ interface CommunalModule {
         @Named(LAUNCHER_PACKAGE)
         fun provideLauncherPackage(@Main resources: Resources): String {
             return resources.getString(R.string.launcher_overlayable_package)
+        }
+
+        @Provides
+        @Named(SWIPE_TO_HUB)
+        fun provideSwipeToHub(@Main resources: Resources): Boolean {
+            return resources.getBoolean(R.bool.config_swipeToOpenGlanceableHub)
+        }
+
+        @Provides
+        @Named(SHOW_UMO)
+        fun provideShowUmo(@Main resources: Resources): Boolean {
+            return resources.getBoolean(R.bool.config_showUmoOnHub)
+        }
+
+        @Provides
+        @Named(TOUCH_NOTIFICATION_RATE_LIMIT)
+        fun providesRateLimit(): Int {
+            return TOUCH_NOTIFIFCATION_RATE_LIMIT_MS
         }
     }
 }

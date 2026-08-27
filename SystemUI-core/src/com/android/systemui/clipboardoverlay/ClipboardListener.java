@@ -18,7 +18,7 @@ package com.android.systemui.clipboardoverlay;
 
 import static android.content.ClipDescription.CLASSIFICATION_COMPLETE;
 
-import static com.android.systemui.Flags.clipboardNoninteractiveOnLockscreen;
+import static com.android.systemui.Flags.clipboardOverlayMultiuser;
 import static com.android.systemui.Flags.overrideSuppressOverlayCondition;
 import static com.android.systemui.clipboardoverlay.ClipboardOverlayEvent.CLIPBOARD_OVERLAY_ENTERED;
 import static com.android.systemui.clipboardoverlay.ClipboardOverlayEvent.CLIPBOARD_OVERLAY_UPDATED;
@@ -31,15 +31,23 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Build;
+import android.os.PersistableBundle;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.logging.UiEventLogger;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.settings.UserTracker;
 import com.android.systemui.user.utils.UserScopedService;
+
+import java.util.Set;
+import java.util.concurrent.Executor;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -54,49 +62,81 @@ public class ClipboardListener implements
 
     @VisibleForTesting
     static final String SHELL_PACKAGE = "com.android.shell";
-    @VisibleForTesting
-    static final String EXTRA_SUPPRESS_OVERLAY =
+    // TODO (b/358473717): move once suppression controller flag is rolled out
+    static final String SYSTEMUI_PACKAGE = "com.android.systemui";
+    static final Set<String> ALLOWED_PACKAGES =
+            Set.of(SHELL_PACKAGE, SYSTEMUI_PACKAGE);
+    public static final String EXTRA_SUPPRESS_OVERLAY =
             "com.android.systemui.SUPPRESS_CLIPBOARD_OVERLAY";
 
     private final Context mContext;
     private final Provider<ClipboardOverlayController> mOverlayProvider;
     private final ClipboardToast mClipboardToast;
-    private final ClipboardManager mClipboardManager;
-    private final KeyguardManager mKeyguardManager;
+    private final UserScopedService<ClipboardManager> mClipboardManagerProvider;
+    private final UserScopedService<KeyguardManager> mKeyguardManagerProvider;
     private final UiEventLogger mUiEventLogger;
     private final ClipboardOverlaySuppressionController mClipboardOverlaySuppressionController;
     private ClipboardOverlay mClipboardOverlay;
+    private ClipboardManager mClipboardManagerForUser;
+    private KeyguardManager mKeyguardManagerForUser;
+
+    private final UserTracker mUserTracker;
+    private final Executor mMainExecutor;
+
+    private final UserTracker.Callback mCallback = new UserTracker.Callback() {
+        @Override
+        public void onUserChanged(int newUser, @NonNull Context userContext) {
+            UserTracker.Callback.super.onUserChanged(newUser, userContext);
+            mClipboardManagerForUser.removePrimaryClipChangedListener(ClipboardListener.this);
+            setUser(mUserTracker.getUserHandle());
+            mClipboardManagerForUser.addPrimaryClipChangedListener(ClipboardListener.this);
+        }
+    };
 
     @Inject
     public ClipboardListener(Context context,
             Provider<ClipboardOverlayController> clipboardOverlayControllerProvider,
             ClipboardToast clipboardToast,
+            UserTracker userTracker,
             UserScopedService<ClipboardManager> clipboardManager,
-            KeyguardManager keyguardManager,
+            UserScopedService<KeyguardManager> keyguardManager,
             UiEventLogger uiEventLogger,
+            @Main Executor mainExecutor,
             ClipboardOverlaySuppressionController clipboardOverlaySuppressionController) {
         mContext = context;
         mOverlayProvider = clipboardOverlayControllerProvider;
         mClipboardToast = clipboardToast;
-        mClipboardManager = clipboardManager.forUser(UserHandle.CURRENT);
-        mKeyguardManager = keyguardManager;
+        mClipboardManagerProvider = clipboardManager;
+        mKeyguardManagerProvider = keyguardManager;
         mUiEventLogger = uiEventLogger;
         mClipboardOverlaySuppressionController = clipboardOverlaySuppressionController;
+
+        mMainExecutor = mainExecutor;
+        mUserTracker = userTracker;
+        setUser(mUserTracker.getUserHandle());
+    }
+
+    private void setUser(UserHandle user) {
+        mClipboardManagerForUser = mClipboardManagerProvider.forUser(user);
+        mKeyguardManagerForUser = mKeyguardManagerProvider.forUser(user);
     }
 
     @Override
     public void start() {
-        mClipboardManager.addPrimaryClipChangedListener(this);
+        if (clipboardOverlayMultiuser()) {
+            mUserTracker.addCallback(mCallback, mMainExecutor);
+        }
+        mClipboardManagerForUser.addPrimaryClipChangedListener(this);
     }
 
     @Override
     public void onPrimaryClipChanged() {
-        if (!mClipboardManager.hasPrimaryClip()) {
+        if (!mClipboardManagerForUser.hasPrimaryClip()) {
             return;
         }
 
-        String clipSource = mClipboardManager.getPrimaryClipSource();
-        ClipData clipData = mClipboardManager.getPrimaryClip();
+        String clipSource = mClipboardManagerForUser.getPrimaryClipSource();
+        ClipData clipData = mClipboardManagerForUser.getPrimaryClip();
 
         if (overrideSuppressOverlayCondition()) {
             if (mClipboardOverlaySuppressionController.shouldSuppressOverlay(clipData, clipSource,
@@ -112,7 +152,7 @@ public class ClipboardListener implements
         }
 
         // user should not access intents before setup or while device is locked
-        if ((clipboardNoninteractiveOnLockscreen() && mKeyguardManager.isDeviceLocked())
+        if (mKeyguardManagerForUser.isDeviceLocked()
                 || !isUserSetupComplete()
                 || clipData == null // shouldn't happen, but just in case
                 || clipData.getItemCount() == 0) {
@@ -136,19 +176,26 @@ public class ClipboardListener implements
         });
     }
 
-    // The overlay is suppressed if EXTRA_SUPPRESS_OVERLAY is true and the device is an emulator or
-    // the source package is SHELL_PACKAGE. This is meant to suppress the overlay when the emulator
-    // or a mirrored device is syncing the clipboard.
+    // The overlay is suppressed the device is an emulator or if the source package is SHELL_PACKAGE
+    // or SYSTEMUI_PACKAGE. It can also must have the EXTRA_SUPPRESS_OVERLAY be true. This is meant
+    // to suppress the overlay when the emulator or a mirrored device is syncing the clipboard, or
+    // when copying a screenshot via the post-screenshot UI.
     @VisibleForTesting
-    static boolean shouldSuppressOverlay(ClipData clipData, String clipSource,
-            boolean isEmulator) {
-        if (!(isEmulator || SHELL_PACKAGE.equals(clipSource))) {
+    static boolean shouldSuppressOverlay(ClipData clipData, String clipSource, boolean isEmulator) {
+        if (!(isEmulator || (clipSource != null && ALLOWED_PACKAGES.contains(clipSource)))) {
             return false;
         }
-        if (clipData == null || clipData.getDescription().getExtras() == null) {
+
+        if (clipData == null) {
             return false;
         }
-        return clipData.getDescription().getExtras().getBoolean(EXTRA_SUPPRESS_OVERLAY, false);
+
+        PersistableBundle extras = clipData.getDescription().getExtras();
+        if (extras == null) {
+            return false;
+        }
+
+        return extras.getBoolean(EXTRA_SUPPRESS_OVERLAY, false);
     }
 
     boolean shouldShowToast(ClipData clipData) {
@@ -163,7 +210,13 @@ public class ClipboardListener implements
     }
 
     private boolean isUserSetupComplete() {
-        return Settings.Secure.getInt(mContext.getContentResolver(),
+        Context userContext;
+        try {
+            userContext = mContext.createContextAsUser(mUserTracker.getUserHandle(), 0);
+        } catch (IllegalStateException e) {
+            userContext = mContext;
+        }
+        return Settings.Secure.getInt(userContext.getContentResolver(),
                 SETTINGS_SECURE_USER_SETUP_COMPLETE, 0) == 1;
     }
 

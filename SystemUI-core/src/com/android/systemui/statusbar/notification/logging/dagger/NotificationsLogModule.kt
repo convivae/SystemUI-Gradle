@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.logging.dagger
 
+import com.android.app.tracing.TrackGroupUtils.trackGroup
+import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.LogBufferFactory
@@ -31,7 +33,8 @@ import com.android.systemui.log.dagger.NotificationSectionLog
 import com.android.systemui.log.dagger.SensitiveNotificationProtectionLog
 import com.android.systemui.log.dagger.UnseenNotificationLog
 import com.android.systemui.log.dagger.VisualStabilityLog
-import com.android.systemui.statusbar.notification.NotifPipelineFlags
+import com.android.systemui.log.table.TableLogBuffer
+import com.android.systemui.log.table.TableLogBufferFactory
 import com.android.systemui.statusbar.notification.promoted.PromotedNotificationLog
 import com.android.systemui.util.Compile
 import dagger.Module
@@ -44,7 +47,11 @@ object NotificationsLogModule {
     @SysUISingleton
     @NotificationHeadsUpLog
     fun provideNotificationHeadsUpLogBuffer(factory: LogBufferFactory): LogBuffer {
-        return factory.create("NotifHeadsUpLog", 1000)
+        return factory.create(
+            "NotifHeadsUpLog",
+            1000,
+            systraceTrackName = notifPipelineTrack("NotifHeadsUpLog"),
+        )
     }
 
     /** Provides a logging buffer for logs related to inflation of notifications. */
@@ -52,7 +59,11 @@ object NotificationsLogModule {
     @SysUISingleton
     @NotifInflationLog
     fun provideNotifInflationLogBuffer(factory: LogBufferFactory): LogBuffer {
-        return factory.create("NotifInflationLog", 250)
+        return factory.create(
+            "NotifInflationLog",
+            500,
+            systraceTrackName = notifPipelineTrack("NotifInflationLog"),
+        )
     }
 
     /** Provides a logging buffer for all logs related to the data layer of notifications. */
@@ -60,7 +71,11 @@ object NotificationsLogModule {
     @SysUISingleton
     @NotifInteractionLog
     fun provideNotifInteractionLogBuffer(factory: LogBufferFactory): LogBuffer {
-        return factory.create("NotifInteractionLog", 50)
+        return factory.create(
+            "NotifInteractionLog",
+            50,
+            systraceTrackName = notifPipelineTrack("NotifInteractionLog"),
+        )
     }
 
     /** Provides a logging buffer for notification interruption calculations. */
@@ -68,7 +83,11 @@ object NotificationsLogModule {
     @SysUISingleton
     @NotificationInterruptLog
     fun provideNotificationInterruptLogBuffer(factory: LogBufferFactory): LogBuffer {
-        return factory.create("NotifInterruptLog", 100)
+        return factory.create(
+            "NotifInterruptLog",
+            100,
+            systraceTrackName = notifPipelineTrack("NotifInterruptLog"),
+        )
     }
 
     /** Provides a logging buffer for all logs related to notifications on the lockscreen. */
@@ -83,15 +102,17 @@ object NotificationsLogModule {
     @Provides
     @SysUISingleton
     @NotificationLog
-    fun provideNotificationsLogBuffer(
-        factory: LogBufferFactory,
-        notifPipelineFlags: NotifPipelineFlags,
-    ): LogBuffer {
+    fun provideNotificationsLogBuffer(factory: LogBufferFactory): LogBuffer {
         var maxSize = 1000
-        if (Compile.IS_DEBUG && notifPipelineFlags.isDevLoggingEnabled()) {
+        if (Flags.notificationDeveloperLogging()) {
             maxSize *= 10
         }
-        return factory.create("NotifLog", maxSize, Compile.IS_DEBUG /* systrace */)
+        return factory.create(
+            "NotifLog",
+            maxSize,
+            /* systrace= */ Compile.IS_DEBUG,
+            systraceTrackName = notifPipelineTrack("NotifLog"),
+        )
     }
 
     /** Provides a logging buffer for all logs related to remote input controller. */
@@ -107,7 +128,11 @@ object NotificationsLogModule {
     @SysUISingleton
     @NotificationRenderLog
     fun provideNotificationRenderLogBuffer(factory: LogBufferFactory): LogBuffer {
-        return factory.create("NotifRenderLog", 100)
+        return factory.create(
+            "NotifRenderLog",
+            100,
+            systraceTrackName = notifPipelineTrack("NotifRenderLog"),
+        )
     }
 
     /** Provides a logging buffer for all logs related to managing notification sections. */
@@ -149,4 +174,23 @@ object NotificationsLogModule {
     fun provideVisualStabilityLogBuffer(factory: LogBufferFactory): LogBuffer {
         return factory.create("VisualStabilityLog", 50, /* maxSize */ false /* systrace */)
     }
+
+    /** Provides a table log buffer for changes to notification alpha. */
+    @JvmStatic
+    @Provides
+    @SysUISingleton
+    @NotificationAlphaTableLog
+    fun provideNotificationAlphaTableLogBuffer(factory: TableLogBufferFactory): TableLogBuffer {
+        return factory.create("NotificationAlphaTableLog", 1000)
+    }
+}
+
+private const val NOTIF_PIPELINE_TRACK_GROUP_NAME = "Notification pipeline"
+
+/**
+ * This generates a track name that is hierarcically collapsed inside
+ * [NOTIF_PIPELINE_TRACK_GROUP_NAME] in perfetto traces.
+ */
+private fun notifPipelineTrack(trackName: String): String {
+    return trackGroup(NOTIF_PIPELINE_TRACK_GROUP_NAME, trackName)
 }

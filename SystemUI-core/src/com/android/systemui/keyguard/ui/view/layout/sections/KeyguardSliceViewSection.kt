@@ -17,74 +17,124 @@
 
 package com.android.systemui.keyguard.ui.view.layout.sections
 
-import android.view.View
-import android.view.ViewGroup
+import android.content.Context
+import android.os.Handler
+import android.view.LayoutInflater
 import androidx.constraintlayout.widget.Barrier
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-import com.android.systemui.customization.R as customR
-import com.android.systemui.keyguard.MigrateClocksToBlueprint
+import com.android.keyguard.KeyguardSliceView
+import com.android.keyguard.KeyguardSliceViewController
+import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.dump.DumpManager
+import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardSection
+import com.android.systemui.keyguard.ui.binder.KeyguardSliceViewBinder
+import com.android.systemui.keyguard.ui.viewmodel.AodBurnInViewModel
+import com.android.systemui.keyguard.ui.viewmodel.KeyguardSmartspaceViewModel
+import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockViewIds
 import com.android.systemui.res.R
+import com.android.systemui.settings.DisplayTracker
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
+import com.android.systemui.statusbar.policy.ConfigurationController
 import javax.inject.Inject
+import kotlinx.coroutines.DisposableHandle
 
 class KeyguardSliceViewSection
 @Inject
 constructor(
+    @ShadeDisplayAware val context: Context,
     val smartspaceController: LockscreenSmartspaceController,
+    val layoutInflater: LayoutInflater,
+    @Main val handler: Handler,
+    @Background val bgHandler: Handler,
+    val activityStarter: ActivityStarter,
+    val configurationController: ConfigurationController,
+    val dumpManager: DumpManager,
+    val displayTracker: DisplayTracker,
+    val keyguardInteractor: KeyguardInteractor,
+    val aodBurnInViewModel: AodBurnInViewModel,
+    val keyguardSmartspaceViewModel: KeyguardSmartspaceViewModel,
 ) : KeyguardSection() {
-    override fun addViews(constraintLayout: ConstraintLayout) {
-        if (!MigrateClocksToBlueprint.isEnabled) return
-        if (smartspaceController.isEnabled) return
+    private lateinit var sliceView: KeyguardSliceView
+    private var disposableHandle: DisposableHandle? = null
 
-        constraintLayout.findViewById<View?>(R.id.keyguard_slice_view)?.let {
-            (it.parent as ViewGroup).removeView(it)
-            constraintLayout.addView(it)
-        }
+    override fun addViews(constraintLayout: ConstraintLayout) {
+        if (smartspaceController.isEnabled) return
+        sliceView =
+            layoutInflater.inflate(R.layout.keyguard_slice_view, null, false) as KeyguardSliceView
+        constraintLayout.addView(sliceView)
     }
 
-    override fun bindData(constraintLayout: ConstraintLayout) {}
+    override fun bindData(constraintLayout: ConstraintLayout) {
+        if (smartspaceController.isEnabled) return
+        val controller =
+            KeyguardSliceViewController(
+                handler,
+                bgHandler,
+                sliceView,
+                activityStarter,
+                configurationController,
+                dumpManager,
+                displayTracker,
+            )
+        controller.setupUri(null)
+        controller.init()
+
+        disposableHandle?.dispose()
+        disposableHandle =
+            KeyguardSliceViewBinder.bind(
+                sliceView,
+                keyguardInteractor,
+                controller,
+                aodBurnInViewModel,
+            )
+    }
 
     override fun applyConstraints(constraintSet: ConstraintSet) {
-        if (!MigrateClocksToBlueprint.isEnabled) return
         if (smartspaceController.isEnabled) return
-
+        val dateWeatherPaddingStart = KeyguardSmartspaceViewModel.getDateWeatherStartMargin(context)
         constraintSet.apply {
             connect(
                 R.id.keyguard_slice_view,
                 ConstraintSet.START,
                 ConstraintSet.PARENT_ID,
-                ConstraintSet.START
+                ConstraintSet.START,
+                dateWeatherPaddingStart,
             )
             connect(
                 R.id.keyguard_slice_view,
                 ConstraintSet.END,
-                ConstraintSet.PARENT_ID,
-                ConstraintSet.END
+                if (keyguardSmartspaceViewModel.isFullWidthShade.value) {
+                    ConstraintSet.PARENT_ID
+                } else {
+                    R.id.split_shade_guideline
+                },
+                ConstraintSet.END,
             )
             constrainHeight(R.id.keyguard_slice_view, ConstraintSet.WRAP_CONTENT)
 
             connect(
                 R.id.keyguard_slice_view,
                 ConstraintSet.TOP,
-                customR.id.lockscreen_clock_view,
-                ConstraintSet.BOTTOM
+                ClockViewIds.LOCKSCREEN_CLOCK_VIEW_SMALL,
+                ConstraintSet.BOTTOM,
             )
 
             createBarrier(
                 R.id.smart_space_barrier_bottom,
                 Barrier.BOTTOM,
                 0,
-                *intArrayOf(R.id.keyguard_slice_view)
+                *intArrayOf(R.id.keyguard_slice_view),
             )
         }
     }
 
     override fun removeViews(constraintLayout: ConstraintLayout) {
-        if (!MigrateClocksToBlueprint.isEnabled) return
         if (smartspaceController.isEnabled) return
-
         constraintLayout.removeView(R.id.keyguard_slice_view)
     }
 }

@@ -17,56 +17,53 @@
 package com.android.systemui.volume.panel.component.volume.ui.composable
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon as MaterialIcon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderColors
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.progressBarRangeInfo
-import androidx.compose.ui.semantics.setProgress
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.android.compose.PlatformSlider
 import com.android.compose.PlatformSliderColors
-import com.android.systemui.Flags
-import com.android.systemui.common.shared.model.Icon
+import com.android.systemui.common.shared.colors.SystemUISliderColors
 import com.android.systemui.common.ui.compose.Icon
 import com.android.systemui.compose.modifiers.sysuiResTag
-import com.android.systemui.haptics.slider.SeekableSliderTrackerConfig
-import com.android.systemui.haptics.slider.SliderHapticFeedbackConfig
 import com.android.systemui.haptics.slider.compose.ui.SliderHapticsViewModel
-import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.qs.ui.compose.borderOnFocus
+import com.android.systemui.res.R
+import com.android.systemui.volume.dialog.sliders.ui.compose.SliderTrack
+import com.android.systemui.volume.haptics.ui.VolumeHapticsConfigsProvider
 import com.android.systemui.volume.panel.component.volume.slider.ui.viewmodel.SliderState
+import com.android.systemui.volume.panel.component.volume.ui.composable.InternalDimensions.SliderTrackRoundedCorner
+import com.android.systemui.volume.ui.compose.slider.AccessibilityParams
+import com.android.systemui.volume.ui.compose.slider.Haptics
+import com.android.systemui.volume.ui.compose.slider.Slider
+import com.android.systemui.volume.ui.compose.slider.SliderIcon
+import com.google.common.annotations.VisibleForTesting
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun VolumeSlider(
     state: SliderState,
@@ -76,238 +73,191 @@ fun VolumeSlider(
     modifier: Modifier = Modifier,
     hapticsViewModelFactory: SliderHapticsViewModel.Factory?,
     onValueChangeFinished: (() -> Unit)? = null,
-    button: (@Composable () -> Unit)? = null,
+    button: (@Composable RowScope.() -> Unit)? = null,
+    showLabel: Boolean = true,
+    dimensions: VolumeSliderDimensions = VolumeSliderDimensions.Defaults,
+    materialSliderColors: SliderColors = SystemUISliderColors.Defaults,
 ) {
-    if (!Flags.volumeRedesign()) {
-        LegacyVolumeSlider(
-            state = state,
-            onValueChange = onValueChange,
-            onIconTapped = onIconTapped,
-            sliderColors = sliderColors,
-            onValueChangeFinished = onValueChangeFinished,
-            modifier = modifier,
-            hapticsViewModelFactory = hapticsViewModelFactory,
-        )
-        return
-    }
-
-    val value by valueState(state)
-    Column(modifier) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            state.icon?.let {
-                Icon(
-                    icon = it,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(40.dp).padding(8.dp),
+    Column(
+        modifier =
+            modifier
+                .borderOnFocus(
+                    color = MaterialTheme.colorScheme.secondary,
+                    cornerSize = CornerSize(SliderTrackRoundedCorner),
                 )
-            }
+                .animateContentSize()
+    ) {
+        if (showLabel) {
             Text(
                 text = state.label,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f).align(Alignment.CenterVertically),
+                modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
             )
-            button?.invoke()
         }
-        Slider(
-            value = value,
-            valueRange = state.valueRange,
-            onValueChange = onValueChange,
-            onValueChangeFinished = onValueChangeFinished,
-            enabled = state.isEnabled,
-            modifier =
-                Modifier.height(40.dp).sysuiResTag(state.label).clearAndSetSemantics {
-                    if (state.isEnabled) {
-                        contentDescription = state.label
-                        state.a11yClickDescription?.let {
-                            customActions =
-                                listOf(
-                                    CustomAccessibilityAction(it) {
-                                        onIconTapped()
-                                        true
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = dimensions.verticalPadding),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (state is SliderState.Empty) {
+                // reserve the space for the slider to avoid excess resizing
+                Spacer(modifier = Modifier.weight(1f).height(dimensions.thumbHeight))
+            } else {
+                Slider(
+                    value = state.value,
+                    valueRange = state.valueRange,
+                    onValueChanged = onValueChange,
+                    onValueChangeFinished = { onValueChangeFinished?.invoke() },
+                    colors = materialSliderColors,
+                    isEnabled = state.isEnabled,
+                    stepDistance = state.step,
+                    accessibilityParams =
+                        AccessibilityParams(
+                            contentDescription = state.a11yContentDescription,
+                            stateDescription = state.a11yStateDescription,
+                        ),
+                    track = { sliderState ->
+                        SliderTrack(
+                            sliderState = sliderState,
+                            colors = materialSliderColors,
+                            isEnabled = state.isEnabled,
+                            trackSize = dimensions.trackHeight,
+                            activeTrackEndIcon =
+                                state.icon?.let { icon ->
+                                    { iconsState ->
+                                        SliderIcon(
+                                            icon = {
+                                                Icon(
+                                                    icon = icon,
+                                                    tint = null,
+                                                    modifier =
+                                                        Modifier.size(dimensions.iconSize)
+                                                            .testTag(
+                                                                VolumeSlidersMotionTestKeys
+                                                                    .ACTIVE_ICON_TAG
+                                                            ),
+                                                )
+                                            },
+                                            isVisible = !iconsState.isInactiveTrackEndIconVisible,
+                                        )
                                     }
-                                )
-                        }
-
-                        state.a11yStateDescription?.let { stateDescription = it }
-                        progressBarRangeInfo = ProgressBarRangeInfo(state.value, state.valueRange)
-                    } else {
-                        disabled()
-                        contentDescription =
-                            state.disabledMessage?.let { "${state.label}, $it" } ?: state.label
-                    }
-                    setProgress { targetValue ->
-                        val targetDirection =
-                            when {
-                                targetValue > value -> 1
-                                targetValue < value -> -1
-                                else -> 0
-                            }
-
-                        val newValue =
-                            (value + targetDirection * state.a11yStep).coerceIn(
-                                state.valueRange.start,
-                                state.valueRange.endInclusive,
+                                },
+                            inactiveTrackEndIcon =
+                                state.icon?.let { icon ->
+                                    { iconsState ->
+                                        SliderIcon(
+                                            icon = {
+                                                Icon(
+                                                    icon = icon,
+                                                    tint = null,
+                                                    modifier =
+                                                        Modifier.size(dimensions.iconSize)
+                                                            .testTag(
+                                                                VolumeSlidersMotionTestKeys
+                                                                    .INACTIVE_ICON_TAG
+                                                            ),
+                                                )
+                                            },
+                                            isVisible = iconsState.isInactiveTrackEndIconVisible,
+                                        )
+                                    }
+                                },
+                            trackCornerSize = SliderTrackRoundedCorner,
+                        )
+                    },
+                    thumb = { sliderState, interactionSource ->
+                        SliderDefaults.Thumb(
+                            sliderState = sliderState,
+                            interactionSource = interactionSource,
+                            enabled = state.isEnabled,
+                            colors = materialSliderColors,
+                            thumbSize = DpSize(dimensions.thumbWidth, dimensions.thumbHeight),
+                        )
+                    },
+                    haptics =
+                        hapticsViewModelFactory?.let {
+                            Haptics.Enabled(
+                                hapticsViewModelFactory = it,
+                                hapticConfigs =
+                                    VolumeHapticsConfigsProvider.continuousConfigs(
+                                        state.hapticFilter
+                                    ),
+                                orientation = Orientation.Horizontal,
                             )
-                        onValueChange(newValue)
-                        true
-                    }
-                },
-        )
+                        } ?: Haptics.Disabled,
+                    modifier =
+                        Modifier.weight(1f).height(dimensions.thumbHeight).sysuiResTag(state.label),
+                )
+            }
+            button?.invoke(this)
+        }
+        state.disabledMessage?.let { disabledMessage ->
+            AnimatedVisibility(visible = !state.isEnabled) {
+                Row(
+                    modifier =
+                        Modifier.padding(bottom = 12.dp)
+                            .testTag(VolumeSlidersMotionTestKeys.DISABLED_MESSAGE_TAG),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MaterialIcon(
+                        painter = painterResource(R.drawable.ic_error_outline),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = disabledMessage,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.basicMarquee().clearAndSetSemantics {},
+                    )
+                }
+            }
+        }
     }
 }
 
-@Composable
-private fun LegacyVolumeSlider(
-    state: SliderState,
-    onValueChange: (newValue: Float) -> Unit,
-    onIconTapped: () -> Unit,
-    sliderColors: PlatformSliderColors,
-    hapticsViewModelFactory: SliderHapticsViewModel.Factory?,
-    modifier: Modifier = Modifier,
-    onValueChangeFinished: (() -> Unit)? = null,
-) {
-    val value by valueState(state)
-    val interactionSource = remember { MutableInteractionSource() }
-    val sliderStepSize = 1f / (state.valueRange.endInclusive - state.valueRange.start)
-    val hapticsViewModel: SliderHapticsViewModel? =
-        hapticsViewModelFactory?.let {
-            rememberViewModel(traceName = "SliderHapticsViewModel") {
-                it.create(
-                    interactionSource,
-                    state.valueRange,
-                    Orientation.Horizontal,
-                    SliderHapticFeedbackConfig(
-                        lowerBookendScale = 0.2f,
-                        progressBasedDragMinScale = 0.2f,
-                        progressBasedDragMaxScale = 0.5f,
-                        deltaProgressForDragThreshold = 0f,
-                        additionalVelocityMaxBump = 0.2f,
-                        maxVelocityToScale = 0.1f, /* slider progress(from 0 to 1) per sec */
-                        sliderStepSize = sliderStepSize,
-                    ),
-                    SeekableSliderTrackerConfig(
-                        lowerBookendThreshold = 0f,
-                        upperBookendThreshold = 1f,
-                    ),
-                )
-            }
-        }
-
-    // Perform haptics due to UI composition
-    hapticsViewModel?.onValueChange(value)
-
-    PlatformSlider(
-        modifier =
-            modifier.sysuiResTag(state.label).clearAndSetSemantics {
-                if (state.isEnabled) {
-                    contentDescription = state.label
-                    state.a11yClickDescription?.let {
-                        customActions =
-                            listOf(
-                                CustomAccessibilityAction(it) {
-                                    onIconTapped()
-                                    true
-                                }
-                            )
-                    }
-
-                    state.a11yStateDescription?.let { stateDescription = it }
-                    progressBarRangeInfo = ProgressBarRangeInfo(state.value, state.valueRange)
-                } else {
-                    disabled()
-                    contentDescription =
-                        state.disabledMessage?.let { "${state.label}, $it" } ?: state.label
-                }
-                setProgress { targetValue ->
-                    val targetDirection =
-                        when {
-                            targetValue > value -> 1
-                            targetValue < value -> -1
-                            else -> 0
-                        }
-
-                    val newValue =
-                        (value + targetDirection * state.a11yStep).coerceIn(
-                            state.valueRange.start,
-                            state.valueRange.endInclusive,
-                        )
-                    onValueChange(newValue)
-                    true
-                }
-            },
-        value = value,
-        valueRange = state.valueRange,
-        onValueChange = { newValue ->
-            hapticsViewModel?.addVelocityDataPoint(newValue)
-            onValueChange(newValue)
-        },
-        onValueChangeFinished = {
-            hapticsViewModel?.onValueChangeEnded()
-            onValueChangeFinished?.invoke()
-        },
-        enabled = state.isEnabled,
-        icon = {
-            state.icon?.let {
-                SliderIcon(icon = it, onIconTapped = onIconTapped, isTappable = state.isMutable)
-            }
-        },
-        colors = sliderColors,
-        label = { isDragging ->
-            AnimatedVisibility(
-                visible = !isDragging,
-                enter = fadeIn(tween(150)),
-                exit = fadeOut(tween(150)),
-            ) {
-                VolumeSliderContent(
-                    modifier = Modifier,
-                    label = state.label,
-                    isEnabled = state.isEnabled,
-                    disabledMessage = state.disabledMessage,
-                )
-            }
-        },
-        interactionSource = interactionSource,
-    )
+@VisibleForTesting
+object VolumeSlidersMotionTestKeys {
+    const val ACTIVE_ICON_TAG = "Volume_Slider_activeStartIcon"
+    const val INACTIVE_ICON_TAG = "Volume_Slider_inactiveStartIcon"
+    const val DISABLED_MESSAGE_TAG = "disabledMessage"
 }
 
-@Composable
-private fun valueState(state: SliderState): State<Float> {
-    var prevState by remember { mutableStateOf(state) }
-    // Don't animate slider value when receive the first value and when changing isEnabled state
-    val shouldSkipAnimation =
-        prevState is SliderState.Empty || prevState.isEnabled != state.isEnabled
-    val value =
-        if (shouldSkipAnimation) remember { mutableFloatStateOf(state.value) }
-        else animateFloatAsState(targetValue = state.value, label = "VolumeSliderValueAnimation")
-    prevState = state
-    return value
+private object InternalDimensions {
+    val SliderTrackRoundedCorner = 12.dp
 }
 
-@Composable
-private fun SliderIcon(
-    icon: Icon,
-    onIconTapped: () -> Unit,
-    isTappable: Boolean,
-    modifier: Modifier = Modifier,
+data class VolumeSliderDimensions(
+    val iconSize: Dp,
+    val thumbHeight: Dp,
+    val thumbWidth: Dp,
+    val trackHeight: Dp,
+    val verticalPadding: Dp,
 ) {
-    val boxModifier =
-        if (isTappable) {
-                modifier.clickable(
-                    onClick = onIconTapped,
-                    interactionSource = null,
-                    indication = null,
+    companion object {
+        val Defaults =
+            VolumeSliderDimensions(
+                iconSize = 24.dp,
+                thumbHeight = 52.dp,
+                thumbWidth = 4.dp,
+                trackHeight = 40.dp,
+                verticalPadding = 4.dp,
+            )
+    }
+}
+
+object VolumeSliderColors {
+    val Defaults: SliderColors
+        @Composable
+        get() =
+            SliderDefaults.colors()
+                .copy(
+                    activeTickColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    disabledActiveTickColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    disabledInactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 )
-            } else {
-                modifier
-            }
-            .fillMaxSize()
-    Box(
-        modifier = boxModifier,
-        contentAlignment = Alignment.Center,
-        content = { Icon(modifier = Modifier.size(24.dp), icon = icon) },
-    )
 }

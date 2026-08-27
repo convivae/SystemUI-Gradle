@@ -17,17 +17,18 @@
 package com.android.systemui.keyguard.domain.interactor
 
 import android.content.Context
+import android.security.Flags.secureLockDevice
 import android.util.Log
 import com.android.keyguard.KeyguardUpdateMonitor
 import com.android.systemui.bouncer.domain.interactor.AlternateBouncerInteractor
 import com.android.systemui.bouncer.domain.interactor.PrimaryBouncerInteractor
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.data.repository.DeviceEntryFingerprintAuthRepository
 import com.android.systemui.res.R
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
-import com.android.systemui.scene.shared.model.Scenes
+import com.android.systemui.scene.shared.model.Overlays
+import com.android.systemui.securelockdevice.domain.interactor.SecureLockDeviceInteractor
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,7 @@ constructor(
     deviceEntryFingerprintAuthRepository: DeviceEntryFingerprintAuthRepository,
     private val sceneInteractor: SceneInteractor,
     private val primaryBouncerInteractor: PrimaryBouncerInteractor,
+    secureLockDeviceInteractor: SecureLockDeviceInteractor,
     alternateBouncerInteractor: AlternateBouncerInteractor,
     private val keyguardUpdateMonitor: KeyguardUpdateMonitor,
 ) {
@@ -59,9 +61,34 @@ constructor(
     private val isSideFpsIndicatorOnPrimaryBouncerEnabled: Boolean
         get() = context.resources.getBoolean(R.bool.config_show_sidefps_hint_on_bouncer)
 
-    private val isBouncerSceneActive: Flow<Boolean> =
+    private val isBouncerOverlayActive: Flow<Boolean> =
         if (SceneContainerFlag.isEnabled) {
-            sceneInteractor.currentScene.map { it == Scenes.Bouncer }.distinctUntilChanged()
+            sceneInteractor.currentOverlays.map { Overlays.Bouncer in it }.distinctUntilChanged()
+        } else {
+            flowOf(false)
+        }
+
+    private val isBiometricAuthRequestedForSecureLockDevice: Flow<Boolean> =
+        if (secureLockDevice()) {
+            secureLockDeviceInteractor.requiresStrongBiometricAuthForSecureLockDevice
+        } else {
+            flowOf(false)
+        }
+
+    /**
+     * Indicates when secure lock device is requesting SFPS auth and the SFPS indicator should be
+     * shown on the UI
+     */
+    val showIndicatorForSecureLockDeviceBiometricAuth: Flow<Boolean> =
+        if (secureLockDevice()) {
+            isBiometricAuthRequestedForSecureLockDevice
+                .map { biometricAuthRequested ->
+                    biometricAuthRequested &&
+                        keyguardUpdateMonitor.isFingerprintDetectionRunning &&
+                        keyguardUpdateMonitor.isUnlockingWithFingerprintAllowed
+                }
+                .distinctUntilChanged()
+                .onEach { Log.d(TAG, "showIndicatorForSecureLockDeviceBiometricAuth updated: $it") }
         } else {
             flowOf(false)
         }
@@ -73,7 +100,7 @@ constructor(
                 primaryBouncerInteractor.startingToHide,
                 primaryBouncerInteractor.startingDisappearAnimation.filterNotNull(),
                 // Bouncer scene visibility changes.
-                isBouncerSceneActive,
+                isBouncerOverlayActive,
                 deviceEntryFingerprintAuthRepository.shouldUpdateIndicatorVisibility.filter { it },
             )
             .map {
@@ -95,17 +122,24 @@ constructor(
      * sensor indicator.
      */
     val showIndicatorForDeviceEntry: Flow<Boolean> =
-        combine(showIndicatorForPrimaryBouncer, showIndicatorForAlternateBouncer) {
+        combine(
+                showIndicatorForPrimaryBouncer,
+                showIndicatorForAlternateBouncer,
+                showIndicatorForSecureLockDeviceBiometricAuth,
+            ) {
                 showForPrimaryBouncer,
-                showForAlternateBouncer ->
-                showForPrimaryBouncer || showForAlternateBouncer
+                showForAlternateBouncer,
+                showIndicatorForSecureLockDeviceBiometricAuth ->
+                showForPrimaryBouncer ||
+                    showForAlternateBouncer ||
+                    showIndicatorForSecureLockDeviceBiometricAuth
             }
             .distinctUntilChanged()
             .onEach { Log.d(TAG, "showIndicatorForDeviceEntry updated: $it") }
 
     private fun isBouncerActive(): Boolean {
         if (SceneContainerFlag.isEnabled) {
-            return sceneInteractor.currentScene.value == Scenes.Bouncer
+            return Overlays.Bouncer in sceneInteractor.currentOverlays.value
         }
         return primaryBouncerInteractor.isBouncerShowing() &&
             !primaryBouncerInteractor.isAnimatingAway()

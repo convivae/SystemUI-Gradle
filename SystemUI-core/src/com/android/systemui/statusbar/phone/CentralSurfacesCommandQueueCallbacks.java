@@ -16,6 +16,9 @@
 
 package com.android.systemui.statusbar.phone;
 
+import static android.service.quickaccesswallet.Flags.launchWalletOptionOnPowerDoubleTap;
+import static android.service.quickaccesswallet.Flags.launchWalletViaSysuiCallbacks;
+
 import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_AWAKE;
 import static com.android.systemui.keyguard.WakefulnessLifecycle.WAKEFULNESS_WAKING;
 
@@ -43,6 +46,7 @@ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.systemui.assist.AssistManager;
 import com.android.systemui.camera.CameraIntents;
+import com.android.systemui.camera.domain.interactor.CameraNotifyWarmUpInteractor;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.DisplayId;
 import com.android.systemui.dagger.qualifiers.Main;
@@ -52,8 +56,6 @@ import com.android.systemui.keyguard.WakefulnessLifecycle;
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.qs.QSHost;
-import com.android.systemui.qs.QSPanelController;
-import com.android.systemui.qs.flags.QsInCompose;
 import com.android.systemui.recents.ScreenPinningRequest;
 import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
@@ -65,11 +67,12 @@ import com.android.systemui.shade.ShadeHeaderController;
 import com.android.systemui.shade.domain.interactor.PanelExpansionInteractor;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.statusbar.CommandQueue;
+import com.android.systemui.statusbar.notification.headsup.HeadsUpManager;
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController;
-import com.android.systemui.statusbar.notification.headsup.HeadsUpManager;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.RemoteInputQuickSettingsDisabler;
+import com.android.systemui.wallet.controller.QuickAccessWalletController;
 
 import dagger.Lazy;
 
@@ -102,6 +105,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     private final NotificationStackScrollLayoutController mNotificationStackScrollLayoutController;
     private final StatusBarHideIconsForBouncerManager mStatusBarHideIconsForBouncerManager;
     private final PowerManager mPowerManager;
+    private final CameraNotifyWarmUpInteractor mCameraNotifyWarmUpInteractor;
     private final Optional<Vibrator> mVibratorOptional;
     private final int mDisplayId;
     private final UserTracker mUserTracker;
@@ -119,6 +123,11 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     private int mDisabled2;
 
     private final EmergencyGestureIntentFactory mEmergencyGestureIntentFactory;
+    private QuickAccessWalletController mWalletController;
+
+     enum PowerButtonLaunchGestureTarget {
+        LAUNCH_CAMERA_ON_GESTURE, LAUNCH_WALLET_ON_GESTURE
+    }
 
     @Inject
     CentralSurfacesCommandQueueCallbacks(
@@ -145,6 +154,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
             NotificationStackScrollLayoutController notificationStackScrollLayoutController,
             StatusBarHideIconsForBouncerManager statusBarHideIconsForBouncerManager,
             PowerManager powerManager,
+            CameraNotifyWarmUpInteractor cameraNotifyWarmUpInteractor,
             Optional<Vibrator> vibratorOptional,
             @DisplayId int displayId,
             Lazy<CameraLauncher> cameraLauncherLazy,
@@ -152,7 +162,8 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
             QSHost qsHost,
             ActivityStarter activityStarter,
             KeyguardInteractor keyguardInteractor,
-            EmergencyGestureIntentFactory emergencyGestureIntentFactory) {
+            EmergencyGestureIntentFactory emergencyGestureIntentFactory,
+            QuickAccessWalletController walletController) {
         mCentralSurfaces = centralSurfaces;
         mQsController = quickSettingsController;
         mContext = context;
@@ -175,6 +186,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
         mNotificationStackScrollLayoutController = notificationStackScrollLayoutController;
         mStatusBarHideIconsForBouncerManager = statusBarHideIconsForBouncerManager;
         mPowerManager = powerManager;
+        mCameraNotifyWarmUpInteractor = cameraNotifyWarmUpInteractor;
         mVibratorOptional = vibratorOptional;
         mDisplayId = displayId;
         mCameraLauncherLazy = cameraLauncherLazy;
@@ -186,6 +198,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
                 mVibratorOptional, resources);
         mActivityStarter = activityStarter;
         mEmergencyGestureIntentFactory = emergencyGestureIntentFactory;
+        mWalletController = walletController;
     }
 
     @Override
@@ -210,16 +223,8 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
 
     @Override
     public void clickTile(ComponentName tile) {
-        if (QsInCompose.isEnabled()) {
-            if (tile != null) {
-                mQSHost.clickTile(tile);
-            }
-        } else {
-            // Can't inject this because it changes with the QS fragment
-            QSPanelController qsPanelController = mCentralSurfaces.getQSPanelController();
-            if (qsPanelController != null) {
-                qsPanelController.clickTile(tile);
-            }
+        if (tile != null) {
+            mQSHost.clickTile(tile);
         }
     }
 
@@ -290,7 +295,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
 
         if ((diff1 & StatusBarManager.DISABLE_NOTIFICATION_ALERTS) != 0) {
             if ((state1 & StatusBarManager.DISABLE_NOTIFICATION_ALERTS) != 0) {
-                mHeadsUpManager.releaseAllImmediately();
+                mHeadsUpManager.releaseAllImmediately("CentralSurfacesCommandQueueCallbacks");
             }
         }
 
@@ -333,7 +338,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
                 }
                 mShadeController.animateExpandShade();
                 mNotificationStackScrollLayoutController.setWillExpand(true);
-                mHeadsUpManager.unpinAll(true /* userUnpinned */);
+                mHeadsUpManager.unpinAll(true /* userUnpinned */, "CentralSurfaces");
                 mMetricsLogger.count("panel_open", 1);
             } else if (!mQsController.getExpanded()
                     && !mShadeController.isExpandingOrCollapsing()) {
@@ -346,9 +351,15 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
 
     @Override
     public void onCameraLaunchGestureDetected(int source) {
+        if (launchWalletOptionOnPowerDoubleTap() && launchWalletViaSysuiCallbacks()) {
+            onPowerButtonLaunchGestureTriggered(
+                    PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE, source);
+            return;
+        }
+
         mCentralSurfaces.setLastCameraLaunchSource(source);
         if (mCentralSurfaces.isGoingToSleep()) {
-            if (CentralSurfaces.DEBUG_CAMERA_LIFT) {
+            if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
                 Slog.d(CentralSurfaces.TAG, "Finish going to sleep before launching camera");
             }
             mCentralSurfaces.setLaunchCameraOnFinishedGoingToSleep(true);
@@ -356,12 +367,13 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
         }
         if (!mCameraLauncherLazy.get().canCameraGestureBeLaunched(
                 mPanelExpansionInteractor.getBarState())) {
-            if (CentralSurfaces.DEBUG_CAMERA_LIFT) {
+            if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
                 Slog.d(CentralSurfaces.TAG, "Can't launch camera right now");
             }
             return;
         }
-        mKeyguardInteractor.onCameraLaunchDetected(source);
+        mKeyguardInteractor.onCameraLaunchDetected(source,
+                mCameraLauncherLazy.get().willLaunchSecureIntent());
 
         if (!mCentralSurfaces.isDeviceInteractive()) {
             mPowerManager.wakeUp(SystemClock.uptimeMillis(), PowerManager.WAKE_REASON_CAMERA_LAUNCH,
@@ -375,6 +387,9 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
         }
 
         if (!mKeyguardStateController.isShowing()) {
+            if (com.android.internal.camera.flags.Flags.cameraWarmUp()) {
+                mCameraNotifyWarmUpInteractor.notifyCameraWarmUp();
+            }
             final Intent cameraIntent = CameraIntents.getInsecureCameraIntent(mContext, mUserTracker.getUserId());
             cameraIntent.putExtra(CameraIntents.EXTRA_LAUNCH_SOURCE, source);
             mActivityStarter.startActivityDismissingKeyguard(cameraIntent,
@@ -389,7 +404,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
                         CentralSurfaces.LAUNCH_TRANSITION_TIMEOUT_MS + 1000L);
             }
             if (isWakingUpOrAwake()) {
-                if (CentralSurfaces.DEBUG_CAMERA_LIFT) {
+                if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
                     Slog.d(CentralSurfaces.TAG, "Launching camera");
                 }
                 if (mStatusBarKeyguardViewManager.isBouncerShowing()) {
@@ -404,12 +419,19 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
                 // we will dismiss us too early since we are waiting on an activity to be drawn and
                 // incorrectly get notified because of the screen on event (which resumes and pauses
                 // some activities)
-                if (CentralSurfaces.DEBUG_CAMERA_LIFT) {
+                if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
                     Slog.d(CentralSurfaces.TAG, "Deferring until screen turns on");
                 }
                 mCentralSurfaces.setLaunchCameraOnFinishedWaking(true);
             }
         }
+    }
+
+    @Override
+    public void onWalletLaunchGestureDetected() {
+        onPowerButtonLaunchGestureTriggered(
+                PowerButtonLaunchGestureTarget.LAUNCH_WALLET_ON_GESTURE,
+                /* cameraLaunchSource=*/ -1);
     }
 
     @Override
@@ -576,5 +598,157 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
         mShadeController.performHapticFeedback(
                 HapticFeedbackConstants.GESTURE_START
         );
+    }
+
+    private void onPowerButtonLaunchGestureTriggered(PowerButtonLaunchGestureTarget target,
+            int cameraLaunchSource) {
+        if (!launchWalletOptionOnPowerDoubleTap() || !launchWalletViaSysuiCallbacks()) {
+            return;
+        }
+
+        if (target == PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE) {
+            mCentralSurfaces.setLastCameraLaunchSource(cameraLaunchSource);
+        }
+
+        if (mCentralSurfaces.isGoingToSleep()) {
+            setLaunchAppOnFinishedGoingToSleep(target);
+            return;
+        }
+
+        if (!canAppBeLaunched(PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE)) {
+            if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
+                Slog.d(CentralSurfaces.TAG, "Can't launch app via power button gesture right "
+                        + "now");
+            }
+            return;
+        }
+
+        if (target == PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE) {
+            mKeyguardInteractor.onCameraLaunchDetected(cameraLaunchSource,
+                    mCameraLauncherLazy.get().willLaunchSecureIntent());
+        }
+
+        wakeUpFromAppLaunch(target);
+        vibrateForCameraGesture();
+
+        if (target == PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE &&
+                cameraLaunchSource == StatusBarManager.CAMERA_LAUNCH_SOURCE_POWER_DOUBLE_TAP) {
+            Slog.v(CentralSurfaces.TAG, "Camera launch");
+            mKeyguardUpdateMonitor.onCameraLaunched();
+        }
+
+        if (!mKeyguardStateController.isShowing()) {
+            switch (target) {
+                case LAUNCH_CAMERA_ON_GESTURE:
+                    startInsecureCameraIntent(cameraLaunchSource);
+                    break;
+                case LAUNCH_WALLET_ON_GESTURE:
+                    mWalletController.startGestureUiIntent(mActivityStarter,
+                            /* animationController=*/ null);
+                    break;
+            }
+        } else {
+            if (!mCentralSurfaces.isDeviceInteractive()) {
+                // Avoid flickering of the scrim when we instant launch and the bouncer
+                // comes on.
+                mCentralSurfaces.acquireGestureWakeLock(
+                        CentralSurfaces.LAUNCH_TRANSITION_TIMEOUT_MS + 1000L);
+            }
+            if (isWakingUpOrAwake()) {
+                if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
+                    Slog.d(CentralSurfaces.TAG, "Launching app via double power button "
+                            + "gesture");
+                }
+                if (mStatusBarKeyguardViewManager.isBouncerShowing()) {
+                    mStatusBarKeyguardViewManager.reset(true /* hide */);
+                }
+                mCentralSurfaces.startLaunchTransitionTimeout();
+                switch (target) {
+                    case LAUNCH_CAMERA_ON_GESTURE:
+                        mCameraLauncherLazy.get().launchCamera(cameraLaunchSource,
+                                mPanelExpansionInteractor.isFullyCollapsed());
+                        break;
+                    case LAUNCH_WALLET_ON_GESTURE:
+                        mWalletController.startGestureUiIntent(mActivityStarter,
+                                /* animationController=*/ null);
+                        break;
+                }
+                mCentralSurfaces.updateScrimController();
+            } else {
+                // We need to defer the app launch until the screen comes on, since otherwise
+                // we will dismiss us too early since we are waiting on an activity to be drawn and
+                // incorrectly get notified because of the screen on event (which resumes and pauses
+                // some activities)
+                if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
+                    Slog.d(CentralSurfaces.TAG, "Deferring until screen turns on");
+                }
+                setLaunchAppOnFinishedWaking(target);
+            }
+        }
+    }
+
+    private void setLaunchAppOnFinishedGoingToSleep(PowerButtonLaunchGestureTarget target) {
+        if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
+            Slog.d(CentralSurfaces.TAG,
+                    "Finish going to sleep before LAUNCHING");
+        }
+        switch (target) {
+            case LAUNCH_CAMERA_ON_GESTURE:
+                Slog.d(CentralSurfaces.TAG, "setLaunchCameraOnFinishedGoingToSleep");
+                mCentralSurfaces.setLaunchCameraOnFinishedGoingToSleep(true);
+                break;
+            case LAUNCH_WALLET_ON_GESTURE:
+                Slog.d(CentralSurfaces.TAG, "setLaunchWalletOnFinishedGoingToSleep");
+                mCentralSurfaces.setLaunchWalletOnFinishedGoingToSleep(true);
+                break;
+
+        }
+    }
+
+    private boolean canAppBeLaunched(PowerButtonLaunchGestureTarget target) {
+        if (target == PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE &&
+                !mCameraLauncherLazy.get().canCameraGestureBeLaunched(
+                        mPanelExpansionInteractor.getBarState())) {
+            if (CentralSurfaces.DEBUG_POWER_BUTTON_GESTURE) {
+                Slog.d(CentralSurfaces.TAG, "Can't launch camera right now");
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private void startInsecureCameraIntent(int source) {
+        if (com.android.internal.camera.flags.Flags.cameraWarmUp()) {
+            mCameraNotifyWarmUpInteractor.notifyCameraWarmUp();
+        }
+        final Intent cameraIntent = CameraIntents.getInsecureCameraIntent(mContext,
+                mUserTracker.getUserId());
+        cameraIntent.putExtra(CameraIntents.EXTRA_LAUNCH_SOURCE, source);
+        mActivityStarter.startActivityDismissingKeyguard(cameraIntent,
+                /* onlyProvisioned=*/ false, /* dismissShade=*/ true,
+                /* disallowEnterPictureInPictureWhileLaunching=*/ true,
+                /* callback=*/ null, /*flags=*/ 0,/* animationController=*/ null,
+                mUserTracker.getUserHandle());
+    }
+
+    private void setLaunchAppOnFinishedWaking(PowerButtonLaunchGestureTarget target) {
+        switch (target) {
+            case LAUNCH_CAMERA_ON_GESTURE:
+                mCentralSurfaces.setLaunchCameraOnFinishedWaking(true);
+                break;
+            case LAUNCH_WALLET_ON_GESTURE:
+                mCentralSurfaces.setLaunchWalletOnFinishedWaking(true);
+                break;
+        }
+    }
+
+    private void wakeUpFromAppLaunch(PowerButtonLaunchGestureTarget appLaunch) {
+        if (!mCentralSurfaces.isDeviceInteractive()) {
+            int reason = appLaunch == PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE ?
+                    PowerManager.WAKE_REASON_CAMERA_LAUNCH : PowerManager.WAKE_REASON_GESTURE;
+            String details = appLaunch ==  PowerButtonLaunchGestureTarget.LAUNCH_CAMERA_ON_GESTURE ?
+                    "com.android.systemui:CAMERA_GESTURE" : "com.android.systemui:WALLET_GESTURE";
+            mPowerManager.wakeUp(SystemClock.uptimeMillis(), reason, details);
+        }
     }
 }

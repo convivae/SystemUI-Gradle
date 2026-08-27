@@ -16,6 +16,8 @@
 
 package com.android.systemui.shade
 
+import com.android.systemui.brightness.domain.interactor.BrightnessMirrorShowingInteractor
+import com.android.systemui.brightness.domain.interactor.BrightnessMirrorShowingInteractorPassThrough
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.shade.data.repository.PrivacyChipRepository
 import com.android.systemui.shade.data.repository.PrivacyChipRepositoryImpl
@@ -81,4 +83,10 @@ abstract class ShadeEmptyImplModule {
     @Binds
     @SysUISingleton
     abstract fun bindShadeModeInteractor(impl: ShadeModeInteractorEmptyImpl): ShadeModeInteractor
+
+    @Binds
+    @SysUISingleton
+    abstract fun bindBrightnessMirrorInteractor(
+        impl: BrightnessMirrorShowingInteractorPassThrough
+    ): BrightnessMirrorShowingInteractor
 }

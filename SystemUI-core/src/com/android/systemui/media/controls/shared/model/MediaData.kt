@@ -22,6 +22,7 @@ import android.graphics.drawable.Icon
 import android.media.session.MediaSession
 import android.os.Process
 import com.android.internal.logging.InstanceId
+import com.android.settingslib.media.LocalMediaManager.MediaDeviceState
 import com.android.systemui.res.R
 
 /** State of a media view. */
@@ -55,6 +56,8 @@ data class MediaData(
     val clickIntent: PendingIntent? = null,
     /** Where the media is playing: phone, headphones, ear buds, remote session. */
     val device: MediaDeviceData? = null,
+    /** Where the media is suggested to be played. */
+    val suggestionData: SuggestionData? = null,
     /**
      * When active, a player will be displayed on keyguard and quick-quick settings. This is
      * unrelated to the stream being playing or not, a player will not be active if timed out, or in
@@ -99,12 +102,6 @@ data class MediaData(
 
     /** Track progress (0 - 1) to display for players where [resumption] is true */
     val resumeProgress: Double? = null,
-
-    /** Smartspace Id, used for logging. */
-    var smartspaceId: Int = -1,
-
-    /** If media card was visible to user, used for logging. */
-    var isImpressed: Boolean = false,
 ) {
     companion object {
         /** Media is playing on the local device */
@@ -135,7 +132,7 @@ data class MediaButton(
     /** Whether to reserve the empty space when the nextOrCustom is null */
     val reserveNext: Boolean = false,
     /** Whether to reserve the empty space when the prevOrCustom is null */
-    val reservePrev: Boolean = false
+    val reservePrev: Boolean = false,
 ) {
     fun getActionById(id: Int): MediaAction? {
         return when (id) {
@@ -159,7 +156,7 @@ data class MediaAction(
     // Rebind Id is used to detect identical rebinds and ignore them. It is intended
     // to prevent continuously looping animations from restarting due to the arrival
     // of repeated media notifications that are visually identical.
-    val rebindId: Int? = null
+    val rebindId: Int? = null,
 )
 
 /** State of a media action from notification. */
@@ -167,7 +164,7 @@ data class MediaNotificationAction(
     val isAuthenticationRequired: Boolean,
     val actionIntent: PendingIntent?,
     val icon: Drawable?,
-    val contentDescription: CharSequence?
+    val contentDescription: CharSequence?,
 )
 
 /** State of the media device. */
@@ -188,9 +185,6 @@ constructor(
 
     /** Unique id for this device */
     val id: String? = null,
-
-    /** Whether or not to show the broadcast button */
-    val showBroadcastButton: Boolean
 ) {
     /**
      * Check whether [MediaDeviceData] objects are equal in all fields except the icon. The icon is
@@ -205,7 +199,64 @@ constructor(
         return enabled == other.enabled &&
             name == other.name &&
             intent == other.intent &&
-            id == other.id &&
-            showBroadcastButton == other.showBroadcastButton
+            id == other.id
+    }
+}
+
+/** State of the suggested media device. */
+data class SuggestedMediaDeviceData
+constructor(
+    /** Device display name */
+    val name: String,
+
+    /** The current state of attempting to transfer to the suggested device. */
+    @MediaDeviceState val connectionState: Int,
+
+    /** The device icon. */
+    val icon: Drawable,
+
+    /** Action to invoke to transfer media playback to this device. */
+    val connect: () -> Unit,
+) {
+    fun equalsWithoutConnect(other: SuggestedMediaDeviceData?): Boolean {
+        if (other == null) {
+            return false
+        }
+
+        return name == other.name && connectionState == other.connectionState && icon == other.icon
+    }
+}
+
+/** Wrapper for data needed to support suggestions in the media player. */
+data class SuggestionData
+constructor(
+    /** The suggested device for playback. Null if no suggestion exists. */
+    val suggestedMediaDeviceData: SuggestedMediaDeviceData? = null,
+
+    /**
+     * Callback to be invoked when the area to surface the suggestion becomes visible. Suggestion
+     * providers are notified of the visibility update and can provide suggestions.
+     */
+    val onSuggestionSpaceVisible: Runnable,
+) {
+
+    /**
+     * Check whether [SuggestionData] objects are equal in all fields except the underlying connect
+     * method, which can't be easily compared for equality, and is based on the underlying
+     * suggestion anyway.
+     */
+    fun equalsWithoutConnect(other: SuggestionData?): Boolean {
+        if (other == null) {
+            return false
+        }
+        if (onSuggestionSpaceVisible != other.onSuggestionSpaceVisible) {
+            return false
+        }
+
+        if (suggestedMediaDeviceData == null) {
+            return other.suggestedMediaDeviceData == null
+        }
+
+        return suggestedMediaDeviceData.equalsWithoutConnect(other.suggestedMediaDeviceData)
     }
 }

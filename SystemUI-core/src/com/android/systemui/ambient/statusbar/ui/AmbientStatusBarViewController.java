@@ -30,9 +30,15 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+import androidx.compose.ui.platform.ComposeView;
 
+import com.android.app.displaylib.PerDisplayRepository;
+
+import com.android.systemui.ambient.statusbar.shared.flag.OngoingActivityChipsOnDream;
+import com.android.systemui.ambient.statusbar.ui.binder.AmbientStatusBarViewBinder;
 import com.android.systemui.communal.domain.interactor.CommunalSceneInteractor;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent;
 import com.android.systemui.dreams.DreamLogger;
 import com.android.systemui.dreams.DreamOverlayNotificationCountProvider;
 import com.android.systemui.dreams.DreamOverlayStateController;
@@ -46,6 +52,7 @@ import com.android.systemui.privacy.PrivacyType;
 import com.android.systemui.res.R;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.CrossFadeHelper;
+import com.android.systemui.statusbar.notification.icon.ui.viewbinder.ConnectedDisplaysStatusBarNotificationIconViewStore;
 import com.android.systemui.statusbar.pipeline.wifi.domain.interactor.WifiInteractor;
 import com.android.systemui.statusbar.pipeline.wifi.shared.model.WifiNetworkModel;
 import com.android.systemui.statusbar.policy.IndividualSensorPrivacyController;
@@ -56,6 +63,8 @@ import com.android.systemui.statusbar.window.StatusBarWindowStateListener;
 import com.android.systemui.util.ViewController;
 import com.android.systemui.util.time.DateFormatUtil;
 
+import kotlinx.coroutines.DisposableHandle;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -65,6 +74,7 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+
 
 /**
  * View controller for {@link AmbientStatusBarView}.
@@ -90,7 +100,11 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
     private final List<DreamOverlayStatusBarItemsProvider.StatusBarItem> mExtraStatusBarItems =
             new ArrayList<>();
     private final CommunalSceneInteractor mCommunalSceneInteractor;
+    private final AmbientStatusBarViewModel.Factory mAmbientStatusBarViewModelFactory;
+    private final ConnectedDisplaysStatusBarNotificationIconViewStore.Factory mIconViewStoreFactory;
     private final DreamLogger mLogger;
+    private final PerDisplayRepository<SystemUIDisplaySubcomponent>
+            mPerDisplayDisplaySubcomponentRepo;
 
     private boolean mIsAttached;
     private boolean mCommunalVisible;
@@ -139,6 +153,8 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
     private final PrivacyItemController.Callback mPrivacyItemControllerCallback =
             this::onPrivacyItemsChanged;
 
+    private final ArrayList<DisposableHandle> mFlows = new ArrayList<>();
+
     @Inject
     public AmbientStatusBarViewController(
             AmbientStatusBarView view,
@@ -150,14 +166,17 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
             IndividualSensorPrivacyController sensorPrivacyController,
             Optional<DreamOverlayNotificationCountProvider> dreamOverlayNotificationCountProvider,
             ZenModeController zenModeController,
-            StatusBarWindowStateController statusBarWindowStateController,
+            PerDisplayRepository<SystemUIDisplaySubcomponent> perDisplaySubcomponentRepository,
             DreamOverlayStatusBarItemsProvider statusBarItemsProvider,
             DreamOverlayStateController dreamOverlayStateController,
             UserTracker userTracker,
             WifiInteractor wifiInteractor,
             PrivacyItemController privacyItemController,
             CommunalSceneInteractor communalSceneInteractor,
-            @DreamLog LogBuffer logBuffer) {
+            AmbientStatusBarViewModel.Factory ambientStatusBarViewModelFactory,
+            ConnectedDisplaysStatusBarNotificationIconViewStore.Factory iconViewStoreFactory,
+            @DreamLog LogBuffer logBuffer,
+            PerDisplayRepository<SystemUIDisplaySubcomponent> perDisplayDisplaySubcomponentRepo) {
         super(view);
         mResources = resources;
         mMainExecutor = mainExecutor;
@@ -166,7 +185,10 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
         mDateFormatUtil = dateFormatUtil;
         mSensorPrivacyController = sensorPrivacyController;
         mDreamOverlayNotificationCountProvider = dreamOverlayNotificationCountProvider;
-        mStatusBarWindowStateController = statusBarWindowStateController;
+        int displayId = view.getContext().getDisplayId();
+        SystemUIDisplaySubcomponent displaySubComponent =
+                perDisplaySubcomponentRepository.getOrDefault(displayId);
+        mStatusBarWindowStateController = displaySubComponent.getStatusBarWindowStateController();
         mStatusBarItemsProvider = statusBarItemsProvider;
         mZenModeController = zenModeController;
         mDreamOverlayStateController = dreamOverlayStateController;
@@ -174,7 +196,10 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
         mWifiInteractor = wifiInteractor;
         mPrivacyItemController = privacyItemController;
         mCommunalSceneInteractor = communalSceneInteractor;
+        mAmbientStatusBarViewModelFactory = ambientStatusBarViewModelFactory;
+        mIconViewStoreFactory = iconViewStoreFactory;
         mLogger = new DreamLogger(logBuffer, TAG);
+        mPerDisplayDisplaySubcomponentRepo = perDisplayDisplaySubcomponentRepo;
     }
 
     @Override
@@ -199,17 +224,28 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
     protected void onViewAttached() {
         mIsAttached = true;
 
-        collectFlow(
+        if (OngoingActivityChipsOnDream.isEnabled()) {
+            final ComposeView ongoingActivityChipsView =
+                    mView.findViewById(R.id.dream_overlay_ongoing_activity_chips);
+            AmbientStatusBarViewBinder.bindOngoingActivityChipsView(
+                    getContext(),
+                    ongoingActivityChipsView,
+                    mAmbientStatusBarViewModelFactory,
+                    mIconViewStoreFactory,
+                    mPerDisplayDisplaySubcomponentRepo);
+        }
+
+        mFlows.add(collectFlow(
                 mView,
                 mWifiInteractor.getWifiNetwork(),
                 network -> updateWifiUnavailableStatusIcon(
-                        network instanceof WifiNetworkModel.Active));
+                        network instanceof WifiNetworkModel.Active)));
 
-        collectFlow(
+        mFlows.add(collectFlow(
                 mView,
                 mCommunalSceneInteractor.isCommunalVisible(),
                 this::onCommunalVisibleChanged
-        );
+        ));
 
         mNextAlarmController.addCallback(mNextAlarmCallback);
         updateAlarmStatusIcon();
@@ -240,6 +276,10 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
         mDreamOverlayStateController.setDreamOverlayStatusBarVisible(false);
         mDreamOverlayStateController.removeCallback(mDreamOverlayStateCallback);
 
+        for (DisposableHandle flow : mFlows) {
+            flow.dispose();
+        }
+        mFlows.clear();
         mIsAttached = false;
     }
 
@@ -291,6 +331,16 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
                 R.string.location_active_dream_overlay_content_description);
     }
 
+    void updateCameraPrivacyStatusIcon(boolean enabled) {
+        showIcon(AmbientStatusBarView.STATUS_ICON_CAMERA_PRIVACY_ON, enabled,
+                R.string.camera_privacy_dream_overlay_content_description);
+    }
+
+    void updateMicPrivacyStatusIcon(boolean enabled) {
+        showIcon(AmbientStatusBarView.STATUS_ICON_MIC_PRIVACY_ON, enabled,
+                R.string.mic_privacy_dream_overlay_content_description);
+    }
+
     private void updateAlarmStatusIcon() {
         final AlarmManager.AlarmClockInfo alarm =
                 mAlarmManager.getNextAlarmClock(mUserTracker.getUserId());
@@ -334,16 +384,12 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
         @AmbientStatusBarView.StatusIconType int iconType = Resources.ID_NULL;
         showIcon(
                 AmbientStatusBarView.STATUS_ICON_CAMERA_DISABLED,
-                !micBlocked && cameraBlocked,
+                cameraBlocked,
                 R.string.camera_blocked_dream_overlay_content_description);
         showIcon(
                 AmbientStatusBarView.STATUS_ICON_MIC_DISABLED,
-                micBlocked && !cameraBlocked,
+                micBlocked,
                 R.string.microphone_blocked_dream_overlay_content_description);
-        showIcon(
-                AmbientStatusBarView.STATUS_ICON_MIC_CAMERA_DISABLED,
-                micBlocked && cameraBlocked,
-                R.string.camera_and_microphone_blocked_dream_overlay_content_description);
     }
 
     private String buildNotificationsContentDescription(int notificationCount) {
@@ -389,6 +435,10 @@ public class AmbientStatusBarViewController extends ViewController<AmbientStatus
     private void onPrivacyItemsChanged(@NonNull List<PrivacyItem> privacyItems) {
         updateLocationStatusIcon(privacyItems.stream()
                 .anyMatch(item -> item.getPrivacyType() == PrivacyType.TYPE_LOCATION));
+        updateMicPrivacyStatusIcon(privacyItems.stream()
+                .anyMatch(item -> item.getPrivacyType() == PrivacyType.TYPE_MICROPHONE));
+        updateCameraPrivacyStatusIcon(privacyItems.stream()
+                .anyMatch(item -> item.getPrivacyType() == PrivacyType.TYPE_CAMERA));
     }
 
     private void onStatusBarItemsChanged(List<StatusBarItem> newItems) {

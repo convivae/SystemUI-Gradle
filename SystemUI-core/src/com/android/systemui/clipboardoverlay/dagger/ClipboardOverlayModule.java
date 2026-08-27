@@ -18,8 +18,7 @@ package com.android.systemui.clipboardoverlay.dagger;
 
 import static android.view.WindowManager.LayoutParams.TYPE_SCREENSHOT;
 
-import static com.android.systemui.Flags.enableViewCaptureTracing;
-import static com.android.systemui.util.ConvenienceExtensionsKt.toKotlinLazy;
+import static com.android.systemui.Flags.clipboardOverlayMultiuser;
 
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
@@ -29,13 +28,14 @@ import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.WindowManager;
 
-import com.android.app.viewcapture.ViewCapture;
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager;
+import com.android.systemui.clipboardoverlay.ActionIntentCreator;
 import com.android.systemui.clipboardoverlay.ClipboardOverlayView;
+import com.android.systemui.clipboardoverlay.IntentCreator;
+import com.android.systemui.display.data.repository.FocusedDisplayRepository;
 import com.android.systemui.res.R;
-import com.android.systemui.settings.DisplayTracker;
+import com.android.systemui.settings.UserTracker;
+import com.android.systemui.utils.windowmanager.WindowManagerProvider;
 
-import dagger.Lazy;
 import dagger.Module;
 import dagger.Provides;
 
@@ -53,19 +53,33 @@ public interface ClipboardOverlayModule {
      */
     @Provides
     @OverlayWindowContext
-    static Context provideWindowContext(DisplayManager displayManager,
-            DisplayTracker displayTracker, Context context) {
-        Display display = displayManager.getDisplay(displayTracker.getDefaultDisplayId());
-        return context.createWindowContext(display, TYPE_SCREENSHOT, null);
+    static Context provideWindowContext(Context context, DisplayManager displayManager,
+            UserTracker userTracker, FocusedDisplayRepository focusedDisplayRepository) {
+        Display display = displayManager.getDisplay(
+                focusedDisplayRepository.getFocusedDisplayId().getValue());
+        if (display == null) {
+            display = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+        }
+        if (clipboardOverlayMultiuser()) {
+            return userTracker.getUserContext().createWindowContext(display, TYPE_SCREENSHOT, null);
+        } else {
+            return context.createWindowContext(display, TYPE_SCREENSHOT, null);
+        }
     }
 
     /**
      *
      */
     @Provides
-    static ClipboardOverlayView provideClipboardOverlayView(@OverlayWindowContext Context context) {
-        return (ClipboardOverlayView) LayoutInflater.from(context).inflate(
-                R.layout.clipboard_overlay, null);
+    static ClipboardOverlayView provideClipboardOverlayView(
+            @OverlayWindowContext Context overlayContext, Context context) {
+        if (clipboardOverlayMultiuser()) {
+            return (ClipboardOverlayView) LayoutInflater.from(context).inflate(
+                    R.layout.clipboard_overlay, null);
+        } else {
+            return (ClipboardOverlayView) LayoutInflater.from(overlayContext).inflate(
+                    R.layout.clipboard_overlay, null);
+        }
     }
 
     /**
@@ -73,21 +87,15 @@ public interface ClipboardOverlayModule {
      */
     @Provides
     @OverlayWindowContext
-    static WindowManager provideWindowManager(@OverlayWindowContext Context context) {
-        return context.getSystemService(WindowManager.class);
+    static WindowManager provideWindowManager(@OverlayWindowContext Context context,
+            WindowManagerProvider windowManagerProvider) {
+        return windowManagerProvider.getWindowManager(context);
     }
 
-    /**
-     *
-     */
     @Provides
-    @OverlayWindowContext
-    static ViewCaptureAwareWindowManager provideViewCaptureAwareWindowManager(
-            @OverlayWindowContext WindowManager windowManager,
-            Lazy<ViewCapture> daggerLazyViewCapture) {
-        return new ViewCaptureAwareWindowManager(windowManager,
-                /* lazyViewCapture= */ toKotlinLazy(daggerLazyViewCapture),
-                /* isViewCaptureEnabled= */ enableViewCaptureTracing());
+    static IntentCreator provideIntentCreator(
+            ActionIntentCreator actionIntentCreator) {
+        return actionIntentCreator;
     }
 
     @Qualifier

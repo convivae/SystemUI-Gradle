@@ -208,8 +208,10 @@ public class KeyguardPasswordView extends KeyguardAbsKeyInputView {
     }
 
     @Override
-    public int getWrongPasswordStringId() {
-        return R.string.kg_wrong_password;
+    public int getWrongPasswordStringId(boolean isDuplicate) {
+        return isDuplicate
+                ? R.string.kg_primary_auth_duplicate_guess_password
+                : R.string.kg_wrong_password;
     }
 
     @Override
@@ -228,6 +230,13 @@ public class KeyguardPasswordView extends KeyguardAbsKeyInputView {
 
     @Override
     public boolean startDisappearAnimation(Runnable finishRunnable) {
+        final WindowInsets insets = getRootWindowInsets();
+        if (insets != null && insets.getInsets(ime()).bottom <= 0) {
+            // If the disappear animation was invoked before the ime even showed, then return false
+            // to indicate that the runnable was not directly called. This will prevent a stuck
+            // password bouncer which can happen mostly in conjuction with the delay from face auth.
+            return false;
+        }
         getWindowInsetsController().controlWindowInsetsAnimation(ime(),
                 100,
                 Interpolators.LINEAR, null, new WindowInsetsAnimationControlListener() {
@@ -340,8 +349,7 @@ public class KeyguardPasswordView extends KeyguardAbsKeyInputView {
      */
     public void hideKeyboard() {
         post(() -> {
-            if (mPasswordEntry.isAttachedToWindow()
-                    && mPasswordEntry.getRootWindowInsets().isVisible(WindowInsets.Type.ime())) {
+            if (mPasswordEntry.isAttachedToWindow()) {
                 mPasswordEntry.clearFocus();
                 mPasswordEntry.getWindowInsetsController().hide(WindowInsets.Type.ime());
             }

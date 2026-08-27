@@ -22,6 +22,7 @@ import android.os.Handler
 import android.os.Trace
 import android.util.Log
 import android.view.View
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.keyguard.KeyguardSecurityModel
 import com.android.keyguard.KeyguardUpdateMonitor
 import com.android.systemui.DejankUtils
@@ -54,7 +55,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 /**
  * Encapsulates business logic for interacting with the lock-screen primary (pin/pattern/password)
@@ -96,6 +96,7 @@ constructor(
     val userRequestedBouncerWhenAlreadyAuthenticated: Flow<Int> =
         repository.userRequestedBouncerWhenAlreadyAuthenticated.filterNotNull()
     val isShowing: StateFlow<Boolean> = repository.primaryBouncerShow
+    val isShowingSoon: StateFlow<Boolean> = repository.primaryBouncerShowingSoon
     val startingToHide: Flow<Unit> = repository.primaryBouncerStartingToHide.filter { it }.map {}
     val isBackButtonEnabled: Flow<Boolean> = repository.isBackButtonEnabled.filterNotNull()
     val showMessage: Flow<BouncerShowMessageModel> = repository.showMessage.filterNotNull()
@@ -104,7 +105,7 @@ constructor(
     val resourceUpdateRequests: Flow<Boolean> = repository.resourceUpdateRequests.filter { it }
     val keyguardPosition: Flow<Float> = repository.keyguardPosition.filterNotNull()
     val panelExpansionAmount: Flow<Float> = repository.panelExpansionAmount
-    val lastShownSecurityMode: Flow<KeyguardSecurityModel.SecurityMode> =
+    val lastShownSecurityMode: StateFlow<KeyguardSecurityModel.SecurityMode> =
         repository.lastShownSecurityMode
 
     /** 0f = bouncer fully hidden. 1f = bouncer fully visible. */
@@ -125,7 +126,7 @@ constructor(
 
     init {
         applicationScope.launch {
-            trustRepository.isCurrentUserActiveUnlockRunning.collect {
+            trustRepository.isCurrentUserActiveUnlockEnabled.collect {
                 currentUserActiveUnlockRunning = it
             }
         }
@@ -135,7 +136,7 @@ constructor(
     // TODO(b/243695312): Encapsulate all of the show logic for the bouncer.
     /** Show the bouncer if necessary and set the relevant states. */
     @JvmOverloads
-    fun show(isScrimmed: Boolean): Boolean {
+    fun show(isScrimmed: Boolean, reason: String): Boolean {
         // When the scene container framework is enabled, instead of calling this, call
         // SceneInteractor#changeScene(Scenes.Bouncer, ...).
         SceneContainerFlag.assertInLegacyMode()
@@ -145,7 +146,7 @@ constructor(
                 TAG,
                 "PrimaryBouncerInteractor#show is being called before the " +
                     "primaryBouncerDelegate is set. Let's exit early so we don't " +
-                    "set the wrong primaryBouncer state."
+                    "set the wrong primaryBouncer state.",
             )
             return false
         }
@@ -176,6 +177,7 @@ constructor(
                 return false
             }
 
+            Log.i(TAG, "Show primary bouncer requested, reason: $reason")
             repository.setPrimaryShowingSoon(true)
             if (usePrimaryBouncerPassiveAuthDelay()) {
                 Log.d(TAG, "delay bouncer, passive auth may succeed")
@@ -197,7 +199,7 @@ constructor(
         if (isFullyShowing()) {
             SysUiStatsLog.write(
                 SysUiStatsLog.KEYGUARD_BOUNCER_STATE_CHANGED,
-                SysUiStatsLog.KEYGUARD_BOUNCER_STATE_CHANGED__STATE__HIDDEN
+                SysUiStatsLog.KEYGUARD_BOUNCER_STATE_CHANGED__STATE__HIDDEN,
             )
             dismissCallbackRegistry.notifyDismissCancelled()
         }
@@ -223,7 +225,7 @@ constructor(
     fun setPanelExpansion(expansion: Float) {
         val oldExpansion = repository.panelExpansionAmount.value
         val expansionChanged = oldExpansion != expansion
-        if (repository.primaryBouncerStartingDisappearAnimation.value == null) {
+        if (!repository.isPrimaryBouncerStartingDisappearAnimation()) {
             repository.setPanelExpansion(expansion)
         }
 
@@ -272,7 +274,7 @@ constructor(
      */
     fun setDismissAction(
         onDismissAction: ActivityStarter.OnDismissAction?,
-        cancelAction: Runnable?
+        cancelAction: Runnable?,
     ) {
         repository.bouncerDismissActionModel =
             if (onDismissAction != null && cancelAction != null) {
@@ -344,7 +346,7 @@ constructor(
     fun isFullyShowing(): Boolean {
         return (repository.primaryBouncerShowingSoon.value || isBouncerShowing()) &&
             repository.panelExpansionAmount.value == KeyguardBouncerConstants.EXPANSION_VISIBLE &&
-            repository.primaryBouncerStartingDisappearAnimation.value == null
+            !repository.isPrimaryBouncerStartingDisappearAnimation()
     }
 
     /** Returns whether bouncer is scrimmed. */
@@ -361,7 +363,7 @@ constructor(
 
     /** Return whether bouncer is animating away. */
     fun isAnimatingAway(): Boolean {
-        return repository.primaryBouncerStartingDisappearAnimation.value != null
+        return repository.isPrimaryBouncerStartingDisappearAnimation()
     }
 
     /** Return whether bouncer will dismiss with actions */

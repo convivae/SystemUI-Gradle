@@ -17,7 +17,6 @@
 */
 -->
 
-
 <com.android.systemui.shade.NotificationPanelView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:systemui="http://schemas.android.com/apk/res-auto"
@@ -26,16 +25,10 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <com.android.systemui.common.ui.view.LongPressHandlingView
+    <com.android.systemui.deviceentry.ui.view.UdfpsAccessibilityOverlayOverlappingTouchHandlingView
         android:id="@+id/keyguard_long_press"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-
-    <ViewStub
-        android:id="@+id/keyguard_qs_user_switch_stub"
-        android:layout="@layout/keyguard_qs_user_switch"
-        android:layout_height="match_parent"
-        android:layout_width="match_parent" />
 
     <include layout="@layout/status_bar_expanded_plugin_frame"/>
 
@@ -47,15 +40,10 @@
         android:clipToPadding="false"
         android:clipChildren="false">
 
-        <include
-            layout="@layout/keyguard_status_view"
-            android:visibility="gone"/>
-
         <include layout="@layout/dock_info_overlay"/>
 
         <FrameLayout
             android:id="@+id/qs_frame"
-            android:layout="@layout/qs_panel"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:clipToPadding="false"
@@ -120,15 +108,20 @@
         />
     </com.android.systemui.shade.NotificationsQuickSettingsContainer>
 
-    <ViewStub
-        android:id="@+id/keyguard_user_switcher_stub"
-        android:layout="@layout/keyguard_user_switcher"
-        android:layout_height="match_parent"
-        android:layout_width="match_parent" />
-
     <include layout="@layout/dock_info_bottom_area_overlay" />
 
     <include
         layout="@layout/keyguard_bottom_area"
         android:visibility="gone" />
+
+    <include
+        android:id="@+id/keyguard_charging_button"
+        layout="@layout/keyguard_settings_popup_menu"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center"
+        android:layout_marginBottom="@dimen/keyguard_affordance_vertical_offset"
+        android:layout_marginHorizontal="@dimen/keyguard_affordance_horizontal_offset"
+        android:visibility="gone"
+        />
 </com.android.systemui.shade.NotificationPanelView>

@@ -16,38 +16,37 @@
 package com.android.systemui.statusbar.phone
 
 import android.app.StatusBarManager.WINDOW_STATUS_BAR
-import android.graphics.Point
+import android.content.res.Resources
 import android.util.Log
+import android.view.Display.DEFAULT_DISPLAY
+import android.view.GestureDetector
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.view.ViewTreeObserver
+import android.view.ViewConfiguration
 import androidx.annotation.VisibleForTesting
-import com.android.systemui.Flags
 import com.android.systemui.Gefingerpoken
-import com.android.systemui.battery.BatteryMeterView
-import com.android.systemui.dagger.qualifiers.DisplaySpecific
-import com.android.systemui.flags.FeatureFlags
-import com.android.systemui.flags.Flags.ENABLE_UNFOLD_STATUS_BAR_ANIMATIONS
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.DisplayAware
 import com.android.systemui.plugins.DarkIconDispatcher
 import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.ui.view.WindowRootView
 import com.android.systemui.shade.ShadeController
-import com.android.systemui.shade.ShadeExpandsOnStatusBarLongPress
 import com.android.systemui.shade.ShadeLogger
 import com.android.systemui.shade.ShadeViewController
-import com.android.systemui.shade.StatusBarLongPressGestureDetector
+import com.android.systemui.shade.data.repository.ShadeDisplaysRepository
 import com.android.systemui.shade.display.StatusBarTouchShadeDisplayPolicy
+import com.android.systemui.shade.display.domain.interactor.ShadeExpansionTargetDisplayInteractor
 import com.android.systemui.shade.domain.interactor.PanelExpansionInteractor
-import com.android.systemui.shade.shared.flag.ShadeWindowGoesAround
-import com.android.systemui.shared.animation.UnfoldMoveFromCenterAnimator
-import com.android.systemui.statusbar.data.repository.StatusBarContentInsetsProviderStore
+import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
+import com.android.systemui.statusbar.core.StatusBarEventForwardingModernization
+import com.android.systemui.statusbar.data.repository.StatusBarConfigurationController
+import com.android.systemui.statusbar.gesture.StatusBarLongPressGestureDetector
+import com.android.systemui.statusbar.layout.StatusBarContentInsetsProvider
 import com.android.systemui.statusbar.policy.Clock
 import com.android.systemui.statusbar.policy.ConfigurationController
+import com.android.systemui.statusbar.window.StatusBarWindowControllerStore
 import com.android.systemui.statusbar.window.StatusBarWindowStateController
-import com.android.systemui.unfold.SysUIUnfoldComponent
 import com.android.systemui.unfold.UNFOLD_STATUS_BAR
 import com.android.systemui.unfold.util.ScopedUnfoldTransitionProgressProvider
 import com.android.systemui.user.ui.viewmodel.StatusBarUserChipViewModel
@@ -67,15 +66,16 @@ class PhoneStatusBarViewController
 private constructor(
     view: PhoneStatusBarView,
     @Named(UNFOLD_STATUS_BAR) private val progressProvider: ScopedUnfoldTransitionProgressProvider?,
+    @DisplayAware private val resources: Resources,
     private val centralSurfaces: CentralSurfaces,
     private val statusBarWindowStateController: StatusBarWindowStateController,
     private val shadeController: ShadeController,
     private val shadeViewController: ShadeViewController,
+    private val shadeModeInteractor: ShadeModeInteractor,
     private val panelExpansionInteractor: PanelExpansionInteractor,
     private val statusBarLongPressGestureDetector: Provider<StatusBarLongPressGestureDetector>,
     private val windowRootView: Provider<WindowRootView>,
     private val shadeLogger: ShadeLogger,
-    private val moveFromCenterAnimationController: StatusBarMoveFromCenterAnimationController?,
     private val userChipViewModel: StatusBarUserChipViewModel,
     private val viewUtil: ViewUtil,
     private val configurationController: ConfigurationController,
@@ -83,14 +83,20 @@ private constructor(
     private val darkIconDispatcher: DarkIconDispatcher,
     private val statusBarContentInsetsProvider: StatusBarContentInsetsProvider,
     private val lazyStatusBarShadeDisplayPolicy: Lazy<StatusBarTouchShadeDisplayPolicy>,
+    private val shadeExpansionTargetDisplayInteractor: ShadeExpansionTargetDisplayInteractor,
+    private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
+    private val statusBarWindowControllerStore: StatusBarWindowControllerStore,
 ) : ViewController<PhoneStatusBarView>(view) {
 
-    private lateinit var battery: BatteryMeterView
     private lateinit var clock: Clock
     private lateinit var startSideContainer: View
     private lateinit var endSideContainer: View
 
-    private val iconsOnTouchListener =
+    private val shadeInvocationSplitRatio: Float =
+        resources.getFloat(R.dimen.config_invocationGestureSplitRatio)
+
+    // Creates a [View.OnTouchListener] that only handles mouse click events.
+    private fun createMouseClickListener(onClick: () -> Unit): View.OnTouchListener =
         object : View.OnTouchListener {
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 // We want to handle only mouse events here to avoid stealing finger touches
@@ -100,8 +106,9 @@ private constructor(
                 // intercepted. See [View.OnTouchEvent]
                 if (event.source == InputDevice.SOURCE_MOUSE) {
                     if (event.action == MotionEvent.ACTION_UP) {
+                        dispatchEventToShadeDisplayPolicy(event)
                         v.performClick()
-                        shadeController.animateExpandShade()
+                        onClick()
                     }
                     return true
                 }
@@ -109,50 +116,89 @@ private constructor(
             }
         }
 
+    // Creates a [View.OnTouchListener] that handles mouse clicks and finger taps.
+    private fun createClickListener(v: View, onClick: () -> Unit): View.OnTouchListener {
+        val gestureDetector =
+            GestureDetector(
+                mView.context,
+                object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onDown(e: MotionEvent): Boolean {
+                        // Return true here to receive subsequent events, which are then
+                        // handled by onSingleTapUp.
+                        return true
+                    }
+
+                    override fun onSingleTapUp(e: MotionEvent): Boolean {
+                        dispatchEventToShadeDisplayPolicy(e)
+                        v.performClick()
+                        onClick()
+                        return true
+                    }
+                },
+            )
+        return View.OnTouchListener { _, event ->
+            // Handle mouse clicks separately.
+            if (event.source == InputDevice.SOURCE_MOUSE) {
+                if (event.action == MotionEvent.ACTION_UP) {
+                    dispatchEventToShadeDisplayPolicy(event)
+                    v.performClick()
+                    onClick()
+                }
+                return@OnTouchListener true
+            }
+
+            // For all other (touch) events, delegate to the GestureDetector.
+            return@OnTouchListener gestureDetector.onTouchEvent(event)
+        }
+    }
+
+    private fun dispatchEventToShadeDisplayPolicy(event: MotionEvent) {
+        // Notify the shade display policy that the status bar was touched. This may cause
+        // the shade to change display if the touch was in a display different than the shade
+        // one.
+        val isRtl = resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
+        shadeExpansionTargetDisplayInteractor.setExpansionIntentFromStatusBarEvent(
+            event.x,
+            event.displayId,
+            mView.width,
+            shadeInvocationSplitRatio,
+            isRtl,
+        )
+    }
+
     private val configurationListener =
         object : ConfigurationController.ConfigurationListener {
             override fun onDensityOrFontScaleChanged() {
-                clock.onDensityOrFontScaleChanged()
+                reloadDimens()
             }
         }
+
+    private fun reloadDimens() {
+        // The hover listener uses a resource, so we need to re-create it.
+        updateStartSideContainerHoverListener()
+    }
 
     override fun onViewAttached() {
         clock = mView.requireViewById(R.id.clock)
-        battery = mView.requireViewById(R.id.battery)
+
         addDarkReceivers()
+
+        if (mView.context.getDisplayId() != DEFAULT_DISPLAY) {
+            // With the StatusBarConnectedDisplays changes, external status bar elements are not
+            // interactive when the shade window can't change displays.
+            mView.setIsStatusBarInteractiveSupplier {
+                val shadeDisplayPolicy = lazyShadeDisplaysRepository.get().currentPolicy
+                shadeDisplayPolicy is StatusBarTouchShadeDisplayPolicy
+            }
+        }
+
         addCursorSupportToIconContainers()
 
-        if (ShadeExpandsOnStatusBarLongPress.isEnabled) {
+        if (!StatusBarEventForwardingModernization.isEnabled) {
             mView.setLongPressGestureDetector(statusBarLongPressGestureDetector.get())
         }
-
         progressProvider?.setReadyToHandleTransition(true)
         configurationController.addCallback(configurationListener)
-
-        if (moveFromCenterAnimationController == null) return
-
-        val statusBarLeftSide: View =
-            mView.requireViewById(R.id.status_bar_start_side_except_heads_up)
-        val systemIconArea: ViewGroup = mView.requireViewById(R.id.status_bar_end_side_content)
-
-        val viewsToAnimate = arrayOf(statusBarLeftSide, systemIconArea)
-
-        mView.viewTreeObserver.addOnPreDrawListener(
-            object : ViewTreeObserver.OnPreDrawListener {
-                override fun onPreDraw(): Boolean {
-                    moveFromCenterAnimationController.onViewsReady(viewsToAnimate)
-                    mView.viewTreeObserver.removeOnPreDrawListener(this)
-                    return true
-                }
-            }
-        )
-
-        mView.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
-            val widthChanged = right - left != oldRight - oldLeft
-            if (widthChanged) {
-                moveFromCenterAnimationController.onStatusBarWidthChanged()
-            }
-        }
     }
 
     private fun addCursorSupportToIconContainers() {
@@ -160,17 +206,49 @@ private constructor(
         endSideContainer.setOnHoverListener(
             statusOverlayHoverListenerFactory.createDarkAwareListener(endSideContainer)
         )
-        endSideContainer.setOnTouchListener(iconsOnTouchListener)
+
+        if (statusBarTapToExpandShadeEnabled()) {
+            endSideContainer.setOnTouchListener(
+                createClickListener(endSideContainer) { animateExpandQs() }
+            )
+        } else {
+            endSideContainer.setOnTouchListener(createMouseClickListener { animateExpandQs() })
+        }
 
         startSideContainer = mView.requireViewById(R.id.status_bar_start_side_content)
+        updateStartSideContainerHoverListener()
+        if (statusBarTapToExpandShadeEnabled()) {
+            startSideContainer.setOnTouchListener(
+                createClickListener(startSideContainer) { shadeController.animateExpandShade() }
+            )
+        } else {
+            startSideContainer.setOnTouchListener(
+                createMouseClickListener { shadeController.animateExpandShade() }
+            )
+        }
+    }
+
+    private fun updateStartSideContainerHoverListener() {
+        val iconContainerHeightPx =
+            context.resources.getDimensionPixelSize(R.dimen.status_bar_icon_container_height)
         startSideContainer.setOnHoverListener(
             statusOverlayHoverListenerFactory.createDarkAwareListener(
                 startSideContainer,
-                topHoverMargin = 6,
-                bottomHoverMargin = 6,
+                customHeightPx = iconContainerHeightPx,
             )
         )
-        startSideContainer.setOnTouchListener(iconsOnTouchListener)
+    }
+
+    private fun statusBarTapToExpandShadeEnabled(): Boolean {
+        return context.resources.getBoolean(R.bool.config_statusBarTapToExpandShade)
+    }
+
+    private fun animateExpandQs() {
+        if (shadeModeInteractor.isDualShade) {
+            shadeController.animateExpandQs()
+        } else {
+            shadeController.animateExpandShade()
+        }
     }
 
     @VisibleForTesting
@@ -179,18 +257,21 @@ private constructor(
         startSideContainer.setOnHoverListener(null)
         endSideContainer.setOnHoverListener(null)
         progressProvider?.setReadyToHandleTransition(false)
-        moveFromCenterAnimationController?.onViewDetached()
         configurationController.removeCallback(configurationListener)
     }
 
     init {
         // These should likely be done in `onInit`, not `init`.
-        mView.setTouchEventHandler(PhoneStatusBarViewTouchHandler())
-        mView.setHasCornerCutoutFetcher {
-            statusBarContentInsetsProvider.currentRotationHasCornerCutout()
-        }
-        mView.setInsetsFetcher {
-            statusBarContentInsetsProvider.getStatusBarContentInsetsForCurrentRotation()
+        mView.setTouchEventHandler(
+            if (StatusBarEventForwardingModernization.isEnabled) {
+                null
+            } else {
+                PhoneStatusBarViewTouchHandler()
+            }
+        )
+        statusBarContentInsetsProvider?.let {
+            mView.setHasCornerCutoutFetcher { it.currentRotationHasCornerCutout() }
+            mView.setInsetsFetcher { it.getStatusBarContentInsetsForCurrentRotation() }
         }
         mView.init(userChipViewModel)
     }
@@ -230,32 +311,72 @@ private constructor(
                 !upOrCancel || shadeController.isExpandedVisible,
             )
         }
-        if (ShadeWindowGoesAround.isEnabled && event.action == MotionEvent.ACTION_DOWN) {
-            lazyStatusBarShadeDisplayPolicy.get().onStatusBarTouched(context.displayId)
-        }
     }
 
     private fun addDarkReceivers() {
-        darkIconDispatcher.addDarkReceiver(battery)
         darkIconDispatcher.addDarkReceiver(clock)
     }
 
     private fun removeDarkReceivers() {
-        darkIconDispatcher.removeDarkReceiver(battery)
         darkIconDispatcher.removeDarkReceiver(clock)
     }
 
+    @Deprecated(
+        "This touch handler will be unused once StatusBarEventForwardingModernization is enabled"
+    )
     inner class PhoneStatusBarViewTouchHandler : Gefingerpoken {
+        private val touchSlop = ViewConfiguration.get(mView.context).scaledTouchSlop
+        private var initialTouchX = 0f
+        private var initialTouchY = 0f
+        private var isIntercepting = false
+        private val cachedEvents = mutableListOf<MotionEvent>()
+
         override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
-            return if (Flags.statusBarSwipeOverChip()) {
-                shadeViewController.handleExternalInterceptTouch(event)
-            } else {
-                onTouch(event)
-                false
+            StatusBarEventForwardingModernization.assertInLegacyMode()
+
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                dispatchEventToShadeDisplayPolicy(event)
             }
+
+            // Let ShadeViewController intercept touch events when flexiglass is disabled.
+            if (!SceneContainerFlag.isEnabled) {
+                return shadeViewController.handleExternalInterceptTouch(event)
+            }
+
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    isIntercepting = false
+                    clearCachedEvents()
+                    initialTouchX = event.x
+                    initialTouchY = event.y
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = event.y - initialTouchY
+                    if (dy > touchSlop) {
+                        if (!isIntercepting) {
+                            isIntercepting = true
+                            dispatchCachedEvents()
+                        }
+                        windowRootView.get().dispatchTouchEvent(event)
+                        return true
+                    }
+                }
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_CANCEL -> {
+                    clearCachedEvents()
+                    isIntercepting = false
+                }
+            }
+
+            if (!isIntercepting) {
+                cacheEvent(event)
+            }
+            return false
         }
 
         override fun onTouchEvent(event: MotionEvent): Boolean {
+            StatusBarEventForwardingModernization.assertInLegacyMode()
+
             onTouch(event)
 
             // If panels aren't enabled, ignore the gesture and don't pass it down to the
@@ -296,90 +417,77 @@ private constructor(
                     return true
                 }
             }
+
             return shadeViewController.handleExternalTouch(event)
         }
-    }
 
-    class StatusBarViewsCenterProvider : UnfoldMoveFromCenterAnimator.ViewCenterProvider {
-        override fun getViewCenter(view: View, outPoint: Point) =
-            when (view.id) {
-                R.id.status_bar_start_side_except_heads_up -> {
-                    // items aligned to the start, return start center point
-                    getViewEdgeCenter(view, outPoint, isStart = true)
-                }
-                R.id.status_bar_end_side_content -> {
-                    // items aligned to the end, return end center point
-                    getViewEdgeCenter(view, outPoint, isStart = false)
-                }
-                else -> super.getViewCenter(view, outPoint)
-            }
+        private fun cacheEvent(event: MotionEvent) {
+            cachedEvents.add(MotionEvent.obtain(event))
+        }
 
-        /** Returns start or end (based on [isStart]) center point of the view */
-        private fun getViewEdgeCenter(view: View, outPoint: Point, isStart: Boolean) {
-            val isRtl = view.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
-            val isLeftEdge = isRtl xor isStart
+        private fun dispatchCachedEvents() {
+            cachedEvents.forEach { windowRootView.get()?.dispatchTouchEvent(it) }
+            clearCachedEvents()
+        }
 
-            val viewLocation = IntArray(2)
-            view.getLocationOnScreen(viewLocation)
-
-            val viewX = viewLocation[0]
-            val viewY = viewLocation[1]
-
-            outPoint.x = viewX + if (isLeftEdge) view.height / 2 else view.width - view.height / 2
-            outPoint.y = viewY + view.height / 2
+        private fun clearCachedEvents() {
+            cachedEvents.forEach { it.recycle() }
+            cachedEvents.clear()
         }
     }
 
     class Factory
     @Inject
     constructor(
-        private val unfoldComponent: Optional<SysUIUnfoldComponent>,
         @Named(UNFOLD_STATUS_BAR)
         private val progressProvider: Optional<ScopedUnfoldTransitionProgressProvider>,
-        private val featureFlags: FeatureFlags,
         private val userChipViewModel: StatusBarUserChipViewModel,
+        @DisplayAware private val resources: Resources,
         private val centralSurfaces: CentralSurfaces,
-        private val statusBarWindowStateController: StatusBarWindowStateController,
+        @DisplayAware private val statusBarWindowStateController: StatusBarWindowStateController,
         private val shadeController: ShadeController,
         private val shadeViewController: ShadeViewController,
+        private val shadeModeInteractor: ShadeModeInteractor,
         private val panelExpansionInteractor: PanelExpansionInteractor,
+        @DisplayAware
         private val statusBarLongPressGestureDetector: Provider<StatusBarLongPressGestureDetector>,
         private val windowRootView: Provider<WindowRootView>,
         private val shadeLogger: ShadeLogger,
         private val viewUtil: ViewUtil,
-        private val configurationController: ConfigurationController,
+        @DisplayAware
+        private val statusBarConfigurationController: StatusBarConfigurationController,
         private val statusOverlayHoverListenerFactory: StatusOverlayHoverListenerFactory,
-        @DisplaySpecific private val darkIconDispatcher: DarkIconDispatcher,
-        private val statusBarContentInsetsProviderStore: StatusBarContentInsetsProviderStore,
+        @DisplayAware private val darkIconDispatcher: DarkIconDispatcher,
+        @DisplayAware private val statusBarContentInsetsProvider: StatusBarContentInsetsProvider,
         private val lazyStatusBarShadeDisplayPolicy: Lazy<StatusBarTouchShadeDisplayPolicy>,
+        private val shadeExpansionTargetDisplayInteractor: ShadeExpansionTargetDisplayInteractor,
+        private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
+        private val statusBarWindowControllerStore: StatusBarWindowControllerStore,
     ) {
         fun create(view: PhoneStatusBarView): PhoneStatusBarViewController {
-            val statusBarMoveFromCenterAnimationController =
-                if (featureFlags.isEnabled(ENABLE_UNFOLD_STATUS_BAR_ANIMATIONS)) {
-                    unfoldComponent.getOrNull()?.getStatusBarMoveFromCenterAnimationController()
-                } else {
-                    null
-                }
-
             return PhoneStatusBarViewController(
                 view,
                 progressProvider.getOrNull(),
+                resources,
                 centralSurfaces,
                 statusBarWindowStateController,
                 shadeController,
                 shadeViewController,
+                shadeModeInteractor,
                 panelExpansionInteractor,
                 statusBarLongPressGestureDetector,
                 windowRootView,
                 shadeLogger,
-                statusBarMoveFromCenterAnimationController,
                 userChipViewModel,
                 viewUtil,
-                configurationController,
+                statusBarConfigurationController,
                 statusOverlayHoverListenerFactory,
                 darkIconDispatcher,
-                statusBarContentInsetsProviderStore.defaultDisplay,
+                statusBarContentInsetsProvider,
                 lazyStatusBarShadeDisplayPolicy,
+                shadeExpansionTargetDisplayInteractor,
+                lazyShadeDisplaysRepository,
+                statusBarWindowControllerStore,
             )
         }
     }

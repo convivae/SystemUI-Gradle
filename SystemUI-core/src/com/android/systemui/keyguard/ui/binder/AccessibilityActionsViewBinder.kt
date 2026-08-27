@@ -20,18 +20,20 @@ package com.android.systemui.keyguard.ui.binder
 import android.os.Bundle
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.systemui.deviceentry.ui.view.UdfpsAccessibilityOverlayOverlappingView
 import com.android.systemui.keyguard.ui.viewmodel.AccessibilityActionsViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
 import com.android.systemui.res.R
 import kotlinx.coroutines.DisposableHandle
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 /** View binder for accessibility actions placeholder on keyguard. */
 object AccessibilityActionsViewBinder {
     fun bind(
-        view: View,
+        view: UdfpsAccessibilityOverlayOverlappingView,
         viewModel: AccessibilityActionsViewModel,
     ): DisposableHandle {
         val disposableHandle =
@@ -60,12 +62,25 @@ object AccessibilityActionsViewBinder {
                                 object : View.AccessibilityDelegate() {
                                     override fun onInitializeAccessibilityNodeInfo(
                                         host: View,
-                                        info: AccessibilityNodeInfo
+                                        info: AccessibilityNodeInfo,
                                     ) {
                                         super.onInitializeAccessibilityNodeInfo(host, info)
-                                        // Add custom actions
+                                        info.isLongClickable = true
+                                        info.addAction(
+                                            AccessibilityNodeInfo.AccessibilityAction(
+                                                AccessibilityNodeInfoCompat.ACTION_LONG_CLICK,
+                                                view.resources.getString(
+                                                    R.string.lock_screen_settings
+                                                ),
+                                            )
+                                        )
+                                        // If this condition is false, the customize lock screen
+                                        // action will automatically be selected when this container
+                                        // is triggered via switch access. This is the default
+                                        // behavior of Switch Access, to choose the only option if
+                                        // only one is available.
                                         if (canOpenGlanceableHub) {
-                                            val action =
+                                            info.addAction(
                                                 AccessibilityNodeInfo.AccessibilityAction(
                                                     R.id.accessibility_action_open_communal_hub,
                                                     view.resources.getString(
@@ -73,23 +88,37 @@ object AccessibilityActionsViewBinder {
                                                             .accessibility_action_open_communal_hub
                                                     ),
                                                 )
-                                            info.addAction(action)
+                                            )
                                         }
                                     }
 
                                     override fun performAccessibilityAction(
                                         host: View,
                                         action: Int,
-                                        args: Bundle?
+                                        args: Bundle?,
                                     ): Boolean {
-                                        return if (
-                                            action == R.id.accessibility_action_open_communal_hub
-                                        ) {
-                                            viewModel.openCommunalHub()
-                                            true
-                                        } else super.performAccessibilityAction(host, action, args)
+                                        return when (action) {
+                                            AccessibilityNodeInfoCompat.ACTION_LONG_CLICK -> {
+                                                viewModel.openCustomizeLockScreen()
+                                                true
+                                            }
+                                            R.id.accessibility_action_open_communal_hub -> {
+                                                viewModel.openCommunalHub()
+                                                true
+                                            }
+                                            else -> {
+                                                super.performAccessibilityAction(host, action, args)
+                                            }
+                                        }
                                     }
                                 }
+                        }
+
+                        launch {
+                            viewModel.accessibilityOverlayBoundsWhenListeningForUdfps.collect {
+                                bounds ->
+                                view.setOverlappingAccessibilityViewBounds(bounds)
+                            }
                         }
                     }
                 }

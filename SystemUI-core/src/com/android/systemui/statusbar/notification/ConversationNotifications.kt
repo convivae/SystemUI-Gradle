@@ -17,12 +17,14 @@
 package com.android.systemui.statusbar.notification
 
 import android.app.Notification
+import android.app.Notification.EXTRA_SUMMARIZED_CONTENT
 import android.content.Context
 import android.content.pm.LauncherApps
 import android.graphics.drawable.AnimatedImageDrawable
 import android.os.Handler
 import android.service.notification.NotificationListenerService.Ranking
 import android.service.notification.NotificationListenerService.RankingMap
+import android.text.TextUtils
 import com.android.internal.widget.ConversationLayout
 import com.android.internal.widget.MessagingImageMessage
 import com.android.internal.widget.MessagingLayout
@@ -31,6 +33,8 @@ import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.notification.collection.NotificationEntry
+import com.android.systemui.statusbar.notification.collection.coordinator.SummarizationDecorator
+import com.android.systemui.statusbar.notification.collection.coordinator.shared.NotificationSummarizationAllowAnimation
 import com.android.systemui.statusbar.notification.collection.inflation.BindEventManager
 import com.android.systemui.statusbar.notification.collection.notifcollection.CommonNotifCollection
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifCollectionListener
@@ -48,8 +52,10 @@ import javax.inject.Inject
 class ConversationNotificationProcessor
 @Inject
 constructor(
+    @ShadeDisplayAware private val context: Context,
     private val launcherApps: LauncherApps,
     private val conversationNotificationManager: ConversationNotificationManager,
+    private val decorator: SummarizationDecorator,
 ) {
     fun processNotification(
         entry: NotificationEntry,
@@ -60,12 +66,24 @@ constructor(
         messagingStyle.conversationType =
             if (entry.ranking.channel.isImportantConversation)
                 Notification.MessagingStyle.CONVERSATION_TYPE_IMPORTANT
-            else Notification.MessagingStyle.CONVERSATION_TYPE_NORMAL
+            else if (entry.ranking.isConversation)
+                Notification.MessagingStyle.CONVERSATION_TYPE_NORMAL
+            else Notification.MessagingStyle.CONVERSATION_TYPE_LEGACY
         entry.ranking.conversationShortcutInfo?.let { shortcutInfo ->
-            logger.logAsyncTaskProgress(entry, "getting shortcut icon")
+            logger.logAsyncTaskProgress(entry.logKey, "getting shortcut icon")
             messagingStyle.shortcutIcon = launcherApps.getShortcutIcon(shortcutInfo)
             shortcutInfo.label?.let { label -> messagingStyle.conversationTitle = label }
         }
+        if (
+            !NmSummarizationAllFlag.isEnabled && !NotificationSummarizationAllowAnimation.isEnabled
+        ) {
+            if (!TextUtils.isEmpty(entry.summarization)) {
+                decorator.decorateSummarization(entry, null)
+            } else {
+                entry.sbn.notification.extras.putCharSequence(EXTRA_SUMMARIZED_CONTENT, null)
+            }
+        }
+
         messagingStyle.unreadMessageCount =
             conversationNotificationManager.getUnreadCount(entry, recoveredBuilder)
         return messagingStyle
@@ -147,8 +165,7 @@ constructor(
     private val notifCollection: CommonNotifCollection,
     @Main private val mainHandler: Handler,
 ) {
-    // Need this state to be thread safe, since it's accessed from the ui thread
-    // (NotificationEntryListener) and a bg thread (NotificationRowContentBinder)
+    // This state should be thread safe, since it may be accessed from different threads.
     private val states = ConcurrentHashMap<String, ConversationState>()
 
     private var notifPanelCollapsed = true

@@ -19,13 +19,12 @@ package com.android.systemui.statusbar.notification.row
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.LogLevel
 import com.android.systemui.log.dagger.NotifInflationLog
-import com.android.systemui.statusbar.notification.collection.NotificationEntry
-import com.android.systemui.statusbar.notification.logKey
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_ALL
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_CONTRACTED
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_EXPANDED
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_HEADS_UP
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_PUBLIC
+import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_CONTENT_VIEW_SINGLE_LINE
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_GROUP_SUMMARY_HEADER
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.FLAG_LOW_PRIORITY_GROUP_SUMMARY_HEADER
@@ -35,90 +34,76 @@ import javax.inject.Inject
 class NotificationRowContentBinderLogger
 @Inject
 constructor(@NotifInflationLog private val buffer: LogBuffer) {
-    fun logNotBindingRowWasRemoved(entry: NotificationEntry) {
-        buffer.log(
-            TAG,
-            LogLevel.INFO,
-            { str1 = entry.logKey },
-            { "not inflating $str1: row was removed" }
-        )
+    fun logNotBindingRowWasRemoved(entry: String) {
+        buffer.log(TAG, LogLevel.INFO, { str1 = entry }, { "not inflating $str1: row was removed" })
     }
 
-    fun logBinding(entry: NotificationEntry, @InflationFlag flag: Int) {
+    fun logBinding(entry: String, @InflationFlag flag: Int) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
             {
-                str1 = entry.logKey
+                str1 = entry
                 int1 = flag
             },
-            { "binding views ${flagToString(int1)} for $str1" }
+            { "binding views ${flagToString(int1)} for $str1" },
         )
     }
 
-    fun logCancelBindAbortedTask(entry: NotificationEntry) {
-        buffer.log(
-            TAG,
-            LogLevel.INFO,
-            { str1 = entry.logKey },
-            { "aborted task to cancel binding $str1" }
-        )
+    fun logCancelBindAbortedTask(entry: String) {
+        buffer.log(TAG, LogLevel.INFO, { str1 = entry }, { "aborted task to cancel binding $str1" })
     }
 
-    fun logUnbinding(entry: NotificationEntry, @InflationFlag flag: Int) {
+    fun logUnbinding(entry: String, @InflationFlag flag: Int) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
             {
-                str1 = entry.logKey
+                str1 = entry
                 int1 = flag
             },
-            { "unbinding views ${flagToString(int1)} for $str1" }
+            { "unbinding views ${flagToString(int1)} for $str1" },
         )
     }
 
-    fun logAsyncTaskProgress(entry: NotificationEntry, progress: String) {
+    fun logAsyncTaskProgress(entry: String?, progress: String) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
             {
-                str1 = entry.logKey
+                str1 = entry
                 str2 = progress
             },
-            { "async task for $str1: $str2" }
+            { "async task for $str1: $str2" },
         )
     }
 
-    fun logAsyncTaskException(entry: NotificationEntry, logContext: String, exception: Throwable) {
+    fun logAsyncTaskException(entry: String?, logContext: String, exception: Throwable) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
             {
-                str1 = entry.logKey
+                str1 = entry
                 str2 = logContext
                 str3 = exception.stackTraceToString()
             },
-            { "async task for $str1 got exception $str2: $str3" }
+            { "async task for $str1 got exception $str2: $str3" },
         )
     }
 
-    fun logInflateSingleLine(
-        entry: NotificationEntry,
-        @InflationFlag inflationFlags: Int,
-        isConversation: Boolean
-    ) {
+    fun logInflateSingleLine(entry: String?, @InflationFlag inflationFlags: Int, type: String) {
         buffer.log(
             TAG,
             LogLevel.DEBUG,
             {
-                str1 = entry.logKey
+                str1 = entry
                 int1 = inflationFlags
-                bool1 = isConversation
+                str2 = type
             },
             {
                 "inflateSingleLineView, inflationFlags: ${flagToString(int1)} for $str1, " +
-                    "isConversation: $bool1"
-            }
+                    "type: $str2"
+            },
         )
     }
 
@@ -146,6 +131,9 @@ constructor(@NotifInflationLog private val buffer: LogBuffer) {
             }
             if (flag and FLAG_CONTENT_VIEW_SINGLE_LINE != 0) {
                 l.add("SINGLE_LINE")
+            }
+            if (flag and FLAG_CONTENT_VIEW_PUBLIC_SINGLE_LINE != 0) {
+                l.add("PUBLIC_SINGLE_LINE")
             }
             if (flag and FLAG_GROUP_SUMMARY_HEADER != 0) {
                 l.add("GROUP_SUMMARY_HEADER")

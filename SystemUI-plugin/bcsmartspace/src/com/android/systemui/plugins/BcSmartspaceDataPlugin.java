@@ -17,18 +17,19 @@
 package com.android.systemui.plugins;
 
 import android.app.PendingIntent;
+import android.app.WallpaperColors.ColorsHints;
 import android.app.smartspace.SmartspaceAction;
 import android.app.smartspace.SmartspaceTarget;
 import android.app.smartspace.SmartspaceTargetEvent;
 import android.app.smartspace.uitemplatedata.TapAction;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
 
@@ -61,27 +62,28 @@ public interface BcSmartspaceDataPlugin extends Plugin {
         throw new UnsupportedOperationException("Not implemented by " + getClass());
     }
 
-    /** Register a SmartspaceEventNotifier. */
-    default void registerSmartspaceEventNotifier(SmartspaceEventNotifier notifier) {
-        throw new UnsupportedOperationException("Not implemented by " + getClass());
-    }
+    /** Sets the event dispatcher for smart space targets. */
+    void setEventDispatcher(SmartspaceEventDispatcher eventDispatcher);
 
-    /** Push a SmartspaceTargetEvent to the SmartspaceEventNotifier. */
-    default void notifySmartspaceEvent(SmartspaceTargetEvent event) {
-        throw new UnsupportedOperationException("Not implemented by " + getClass());
-    }
+    /**
+     * Overrides how Intents/PendingIntents gets launched. Mostly to support auth from
+     * the lockscreen.
+     */
+    void setIntentStarter(IntentStarter intentStarter);
 
-    /** Allows for notifying the SmartspaceSession of SmartspaceTargetEvents. */
-    interface SmartspaceEventNotifier {
-        /** Pushes a given SmartspaceTargetEvent to the SmartspaceSession. */
-        void notifySmartspaceEvent(SmartspaceTargetEvent event);
-    }
+    /** Returns the smartspace event notifier */
+    SmartspaceEventNotifier getEventNotifier();
 
     /**
      * Create a view to be shown within the parent. Do not add the view, as the parent
      * will be responsible for correctly setting the LayoutParams
      */
-    default SmartspaceView getView(ViewGroup parent) {
+    default SmartspaceView getView(Context context) {
+        throw new UnsupportedOperationException("Not implemented by " + getClass());
+    }
+
+    /** Similar to getView, but for the large-clock version of a target view */
+    default SmartspaceView getLargeClockView(Context context) {
         throw new UnsupportedOperationException("Not implemented by " + getClass());
     }
 
@@ -103,15 +105,6 @@ public interface BcSmartspaceDataPlugin extends Plugin {
         void onSmartspaceTargetsUpdated(List<? extends Parcelable> targets);
     }
 
-    /**
-     * Sets {@link BcSmartspaceConfigPlugin}.
-     *
-     * TODO: b/259566300 - Remove once isViewPager2Enabled is fully rolled out
-     */
-    default void registerConfigProvider(BcSmartspaceConfigPlugin configProvider) {
-        throw new UnsupportedOperationException("Not implemented by " + getClass());
-    }
-
     /** View to which this plugin can be registered, in order to get updates. */
     interface SmartspaceView {
         void registerDataProvider(BcSmartspaceDataPlugin plugin);
@@ -122,6 +115,11 @@ public interface BcSmartspaceDataPlugin extends Plugin {
         default void registerConfigProvider(BcSmartspaceConfigPlugin configProvider) {
             throw new UnsupportedOperationException("Not implemented by " + getClass());
         }
+
+        /**
+         * Background color for non-RemoteViews cards, when high contrast background is enabled.
+         */
+        default void setHighContrastBackgroundColor(@ColorsHints int wallpaperColorHints) {}
 
         /**
          * Primary color for unprotected text
@@ -168,12 +166,6 @@ public interface BcSmartspaceDataPlugin extends Plugin {
         default void setKeyguardBypassEnabled(boolean enabled) {}
 
         /**
-         * Overrides how Intents/PendingIntents gets launched. Mostly to support auth from
-         * the lockscreen.
-         */
-        void setIntentStarter(IntentStarter intentStarter);
-
-        /**
          * When on the lockscreen, use the FalsingManager to help detect errant touches
          */
         void setFalsingManager(com.android.systemui.plugins.FalsingManager falsingManager);
@@ -196,7 +188,7 @@ public interface BcSmartspaceDataPlugin extends Plugin {
          * Set or clear device media playing
          */
         default void setMediaTarget(@Nullable SmartspaceTarget target) {
-            throw new UnsupportedOperationException("Not implemented by " + getClass());
+            // No-op by default for most view implementations
         }
 
         /**
@@ -253,6 +245,19 @@ public interface BcSmartspaceDataPlugin extends Plugin {
 
         /** Start the PendingIntent */
         void startPendingIntent(View v, PendingIntent pi, boolean showOnLockscreen);
+    }
+
+    /** SmartspaceEventDispatcher which also controls controlling intent launching behavior */
+    interface SmartspaceEventNotifier extends SmartspaceEventDispatcher {
+
+        /** The intent starter for controlling activity launches */
+        @Nullable IntentStarter getIntentStarter();
+    }
+
+    /** Allows for notifying the SmartspaceSession of SmartspaceTargetEvents. */
+    interface SmartspaceEventDispatcher {
+        /** Pushes a given SmartspaceTargetEvent to the SmartspaceSession. */
+        void notifySmartspaceEvent(SmartspaceTargetEvent event);
     }
 
     /** Interface for delegating time updates */

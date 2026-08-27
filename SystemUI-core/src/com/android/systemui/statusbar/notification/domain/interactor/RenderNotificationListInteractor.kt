@@ -15,29 +15,40 @@
  */
 package com.android.systemui.statusbar.notification.domain.interactor
 
+import android.app.Notification
 import android.app.Notification.CallStyle.CALL_TYPE_INCOMING
 import android.app.Notification.CallStyle.CALL_TYPE_ONGOING
 import android.app.Notification.CallStyle.CALL_TYPE_SCREENING
 import android.app.Notification.CallStyle.CALL_TYPE_UNKNOWN
 import android.app.Notification.EXTRA_CALL_TYPE
+import android.app.Notification.FLAG_ONGOING_EVENT
+import android.app.Notification.MessagingStyle
 import android.app.PendingIntent
+import android.content.Context
 import android.graphics.drawable.Icon
 import android.service.notification.StatusBarNotification
 import android.util.ArrayMap
+import androidx.annotation.VisibleForTesting
 import com.android.app.tracing.traceSection
-import com.android.systemui.Flags
+import com.android.internal.logging.InstanceId
+import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.statusbar.StatusBarIconView
+import com.android.systemui.statusbar.notification.collection.BundleEntry
 import com.android.systemui.statusbar.notification.collection.GroupEntry
 import com.android.systemui.statusbar.notification.collection.ListEntry
 import com.android.systemui.statusbar.notification.collection.NotificationEntry
+import com.android.systemui.statusbar.notification.collection.PipelineEntry
 import com.android.systemui.statusbar.notification.collection.provider.SectionStyleProvider
 import com.android.systemui.statusbar.notification.data.repository.ActiveNotificationListRepository
 import com.android.systemui.statusbar.notification.data.repository.ActiveNotificationsStore
-import com.android.systemui.statusbar.notification.promoted.shared.model.PromotedNotificationContentModel
+import com.android.systemui.statusbar.notification.domain.interactor.RenderNotificationListInteractor.Companion.IS_SCREEN_SHARE_NOTIFICATION
+import com.android.systemui.statusbar.notification.promoted.shared.model.PromotedNotificationContentModels
+import com.android.systemui.statusbar.notification.shared.ActiveBundleModel
 import com.android.systemui.statusbar.notification.shared.ActiveNotificationEntryModel
 import com.android.systemui.statusbar.notification.shared.ActiveNotificationGroupModel
 import com.android.systemui.statusbar.notification.shared.ActiveNotificationModel
 import com.android.systemui.statusbar.notification.shared.CallType
+import com.android.systemui.statusbar.notification.shared.NotifStyle
 import javax.inject.Inject
 import kotlinx.coroutines.flow.update
 
@@ -51,104 +62,146 @@ class RenderNotificationListInteractor
 constructor(
     private val repository: ActiveNotificationListRepository,
     private val sectionStyleProvider: SectionStyleProvider,
+    @Main private val context: Context,
 ) {
     /**
      * Sets the current list of rendered notification entries as displayed in the notification list.
      */
-    fun setRenderedList(entries: List<ListEntry>) {
+    fun setRenderedList(entries: List<PipelineEntry>) {
         traceSection("RenderNotificationListInteractor.setRenderedList") {
             repository.activeNotifications.update { existingModels ->
-                buildActiveNotificationsStore(existingModels, sectionStyleProvider) {
-                    entries.forEach(::addListEntry)
+                buildActiveNotificationsStore(existingModels, sectionStyleProvider, context) {
+                    entries.forEach(::addPipelineEntry)
                     setRankingsMap(entries)
                 }
             }
         }
+    }
+
+    companion object {
+        @VisibleForTesting
+        const val IS_SCREEN_SHARE_NOTIFICATION = "android.isScreenShareLiveUpdate"
     }
 }
 
 private fun buildActiveNotificationsStore(
     existingModels: ActiveNotificationsStore,
     sectionStyleProvider: SectionStyleProvider,
+    context: Context,
     block: ActiveNotificationsStoreBuilder.() -> Unit,
 ): ActiveNotificationsStore =
-    ActiveNotificationsStoreBuilder(existingModels, sectionStyleProvider).apply(block).build()
+    ActiveNotificationsStoreBuilder(existingModels, sectionStyleProvider, context)
+        .apply(block)
+        .build()
 
 private class ActiveNotificationsStoreBuilder(
     private val existingModels: ActiveNotificationsStore,
     private val sectionStyleProvider: SectionStyleProvider,
+    private val context: Context,
 ) {
     private val builder = ActiveNotificationsStore.Builder()
 
     fun build(): ActiveNotificationsStore = builder.build()
 
     /**
-     * Convert a [ListEntry] into [ActiveNotificationEntryModel]s, and add them to the
+     * Convert a [PipelineEntry] into [ActiveNotificationEntryModel]s, and add them to the
      * [ActiveNotificationsStore]. Special care is taken to avoid re-allocating models if the result
      * would be identical to an existing model (at the expense of additional computations).
      */
-    fun addListEntry(entry: ListEntry) {
+    fun addPipelineEntry(entry: PipelineEntry) {
         when (entry) {
-            is GroupEntry -> {
-                entry.summary?.let { summary ->
-                    val summaryModel = summary.toModel()
-                    val childModels = entry.children.map { it.toModel() }
-                    builder.addNotifGroup(
-                        existingModels.createOrReuse(
-                            key = entry.key,
-                            summary = summaryModel,
-                            children = childModels,
-                        )
-                    )
-                }
-            }
-            else -> {
-                entry.representativeEntry?.let { notifEntry ->
-                    builder.addIndividualNotif(notifEntry.toModel())
-                }
-            }
+            is BundleEntry -> addBundleEntry(entry)
+            is ListEntry -> addListEntry(entry)
         }
     }
 
-    fun setRankingsMap(entries: List<ListEntry>) {
+    private fun addListEntry(entry: ListEntry) {
+        when (entry) {
+            is GroupEntry -> addGroupEntry(entry)
+            is NotificationEntry -> addNotificationEntry(entry)
+        }
+    }
+
+    private fun addBundleEntry(entry: BundleEntry) {
+        val childModels = entry.children.mapNotNull { it.toModel() }
+        builder.addBundle(
+            existingModels.createOrReuseBundle(
+                key = entry.key,
+                icon = Icon.createWithResource(context, entry.bundleRepository.bundleIcon),
+                children = childModels,
+            )
+        )
+    }
+
+    private fun addGroupEntry(entry: GroupEntry) {
+        entry.toModel()?.let { builder.addNotifGroup(it) }
+    }
+
+    private fun addNotificationEntry(entry: NotificationEntry) {
+        builder.addIndividualNotif(entry.toModel())
+    }
+
+    fun setRankingsMap(entries: List<PipelineEntry>) {
         builder.setRankingsMap(flatMapToRankingsMap(entries))
     }
 
-    fun flatMapToRankingsMap(entries: List<ListEntry>): Map<String, Int> {
+    private fun flatMapToRankingsMap(entries: List<PipelineEntry>): Map<String, Int> {
         val result = ArrayMap<String, Int>()
         for (entry in entries) {
-            if (entry is NotificationEntry) {
-                entry.representativeEntry?.let { representativeEntry ->
-                    result[representativeEntry.key] = representativeEntry.ranking.rank
-                }
-            } else if (entry is GroupEntry) {
+            when (entry) {
+                is BundleEntry -> flatMapToRankingsMap(entry, result)
+                is ListEntry -> flatMapToRankingsMap(entry, result)
+            }
+        }
+        return result
+    }
+
+    private fun flatMapToRankingsMap(entry: BundleEntry, result: ArrayMap<String, Int>) {
+        for (child in entry.children) {
+            flatMapToRankingsMap(child, result)
+        }
+    }
+
+    private fun flatMapToRankingsMap(entry: ListEntry, result: ArrayMap<String, Int>) {
+        when (entry) {
+            is NotificationEntry -> {
+                result[entry.key] = entry.ranking.rank
+            }
+
+            is GroupEntry -> {
                 entry.summary?.let { summary -> result[summary.key] = summary.ranking.rank }
                 for (child in entry.children) {
                     result[child.key] = child.ranking.rank
                 }
             }
         }
-        return result
     }
 
-    private fun NotificationEntry.toModel(): ActiveNotificationModel {
-        val statusBarChipIcon =
-            if (Flags.statusBarCallChipNotificationIcon()) {
-                icons.statusBarChipIcon
-            } else {
-                null
-            }
-        val promotedContent =
-            if (PromotedNotificationContentModel.featureFlagEnabled()) {
-                promotedNotificationContentModel
-            } else {
-                null
-            }
+    private fun ListEntry.toModel(): ActiveNotificationEntryModel? =
+        when (this) {
+            is GroupEntry -> toModel()
+            is NotificationEntry -> toModel()
+            else -> null
+        }
 
-        return existingModels.createOrReuse(
+    private fun GroupEntry.toModel(): ActiveNotificationGroupModel? =
+        summary?.let { summary ->
+            val summaryModel = summary.toModel()
+            val childModels = children.map { it.toModel() }
+            existingModels.createOrReuseGroup(
+                key = key,
+                summary = summaryModel,
+                children = childModels,
+            )
+        }
+
+    private fun NotificationEntry.toModel(): ActiveNotificationModel {
+        return existingModels.createOrReuseNotif(
             key = key,
             groupKey = sbn.groupKey,
             whenTime = sbn.notification.`when`,
+            isForegroundService = sbn.notification.isForegroundService,
+            isOngoingEvent = (sbn.notification.flags and FLAG_ONGOING_EVENT) != 0,
             isAmbient = sectionStyleProvider.isMinimized(this),
             isRowDismissed = isRowDismissed,
             isSilent = sectionStyleProvider.isSilent(this),
@@ -158,23 +211,33 @@ private class ActiveNotificationsStoreBuilder(
             aodIcon = icons.aodIcon?.sourceIcon,
             shelfIcon = icons.shelfIcon?.sourceIcon,
             statusBarIcon = icons.statusBarIcon?.sourceIcon,
-            statusBarChipIconView = statusBarChipIcon,
+            statusBarChipIconView = icons.statusBarChipIcon,
             uid = sbn.uid,
             packageName = sbn.packageName,
+            appName = sbn.notification.loadHeaderAppName(context) ?: "",
             contentIntent = sbn.notification.contentIntent,
-            instanceId = sbn.instanceId?.id,
+            instanceId = sbn.instanceId,
             isGroupSummary = sbn.notification.isGroupSummary,
             bucket = bucket,
             callType = sbn.toCallType(),
-            promotedContent = promotedContent,
+            promotedContent = promotedNotificationContentModels,
+            requestedPromotion = sbn.notification.isRequestPromotedOngoing,
+            isScreenShareNotification = sbn.notification.isScreenShareNotification(),
+            notifStyle = notifStyle(sbn.notification),
         )
     }
 }
 
-private fun ActiveNotificationsStore.createOrReuse(
+private fun Notification.isScreenShareNotification(): Boolean {
+    return extras.getBoolean(IS_SCREEN_SHARE_NOTIFICATION, false)
+}
+
+private fun ActiveNotificationsStore.createOrReuseNotif(
     key: String,
     groupKey: String?,
     whenTime: Long,
+    isForegroundService: Boolean,
+    isOngoingEvent: Boolean,
     isAmbient: Boolean,
     isRowDismissed: Boolean,
     isSilent: Boolean,
@@ -187,18 +250,24 @@ private fun ActiveNotificationsStore.createOrReuse(
     statusBarChipIconView: StatusBarIconView?,
     uid: Int,
     packageName: String,
+    appName: String,
     contentIntent: PendingIntent?,
-    instanceId: Int?,
+    instanceId: InstanceId?,
     isGroupSummary: Boolean,
     bucket: Int,
     callType: CallType,
-    promotedContent: PromotedNotificationContentModel?,
+    promotedContent: PromotedNotificationContentModels?,
+    requestedPromotion: Boolean,
+    isScreenShareNotification: Boolean,
+    notifStyle: NotifStyle?,
 ): ActiveNotificationModel {
     return individuals[key]?.takeIf {
         it.isCurrent(
             key = key,
             groupKey = groupKey,
             whenTime = whenTime,
+            isForegroundService = isForegroundService,
+            isOngoingEvent = isOngoingEvent,
             isAmbient = isAmbient,
             isRowDismissed = isRowDismissed,
             isSilent = isSilent,
@@ -213,16 +282,22 @@ private fun ActiveNotificationsStore.createOrReuse(
             instanceId = instanceId,
             isGroupSummary = isGroupSummary,
             packageName = packageName,
+            appName = appName,
             contentIntent = contentIntent,
             bucket = bucket,
             callType = callType,
             promotedContent = promotedContent,
+            requestedPromotion = requestedPromotion,
+            isScreenShareNotification = isScreenShareNotification,
+            style = notifStyle,
         )
     }
         ?: ActiveNotificationModel(
             key = key,
             groupKey = groupKey,
             whenTime = whenTime,
+            isForegroundService = isForegroundService,
+            isOngoingEvent = isOngoingEvent,
             isAmbient = isAmbient,
             isRowDismissed = isRowDismissed,
             isSilent = isSilent,
@@ -237,10 +312,14 @@ private fun ActiveNotificationsStore.createOrReuse(
             instanceId = instanceId,
             isGroupSummary = isGroupSummary,
             packageName = packageName,
+            appName = appName,
             contentIntent = contentIntent,
             bucket = bucket,
             callType = callType,
             promotedContent = promotedContent,
+            requestedPromotion = requestedPromotion,
+            isScreenShareNotification = isScreenShareNotification,
+            style = notifStyle,
         )
 }
 
@@ -248,6 +327,8 @@ private fun ActiveNotificationModel.isCurrent(
     key: String,
     groupKey: String?,
     whenTime: Long,
+    isForegroundService: Boolean,
+    isOngoingEvent: Boolean,
     isAmbient: Boolean,
     isRowDismissed: Boolean,
     isSilent: Boolean,
@@ -260,17 +341,23 @@ private fun ActiveNotificationModel.isCurrent(
     statusBarChipIconView: StatusBarIconView?,
     uid: Int,
     packageName: String,
+    appName: String,
     contentIntent: PendingIntent?,
-    instanceId: Int?,
+    instanceId: InstanceId?,
     isGroupSummary: Boolean,
     bucket: Int,
     callType: CallType,
-    promotedContent: PromotedNotificationContentModel?,
+    promotedContent: PromotedNotificationContentModels?,
+    requestedPromotion: Boolean,
+    isScreenShareNotification: Boolean,
+    style: NotifStyle?,
 ): Boolean {
     return when {
         key != this.key -> false
         groupKey != this.groupKey -> false
         whenTime != this.whenTime -> false
+        isForegroundService != this.isForegroundService -> false
+        isOngoingEvent != this.isOngoingEvent -> false
         isAmbient != this.isAmbient -> false
         isRowDismissed != this.isRowDismissed -> false
         isSilent != this.isSilent -> false
@@ -285,17 +372,21 @@ private fun ActiveNotificationModel.isCurrent(
         instanceId != this.instanceId -> false
         isGroupSummary != this.isGroupSummary -> false
         packageName != this.packageName -> false
+        appName != this.appName -> false
         contentIntent != this.contentIntent -> false
         bucket != this.bucket -> false
         callType != this.callType -> false
         // QQQ: Do we need to do the same `isCurrent` thing within the content model to avoid
         // recreating the active notification model constantly?
         promotedContent != this.promotedContent -> false
+        requestedPromotion != this.requestedPromotion -> false
+        isScreenShareNotification != this.isScreenShareNotification -> false
+        style != this.style -> false
         else -> true
     }
 }
 
-private fun ActiveNotificationsStore.createOrReuse(
+private fun ActiveNotificationsStore.createOrReuseGroup(
     key: String,
     summary: ActiveNotificationModel,
     children: List<ActiveNotificationModel>,
@@ -325,4 +416,44 @@ private fun StatusBarNotification.toCallType(): CallType =
         CALL_TYPE_SCREENING -> CallType.Screening
         CALL_TYPE_UNKNOWN -> CallType.Unknown
         else -> CallType.Unknown
+    }
+
+private fun ActiveNotificationsStore.createOrReuseBundle(
+    key: String,
+    icon: Icon,
+    children: List<ActiveNotificationEntryModel>,
+): ActiveBundleModel {
+    return bundles[key]?.takeIf { it.isCurrent(key, icon, children) }
+        ?: ActiveBundleModel(key, icon, children)
+}
+
+private fun ActiveBundleModel.isCurrent(
+    key: String,
+    icon: Icon,
+    children: List<ActiveNotificationEntryModel>,
+): Boolean {
+    return when {
+        key != this.key -> false
+        icon.resId != this.icon.resId -> false
+        !hasSameInstances(children, this.children) -> false
+        else -> true
+    }
+}
+
+private fun hasSameInstances(list1: List<*>, list2: List<*>): Boolean {
+    if (list1.size != list2.size) {
+        return false
+    }
+    for (i in list1.indices) {
+        if (list1[i] !== list2[i]) {
+            return false
+        }
+    }
+    return true
+}
+
+private fun notifStyle(notif: Notification): NotifStyle? =
+    when {
+        notif.isStyle(MessagingStyle::class.java) -> NotifStyle.Messaging()
+        else -> null
     }

@@ -18,25 +18,25 @@ package com.android.systemui.shade
 
 import android.annotation.IntDef
 import android.os.Trace
+import android.os.Trace.TRACE_TAG_APP as TRACE_TAG
 import android.util.Log
 import androidx.annotation.FloatRange
+import com.android.app.tracing.TraceStateLogger
+import com.android.app.tracing.TrackGroupUtils.trackGroup
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.util.Compile
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
-import android.os.Trace.TRACE_TAG_APP as TRACE_TAG
 
-/**
- * A class responsible for managing the notification panel's current state.
- *
- * TODO(b/200063118): Make this class the one source of truth for the state of panel expansion.
- */
+/** A class responsible for managing the notification panel's current state. */
 @SysUISingleton
 @Deprecated("Use ShadeInteractor instead")
 class ShadeExpansionStateManager @Inject constructor() {
 
     private val expansionListeners = CopyOnWriteArrayList<ShadeExpansionListener>()
     private val stateListeners = CopyOnWriteArrayList<ShadeStateListener>()
+
+    private val stateLogger = TraceStateLogger(trackGroup("shade", TRACK_NAME))
 
     @PanelState private var state: Int = STATE_CLOSED
     @FloatRange(from = 0.0, to = 1.0) private var fraction: Float = 0f
@@ -75,9 +75,12 @@ class ShadeExpansionStateManager @Inject constructor() {
     fun onPanelExpansionChanged(
         @FloatRange(from = 0.0, to = 1.0) fraction: Float,
         expanded: Boolean,
-        tracking: Boolean
+        tracking: Boolean,
     ) {
-        require(!fraction.isNaN()) { "fraction cannot be NaN" }
+        if (fraction.isNaN()) {
+            debugLog("The shade expansion fraction is NaN")
+            return
+        }
         val oldState = state
 
         this.fraction = fraction
@@ -113,11 +116,7 @@ class ShadeExpansionStateManager @Inject constructor() {
         )
 
         if (Trace.isTagEnabled(TRACE_TAG)) {
-            Trace.traceCounter(TRACE_TAG, "panel_expansion", (fraction * 100).toInt())
-            if (state != oldState) {
-                Trace.asyncTraceForTrackEnd(TRACE_TAG, TRACK_NAME, 0)
-                Trace.asyncTraceForTrackBegin(TRACE_TAG, TRACK_NAME, state.panelStateToString(), 0)
-            }
+            stateLogger.log(state.panelStateToString())
         }
 
         val expansionChangeEvent = ShadeExpansionChangeEvent(fraction, expanded, tracking)

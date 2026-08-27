@@ -19,37 +19,41 @@ package com.android.systemui.qs.tiles
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.os.UserManager.DISALLOW_ADJUST_VOLUME
 import android.service.quicksettings.Tile
 import androidx.annotation.DrawableRes
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.app.tracing.coroutines.runBlockingTraced as runBlocking
 import com.android.internal.logging.MetricsLogger
+import com.android.systemui.Flags
 import com.android.systemui.animation.Expandable
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dagger.qualifiers.Main
-import com.android.systemui.modes.shared.ModesUi
-import com.android.systemui.modes.shared.ModesUiIcons
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.plugins.qs.QSTile
+import com.android.systemui.plugins.qs.TileDetailsViewModel
 import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.qs.QSHost
 import com.android.systemui.qs.QsEventLogger
 import com.android.systemui.qs.asQSTileIcon
 import com.android.systemui.qs.logging.QSLogger
 import com.android.systemui.qs.tileimpl.QSTileImpl
+import com.android.systemui.qs.tiles.base.shared.model.QSTileConfigProvider
+import com.android.systemui.qs.tiles.base.shared.model.QSTileState
+import com.android.systemui.qs.tiles.dialog.ModesDetailsViewModel
 import com.android.systemui.qs.tiles.impl.modes.domain.interactor.ModesTileDataInteractor
 import com.android.systemui.qs.tiles.impl.modes.domain.interactor.ModesTileUserActionInteractor
 import com.android.systemui.qs.tiles.impl.modes.domain.model.ModesTileModel
-import com.android.systemui.qs.tiles.impl.modes.ui.ModesTileMapper
-import com.android.systemui.qs.tiles.viewmodel.QSTileConfigProvider
-import com.android.systemui.qs.tiles.viewmodel.QSTileState
+import com.android.systemui.qs.tiles.impl.modes.ui.mapper.ModesTileMapper
 import com.android.systemui.res.R
+import com.android.systemui.statusbar.policy.ui.dialog.viewmodel.ModesDialogViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.runBlocking
 
 class ModesTile
 @Inject
@@ -67,6 +71,7 @@ constructor(
     private val dataInteractor: ModesTileDataInteractor,
     private val tileMapper: ModesTileMapper,
     private val userActionInteractor: ModesTileUserActionInteractor,
+    private val modesDialogViewModel: ModesDialogViewModel,
 ) :
     QSTileImpl<QSTile.State>(
         host,
@@ -84,8 +89,6 @@ constructor(
     private val config = qsTileConfigProvider.getConfig(TILE_SPEC)
 
     init {
-        /* Check if */ ModesUiIcons.isUnexpectedlyInLegacyMode()
-
         lifecycle.coroutineScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 dataInteractor.tileData().collect { refreshState(it) }
@@ -93,7 +96,7 @@ constructor(
         }
     }
 
-    override fun isAvailable(): Boolean = ModesUi.isEnabled
+    override fun isAvailable(): Boolean = true
 
     override fun getTileLabel(): CharSequence = tileState.label
 
@@ -102,16 +105,38 @@ constructor(
             label = mContext.getString(R.string.quick_settings_modes_label)
             icon = ResourceIcon.get(ICON_RES_ID)
             state = Tile.STATE_INACTIVE
+            handlesSecondaryClick = true
         }
     }
 
-    override fun handleClick(expandable: Expandable?) = runBlocking {
-        userActionInteractor.handleClick(expandable)
+    override fun handleClick(expandable: Expandable?) {
+        if (Flags.doNotUseRunBlocking()) {
+            lifecycleScope.launch { userActionInteractor.handleClick(expandable) }
+        } else {
+            runBlocking { userActionInteractor.handleClick(expandable) }
+        }
     }
 
-    override fun handleSecondaryClick(expandable: Expandable?) = runBlocking {
-        val model = dataInteractor.getCurrentTileModel()
-        userActionInteractor.handleToggleClick(model)
+    override fun handleSecondaryClick(expandable: Expandable?) {
+        if (Flags.doNotUseRunBlocking()) {
+            lifecycleScope.launch {
+                val model = dataInteractor.getCurrentTileModel()
+                userActionInteractor.handleToggleClick(model)
+            }
+        } else {
+            runBlocking {
+                val model = dataInteractor.getCurrentTileModel()
+                userActionInteractor.handleToggleClick(model)
+            }
+        }
+    }
+
+    override fun getDetailsViewModel(): TileDetailsViewModel {
+        return ModesDetailsViewModel(
+            context = mContext,
+            onSettingsClick = { userActionInteractor.handleLongClick(null) },
+            viewModel = modesDialogViewModel,
+        )
     }
 
     override fun getLongClickIntent(): Intent = userActionInteractor.longClickIntent
@@ -124,6 +149,7 @@ constructor(
 
         tileState = tileMapper.map(config, model)
         state?.apply {
+            checkIfRestrictionEnforcedByAdminOnly(state, DISALLOW_ADJUST_VOLUME)
             this.state = tileState.activationState.legacyState
             icon = tileState.icon?.asQSTileIcon() ?: maybeLoadResourceIcon(ICON_RES_ID)
             label = tileLabel

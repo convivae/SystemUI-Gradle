@@ -53,6 +53,15 @@ object SysUIConcurrencyModule {
     private const val NOTIFICATION_INFLATION_SLOW_DISPATCH_THRESHOLD = 1000L
     private const val NOTIFICATION_INFLATION_SLOW_DELIVERY_THRESHOLD = 1000L
 
+    /**
+     * Choreographer instance for the main thread.
+     *
+     * TODO(b/395887935): Lets move this to @Main and provide thread-local references
+     */
+    @Provides
+    @SysUISingleton
+    fun providesChoreographer(): Choreographer = Choreographer.getInstance()
+
     /** Background Looper */
     @Provides
     @SysUISingleton
@@ -77,7 +86,7 @@ object SysUIConcurrencyModule {
             .getLooper()
             .setSlowLogThresholdMs(
                 BROADCAST_SLOW_DISPATCH_THRESHOLD,
-                BROADCAST_SLOW_DELIVERY_THRESHOLD
+                BROADCAST_SLOW_DELIVERY_THRESHOLD,
             )
         return thread.getLooper()
     }
@@ -99,16 +108,13 @@ object SysUIConcurrencyModule {
     @Provides
     @SysUISingleton
     @NotifInflation
-    fun provideNotifInflationLooper(@Background bgLooper: Looper): Looper {
-        if (!Flags.dedicatedNotifInflationThread()) {
-            return bgLooper
-        }
+    fun provideNotifInflationLooper(): Looper {
         val thread = HandlerThread("NotifInflation", Process.THREAD_PRIORITY_BACKGROUND)
         thread.start()
         val looper = thread.getLooper()
         looper.setSlowLogThresholdMs(
             NOTIFICATION_INFLATION_SLOW_DISPATCH_THRESHOLD,
-            NOTIFICATION_INFLATION_SLOW_DELIVERY_THRESHOLD
+            NOTIFICATION_INFLATION_SLOW_DELIVERY_THRESHOLD,
         )
         return looper
     }
@@ -119,7 +125,7 @@ object SysUIConcurrencyModule {
     fun provideBackPanelUiThreadContext(
         @Main mainLooper: Looper,
         @Main mainHandler: Handler,
-        @Main mainExecutor: Executor
+        @Main mainExecutor: Executor,
     ): UiThreadContext {
         return if (Flags.edgeBackGestureHandlerThread()) {
             val thread =
@@ -127,21 +133,21 @@ object SysUIConcurrencyModule {
                     start()
                     looper.setSlowLogThresholdMs(
                         LONG_SLOW_DISPATCH_THRESHOLD,
-                        LONG_SLOW_DELIVERY_THRESHOLD
+                        LONG_SLOW_DELIVERY_THRESHOLD,
                     )
                 }
             UiThreadContext(
                 thread.looper,
                 thread.threadHandler,
                 thread.threadExecutor,
-                thread.threadHandler.runWithScissors { Choreographer.getInstance() }
+                thread.threadHandler.runWithScissors { Choreographer.getInstance() },
             )
         } else {
             UiThreadContext(
                 mainLooper,
                 mainHandler,
                 mainExecutor,
-                mainHandler.runWithScissors { Choreographer.getInstance() }
+                mainHandler.runWithScissors { Choreographer.getInstance() },
             )
         }
     }

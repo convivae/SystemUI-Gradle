@@ -25,7 +25,7 @@ import com.android.systemui.keyguard.shared.model.DozeStateModel
 import com.android.systemui.keyguard.shared.model.Edge
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.power.domain.interactor.PowerInteractor
-import com.android.systemui.statusbar.disableflags.domain.interactor.DisableFlagsInteractor
+import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.statusbar.phone.DozeParameters
 import com.android.systemui.statusbar.policy.data.repository.UserSetupRepository
 import com.android.systemui.statusbar.policy.domain.interactor.DeviceProvisioningInteractor
@@ -40,14 +40,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-/** The non-empty SceneInteractor implementation. */
+/** The non-empty [ShadeInteractor] implementation. */
 @SysUISingleton
 class ShadeInteractorImpl
 @Inject
 constructor(
     @Application val scope: CoroutineScope,
     deviceProvisioningInteractor: DeviceProvisioningInteractor,
-    disableFlagsInteractor: DisableFlagsInteractor,
     dozeParams: DozeParameters,
     keyguardRepository: KeyguardRepository,
     keyguardTransitionInteractor: KeyguardTransitionInteractor,
@@ -55,19 +54,18 @@ constructor(
     userSetupRepository: UserSetupRepository,
     userSwitcherInteractor: UserSwitcherInteractor,
     private val baseShadeInteractor: BaseShadeInteractor,
-    shadeModeInteractor: ShadeModeInteractor,
-) :
-    ShadeInteractor,
-    BaseShadeInteractor by baseShadeInteractor,
-    ShadeModeInteractor by shadeModeInteractor {
+    sceneInteractor: SceneInteractor,
+    shadeStatusBarComponentsInteractor: ShadeStatusBarComponentsInteractor,
+) : ShadeInteractor, BaseShadeInteractor by baseShadeInteractor {
+
     override val isShadeEnabled: StateFlow<Boolean> =
-        disableFlagsInteractor.disableFlags
+        shadeStatusBarComponentsInteractor.disableFlags
             .map { it.isShadeEnabled() }
             .flowName("isShadeEnabled")
             .stateIn(scope, SharingStarted.Eagerly, initialValue = false)
 
     override val isQsEnabled: StateFlow<Boolean> =
-        disableFlagsInteractor.disableFlags
+        shadeStatusBarComponentsInteractor.disableFlags
             .map { it.isQuickSettingsEnabled() }
             .flowName("isQsEnabled")
             .stateIn(scope, SharingStarted.Eagerly, initialValue = false)
@@ -92,7 +90,13 @@ constructor(
         baseShadeInteractor.shadeExpansion.map { it <= 0f }.distinctUntilChanged()
 
     override val isUserInteracting: StateFlow<Boolean> =
-        combine(isUserInteractingWithShade, isUserInteractingWithQs) { shade, qs -> shade || qs }
+        combine(
+                isUserInteractingWithShade,
+                isUserInteractingWithQs,
+                sceneInteractor.isRemoteUserInteractionOngoing,
+            ) { shade, qs, isRemoteUserInteractionOngoing ->
+                shade || qs || isRemoteUserInteractionOngoing
+            }
             .flowName("isUserInteracting")
             .stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -101,11 +105,10 @@ constructor(
             powerInteractor.isAsleep,
             keyguardTransitionInteractor.isInTransition(Edge.create(to = KeyguardState.AOD)),
             keyguardRepository.dozeTransitionModel.map { it.to == DozeStateModel.DOZE_PULSING },
-        ) { isAsleep, goingToSleep, isPulsing ->
+        ) { isAsleep, isTransitioningToAod, isPulsing ->
             when {
-                // If the device is going to sleep, only accept touches if we're still
-                // animating
-                goingToSleep -> dozeParams.shouldControlScreenOff()
+                // If the device is transitioning to AOD, only accept touches if still animating.
+                isTransitioningToAod -> dozeParams.shouldControlScreenOff()
                 // If the device is asleep, only accept touches if there's a pulse
                 isAsleep -> isPulsing
                 else -> true
@@ -114,7 +117,7 @@ constructor(
 
     override val isExpandToQsEnabled: Flow<Boolean> =
         combine(
-            disableFlagsInteractor.disableFlags,
+            shadeStatusBarComponentsInteractor.disableFlags,
             isShadeEnabled,
             keyguardRepository.isDozing,
             userSetupRepository.isUserSetUp,

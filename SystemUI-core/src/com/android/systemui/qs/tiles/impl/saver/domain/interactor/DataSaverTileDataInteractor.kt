@@ -17,11 +17,11 @@
 package com.android.systemui.qs.tiles.impl.saver.domain.interactor
 
 import android.os.UserHandle
-import com.android.systemui.common.coroutine.ConflatedCallbackFlow
-import com.android.systemui.qs.tiles.base.interactor.DataUpdateTrigger
-import com.android.systemui.qs.tiles.base.interactor.QSTileDataInteractor
+import com.android.systemui.qs.tiles.base.domain.interactor.QSTileDataInteractor
+import com.android.systemui.qs.tiles.base.domain.model.DataUpdateTrigger
 import com.android.systemui.qs.tiles.impl.saver.domain.model.DataSaverTileModel
 import com.android.systemui.statusbar.policy.DataSaverController
+import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
 import javax.inject.Inject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -30,15 +30,14 @@ import kotlinx.coroutines.flow.flowOf
 /** Observes data saver state changes providing the [DataSaverTileModel]. */
 class DataSaverTileDataInteractor
 @Inject
-constructor(
-    private val dataSaverController: DataSaverController,
-) : QSTileDataInteractor<DataSaverTileModel> {
+constructor(private val dataSaverController: DataSaverController) :
+    QSTileDataInteractor<DataSaverTileModel> {
 
     override fun tileData(
         user: UserHandle,
-        triggers: Flow<DataUpdateTrigger>
+        triggers: Flow<DataUpdateTrigger>,
     ): Flow<DataSaverTileModel> =
-        ConflatedCallbackFlow.conflatedCallbackFlow {
+        conflatedCallbackFlow {
             val initialValue = dataSaverController.isDataSaverEnabled
             trySend(DataSaverTileModel(initialValue))
 

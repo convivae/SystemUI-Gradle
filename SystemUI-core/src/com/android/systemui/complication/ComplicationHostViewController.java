@@ -18,26 +18,39 @@ package com.android.systemui.complication;
 
 import static com.android.systemui.complication.dagger.ComplicationHostViewModule.SCOPED_COMPLICATIONS_LAYOUT;
 import static com.android.systemui.complication.dagger.ComplicationModule.SCOPED_COMPLICATIONS_MODEL;
+import static com.android.systemui.util.kotlin.JavaAdapterKt.collectFlow;
 
 import android.graphics.Rect;
 import android.graphics.Region;
 import android.os.Debug;
 import android.os.UserHandle;
 import android.provider.Settings;
+import android.service.dreams.Flags;
 import android.util.Log;
 import android.view.View;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.Observer;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor;
+import com.android.systemui.dagger.qualifiers.Application;
+import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dreams.DreamOverlayStateController;
 import com.android.systemui.util.ViewController;
 import com.android.systemui.util.settings.SecureSettings;
 
+import kotlinx.coroutines.CoroutineScope;
+import kotlinx.coroutines.CoroutineDispatcher;
+import kotlinx.coroutines.DisposableHandle;
+import kotlinx.coroutines.Job;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -58,6 +71,21 @@ public class ComplicationHostViewController extends ViewController<ConstraintLay
     private final LifecycleOwner mLifecycleOwner;
     private final ComplicationCollectionViewModel mComplicationCollectionViewModel;
     private final HashMap<ComplicationId, Complication.ViewHolder> mComplications = new HashMap<>();
+
+    private final ConfigurationInteractor mConfigurationInteractor;
+
+    private final CoroutineDispatcher mMainDispatcher;
+    private final CoroutineScope mApplicationScope;
+
+    private final ArrayList<DisposableHandle> mFlows = new ArrayList<>();
+
+    private final Observer<Collection<ComplicationViewModel>> mComplicationViewModelObserver =
+            new Observer<>() {
+                @Override
+                public void onChanged(Collection<ComplicationViewModel> complicationViewModels) {
+                    updateComplications(complicationViewModels);
+                }
+            };
     @VisibleForTesting
     boolean mIsAnimationEnabled;
 
@@ -68,7 +96,10 @@ public class ComplicationHostViewController extends ViewController<ConstraintLay
             DreamOverlayStateController dreamOverlayStateController,
             LifecycleOwner lifecycleOwner,
             @Named(SCOPED_COMPLICATIONS_MODEL) ComplicationCollectionViewModel viewModel,
-            SecureSettings secureSettings) {
+            SecureSettings secureSettings,
+            ConfigurationInteractor configurationInteractor,
+            @Application CoroutineScope applicationScope,
+            @Main CoroutineDispatcher mainDispatcher) {
         super(view);
         mLayoutEngine = layoutEngine;
         mLifecycleOwner = lifecycleOwner;
@@ -78,13 +109,10 @@ public class ComplicationHostViewController extends ViewController<ConstraintLay
         // Whether animations are enabled.
         mIsAnimationEnabled = secureSettings.getFloatForUser(
                 Settings.Global.ANIMATOR_DURATION_SCALE, 1.0f, UserHandle.USER_CURRENT) != 0.0f;
-    }
 
-    @Override
-    protected void onInit() {
-        super.onInit();
-        mComplicationCollectionViewModel.getComplications().observe(mLifecycleOwner,
-                complicationViewModels -> updateComplications(complicationViewModels));
+        mConfigurationInteractor = configurationInteractor;
+        mMainDispatcher = mainDispatcher;
+        mApplicationScope = applicationScope;
     }
 
     /**
@@ -106,6 +134,19 @@ public class ComplicationHostViewController extends ViewController<ConstraintLay
         return region;
     }
 
+    private void updateLayoutEngine(Rect bounds) {
+        // Get the latest screen responsive layoutParams for each complication
+        final Map<ComplicationId, ComplicationLayoutParams> latestComplicationLayoutParams =
+                mComplications.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> entry.getValue().getLayoutParams()));
+        mLayoutEngine.updateLayoutEngine(bounds, latestComplicationLayoutParams);
+    }
+
+    private void removeComplication(ComplicationId id) {
+        mLayoutEngine.removeComplication(id);
+        mComplications.remove(id);
+    }
+
     private void updateComplications(Collection<ComplicationViewModel> complications) {
         if (DEBUG) {
             Log.d(TAG, "updateComplications called. Callers = " + Debug.getCallers(25));
@@ -122,10 +163,7 @@ public class ComplicationHostViewController extends ViewController<ConstraintLay
                         .collect(Collectors.toSet());
 
         // Trim removed complications
-        removedComplicationIds.forEach(complicationId -> {
-            mLayoutEngine.removeComplication(complicationId);
-            mComplications.remove(complicationId);
-        });
+        removedComplicationIds.forEach(complicationId -> removeComplication(complicationId));
 
         // Add new complications
         final Collection<ComplicationViewModel> newComplications = complications
@@ -166,10 +204,45 @@ public class ComplicationHostViewController extends ViewController<ConstraintLay
 
     @Override
     protected void onViewAttached() {
+        mComplicationCollectionViewModel.getComplications().observe(mLifecycleOwner,
+                mComplicationViewModelObserver);
+
+        if (Flags.dreamsV2()) {
+            // Update layout on configuration change like rotation, fold etc.
+            final Job job = collectFlow(
+                    mApplicationScope,
+                    mMainDispatcher,
+                    mConfigurationInteractor.getMaxBounds(),
+                    this::updateLayoutEngine);
+            mFlows.add(() -> job.cancel(null));
+        }
     }
 
     @Override
     protected void onViewDetached() {
+        mComplicationCollectionViewModel.getComplications().removeObserver(
+                mComplicationViewModelObserver);
+
+        if (Flags.dreamsV2()) {
+            for (DisposableHandle flow : mFlows) {
+                flow.dispose();
+            }
+
+            mFlows.clear();
+        }
+    }
+
+    @Override
+    public void destroy() {
+        mLayoutEngine.onDestroyed();
+        mComplications.keySet().stream().collect(Collectors.toSet())
+                .forEach(id -> removeComplication(id));
+        super.destroy();
+    }
+
+    @VisibleForTesting
+    protected int getComplicationCount() {
+        return mComplications.size();
     }
 
     /**

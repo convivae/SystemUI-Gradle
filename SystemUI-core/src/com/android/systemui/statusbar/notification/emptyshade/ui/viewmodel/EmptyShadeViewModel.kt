@@ -16,110 +16,135 @@
 
 package com.android.systemui.statusbar.notification.emptyshade.ui.viewmodel
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.icu.text.MessageFormat
+import com.android.systemui.common.shared.model.Icon
+import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dump.DumpManager
-import com.android.systemui.modes.shared.ModesUi
 import com.android.systemui.res.R
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.notifications.domain.interactor.NotificationSettingsInteractor
 import com.android.systemui.statusbar.notification.NotificationActivityStarter.SettingsIntent
 import com.android.systemui.statusbar.notification.domain.interactor.SeenNotificationsInteractor
-import com.android.systemui.statusbar.notification.emptyshade.shared.ModesEmptyShadeFix
-import com.android.systemui.statusbar.notification.footer.shared.FooterViewRefactor
+import com.android.systemui.statusbar.notification.emptyshade.ui.shared.flag.ShowIconInEmptyShade
+import com.android.systemui.statusbar.notification.emptyshade.ui.shared.model.IconMessageModel
 import com.android.systemui.statusbar.notification.footer.ui.viewmodel.FooterMessageViewModel
 import com.android.systemui.statusbar.policy.domain.interactor.ZenModeInteractor
+import com.android.systemui.statusbar.policy.domain.model.ActiveZenModes
 import com.android.systemui.util.kotlin.FlowDumperImpl
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import java.util.Locale
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 
 /**
  * ViewModel for the empty shade (aka the "No notifications" text shown when there are no
  * notifications.
  */
+@SuppressLint("FlowExposedFromViewModel")
 class EmptyShadeViewModel
 @AssistedInject
 constructor(
-    private val context: Context,
+    @ShadeDisplayAware private val context: Context,
     zenModeInteractor: ZenModeInteractor,
     seenNotificationsInteractor: SeenNotificationsInteractor,
     notificationSettingsInteractor: NotificationSettingsInteractor,
+    configurationInteractor: ConfigurationInteractor,
     @Background bgDispatcher: CoroutineDispatcher,
     dumpManager: DumpManager,
 ) : FlowDumperImpl(dumpManager) {
     val areNotificationsHiddenInShade: Flow<Boolean> by lazy {
-        if (FooterViewRefactor.isUnexpectedlyInLegacyMode()) {
-            flowOf(false)
-        } else if (ModesEmptyShadeFix.isEnabled) {
-            zenModeInteractor.areNotificationsHiddenInShade
-                .dumpWhileCollecting("areNotificationsHiddenInShade")
-                .flowOn(bgDispatcher)
-        } else {
-            zenModeInteractor.areNotificationsHiddenInShade.dumpWhileCollecting(
-                "areNotificationsHiddenInShade"
-            )
-        }
+        zenModeInteractor.areNotificationsHiddenInShade
+            .dumpWhileCollecting("areNotificationsHiddenInShade")
+            .flowOn(bgDispatcher)
     }
 
-    val hasFilteredOutSeenNotifications: StateFlow<Boolean> by lazy {
-        if (FooterViewRefactor.isUnexpectedlyInLegacyMode()) {
-            MutableStateFlow(false)
-        } else {
-            seenNotificationsInteractor.hasFilteredOutSeenNotifications.dumpValue(
-                "hasFilteredOutSeenNotifications"
+    val hasFilteredOutSeenNotifications: StateFlow<Boolean> =
+        seenNotificationsInteractor.hasFilteredOutSeenNotifications.dumpValue(
+            "hasFilteredOutSeenNotifications"
+        )
+
+    private val primaryLocale by lazy {
+        configurationInteractor.configurationValues
+            .map { it.locales.get(0) ?: Locale.getDefault() }
+            .onStart { emit(Locale.getDefault()) }
+            .distinctUntilChanged()
+    }
+
+    /**
+     * A combination of icon + text that replaces the old approach with the text followed by a
+     * footer that shows an icon.
+     */
+    val message: Flow<IconMessageModel> by lazy {
+        if (ShowIconInEmptyShade.isUnexpectedlyInLegacyMode()) {
+            flowOf(
+                IconMessageModel(
+                    message = "Something went wrong",
+                    icon = Icon.Resource(R.drawable.ic_error_outline, null),
+                )
             )
+        } else {
+            combine(
+                    zenModeInteractor.modesHidingNotifications,
+                    primaryLocale,
+                    hasFilteredOutSeenNotifications,
+                ) { modes, locale, hasFilteredOutSeenNotificationsValue ->
+                    when {
+                        hasFilteredOutSeenNotificationsValue ->
+                            IconMessageModel(
+                                message = context.getString(R.string.unlock_to_see_notif_text),
+                                icon = Icon.Resource(R.drawable.ic_friction_lock_closed, null),
+                            )
+                        modes.main == null ->
+                            IconMessageModel(
+                                message = context.getString(R.string.caught_up_shade_text),
+                                icon = Icon.Resource(R.drawable.ic_trophy, null),
+                            )
+                        else ->
+                            IconMessageModel(
+                                message = formatModesString(locale, modes),
+                                icon = modes.main.icon,
+                            )
+                    }
+                }
+                .distinctUntilChanged()
+                .flowOn(bgDispatcher)
         }
     }
 
     val text: Flow<String> by lazy {
-        if (ModesEmptyShadeFix.isUnexpectedlyInLegacyMode()) {
-            flowOf(context.getString(R.string.empty_shade_text))
-        } else {
-            // Note: Flag modes_ui_empty_shade includes two pieces: refactoring the empty shade to
-            // recommended architecture, and making it so it reacts to changes for the new Modes.
-            // The former does not depend on the modes flags being on, but the latter does.
-            if (ModesUi.isEnabled) {
-                    zenModeInteractor.modesHidingNotifications.map { modes ->
-                        // Create a string that is either "No notifications" if no modes are
-                        // filtering
-                        // them out, or something like "Notifications paused by SomeMode" otherwise.
-                        val msgFormat =
-                            MessageFormat(
-                                context.getString(R.string.modes_suppressing_shade_text),
-                                Locale.getDefault(),
-                            )
-                        val count = modes.count()
-                        val args: MutableMap<String, Any> = HashMap()
-                        args["count"] = count
-                        if (count >= 1) {
-                            args["mode"] = modes[0].name
-                        }
-                        msgFormat.format(args)
-                    }
-                } else {
-                    areNotificationsHiddenInShade.map { areNotificationsHiddenInShade ->
-                        if (areNotificationsHiddenInShade) {
-                            context.getString(R.string.dnd_suppressing_shade_text)
-                        } else {
-                            context.getString(R.string.empty_shade_text)
-                        }
-                    }
-                }
-                .flowOn(bgDispatcher)
+        ShowIconInEmptyShade.assertInLegacyMode()
+        combine(zenModeInteractor.modesHidingNotifications, primaryLocale) { modes, locale ->
+                formatModesString(locale, modes)
+            }
+            .flowOn(bgDispatcher)
+    }
+
+    private fun formatModesString(locale: Locale?, modes: ActiveZenModes): String {
+        // Create a string that is either "No notifications" if no modes are filtering them
+        // out, or something like "Notifications paused by SomeMode" otherwise.
+        val msgFormat =
+            MessageFormat(context.getString(R.string.modes_suppressing_shade_text), locale)
+        val args: MutableMap<String, Any> = HashMap()
+        args["count"] = modes.count
+        if (modes.main != null) {
+            args["mode"] = modes.main.name
         }
+        return msgFormat.format(args)
     }
 
     val footer: FooterMessageViewModel by lazy {
-        ModesEmptyShadeFix.assertInNewMode()
+        ShowIconInEmptyShade.assertInLegacyMode()
         FooterMessageViewModel(
             messageId = R.string.unlock_to_see_notif_text,
             iconId = R.drawable.ic_friction_lock_closed,
@@ -128,14 +153,13 @@ constructor(
     }
 
     val onClick: Flow<SettingsIntent> by lazy {
-        ModesEmptyShadeFix.assertInNewMode()
         combine(
                 zenModeInteractor.modesHidingNotifications,
                 notificationSettingsInteractor.isNotificationHistoryEnabled,
             ) { modes, isNotificationHistoryEnabled ->
-                if (modes.isNotEmpty()) {
-                    if (modes.size == 1) {
-                        SettingsIntent.forModeSettings(modes[0].id)
+                if (modes.main != null) {
+                    if (modes.count == 1) {
+                        SettingsIntent.forModeSettings(modes.main.id)
                     } else {
                         SettingsIntent.forModesSettings()
                     }

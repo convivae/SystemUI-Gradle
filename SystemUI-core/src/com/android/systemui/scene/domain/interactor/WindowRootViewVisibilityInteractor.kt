@@ -32,11 +32,9 @@ import com.android.systemui.statusbar.NotificationPresenter
 import com.android.systemui.statusbar.notification.domain.interactor.ActiveNotificationsInteractor
 import com.android.systemui.statusbar.notification.headsup.HeadsUpManager
 import com.android.systemui.statusbar.notification.init.NotificationsController
-import com.android.systemui.statusbar.notification.shared.NotificationsLiveDataStoreRefactor
 import javax.inject.Inject
 import javax.inject.Provider
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -47,7 +45,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /** Business logic about the visibility of various parts of the window root view. */
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class WindowRootViewVisibilityInteractor
 @Inject
@@ -77,7 +74,7 @@ constructor(
         } else {
             sceneInteractorProvider
                 .get()
-                .transitionState
+                .transitionStateFlow
                 .flatMapConcat { state ->
                     when (state) {
                         is ObservableTransitionState.Idle ->
@@ -89,7 +86,7 @@ constructor(
                             )
                         is ObservableTransitionState.Transition ->
                             if (
-                                state.fromContent == Scenes.Bouncer &&
+                                state.fromContent == Overlays.Bouncer &&
                                     state.toContent == Scenes.Lockscreen
                             ) {
                                 // Lockscreen is not visible during preview stage of predictive back
@@ -172,10 +169,6 @@ constructor(
     }
 
     private fun getActiveNotificationsCount(): Int {
-        return if (NotificationsLiveDataStoreRefactor.isEnabled) {
-            activeNotificationsInteractor.allNotificationsCountValue
-        } else {
-            notificationsController?.getActiveNotificationsCount() ?: 0
-        }
+        return activeNotificationsInteractor.allNotificationsCountValue
     }
 }

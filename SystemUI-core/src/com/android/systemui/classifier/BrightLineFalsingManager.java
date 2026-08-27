@@ -35,6 +35,7 @@ import com.android.systemui.classifier.FalsingDataProvider.SessionListener;
 import com.android.systemui.classifier.HistoryTracker.BeliefListener;
 import com.android.systemui.dagger.qualifiers.TestHarness;
 import com.android.systemui.plugins.FalsingManager;
+import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 
 import java.io.PrintWriter;
@@ -108,7 +109,7 @@ public class BrightLineFalsingManager implements FalsingManager {
                     "{belief=%s confidence=%s}",
                     mHistoryTracker.falseBelief(),
                     mHistoryTracker.falseConfidence()));
-            if (belief > FALSE_BELIEF_THRESHOLD) {
+            if (belief > FALSE_BELIEF_THRESHOLD && !skipFalsing(GENERIC)) {
                 mFalsingBeliefListeners.forEach(FalsingBeliefListener::onFalse);
                 logInfo("Triggering False Event (Threshold: " + FALSE_BELIEF_THRESHOLD + ")");
             }
@@ -286,7 +287,7 @@ public class BrightLineFalsingManager implements FalsingManager {
         mPriorResults = Collections.singleton(singleTapResult);
 
         if (!singleTapResult.isFalse()) {
-            if (mDataProvider.isJustUnlockedWithFace()) {
+            if (mDataProvider.isJustUnlockedWithFace() || mDataProvider.isUnlockedAndDismissing()) {
                 // Immediately pass if a face is detected.
                 mPriorResults = getPassedResult(1);
                 logDebug("False Single Tap: false (face detected)");
@@ -350,7 +351,7 @@ public class BrightLineFalsingManager implements FalsingManager {
         mPriorResults = Collections.singleton(longTapResult);
 
         if (!longTapResult.isFalse()) {
-            if (mDataProvider.isJustUnlockedWithFace()) {
+            if (mDataProvider.isJustUnlockedWithFace() || mDataProvider.isUnlockedAndDismissing()) {
                 // Immediately pass if a face is detected.
                 mPriorResults = getPassedResult(1);
                 logDebug("False Long Tap: false (face detected)");
@@ -389,13 +390,16 @@ public class BrightLineFalsingManager implements FalsingManager {
                 || !mKeyguardStateController.isShowing()
                 || mTestHarness
                 || mDataProvider.isJustUnlockedWithFace()
+                || mDataProvider.isUnlockedAndDismissing()
                 || mDataProvider.isDocked()
                 || mAccessibilityManager.isTouchExplorationEnabled()
                 || mDataProvider.isA11yAction()
                 || mDataProvider.isFromTrackpad()
                 || mDataProvider.isFromKeyboard()
                 || !mDataProvider.isTouchScreenSource()
-                || mDataProvider.isUnfolded();
+                || mDataProvider.isDesktop()
+                || mDataProvider.isUnfolded()
+                || mDataProvider.isShowingCommunalHub();
     }
 
     @Override
@@ -465,8 +469,16 @@ public class BrightLineFalsingManager implements FalsingManager {
         ipw.println("BRIGHTLINE FALSING MANAGER");
         ipw.print("classifierEnabled=");
         ipw.println(isClassifierEnabled() ? 1 : 0);
-        ipw.print("mJustUnlockedWithFace=");
-        ipw.println(mDataProvider.isJustUnlockedWithFace() ? 1 : 0);
+
+        if (SceneContainerFlag.isEnabled()) {
+            ipw.print("mJustUnlockedWithFaceUnlockNonBypass=");
+            ipw.println(mDataProvider.isJustUnlockedWithFace() ? 1 : 0);
+            ipw.print("isUnlockedAndDismissing=");
+            ipw.println(mDataProvider.isUnlockedAndDismissing() ? 1 : 0);
+        } else {
+            ipw.print("mJustUnlockedWithFace=");
+            ipw.println(mDataProvider.isJustUnlockedWithFace() ? 1 : 0);
+        }
         ipw.print("isDocked=");
         ipw.println(mDataProvider.isDocked() ? 1 : 0);
         ipw.print("width=");
@@ -495,13 +507,16 @@ public class BrightLineFalsingManager implements FalsingManager {
     }
 
     @Override
-    public void cleanupInternal() {
+    public List<FalsingBeliefListener> cleanupInternal() {
+        List<FalsingBeliefListener> existingBeliefListeners
+                = new ArrayList<>(mFalsingBeliefListeners);
         mDestroyed = true;
         mDataProvider.removeSessionListener(mSessionListener);
         mDataProvider.removeGestureCompleteListener(mGestureFinalizedListener);
         mClassifiers.forEach(FalsingClassifier::cleanup);
         mFalsingBeliefListeners.clear();
         mHistoryTracker.removeBeliefListener(mBeliefListener);
+        return existingBeliefListeners;
     }
 
     private static Collection<FalsingClassifier.Result> getPassedResult(double confidence) {

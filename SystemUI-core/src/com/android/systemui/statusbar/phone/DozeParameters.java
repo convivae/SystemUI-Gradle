@@ -16,7 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -37,18 +36,21 @@ import androidx.annotation.VisibleForTesting;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardUpdateMonitorCallback;
 import com.android.systemui.Dumpable;
-import com.android.systemui.Flags;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
+import com.android.systemui.display.flags.DisplayComponentRepositoryFlag;
 import com.android.systemui.doze.AlwaysOnDisplayPolicy;
 import com.android.systemui.doze.DozeScreenState;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.keyguard.domain.interactor.DozeInteractor;
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor;
 import com.android.systemui.keyguard.shared.model.KeyguardState;
+import com.android.systemui.minmode.MinModeManager;
+import com.android.systemui.minmode.MinModeManagerUtilsKt;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.res.R;
+import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.BatteryController.BatteryStateChangeCallback;
@@ -61,6 +63,7 @@ import com.android.systemui.util.settings.SecureSettings;
 
 import java.io.PrintWriter;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 
 import javax.inject.Inject;
 
@@ -90,8 +93,10 @@ public class DozeParameters implements
     private final KeyguardTransitionInteractor mTransitionInteractor;
     private final FoldAodAnimationController mFoldAodAnimationController;
     private final UnlockedScreenOffAnimationController mUnlockedScreenOffAnimationController;
+    private final StatusBarStateController mStatusBarStateController;
     private final UserTracker mUserTracker;
     private final SecureSettings mSecureSettings;
+    private final Optional<MinModeManager> mMinModeManager;
 
     private boolean mDozeAlwaysOn;
     private boolean mControlScreenOffAnimation;
@@ -122,6 +127,7 @@ public class DozeParameters implements
     protected DozeParameters(
             Context context,
             @Background Handler handler,
+            @Main Executor uiExecutor,
             @Main Resources resources,
             AmbientDisplayConfiguration ambientDisplayConfiguration,
             AlwaysOnDisplayPolicy alwaysOnDisplayPolicy,
@@ -138,7 +144,8 @@ public class DozeParameters implements
             UserTracker userTracker,
             DozeInteractor dozeInteractor,
             KeyguardTransitionInteractor transitionInteractor,
-            SecureSettings secureSettings) {
+            SecureSettings secureSettings,
+            Optional<MinModeManager> minModeManager) {
         mResources = resources;
         mAmbientDisplayConfiguration = ambientDisplayConfiguration;
         mAlwaysOnPolicy = alwaysOnDisplayPolicy;
@@ -150,12 +157,19 @@ public class DozeParameters implements
         mPowerManager.setDozeAfterScreenOff(!mControlScreenOffAnimation);
         mScreenOffAnimationController = screenOffAnimationController;
         mUnlockedScreenOffAnimationController = unlockedScreenOffAnimationController;
+        mStatusBarStateController = statusBarStateController;
         mUserTracker = userTracker;
         mDozeInteractor = dozeInteractor;
         mTransitionInteractor = transitionInteractor;
         mSecureSettings = secureSettings;
+        mMinModeManager = minModeManager;
 
-        keyguardUpdateMonitor.registerCallback(mKeyguardVisibilityCallback);
+        if (DisplayComponentRepositoryFlag.INSTANCE.isEagerInitializationEnabled()) {
+            uiExecutor.execute(
+                    () -> keyguardUpdateMonitor.registerCallback(mKeyguardVisibilityCallback));
+        } else {
+            keyguardUpdateMonitor.registerCallback(mKeyguardVisibilityCallback);
+        }
         tunerService.addTunable(
                 this,
                 Settings.Secure.DOZE_ALWAYS_ON,
@@ -271,11 +285,20 @@ public class DozeParameters implements
     }
 
     /**
+     * Checks if minmode is enabled.
+     */
+    public boolean isMinModeActive() {
+        return mMinModeManager.isPresent()
+                && MinModeManagerUtilsKt.isMinModeAvailable(mMinModeManager.get());
+    }
+
+    /**
      * Checks if always on is available and enabled for the current user.
+     * If minmode is active, always on is enabled to control the screen off animation.
      * @return {@code true} if enabled and available.
      */
     public boolean getAlwaysOn() {
-        return mDozeAlwaysOn && !mBatteryController.isAodPowerSave();
+        return (mDozeAlwaysOn && !mBatteryController.isAodPowerSave()) || isMinModeActive();
     }
 
     /**
@@ -312,7 +335,12 @@ public class DozeParameters implements
         if (!getDisplayNeedsBlanking()) {
             final boolean controlScreenOff =
                     getAlwaysOn() && (mKeyguardVisible || shouldControlUnlockedScreenOff());
-            setControlScreenOffAnimation(controlScreenOff);
+            if (SceneContainerFlag.isEnabled()) {
+                setControlScreenOffAnimation(controlScreenOff
+                        && !mStatusBarStateController.isExpanded());
+            } else {
+                setControlScreenOffAnimation(controlScreenOff);
+            }
         }
     }
 
@@ -349,8 +377,12 @@ public class DozeParameters implements
         return mScreenOffAnimationController.shouldShowLightRevealScrim();
     }
 
+    /**
+     * Whether we should animate the transition to or from Dozing.
+     * This is true if either the screen off animation controller or minmode is active.
+     */
     public boolean shouldAnimateDozingChange() {
-        return mScreenOffAnimationController.shouldAnimateDozingChange();
+        return mScreenOffAnimationController.shouldAnimateDozingChange() || isMinModeActive();
     }
 
     /**
@@ -462,6 +494,7 @@ public class DozeParameters implements
         pw.print("getSelectivelyRegisterSensorsUsingProx(): ");
         pw.println(getSelectivelyRegisterSensorsUsingProx());
         pw.print("isQuickPickupEnabled(): "); pw.println(isQuickPickupEnabled());
+        pw.print("isMinModeActive(): "); pw.println(isMinModeActive());
     }
 
     private void dispatchAlwaysOnEvent() {
@@ -504,25 +537,15 @@ public class DozeParameters implements
         }
 
         void observe() {
-            if (Flags.registerContentObserversAsync()) {
-                mSecureSettings.registerContentObserverForUserAsync(mQuickPickupGesture,
-                        this, UserHandle.USER_ALL);
-                mSecureSettings.registerContentObserverForUserAsync(mPickupGesture,
-                        this, UserHandle.USER_ALL);
-                mSecureSettings.registerContentObserverForUserAsync(mAlwaysOnEnabled,
-                        this, UserHandle.USER_ALL,
-                        // The register calls are called in order, so this ensures that update()
-                        // is called after them all and value retrieval isn't racy.
-                        () -> mHandler.post(() -> update(null)));
-            } else {
-                ContentResolver resolver = mContext.getContentResolver();
-                resolver.registerContentObserver(mQuickPickupGesture, false, this,
-                        UserHandle.USER_ALL);
-                resolver.registerContentObserver(mPickupGesture, false, this, UserHandle.USER_ALL);
-                resolver.registerContentObserver(mAlwaysOnEnabled, false, this,
-                        UserHandle.USER_ALL);
-                update(null);
-            }
+            mSecureSettings.registerContentObserverForUserAsync(mQuickPickupGesture,
+                    this, UserHandle.USER_ALL);
+            mSecureSettings.registerContentObserverForUserAsync(mPickupGesture,
+                    this, UserHandle.USER_ALL);
+            mSecureSettings.registerContentObserverForUserAsync(mAlwaysOnEnabled,
+                    this, UserHandle.USER_ALL,
+                    // The register calls are called in order, so this ensures that update()
+                    // is called after them all and value retrieval isn't racy.
+                    () -> mHandler.post(() -> update(null)));
         }
 
         @Override

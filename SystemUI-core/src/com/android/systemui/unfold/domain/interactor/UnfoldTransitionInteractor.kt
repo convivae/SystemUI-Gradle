@@ -21,6 +21,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.unfold.data.repository.UnfoldTransitionRepository
+import com.android.systemui.unfold.data.repository.UnfoldTransitionStatus
 import com.android.systemui.unfold.data.repository.UnfoldTransitionStatus.TransitionFinished
 import com.android.systemui.unfold.data.repository.UnfoldTransitionStatus.TransitionInProgress
 import com.android.systemui.unfold.data.repository.UnfoldTransitionStatus.TransitionStarted
@@ -48,6 +49,9 @@ constructor(
     val isAvailable: Boolean
         get() = repository.isAvailable
 
+    /** Flow of latest [UnfoldTransitionStatus] changes */
+    val unfoldTransitionStatus: Flow<UnfoldTransitionStatus> = repository.transitionStatus
+
     /**
      * This mapping emits 1 when the device is completely unfolded and 0.0 when the device is
      * completely folded.
@@ -72,11 +76,12 @@ constructor(
     fun unfoldTranslationX(isOnStartSide: Boolean): Flow<Float> {
         return combine(
             unfoldProgress,
-            configurationInteractor.dimensionPixelSize(R.dimen.notification_side_paddings),
+            configurationInteractor.dimensionPixelSize(R.dimen.notification_side_paddings_single),
             configurationInteractor.layoutDirection.map {
                 if (it == View.LAYOUT_DIRECTION_RTL) -1 else 1
             },
         ) { unfoldedAmount, max, layoutDirectionMultiplier ->
+            // TODO(b/488459485): make max response to shadeMode
             val sideMultiplier = if (isOnStartSide) 1 else -1
             max * (1 - unfoldedAmount) * sideMultiplier * layoutDirectionMultiplier
         }

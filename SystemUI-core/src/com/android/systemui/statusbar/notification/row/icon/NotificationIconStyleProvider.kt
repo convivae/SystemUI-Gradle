@@ -17,23 +17,19 @@
 package com.android.systemui.statusbar.notification.row.icon
 
 import android.annotation.WorkerThread
-import android.app.Flags
+import android.app.Notification
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.os.UserManager
 import android.service.notification.StatusBarNotification
-import android.util.Log
 import com.android.systemui.Dumpable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.statusbar.notification.collection.NotifCollectionCache
 import com.android.systemui.util.asIndenting
+import com.android.systemui.util.time.SystemClock
 import com.android.systemui.util.withIncreasedIndent
-import dagger.Module
-import dagger.Provides
 import java.io.PrintWriter
 import javax.inject.Inject
-import javax.inject.Provider
 
 /**
  * A provider used to cache and fetch information about which icon should be displayed by
@@ -48,12 +44,6 @@ interface NotificationIconStyleProvider {
     fun shouldShowAppIcon(notification: StatusBarNotification, context: Context): Boolean
 
     /**
-     * Whether the [notification] is coming from a work profile app, and therefore should display
-     * the briefcase badge.
-     */
-    fun shouldShowWorkProfileBadge(notification: StatusBarNotification, context: Context): Boolean
-
-    /**
      * Mark all the entries in the cache that are NOT in [wantedPackages] to be cleared. If they're
      * still not needed on the next call of this method (made after a timeout of 1s, in case they
      * happen more frequently than that), they will be purged. This can be done from any thread.
@@ -61,18 +51,36 @@ interface NotificationIconStyleProvider {
     fun purgeCache(wantedPackages: Collection<String>)
 }
 
+/**
+ * Base implementation of [NotificationIconStyleProvider] that provides the implementation of
+ * [shouldShowAppIcon]. This includes the logic which checks [Notification.EXTRA_PREFER_SMALL_ICON]
+ * but not the logic which has to interact with a real package manager to check for an app icon.
+ */
+abstract class NotificationIconStyleProviderBase : NotificationIconStyleProvider {
+    override fun shouldShowAppIcon(notification: StatusBarNotification, context: Context): Boolean {
+        return !prefersSmallIcon(notification.notification) &&
+            packageHasAppIcon(notification, context)
+    }
+
+    private fun prefersSmallIcon(notification: Notification): Boolean {
+        return notification.extras.getBoolean(Notification.EXTRA_PREFER_SMALL_ICON)
+    }
+
+    abstract fun packageHasAppIcon(notification: StatusBarNotification, context: Context): Boolean
+}
+
 @SysUISingleton
 class NotificationIconStyleProviderImpl
 @Inject
-constructor(private val userManager: UserManager, dumpManager: DumpManager) :
-    NotificationIconStyleProvider, Dumpable {
+constructor(dumpManager: DumpManager, systemClock: SystemClock) :
+    NotificationIconStyleProviderBase(), Dumpable {
     init {
         dumpManager.registerNormalDumpable(TAG, this)
     }
 
-    private val cache = NotifCollectionCache<Boolean>()
+    private val cache = NotifCollectionCache<Boolean>(systemClock = systemClock)
 
-    override fun shouldShowAppIcon(notification: StatusBarNotification, context: Context): Boolean {
+    override fun packageHasAppIcon(notification: StatusBarNotification, context: Context): Boolean {
         return cache.getOrFetch(notification.packageName) {
             val packageContext = notification.getPackageContext(context)
             !belongsToHeadlessSystemApp(packageContext)
@@ -87,24 +95,21 @@ constructor(private val userManager: UserManager, dumpManager: DumpManager) :
                 // It's not a system app at all.
                 return false
             } else {
-                // If there's no launch intent, it's probably a headless app.
-                val pm = context.packageManager
-                return (pm.getLaunchIntentForPackage(info.packageName) == null)
+                // If there's no launch intent, it's probably a headless app. Check for both
+                // direct-aware and -unaware intents; otherwise this will almost certainly fail
+                // for notifications posted before unlocking.
+                val packageLaunchIntent =
+                    context.packageManager.getLaunchIntentForPackage(
+                        info.packageName,
+                        /* includeDirectBootUnaware= */ true,
+                    )
+                return packageLaunchIntent == null
             }
         } else {
             // If for some reason we don't have the app info, we don't know; best assume it's
             // not a system app.
             return false
         }
-    }
-
-    override fun shouldShowWorkProfileBadge(
-        notification: StatusBarNotification,
-        context: Context,
-    ): Boolean {
-        val packageContext = notification.getPackageContext(context)
-        // UserManager already caches this, so we don't need to.
-        return userManager.isManagedProfile(packageContext.userId)
     }
 
     override fun purgeCache(wantedPackages: Collection<String>) {
@@ -120,41 +125,4 @@ constructor(private val userManager: UserManager, dumpManager: DumpManager) :
     companion object {
         const val TAG = "NotificationIconStyleProviderImpl"
     }
-}
-
-class NoOpIconStyleProvider : NotificationIconStyleProvider {
-    companion object {
-        const val TAG = "NoOpIconStyleProvider"
-    }
-
-    override fun shouldShowAppIcon(notification: StatusBarNotification, context: Context): Boolean {
-        Log.wtf(TAG, "NoOpIconStyleProvider should not be used anywhere.")
-        return true
-    }
-
-    override fun shouldShowWorkProfileBadge(
-        notification: StatusBarNotification,
-        context: Context,
-    ): Boolean {
-        Log.wtf(TAG, "NoOpIconStyleProvider should not be used anywhere.")
-        return false
-    }
-
-    override fun purgeCache(wantedPackages: Collection<String>) {
-        Log.wtf(TAG, "NoOpIconStyleProvider should not be used anywhere.")
-    }
-}
-
-@Module
-class NotificationIconStyleProviderModule {
-    @Provides
-    @SysUISingleton
-    fun provideImpl(
-        realImpl: Provider<NotificationIconStyleProviderImpl>
-    ): NotificationIconStyleProvider =
-        if (Flags.notificationsRedesignAppIcons()) {
-            realImpl.get()
-        } else {
-            NoOpIconStyleProvider()
-        }
 }

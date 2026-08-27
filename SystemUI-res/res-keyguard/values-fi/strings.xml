@@ -45,6 +45,7 @@
     <string name="keyguard_accessibility_password" msgid="3524161948484801450">"Laitteen salasana"</string>
     <string name="keyguard_accessibility_sim_pin_area" msgid="6272116591533888062">"SIM-kortin PIN-koodin alue"</string>
     <string name="keyguard_accessibility_sim_puk_area" msgid="5537294043180237374">"SIM-kortin PUK-koodin alue"</string>
+    <string name="keyguard_accessibility_pin_delete_long_click" msgid="1530074796041838525">"poista kaikki painamalla pitkään"</string>
     <string name="keyboardview_keycode_delete" msgid="8489719929424895174">"Poista"</string>
     <string name="disable_carrier_button_text" msgid="7153361131709275746">"Poista eSIM käytöstä"</string>
     <string name="error_disable_esim_title" msgid="3802652622784813119">"eSIMiä ei voi poistaa käytöstä"</string>
@@ -57,7 +58,7 @@
     <string name="kg_wrong_pin" msgid="4160978845968732624">"Väärä PIN-koodi"</string>
     <string name="kg_wrong_pin_try_again" msgid="3129729383303430190">"Väärä PIN. Yritä uud."</string>
     <string name="kg_wrong_input_try_fp_suggestion" msgid="3143861542242024833">"Voit avata lukituksen myös sormenjäljellä"</string>
-    <string name="kg_fp_not_recognized" msgid="5183108260932029241">"Tunnistamaton sormenjälki"</string>
+    <string name="kg_fp_not_recognized" msgid="5183108260932029241">"Sormenjälkeä ei tunnistettu"</string>
     <string name="bouncer_face_not_recognized" msgid="1666128054475597485">"Kasvoja ei tunnistettu"</string>
     <string name="kg_bio_try_again_or_pin" msgid="4752168242723808390">"Yritä uudelleen tai lisää PIN-koodi"</string>
     <string name="kg_bio_try_again_or_password" msgid="1473132729225398039">"Yritä uudelleen tai lisää salasana"</string>
@@ -65,10 +66,14 @@
     <string name="kg_bio_too_many_attempts_pin" msgid="5850845723433047605">"PIN-koodia kysytään usean yrityksen jälkeen"</string>
     <string name="kg_bio_too_many_attempts_password" msgid="5551690347827728042">"Salasanaa kysytään usean yrityksen jälkeen"</string>
     <string name="kg_bio_too_many_attempts_pattern" msgid="736884689355181602">"Kuviota kysytään usean yrityksen jälkeen"</string>
-    <string name="kg_unlock_with_pin_or_fp" msgid="5635161174698729890">"Avaa: PIN/sormenjälki"</string>
-    <string name="kg_unlock_with_password_or_fp" msgid="2251295907826814237">"Avaa: salasana/sormenjälki"</string>
-    <string name="kg_unlock_with_pattern_or_fp" msgid="2391870539909135046">"Avaa: kuvio/sormenjälki"</string>
+    <string name="kg_unlock_with_pin_or_fp" msgid="5635161174698729890">"Avaa PIN-koodilla tai sormenjäljellä"</string>
+    <string name="kg_unlock_with_password_or_fp" msgid="2251295907826814237">"Avaa salasanalla tai sormenjäljellä"</string>
+    <string name="kg_unlock_with_pattern_or_fp" msgid="2391870539909135046">"Avaa kuviolla tai sormenjäljellä"</string>
     <string name="kg_prompt_after_dpm_lock" msgid="6002804765868345917">"Laite lukittiin työkäytännöllä sen suojaamiseksi"</string>
+    <string name="kg_prompt_title_after_secure_lock_device" msgid="2646423690908627259">"Kaksivaiheinen vahvistus"</string>
+    <string name="kg_prompt_subtitle_for_secure_lock_device_biometric_auth_fingerprint" msgid="6596633555720510932">"Käytä sormenjälkiavausta"</string>
+    <string name="kg_prompt_subtitle_for_secure_lock_device_biometric_auth_face" msgid="4550701327607935441">"Käytä kasvojentunnistusavausta"</string>
+    <string name="kg_prompt_subtitle_for_secure_lock_device_biometric_auth_coex" msgid="2093026058274456330">"Käytä sormenjälki- tai kasvojentunnistusavausta"</string>
     <string name="kg_prompt_after_user_lockdown_pin" msgid="5374732179740050373">"PIN-koodi tarvitaan lukitustilan jälkeen"</string>
     <string name="kg_prompt_after_user_lockdown_password" msgid="9097968458291129795">"Salasana tarvitaan lukitustilan jälkeen"</string>
     <string name="kg_prompt_after_user_lockdown_pattern" msgid="215072203613597906">"Kuvio tarvitaan lukitustilan jälkeen"</string>
@@ -81,9 +86,20 @@
     <string name="kg_fp_locked_out" msgid="6228277682396768830">"Avaus sormenjäljellä ei onnistu. Liikaa yrityksiä."</string>
     <string name="kg_trust_agent_disabled" msgid="5400691179958727891">"Luotettava taho ei ole käytettävissä"</string>
     <string name="kg_primary_auth_locked_out_pin" msgid="5492230176361601475">"Liian monta yritystä väärällä PIN-koodilla"</string>
+    <string name="kg_primary_auth_duplicate_guess_pin" msgid="5834891656916692329">"Tätä PIN-koodia on jo kokeiltu. Kokeile toista."</string>
+    <string name="kg_primary_auth_duplicate_guess_pattern" msgid="3827593245962385968">"Tätä kuviota on jo kokeiltu. Kokeile toista."</string>
+    <string name="kg_primary_auth_duplicate_guess_password" msgid="3153406042812407458">"Tätä salasanaa on jo kokeiltu. Kokeile toista."</string>
     <string name="kg_primary_auth_locked_out_pattern" msgid="8266214607346180952">"Liian monta yritystä väärällä kuviolla"</string>
     <string name="kg_primary_auth_locked_out_password" msgid="6170245108400198659">"Liian monta yritystä väärällä salasanalla"</string>
+    <string name="kg_primary_auth_locked_out_pin_shortlink" msgid="1294871994741389848">"Liian monta yritystä väärällä PIN-koodilla.\nLue lisää osoitteesta <xliff:g id="SHORTLINK">{shortlink}</xliff:g>"</string>
+    <string name="kg_primary_auth_locked_out_pattern_shortlink" msgid="5998598232858156495">"Liian monta yritystä väärällä kuviolla\nLue lisää osoitteessa <xliff:g id="SHORTLINK">{shortlink}</xliff:g>"</string>
+    <string name="kg_primary_auth_locked_out_password_shortlink" msgid="7035847891707609104">"Liian monta yritystä väärällä salasanalla\nLue lisää osoitteessa <xliff:g id="SHORTLINK">{shortlink}</xliff:g>"</string>
     <string name="kg_too_many_failed_attempts_countdown" msgid="2038195171919795529">"{count,plural, =1{Yritä uudelleen # sekunnin kuluttua.}other{Yritä uudelleen # sekunnin kuluttua.}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_seconds" msgid="5869847493314053274">"{count,plural, =1{Yritä uudelleen # sekunnin kuluttua}other{Yritä uudelleen # sekunnin kuluttua}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_minutes" msgid="6688071439818994316">"{count,plural, =1{Yritä uudelleen # minuutin kuluttua}other{Yritä uudelleen # minuutin kuluttua}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_hours" msgid="4895375498917738857">"{count,plural, =1{Yritä uudelleen # tunnin kuluttua}other{Yritä uudelleen # tunnin kuluttua}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_days" msgid="5427787465019979593">"{count,plural, =1{Yritä uudelleen # päivän kuluttua}other{Yritä uudelleen # päivän kuluttua}}"</string>
+    <string name="kg_too_many_failed_attempts_countdown_years" msgid="7115333753941425268">"{count,plural, =1{Yritä uudelleen # vuoden kuluttua}other{Yritä uudelleen # vuoden kuluttua}}"</string>
     <string name="kg_sim_pin_instructions" msgid="1942424305184242951">"Anna SIM-kortin PIN-koodi."</string>
     <string name="kg_sim_pin_instructions_multi" msgid="3639863309953109649">"Anna operaattorin <xliff:g id="CARRIER">%1$s</xliff:g> SIM-kortin PIN-koodi."</string>
     <string name="kg_sim_lock_esim_instructions" msgid="5577169988158738030">"<xliff:g id="PREVIOUS_MSG">%1$s</xliff:g> Poista eSIM käytöstä, jos haluat käyttää laitetta ilman mobiililiittymää."</string>
@@ -108,6 +124,9 @@
     <string name="kg_prompt_reason_restart_pattern" msgid="3321211830602827742">"Kuvio tarvitaan uudelleenkäynnistyksen jälkeen"</string>
     <string name="kg_prompt_reason_restart_pin" msgid="2672166323886110512">"PIN-koodi tarvitaan uudelleenkäynnistyksen jälkeen"</string>
     <string name="kg_prompt_reason_restart_password" msgid="3967993994418885887">"Salasana tarvitaan uudelleenkäynnistyksen jälkeen"</string>
+    <string name="kg_prompt_reason_signin_pattern" msgid="1650886553162854395">"Sisäänkirjautuminen edellyttää kuviota"</string>
+    <string name="kg_prompt_reason_signin_pin" msgid="636031498838532631">"Sisäänkirjautuminen edellyttää PIN-koodia"</string>
+    <string name="kg_prompt_reason_signin_password" msgid="1020939174735616114">"Sisäänkirjautuminen edellyttää salasanaa"</string>
     <string name="kg_prompt_reason_timeout_pattern" msgid="5514969660010197363">"Käytä kuviota, niin saat lisäsuojaa"</string>
     <string name="kg_prompt_reason_timeout_pin" msgid="4227962059353859376">"Käytä PIN-koodia, niin saat lisäsuojaa"</string>
     <string name="kg_prompt_reason_timeout_password" msgid="8810879144143933690">"Käytä salasanaa, niin saat lisäsuojaa"</string>

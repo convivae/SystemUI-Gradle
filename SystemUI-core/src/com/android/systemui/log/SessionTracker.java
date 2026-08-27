@@ -21,6 +21,7 @@ import static android.app.StatusBarManager.SESSION_BIOMETRIC_PROMPT;
 import static android.app.StatusBarManager.SESSION_KEYGUARD;
 
 import android.annotation.Nullable;
+import android.hardware.biometrics.PromptInfo;
 import android.os.RemoteException;
 import android.os.UserManager;
 import android.util.Log;
@@ -36,6 +37,7 @@ import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardUpdateMonitorCallback;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.biometrics.AuthController;
+import com.android.systemui.biometrics.BiometricPromptLogger;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.process.ProcessWrapper;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
@@ -66,9 +68,11 @@ public class SessionTracker implements CoreStartable {
     private final KeyguardStateController mKeyguardStateController;
     private final UiEventLogger mUiEventLogger;
     private final ProcessWrapper mProcessWrapper;
+    private final BiometricPromptLogger mBiometricPromptLogger;
     private final Map<Integer, InstanceId> mSessionToInstanceId = new HashMap<>();
 
     private boolean mKeyguardSessionStarted;
+    private boolean mSessionTrackerStarted;
 
     @Inject
     public SessionTracker(
@@ -77,7 +81,8 @@ public class SessionTracker implements CoreStartable {
             KeyguardUpdateMonitor keyguardUpdateMonitor,
             KeyguardStateController keyguardStateController,
             UiEventLogger uiEventLogger,
-            ProcessWrapper processWrapper
+            ProcessWrapper processWrapper,
+            BiometricPromptLogger biometricPromptLogger
     ) {
         mStatusBarManagerService = statusBarService;
         mAuthController = authController;
@@ -85,15 +90,23 @@ public class SessionTracker implements CoreStartable {
         mKeyguardStateController = keyguardStateController;
         mUiEventLogger = uiEventLogger;
         mProcessWrapper = processWrapper;
+        mBiometricPromptLogger = biometricPromptLogger;
     }
 
     @Override
     public void start() {
+        if (mSessionTrackerStarted) {
+            return;
+        }
+        mSessionTrackerStarted = true;
         mAuthController.addCallback(mAuthControllerCallback);
         mKeyguardUpdateMonitor.registerCallback(mKeyguardUpdateMonitorCallback);
         mKeyguardStateController.addCallback(mKeyguardStateCallback);
 
-        if (mKeyguardStateController.isShowing()) {
+        // isKeyguardShowing may not be updated immediately after first boot, so we also
+        // check whether the device has not yet been entered since firsts boot to determine
+        // if we should start the session.
+        if (isKeyguardShowingOrNotEnteredSinceBoot()) {
             mKeyguardSessionStarted = true;
             startSession(SESSION_KEYGUARD);
         }
@@ -103,6 +116,12 @@ public class SessionTracker implements CoreStartable {
      * Get the session ID associated with the passed session type.
      */
     public @Nullable InstanceId getSessionId(int type) {
+        // It's possible the session id is needed for a UiEvent that is being logged from a
+        // CoreStartable that's started before the SessionTracker. In that case, start the
+        // SessionTracker earlier.
+        if (!mSessionTrackerStarted) {
+            start();
+        }
         return mSessionToInstanceId.getOrDefault(type, null);
     }
 
@@ -111,13 +130,12 @@ public class SessionTracker implements CoreStartable {
             Log.e(TAG, "session [" + getString(type) + "] was already started");
             return;
         }
-
         final InstanceId instanceId = mInstanceIdGenerator.newInstanceId();
         mSessionToInstanceId.put(type, instanceId);
 
         if (UserManager.isVisibleBackgroundUsersEnabled() && !mProcessWrapper.isSystemUser()
-                && !mProcessWrapper.isForegroundUser()) {
-            // TODO: b/341604160 - Support visible background users properly.
+                && !mProcessWrapper.isForegroundUserOrProfile()) {
+            // TODO(b/341604160): Support visible background users properly.
             if (DEBUG) {
                 Log.d(TAG, "Status bar manager is disabled for visible background users");
             }
@@ -155,8 +173,8 @@ public class SessionTracker implements CoreStartable {
                 mUiEventLogger.log(endSessionUiEvent, instanceId);
             }
             if (UserManager.isVisibleBackgroundUsersEnabled() && !mProcessWrapper.isSystemUser()
-                    && !mProcessWrapper.isForegroundUser()) {
-                // TODO: b/341604160 - Support visible background users properly.
+                    && !mProcessWrapper.isForegroundUserOrProfile()) {
+                // TODO(b/341604160): Support visible background users properly.
                 if (DEBUG) {
                     Log.d(TAG, "Status bar manager is disabled for visible background users");
                 }
@@ -188,7 +206,8 @@ public class SessionTracker implements CoreStartable {
             new KeyguardStateController.Callback() {
         public void onKeyguardShowingChanged() {
             boolean wasSessionStarted = mKeyguardSessionStarted;
-            boolean keyguardShowing = mKeyguardStateController.isShowing();
+            boolean keyguardShowing = isKeyguardShowingOrNotEnteredSinceBoot();
+
             if (keyguardShowing && !wasSessionStarted) {
                 // the keyguard can start showing without the device going to sleep (ie: lockdown
                 // from the power button), so we start a new keyguard session when the keyguard is
@@ -205,12 +224,16 @@ public class SessionTracker implements CoreStartable {
 
     public AuthController.Callback mAuthControllerCallback = new AuthController.Callback() {
         @Override
-        public void onBiometricPromptShown() {
+        public void onBiometricPromptShown(PromptInfo promptInfo) {
             startSession(SESSION_BIOMETRIC_PROMPT);
+            mBiometricPromptLogger.logPromptStart(getSessionId(SESSION_BIOMETRIC_PROMPT),
+                    promptInfo);
         }
 
         @Override
-        public void onBiometricPromptDismissed() {
+        public void onBiometricPromptDismissed(int reason, int credentialType) {
+            mBiometricPromptLogger.logPromptEnd(getSessionId(SESSION_BIOMETRIC_PROMPT), reason,
+                    credentialType);
             endSession(SESSION_BIOMETRIC_PROMPT);
         }
     };
@@ -235,6 +258,11 @@ public class SessionTracker implements CoreStartable {
         }
 
         return "unknownType=" + sessionType;
+    }
+
+    private boolean isKeyguardShowingOrNotEnteredSinceBoot() {
+        return mKeyguardStateController.isShowing()
+                || !mKeyguardUpdateMonitor.getStrongAuthTracker().hasUserAuthenticatedSinceBoot();
     }
 
     enum SessionUiEvent implements UiEventLogger.UiEventEnum {

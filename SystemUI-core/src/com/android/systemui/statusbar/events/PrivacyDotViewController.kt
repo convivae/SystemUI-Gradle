@@ -19,31 +19,37 @@ package com.android.systemui.statusbar.events
 import android.annotation.UiThread
 import android.graphics.Point
 import android.graphics.Rect
+import android.graphics.drawable.GradientDrawable
+import android.location.flags.Flags.locationIndicatorsEnabled
 import android.util.Log
+import android.view.Display
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import androidx.core.animation.Animator
 import com.android.app.animation.Interpolators
+import com.android.app.displaylib.PerDisplayRepository
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.internal.annotations.GuardedBy
 import com.android.systemui.ScreenDecorationsThread
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent
 import com.android.systemui.plugins.statusbar.StatusBarStateController
+import com.android.systemui.privacy.PrivacyConfig
+import com.android.systemui.privacy.PrivacyItem
 import com.android.systemui.res.R
+import com.android.systemui.shade.domain.interactor.ShadeDisplaysInteractor
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
-import com.android.systemui.statusbar.StatusBarState.SHADE
-import com.android.systemui.statusbar.StatusBarState.SHADE_LOCKED
-import com.android.systemui.statusbar.core.StatusBarConnectedDisplays
-import com.android.systemui.statusbar.data.repository.StatusBarContentInsetsProviderStore
 import com.android.systemui.statusbar.events.PrivacyDotCorner.BottomLeft
 import com.android.systemui.statusbar.events.PrivacyDotCorner.BottomRight
 import com.android.systemui.statusbar.events.PrivacyDotCorner.TopLeft
 import com.android.systemui.statusbar.events.PrivacyDotCorner.TopRight
-import com.android.systemui.statusbar.phone.StatusBarContentInsetsChangedListener
-import com.android.systemui.statusbar.phone.StatusBarContentInsetsProvider
+import com.android.systemui.statusbar.layout.StatusBarContentInsetsChangedListener
+import com.android.systemui.statusbar.layout.StatusBarContentInsetsProvider
 import com.android.systemui.statusbar.policy.ConfigurationController
+import com.android.systemui.statusbar.quickactions.av.domain.interactor.AvControlsChipInteractor
 import com.android.systemui.util.concurrency.DelayableExecutor
 import com.android.systemui.util.leak.RotationUtils
 import com.android.systemui.util.leak.RotationUtils.ROTATION_LANDSCAPE
@@ -51,6 +57,7 @@ import com.android.systemui.util.leak.RotationUtils.ROTATION_NONE
 import com.android.systemui.util.leak.RotationUtils.ROTATION_SEASCAPE
 import com.android.systemui.util.leak.RotationUtils.ROTATION_UPSIDE_DOWN
 import com.android.systemui.util.leak.RotationUtils.Rotation
+import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 import dagger.assisted.Assisted
@@ -58,6 +65,8 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * Understands how to keep the persistent privacy dot in the corner of the screen in
@@ -115,9 +124,12 @@ constructor(
     private val stateController: StatusBarStateController,
     @Assisted private val configurationController: ConfigurationController,
     @Assisted private val contentInsetsProvider: StatusBarContentInsetsProvider,
-    private val animationScheduler: SystemStatusAnimationScheduler,
-    shadeInteractor: ShadeInteractor?,
+    @Assisted private val animationScheduler: SystemStatusAnimationScheduler,
+    private val shadeInteractor: ShadeInteractor,
+    @Assisted avControlsChipInteractor: AvControlsChipInteractor,
     @ScreenDecorationsThread val uiExecutor: DelayableExecutor,
+    @Assisted private val displayId: Int,
+    private val shadeDisplaysInteractor: Lazy<ShadeDisplaysInteractor>?,
 ) : PrivacyDotViewController {
     private lateinit var tl: View
     private lateinit var tr: View
@@ -182,18 +194,37 @@ constructor(
         configurationController.addCallback(configurationListener)
         stateController.addCallback(statusBarStateListener)
         scope.launch {
-            shadeInteractor?.isQsExpanded?.collect { isQsExpanded ->
-                dlog("setQsExpanded $isQsExpanded")
-                synchronized(lock) { nextViewState = nextViewState.copy(qsExpanded = isQsExpanded) }
+            avControlsChipInteractor?.isShowingAvChip?.collect { shouldSuppress ->
+                synchronized(lock) {
+                    nextViewState =
+                        nextViewState.copy(dotDuplicatedByAvControlsChip = shouldSuppress)
+                }
+            }
+        }
+        scope.launch {
+            if (shadeDisplaysInteractor != null) {
+                combine(
+                    shadeInteractor?.isQsExpanded ?: flowOf(false),
+                    shadeDisplaysInteractor.get().displayId,
+                ) { _, _ ->
+                    updateStatusBarState()
+                }
+            } else {
+                shadeInteractor?.isQsExpanded?.collect { isQsExpanded ->
+                    dlog("setQsExpanded $isQsExpanded")
+                    synchronized(lock) {
+                        nextViewState = nextViewState.copy(qsExpanded = isQsExpanded)
+                    }
+                }
             }
         }
     }
 
     override fun stop() {
-        StatusBarConnectedDisplays.assertInNewMode()
         contentInsetsProvider.removeCallback(insetsChangedListener)
         configurationController.removeCallback(configurationListener)
         stateController.removeCallback(statusBarStateListener)
+        mainExecutor.execute { animationScheduler.removeCallback(systemStatusAnimationCallback) }
     }
 
     @UiThread
@@ -469,17 +500,33 @@ constructor(
     }
 
     private fun updateStatusBarState() {
-        synchronized(lock) { nextViewState = nextViewState.copy(shadeExpanded = isShadeInQs()) }
+        synchronized(lock) {
+            nextViewState =
+                nextViewState.copy(
+                    // When status bar is manipulated, both shade and qs are used to determine
+                    // if
+                    // the privacy dot should show.
+                    shadeExpanded = isShadeInQs(),
+                    qsExpanded = shadeInteractor.isQsExpanded.value,
+                )
+        }
     }
 
     /**
-     * If we are unlocked with an expanded shade, QS is showing. On keyguard, the shade is always
-     * expanded so we use other signals from the panel view controller to know if QS is expanded
+     * If we are unlocked with an expanded shade, QS is showing.
+     *
+     * @return Returns true if the fully expanded QS is showing
      */
     @GuardedBy("lock")
     private fun isShadeInQs(): Boolean {
-        return (stateController.isExpanded && stateController.state == SHADE) ||
-            (stateController.state == SHADE_LOCKED)
+        val isShadeExpanded = shadeInteractor.isShadeAnyExpanded.value
+        val isShadeExpandedOnThisDisplay =
+            if (shadeDisplaysInteractor != null) {
+                isShadeExpanded && shadeDisplaysInteractor.get().displayId.value == displayId
+            } else {
+                isShadeExpanded
+            }
+        return isShadeExpandedOnThisDisplay
     }
 
     private fun scheduleUpdate() {
@@ -541,6 +588,26 @@ constructor(
     @UiThread
     override fun updateDotView(state: ViewState) {
         val shouldShow = state.shouldShowDot()
+        if (locationIndicatorsEnabled()) {
+            if (shouldShow && state.designatedCorner != null) {
+                val dot = state.designatedCorner
+                val privacyDotView = dot.findViewById<ImageView>(R.id.privacy_dot)
+                (privacyDotView.drawable?.mutate() as? GradientDrawable)?.let { drawable ->
+                    val isLocationOnly = state.systemPrivacyEventLocationOnlyIsActive
+                    val colorRes = PrivacyConfig.Companion.getPrivacyColor(isLocationOnly)
+                    val outlineRes = PrivacyConfig.Companion.getPrivacyOutlineColor(isLocationOnly)
+                    val stroke = PrivacyConfig.Companion.getPrivacyOutlineStroke(isLocationOnly)
+                    val color = dot.context.getColor(colorRes)
+                    val outlineColor = dot.context.getColor(outlineRes)
+
+                    if (drawable.color?.defaultColor != color) {
+                        drawable.setColor(color)
+                    }
+
+                    drawable.setStroke(stroke, outlineColor)
+                }
+            }
+        }
         if (shouldShow != currentViewState.shouldShowDot()) {
             if (shouldShow && state.designatedCorner != null) {
                 showDotView(state.designatedCorner, true)
@@ -553,14 +620,27 @@ constructor(
     private val systemStatusAnimationCallback: SystemStatusAnimationCallback =
         object : SystemStatusAnimationCallback {
             override fun onSystemStatusAnimationTransitionToPersistentDot(
-                contentDescr: String?
+                contentDescription: String?,
+                privacyItems: List<PrivacyItem>?,
             ): Animator? {
                 synchronized(lock) {
-                    nextViewState =
-                        nextViewState.copy(
-                            systemPrivacyEventIsActive = true,
-                            contentDescription = contentDescr,
-                        )
+                    if (locationIndicatorsEnabled()) {
+                        nextViewState =
+                            nextViewState.copy(
+                                systemPrivacyEventIsActive = true,
+                                systemPrivacyEventLocationOnlyIsActive =
+                                    PrivacyConfig.Companion.privacyItemsAreLocationOnly(
+                                        privacyItems ?: emptyList()
+                                    ),
+                                contentDescription = contentDescription,
+                            )
+                    } else {
+                        nextViewState =
+                            nextViewState.copy(
+                                systemPrivacyEventIsActive = true,
+                                contentDescription = contentDescription,
+                            )
+                    }
                 }
 
                 return null
@@ -568,7 +648,11 @@ constructor(
 
             override fun onHidePersistentDot(): Animator? {
                 synchronized(lock) {
-                    nextViewState = nextViewState.copy(systemPrivacyEventIsActive = false)
+                    nextViewState =
+                        nextViewState.copy(
+                            systemPrivacyEventIsActive = false,
+                            systemPrivacyEventLocationOnlyIsActive = false,
+                        )
                 }
 
                 return null
@@ -612,6 +696,9 @@ constructor(
             scope: CoroutineScope,
             configurationController: ConfigurationController,
             contentInsetsProvider: StatusBarContentInsetsProvider,
+            displayId: Int,
+            animationScheduler: SystemStatusAnimationScheduler,
+            avControlsChipInteractor: AvControlsChipInteractor,
         ): PrivacyDotViewControllerImpl
     }
 }
@@ -636,8 +723,10 @@ private const val DEBUG_VERBOSE = false
 data class ViewState(
     val viewInitialized: Boolean = false,
     val systemPrivacyEventIsActive: Boolean = false,
+    val systemPrivacyEventLocationOnlyIsActive: Boolean = false,
     val shadeExpanded: Boolean = false,
     val qsExpanded: Boolean = false,
+    val dotDuplicatedByAvControlsChip: Boolean = false,
     val portraitRect: Rect? = null,
     val landscapeRect: Rect? = null,
     val upsideDownRect: Rect? = null,
@@ -650,7 +739,10 @@ data class ViewState(
     val contentDescription: String? = null,
 ) {
     fun shouldShowDot(): Boolean {
-        return systemPrivacyEventIsActive && !shadeExpanded && !qsExpanded
+        return systemPrivacyEventIsActive &&
+            !shadeExpanded &&
+            !qsExpanded &&
+            !dotDuplicatedByAvControlsChip
     }
 
     fun needsLayout(other: ViewState): Boolean {
@@ -682,12 +774,16 @@ object PrivacyDotViewControllerModule {
         factory: PrivacyDotViewControllerImpl.Factory,
         @Application scope: CoroutineScope,
         configurationController: ConfigurationController,
-        contentInsetsProviderStore: StatusBarContentInsetsProviderStore,
+        perDisplaySubcomponentRepo: PerDisplayRepository<SystemUIDisplaySubcomponent>,
     ): PrivacyDotViewController {
+        val displaySubcomponent = perDisplaySubcomponentRepo[Display.DEFAULT_DISPLAY]!!
         return factory.create(
             scope,
             configurationController,
-            contentInsetsProviderStore.defaultDisplay,
+            displaySubcomponent.statusBarContentInsetsProvider,
+            Display.DEFAULT_DISPLAY,
+            displaySubcomponent.systemStatusAnimationScheduler,
+            displaySubcomponent.avControlsChipInteractor,
         )
     }
 }

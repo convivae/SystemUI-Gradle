@@ -16,21 +16,20 @@
 
 package com.android.systemui.statusbar.events
 
+import android.util.Log
 import android.view.Display
-import android.view.DisplayCutout.BOUNDS_POSITION_BOTTOM
-import android.view.DisplayCutout.BOUNDS_POSITION_LEFT
-import android.view.DisplayCutout.BOUNDS_POSITION_RIGHT
-import android.view.DisplayCutout.BOUNDS_POSITION_TOP
 import android.view.LayoutInflater
 import android.view.View
+import android.view.WindowManager
+import android.view.WindowManager.InvalidDisplayException
 import android.view.WindowManager.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
-import com.android.app.viewcapture.ViewCaptureAwareWindowManager
 import com.android.systemui.ScreenDecorations
 import com.android.systemui.ScreenDecorationsThread
 import com.android.systemui.decor.DecorProvider
 import com.android.systemui.decor.PrivacyDotCornerDecorProviderImpl
 import com.android.systemui.decor.PrivacyDotDecorProviderFactory
+import com.android.systemui.log.MultiDisplayStatusBarLogger
 import com.android.systemui.statusbar.events.PrivacyDotCorner.BottomLeft
 import com.android.systemui.statusbar.events.PrivacyDotCorner.BottomRight
 import com.android.systemui.statusbar.events.PrivacyDotCorner.TopLeft
@@ -52,37 +51,76 @@ class PrivacyDotWindowController
 constructor(
     @Assisted private val displayId: Int,
     @Assisted private val privacyDotViewController: PrivacyDotViewController,
-    @Assisted private val viewCaptureAwareWindowManager: ViewCaptureAwareWindowManager,
+    @Assisted private val windowManager: WindowManager,
     @Assisted private val inflater: LayoutInflater,
     @ScreenDecorationsThread private val uiExecutor: Executor,
     private val dotFactory: PrivacyDotDecorProviderFactory,
+    private val logger: MultiDisplayStatusBarLogger,
 ) {
+    private val dotWindowViewsByCorner = mutableMapOf<PrivacyDotCorner, View>()
+    private var displayRotationOnStartup = 0
 
     fun start() {
         uiExecutor.execute { startOnUiThread() }
     }
 
     private fun startOnUiThread() {
+        displayRotationOnStartup = inflater.context.display.rotation
+
         val providers = dotFactory.providers
 
-        val topLeft = providers.inflate(BOUNDS_POSITION_TOP, BOUNDS_POSITION_LEFT)
-        val topRight = providers.inflate(BOUNDS_POSITION_TOP, BOUNDS_POSITION_RIGHT)
-        val bottomLeft = providers.inflate(BOUNDS_POSITION_BOTTOM, BOUNDS_POSITION_LEFT)
-        val bottomRight = providers.inflate(BOUNDS_POSITION_BOTTOM, BOUNDS_POSITION_RIGHT)
+        val topLeftContainer = providers.inflate(TopLeft)
+        val topRightContainer = providers.inflate(TopRight)
+        val bottomLeftContainer = providers.inflate(BottomLeft)
+        val bottomRightContainer = providers.inflate(BottomRight)
 
-        topLeft.addToWindow(TopLeft)
-        topRight.addToWindow(TopRight)
-        bottomLeft.addToWindow(BottomLeft)
-        bottomRight.addToWindow(BottomRight)
+        val dotViewContainersByView =
+            mapOf(
+                topLeftContainer.dotView to topLeftContainer,
+                topRightContainer.dotView to topRightContainer,
+                bottomLeftContainer.dotView to bottomLeftContainer,
+                bottomRightContainer.dotView to bottomRightContainer,
+            )
 
-        privacyDotViewController.initialize(topLeft, topRight, bottomLeft, bottomRight)
+        privacyDotViewController.showingListener =
+            object : PrivacyDotViewController.ShowingListener {
+
+                override fun onPrivacyDotShown(v: View?) {
+                    val dotViewContainer = dotViewContainersByView[v]
+                    if (v == null || dotViewContainer == null) {
+                        return
+                    }
+                    if (dotWindowViewsByCorner.containsKey(dotViewContainer.corner)) {
+                        return
+                    }
+                    v.addToWindow(dotViewContainer.corner)
+                    dotWindowViewsByCorner[dotViewContainer.corner] = dotViewContainer.windowView
+                }
+
+                override fun onPrivacyDotHidden(v: View?) {
+                    val dotViewContainer = dotViewContainersByView[v]
+                    val corner = dotViewContainer?.corner ?: return
+                    val windowView = dotWindowViewsByCorner.remove(corner) ?: return
+                    windowManager.removeViewSafely(windowView, corner)
+                }
+            }
+        privacyDotViewController.initialize(
+            topLeftContainer.dotView,
+            topRightContainer.dotView,
+            bottomLeftContainer.dotView,
+            bottomRightContainer.dotView,
+        )
     }
 
-    private fun List<DecorProvider>.inflate(alignedBound1: Int, alignedBound2: Int): View {
+    private fun List<DecorProvider>.inflate(corner: PrivacyDotCorner): DotViewContainer {
         val provider =
-            first { it.alignedBounds.containsExactly(alignedBound1, alignedBound2) }
+            first { it.alignedBounds.containsExactly(corner.alignedBound1, corner.alignedBound2) }
                 as PrivacyDotCornerDecorProviderImpl
-        return inflater.inflate(/* resource= */ provider.layoutId, /* root= */ null)
+        val dotView = inflater.inflate(/* resource= */ provider.layoutId, /* root= */ null)
+        // PrivacyDotViewController expects the dot view to have a FrameLayout parent.
+        val windowView = FrameLayout(dotView.context)
+        windowView.addView(dotView)
+        return DotViewContainer(windowView, dotView, corner)
     }
 
     private fun View.addToWindow(corner: PrivacyDotCorner) {
@@ -91,22 +129,59 @@ constructor(
             ScreenDecorations.getWindowLayoutBaseParams(excludeFromScreenshots).apply {
                 width = WRAP_CONTENT
                 height = WRAP_CONTENT
-                gravity = corner.rotatedCorner(context.display.rotation).gravity
+                gravity = corner.rotatedCorner(displayRotationOnStartup).gravity
                 title = "PrivacyDot${corner.title}$displayId"
             }
-        // PrivacyDotViewController expects the dot view to have a FrameLayout parent.
-        val rootView = FrameLayout(context)
-        rootView.addView(this)
-        viewCaptureAwareWindowManager.addView(rootView, params)
+        try {
+            // Wrapping this in a try/catch to avoid crashes when a display is instantly removed
+            // after being added, and initialization hasn't finished yet.
+            windowManager.addView(rootView, params)
+            logger.logPrivacyDotWindowAdded(displayId, corner)
+        } catch (e: InvalidDisplayException) {
+            logger.logPrivacyDotWindowAddFailure(displayId, corner)
+            Log.e(
+                TAG,
+                "Unable to add view to WM. Display with id $displayId does not exist anymore",
+                e,
+            )
+        }
+        return
     }
+
+    fun stop() {
+        uiExecutor.execute {
+            privacyDotViewController.showingListener = null
+            dotWindowViewsByCorner.forEach { windowManager.removeViewSafely(it.value, it.key) }
+        }
+    }
+
+    private data class DotViewContainer(
+        val windowView: View,
+        val dotView: View,
+        val corner: PrivacyDotCorner,
+    )
 
     @AssistedFactory
     fun interface Factory {
         fun create(
             displayId: Int,
             privacyDotViewController: PrivacyDotViewController,
-            viewCaptureAwareWindowManager: ViewCaptureAwareWindowManager,
+            windowManager: WindowManager,
             inflater: LayoutInflater,
         ): PrivacyDotWindowController
+    }
+
+    private fun WindowManager.removeViewSafely(view: View, corner: PrivacyDotCorner) {
+        try {
+            removeView(view)
+            logger.logPrivacyDotWindowRemoved(displayId, corner)
+        } catch (e: IllegalArgumentException) {
+            logger.logPrivacyDotWindowRemovalFailure(displayId, corner)
+            Log.e(TAG, "Failed to remove view from window manager.", e)
+        }
+    }
+
+    private companion object {
+        const val TAG = "PrivacyDotWindowController"
     }
 }

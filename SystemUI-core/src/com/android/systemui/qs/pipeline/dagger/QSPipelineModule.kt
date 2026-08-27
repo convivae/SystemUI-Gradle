@@ -31,17 +31,21 @@ import com.android.systemui.qs.pipeline.data.repository.QSSettingsRestoredBroadc
 import com.android.systemui.qs.pipeline.data.repository.QSSettingsRestoredRepository
 import com.android.systemui.qs.pipeline.data.repository.TileSpecRepository
 import com.android.systemui.qs.pipeline.data.repository.TileSpecSettingsRepository
+import com.android.systemui.qs.pipeline.data.startable.PackageUninstalledCoreStartable
 import com.android.systemui.qs.pipeline.domain.interactor.CurrentTilesInteractor
 import com.android.systemui.qs.pipeline.domain.interactor.CurrentTilesInteractorImpl
 import com.android.systemui.qs.pipeline.domain.startable.QSPipelineCoreStartable
+import com.android.systemui.qs.pipeline.domain.upgrade.CustomTileAddedUpgrade
+import com.android.systemui.qs.pipeline.domain.upgrade.RemoveAlreadyRemovedTiles
 import com.android.systemui.qs.pipeline.shared.logging.QSPipelineLogger
-import com.android.systemui.qs.tiles.base.interactor.DisabledByPolicyInteractor
-import com.android.systemui.qs.tiles.base.interactor.DisabledByPolicyInteractorImpl
+import com.android.systemui.qs.tiles.base.domain.interactor.DisabledByPolicyInteractor
+import com.android.systemui.qs.tiles.base.domain.interactor.DisabledByPolicyInteractorImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
+import dagger.multibindings.IntoSet
 import dagger.multibindings.Multibinds
 
 @Module(includes = [QSAutoAddModule::class, RestoreProcessorsModule::class])
@@ -79,6 +83,13 @@ abstract class QSPipelineModule {
     abstract fun provideCoreStartable(startable: QSPipelineCoreStartable): CoreStartable
 
     @Binds
+    @IntoMap
+    @ClassKey(PackageUninstalledCoreStartable::class)
+    abstract fun providePackageUninstalledCoreStartable(
+        startable: PackageUninstalledCoreStartable
+    ): CoreStartable
+
+    @Binds
     abstract fun provideQSSettingsRestoredRepository(
         impl: QSSettingsRestoredBroadcastRepository
     ): QSSettingsRestoredRepository
@@ -87,6 +98,10 @@ abstract class QSPipelineModule {
     abstract fun provideMinimumTilesRepository(
         impl: MinimumTilesResourceRepository
     ): MinimumTilesRepository
+
+    @Binds
+    @IntoSet
+    abstract fun bindTileDbUpgradeToV2(impl: RemoveAlreadyRemovedTiles): CustomTileAddedUpgrade
 
     companion object {
         /**
@@ -105,6 +120,13 @@ abstract class QSPipelineModule {
         @QSRestoreLog
         fun providesQSRestoreLogBuffer(factory: LogBufferFactory): LogBuffer {
             return factory.create(QSPipelineLogger.RESTORE_TAG, maxSize = 50, systrace = false)
+        }
+
+        @Provides
+        @SysUISingleton
+        @QSUpgraderLog
+        fun provideQSUpgraderLogBuffer(factory: LogBufferFactory): LogBuffer {
+            return factory.create(QSPipelineLogger.UPGRADER_TAG, maxSize = 50, systrace = false)
         }
     }
 }

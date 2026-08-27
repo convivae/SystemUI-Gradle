@@ -16,6 +16,7 @@
 
 package com.android.systemui.statusbar.notification.collection.render;
 
+import com.android.systemui.statusbar.notification.collection.EntryAdapter;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 
@@ -32,18 +33,20 @@ public interface GroupExpansionManager {
     void registerGroupExpansionChangeListener(OnGroupExpansionChangeListener listener);
 
     /**
-     * Whether the group associated with this notification is expanded.
-     * If this notification is not part of a group, it will always return false.
+     * Whether this group or bundle is expanded.
+     * If this notification is not the root of a group (summary) or bundle (BundleEntry), it will
+     * return whether its direct parent is expanded.
+     * If this notification is not part of a group or bundle, it will always return false.
      */
-    boolean isGroupExpanded(NotificationEntry entry);
+    boolean isGroupExpanded(EntryAdapter entry);
 
     /**
-     * Set whether the group associated with this notification is expanded or not.
+     * Set whether the group/bundle associated with this notification is expanded or not.
      */
-    void setGroupExpanded(NotificationEntry entry, boolean expanded);
+    void setGroupExpanded(EntryAdapter entry, boolean expanded);
 
-    /** @return group expansion state after toggling. */
-    boolean toggleGroupExpansion(NotificationEntry entry);
+    /** @return group/bundle expansion state after toggling. */
+    boolean toggleGroupExpansion(EntryAdapter entry);
 
     /**
      * Set expanded=false for all groups

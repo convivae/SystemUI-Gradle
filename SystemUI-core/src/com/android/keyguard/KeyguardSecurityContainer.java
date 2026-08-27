@@ -32,7 +32,6 @@ import static androidx.constraintlayout.widget.ConstraintSet.START;
 import static androidx.constraintlayout.widget.ConstraintSet.TOP;
 import static androidx.constraintlayout.widget.ConstraintSet.WRAP_CONTENT;
 
-import static com.android.systemui.Flags.gsfBouncer;
 import static com.android.systemui.plugins.FalsingManager.LOW_PENALTY;
 
 import static java.lang.Integer.max;
@@ -51,6 +50,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BlendMode;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
@@ -97,10 +97,16 @@ import com.android.internal.widget.LockPatternUtils;
 import com.android.keyguard.KeyguardSecurityModel.SecurityMode;
 import com.android.settingslib.Utils;
 import com.android.settingslib.drawable.CircleFramedDrawable;
+import com.android.systemui.Flags;
+import com.android.systemui.FontStyles;
 import com.android.systemui.Gefingerpoken;
+import com.android.systemui.bouncer.domain.interactor.BouncerInteractor;
+import com.android.systemui.bouncer.ui.BouncerColors;
+import com.android.systemui.classifier.Classifier;
 import com.android.systemui.classifier.FalsingA11yDelegate;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.res.R;
+import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shade.TouchLogger;
 import com.android.systemui.shared.system.SysUiStatsLog;
 import com.android.systemui.statusbar.policy.BaseUserSwitcherAdapter;
@@ -108,6 +114,7 @@ import com.android.systemui.statusbar.policy.UserSwitcherController;
 import com.android.systemui.user.data.source.UserRecord;
 import com.android.systemui.util.settings.GlobalSettings;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -118,6 +125,7 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
     static final int USER_TYPE_PRIMARY = 1;
     static final int USER_TYPE_WORK_PROFILE = 2;
     static final int USER_TYPE_SECONDARY_USER = 3;
+    private boolean mTransparentModeEnabled = false;
 
     @IntDef({MODE_UNINITIALIZED, MODE_DEFAULT, MODE_ONE_HANDED, MODE_USER_SWITCHER})
     public @interface Mode {}
@@ -169,11 +177,13 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
     private boolean mIsDragging;
     private float mStartTouchY = -1;
     private boolean mDisappearAnimRunning;
+    private boolean mIsAppearAnimationDelayed;
     private SwipeListener mSwipeListener;
     private ViewMode mViewMode = new DefaultViewMode();
     private boolean mIsInteractable;
     protected ViewMediatorCallback mViewMediatorCallback;
     private Executor mBgExecutor;
+    private BouncerInteractor mBouncerInteractor;
     /*
      * Using MODE_UNINITIALIZED to mean the view mode is set to DefaultViewMode, but init() has not
      * yet been called on it. This will happen when the ViewController is initialized.
@@ -346,8 +356,7 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         setPadding(getPaddingLeft(), getPaddingTop() + getResources().getDimensionPixelSize(
                         R.dimen.keyguard_security_container_padding_top), getPaddingRight(),
                 getPaddingBottom());
-        setBackgroundColor(Utils.getColorAttrDefaultColor(getContext(),
-                com.android.internal.R.attr.materialColorSurfaceDim));
+        reloadBackgroundColor();
     }
 
     void onResume(SecurityMode securityMode, boolean faceAuthEnabled) {
@@ -362,7 +371,8 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
     void initMode(@Mode int mode, GlobalSettings globalSettings, FalsingManager falsingManager,
             UserSwitcherController userSwitcherController,
             UserSwitcherViewMode.UserSwitcherCallback userSwitcherCallback,
-            FalsingA11yDelegate falsingA11yDelegate) {
+            FalsingA11yDelegate falsingA11yDelegate,
+            BouncerInteractor bouncerInteractor) {
         if (mCurrentMode == mode) return;
         Log.i(TAG, "Switching mode from " + modeToString(mCurrentMode) + " to "
                 + modeToString(mode));
@@ -383,6 +393,8 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         mFalsingManager = falsingManager;
         mFalsingA11yDelegate = falsingA11yDelegate;
         mUserSwitcherController = userSwitcherController;
+        mBouncerInteractor = bouncerInteractor;
+
         setupViewMode();
     }
 
@@ -408,7 +420,7 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         }
 
         mViewMode.init(this, mGlobalSettings, mSecurityViewFlipper, mFalsingManager,
-                mUserSwitcherController, mFalsingA11yDelegate);
+                mUserSwitcherController, mFalsingA11yDelegate, mBouncerInteractor);
     }
 
     @Mode int getMode() {
@@ -510,7 +522,7 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
     public boolean onTouchEvent(MotionEvent event) {
         final int action = event.getActionMasked();
 
-        boolean result =  mMotionEventListeners.stream()
+        boolean result = mMotionEventListeners.stream()
                 .anyMatch(listener -> listener.onTouchEvent(event))
                 || super.onTouchEvent(event);
 
@@ -551,15 +563,18 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
                 break;
         }
         if (action == MotionEvent.ACTION_UP) {
-            if (-getTranslationY() > TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                    MIN_DRAG_SIZE, getResources().getDisplayMetrics())) {
-                if (mSwipeListener != null) {
-                    mSwipeListener.onSwipeUp();
-                }
-            } else if (getTranslationY() > TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                    MIN_DRAG_SIZE, getResources().getDisplayMetrics())) {
-                if (mSwipeListener != null) {
-                    mSwipeListener.onSwipeDown();
+            if (!mFalsingManager.isFalseTouch(Classifier.BOUNCER_SWIPE)) {
+                if (-getTranslationY() > TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+                        MIN_DRAG_SIZE, getResources().getDisplayMetrics())) {
+                    if (mSwipeListener != null) {
+                        mSwipeListener.onSwipeUp();
+                    }
+                } else if (getTranslationY() > TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP,
+                        MIN_DRAG_SIZE, getResources().getDisplayMetrics())) {
+                    if (mSwipeListener != null) {
+                        mSwipeListener.onSwipeDown();
+                    }
                 }
             }
         }
@@ -579,6 +594,10 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
             return true;
         }
         return false;
+    }
+
+    boolean isAppearAnimationDelayed() {
+        return mIsAppearAnimationDelayed;
     }
 
     void addMotionEventListener(Gefingerpoken listener) {
@@ -620,6 +639,19 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         setTranslationY(0f);
         updateChildren(0 /* translationY */, 1f /* alpha */);
         mViewMode.startAppearAnimation(securityMode);
+    }
+
+    /**
+     * Set view translationY and alpha as we delay bouncer animation.
+     */
+    public void setupForDelayedAppear() {
+        setTranslationY(0f);
+        setAlpha(0f);
+        setIsAppearAnimationDelayed(true);
+    }
+
+    public void setIsAppearAnimationDelayed(boolean isDelayed) {
+        mIsAppearAnimationDelayed = isDelayed;
     }
 
     private void beginJankInstrument(int cuj) {
@@ -715,9 +747,8 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         mAlertDialog.show();
     }
 
-    void showTimeoutDialog(int userId, int timeoutMs, LockPatternUtils lockPatternUtils,
+    void showTimeoutDialog(int userId, Duration timeout, LockPatternUtils lockPatternUtils,
             SecurityMode securityMode) {
-        int timeoutInSeconds = timeoutMs / 1000;
         int messageId = 0;
 
         switch (securityMode) {
@@ -741,7 +772,7 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         if (messageId != 0) {
             final String message = mContext.getString(messageId,
                     lockPatternUtils.getCurrentFailedPasswordAttempts(userId),
-                    timeoutInSeconds);
+                    timeout.toSeconds());
             showDialog(null, message);
         }
     }
@@ -810,12 +841,43 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
     public void reset() {
         mViewMode.reset();
         mDisappearAnimRunning = false;
+        mIsAppearAnimationDelayed = false;
+    }
+
+    /**
+     * Make the bouncer background transparent
+     */
+    public void enableTransparentMode() {
+        mTransparentModeEnabled = true;
+        reloadBackgroundColor();
+    }
+
+    /**
+     * Make the bouncer background opaque
+     */
+    public void disableTransparentMode() {
+        mTransparentModeEnabled = false;
+        reloadBackgroundColor();
+    }
+
+    private void reloadBackgroundColor() {
+        if (mTransparentModeEnabled) {
+            setBackgroundColor(Color.TRANSPARENT);
+        } else {
+            if (Flags.bouncerUiRevamp2()) {
+                setBackgroundColor(BouncerColors.surfaceColor(mContext, false));
+            } else {
+                setBackgroundColor(
+                        getContext().getColor(
+                                com.android.internal.R.color.materialColorSurfaceDim));
+            }
+        }
+        invalidate();
     }
 
     void reloadColors() {
         mViewMode.reloadColors();
-        setBackgroundColor(Utils.getColorAttrDefaultColor(getContext(),
-                com.android.internal.R.attr.materialColorSurfaceDim));
+        reloadBackgroundColor();
     }
 
     /** Handles density or font scale changes. */
@@ -848,7 +910,8 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
                 @NonNull KeyguardSecurityViewFlipper viewFlipper,
                 @NonNull FalsingManager falsingManager,
                 @NonNull UserSwitcherController userSwitcherController,
-                @NonNull FalsingA11yDelegate falsingA11yDelegate) {};
+                @NonNull FalsingA11yDelegate falsingA11yDelegate,
+                @NonNull BouncerInteractor bouncerInteractor) {};
 
         /** Reinitialize the location */
         default void updateSecurityViewLocation() {};
@@ -887,15 +950,23 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         private ConstraintLayout mView;
         private GlobalSettings mGlobalSettings;
         private int mDefaultSideSetting;
+        private boolean mDisableDoubleClickSwap;
+        private BouncerInteractor mBouncerInteractor;
 
         public void init(ConstraintLayout v, KeyguardSecurityViewFlipper viewFlipper,
-                GlobalSettings globalSettings, boolean leftAlignedByDefault) {
+                GlobalSettings globalSettings, boolean leftAlignedByDefault,
+                BouncerInteractor bouncerInteractor) {
             mView = v;
             mViewFlipper = viewFlipper;
             mGlobalSettings = globalSettings;
             mDefaultSideSetting =
                     leftAlignedByDefault ? Settings.Global.ONE_HANDED_KEYGUARD_SIDE_LEFT
                             : Settings.Global.ONE_HANDED_KEYGUARD_SIDE_RIGHT;
+            mBouncerInteractor = bouncerInteractor;
+            mDisableDoubleClickSwap =
+                    (Flags.disableDoubleClickSwapOnBouncer()
+                                    || Flags.disableDoubleClickSwapOnBouncer2())
+                            && mBouncerInteractor.isImproveLargeScreenInteractionEnabled();
         }
 
         /**
@@ -904,6 +975,9 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
          */
         @Override
         public void handleDoubleTap(MotionEvent event) {
+            if (mDisableDoubleClickSwap) {
+                return;
+            }
             boolean currentlyLeftAligned = isLeftAligned();
             // Did the tap hit the "other" side of the bouncer?
             if (isTouchOnTheOtherSideOfSecurity(event, currentlyLeftAligned)) {
@@ -957,7 +1031,8 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
                 @NonNull KeyguardSecurityViewFlipper viewFlipper,
                 @NonNull FalsingManager falsingManager,
                 @NonNull UserSwitcherController userSwitcherController,
-                @NonNull FalsingA11yDelegate falsingA11yDelegate) {
+                @NonNull FalsingA11yDelegate falsingA11yDelegate,
+                @NonNull BouncerInteractor bouncerInteractor) {
             mView = v;
             mViewFlipper = viewFlipper;
 
@@ -1016,8 +1091,10 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
                 @NonNull KeyguardSecurityViewFlipper viewFlipper,
                 @NonNull FalsingManager falsingManager,
                 @NonNull UserSwitcherController userSwitcherController,
-                @NonNull FalsingA11yDelegate falsingA11yDelegate) {
-            init(v, viewFlipper, globalSettings, /* leftAlignedByDefault= */false);
+                @NonNull FalsingA11yDelegate falsingA11yDelegate,
+                @NonNull BouncerInteractor bouncerInteractor) {
+            init(v, viewFlipper, globalSettings, /* leftAlignedByDefault= */false,
+                    bouncerInteractor);
             mView = v;
             mViewFlipper = viewFlipper;
             mFalsingManager = falsingManager;
@@ -1082,6 +1159,9 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
         }
 
         private void findLargeUserIcon(int userId, Consumer<Drawable> consumer) {
+            if (SceneContainerFlag.isEnabled()) {
+                return;
+            }
             mBgExecutor.execute(() -> {
                 Drawable icon;
                 Bitmap userIcon = UserManager.get(mView.getContext()).getUserIcon(userId);
@@ -1337,8 +1417,9 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
                     true);
             mUserSwitcherViewGroup = mView.findViewById(R.id.keyguard_bouncer_user_switcher);
             mUserSwitcher = mView.findViewById(R.id.user_switcher_header);
-            if (gsfBouncer()) {
-                mUserSwitcher.setTypeface(Typeface.create("gsf-label-medium", Typeface.NORMAL));
+            if (Flags.bouncerUiRevamp2()) {
+                mUserSwitcher.setTypeface(
+                        Typeface.create(FontStyles.GSF_LABEL_MEDIUM, Typeface.NORMAL));
             }
         }
 
@@ -1360,8 +1441,10 @@ public class KeyguardSecurityContainer extends ConstraintLayout {
                 @NonNull KeyguardSecurityViewFlipper viewFlipper,
                 @NonNull FalsingManager falsingManager,
                 @NonNull UserSwitcherController userSwitcherController,
-                @NonNull FalsingA11yDelegate falsingA11yDelegate) {
-            init(v, viewFlipper, globalSettings, /* leftAlignedByDefault= */true);
+                @NonNull FalsingA11yDelegate falsingA11yDelegate,
+                @NonNull BouncerInteractor bouncerInteractor) {
+            init(v, viewFlipper, globalSettings, /* leftAlignedByDefault= */true,
+                    bouncerInteractor);
             mView = v;
             mViewFlipper = viewFlipper;
 

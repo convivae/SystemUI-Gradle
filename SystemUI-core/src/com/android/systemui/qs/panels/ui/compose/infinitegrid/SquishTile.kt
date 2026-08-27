@@ -33,16 +33,26 @@ import kotlin.math.roundToInt
  * also use an approachLayout tracking the squishiness.
  */
 fun Modifier.verticalSquish(squishiness: () -> Float): Modifier {
-    return approachLayout(isMeasurementApproachInProgress = { squishiness() < 1 }) { measurable, _
-        ->
-        val squishinessValue = squishiness()
-        val expectedHeight = lookaheadSize.height
+    return approachLayout(
+        isMeasurementApproachInProgress = { squishiness() < 1 },
+        approachMeasure = { measurable, constraints ->
+            val squishinessValue = if (isLookingAhead) 1f else squishiness()
 
-        val placeable = measurable.measure(lookaheadConstraints)
-        val squishedHeight = (expectedHeight * squishinessValue).roundToInt()
-        // Center the content by moving it UP (squishedHeight < actualHeight)
-        val scroll = (squishedHeight - expectedHeight) / 2
+            // Prevents unnecessary calculations when no squishing is needed.
+            if (squishinessValue == 1f) {
+                return@approachLayout measurable.measure(constraints).run {
+                    layout(width, height) { place(0, 0) }
+                }
+            }
 
-        layout(placeable.width, squishedHeight) { placeable.place(0, scroll) }
-    }
+            val expectedHeight = lookaheadSize.height
+
+            val placeable = measurable.measure(lookaheadConstraints)
+            val squishedHeight = (expectedHeight * squishinessValue).roundToInt()
+            // Center the content by moving it UP (squishedHeight < actualHeight)
+            val scroll = (squishedHeight - expectedHeight) / 2
+
+            layout(placeable.width, squishedHeight) { placeable.place(0, scroll) }
+        },
+    )
 }

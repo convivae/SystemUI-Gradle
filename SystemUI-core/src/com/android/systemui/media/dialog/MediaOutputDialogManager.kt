@@ -16,33 +16,29 @@
 
 package com.android.systemui.media.dialog
 
-import android.content.Context
 import android.media.session.MediaSession
 import android.os.UserHandle
 import android.view.View
 import com.android.internal.jank.InteractionJankMonitor
-import com.android.internal.logging.UiEventLogger
 import com.android.systemui.animation.DialogCuj
 import com.android.systemui.animation.DialogTransitionAnimator
-import com.android.systemui.broadcast.BroadcastSender
 import javax.inject.Inject
 
-/** Manager to create and show a [MediaOutputDialog]. */
+/** Manager to create and show a [MediaOutputDialogDelegate]. */
 open class MediaOutputDialogManager
 @Inject
 constructor(
-    private val context: Context,
-    private val broadcastSender: BroadcastSender,
-    private val uiEventLogger: UiEventLogger,
     private val dialogTransitionAnimator: DialogTransitionAnimator,
     private val mediaSwitchingControllerFactory: MediaSwitchingController.Factory,
+    private val mediaOutputDialogDelegateFactory: MediaOutputDialogDelegate.Factory,
 ) {
     companion object {
         const val INTERACTION_JANK_TAG = "media_output"
-        var mediaOutputDialog: MediaOutputDialog? = null
     }
 
-    /** Creates a [MediaOutputDialog] for the given package. */
+    var mediaOutputDialogDelegate: MediaOutputDialogDelegate? = null
+
+    /** Creates a [MediaOutputDialogDelegate] for the given package. */
     // TODO: b/321969740 - Make the userHandle non-optional, and place the parameter next to the
     // package name. The user handle is necessary to disambiguate the same package running on
     // different users.
@@ -51,7 +47,8 @@ constructor(
         aboveStatusBar: Boolean,
         view: View? = null,
         userHandle: UserHandle? = null,
-        token: MediaSession.Token? = null
+        token: MediaSession.Token? = null,
+        useSystemColors: Boolean = false,
     ) {
         createAndShowWithController(
             packageName,
@@ -62,16 +59,17 @@ constructor(
                         it,
                         DialogCuj(
                             InteractionJankMonitor.CUJ_SHADE_DIALOG_OPEN,
-                            INTERACTION_JANK_TAG
-                        )
+                            INTERACTION_JANK_TAG,
+                        ),
                     )
                 },
             userHandle = userHandle,
             token = token,
+            useSystemColors = useSystemColors,
         )
     }
 
-    /** Creates a [MediaOutputDialog] for the given package. */
+    /** Creates a [MediaOutputDialogDelegate] for the given package. */
     // TODO: b/321969740 - Make the userHandle non-optional, and place the parameter next to the
     // package name. The user handle is necessary to disambiguate the same package running on
     // different users.
@@ -81,26 +79,38 @@ constructor(
         controller: DialogTransitionAnimator.Controller?,
         userHandle: UserHandle? = null,
         token: MediaSession.Token? = null,
+        onDialogEventListener: MediaOutputDialogDelegate.OnDialogEventListener? = null,
+        mediaSwitchingType: MediaSwitchingType? = null,
+        useSystemColors: Boolean = false,
     ) {
         createAndShow(
+            userHandle,
             packageName,
             aboveStatusBar,
             dialogTransitionAnimatorController = controller,
             includePlaybackAndAppMetadata = true,
-            userHandle = userHandle,
             token = token,
+            onDialogEventListener = onDialogEventListener,
+            mediaSwitchingType = mediaSwitchingType,
+            useSystemColors = useSystemColors,
         )
     }
 
     open fun createAndShowForSystemRouting(
-        controller: DialogTransitionAnimator.Controller? = null
+        controller: DialogTransitionAnimator.Controller? = null,
+        onDialogEventListener: MediaOutputDialogDelegate.OnDialogEventListener? = null,
+        mediaSwitchingType: MediaSwitchingType? = null,
+        userHandle: UserHandle? = null,
     ) {
         createAndShow(
+            userHandle,
             packageName = null,
             aboveStatusBar = false,
             dialogTransitionAnimatorController = controller,
             includePlaybackAndAppMetadata = false,
-            userHandle = null,
+            onDialogEventListener = onDialogEventListener,
+            mediaSwitchingType = mediaSwitchingType,
+            useSystemColors = true,
         )
     }
 
@@ -108,43 +118,49 @@ constructor(
     // package name. The user handle is necessary to disambiguate the same package running on
     // different users.
     private fun createAndShow(
+        userHandle: UserHandle?,
         packageName: String?,
         aboveStatusBar: Boolean,
         dialogTransitionAnimatorController: DialogTransitionAnimator.Controller?,
         includePlaybackAndAppMetadata: Boolean = true,
-        userHandle: UserHandle? = null,
         token: MediaSession.Token? = null,
+        onDialogEventListener: MediaOutputDialogDelegate.OnDialogEventListener? = null,
+        mediaSwitchingType: MediaSwitchingType? = null,
+        useSystemColors: Boolean = false,
     ) {
         // Dismiss the previous dialog, if any.
-        mediaOutputDialog?.dismiss()
+        mediaOutputDialogDelegate?.dismiss()
 
-        val controller = mediaSwitchingControllerFactory.create(packageName, userHandle, token)
-
-        val mediaOutputDialog =
-            MediaOutputDialog(
-                context,
-                aboveStatusBar,
-                broadcastSender,
-                controller,
-                dialogTransitionAnimator,
-                uiEventLogger,
-                includePlaybackAndAppMetadata
+        val controller =
+            mediaSwitchingControllerFactory.create(
+                packageName,
+                userHandle,
+                token,
+                mediaSwitchingType,
             )
+
+        val delegate =
+            mediaOutputDialogDelegateFactory.create(
+                aboveStatusBar,
+                controller,
+                includePlaybackAndAppMetadata,
+                onDialogEventListener,
+                useSystemColors,
+            )
+        mediaOutputDialogDelegate = delegate
+        val dialog = delegate.createDialog()
 
         // Show the dialog.
         if (dialogTransitionAnimatorController != null) {
-            dialogTransitionAnimator.show(
-                mediaOutputDialog,
-                dialogTransitionAnimatorController,
-            )
+            dialogTransitionAnimator.show(dialog, dialogTransitionAnimatorController)
         } else {
-            mediaOutputDialog.show()
+            dialog.show()
         }
     }
 
-    /** dismiss [MediaOutputDialog] if exist. */
+    /** dismiss [MediaOutputDialogDelegate] if it exists. */
     open fun dismiss() {
-        mediaOutputDialog?.dismiss()
-        mediaOutputDialog = null
+        mediaOutputDialogDelegate?.dismiss()
+        mediaOutputDialogDelegate = null
     }
 }

@@ -19,11 +19,18 @@
     xmlns:androidprv="http://schemas.android.com/apk/prv/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/clipboard_ui"
-    android:theme="@style/FloatingOverlay"
+    android:theme="@android:style/Theme.DeviceDefault.DayNight"
     android:alpha="0"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:contentDescription="@string/clipboard_overlay_window_name">
+    <View
+        android:id="@+id/clipboard_announcement_live_region"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:accessibilityLiveRegion="polite"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
     <!-- Min edge spacing guideline off of which the preview and actions can be anchored (without
          this we'd need to express margins as the sum of two different dimens). -->
     <androidx.constraintlayout.widget.Guideline
@@ -85,6 +92,7 @@
         android:paddingVertical="@dimen/overlay_action_container_padding_vertical"
         android:elevation="4dp"
         android:scrollbars="none"
+        android:importantForAccessibility="no"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintWidth_percent="1.0"
         app:layout_constraintWidth_max="wrap"
@@ -141,9 +149,9 @@
                   android:autoSizeTextType="uniform"
                   android:autoSizeMinTextSize="@dimen/clipboard_overlay_min_font"
                   android:autoSizeMaxTextSize="@dimen/clipboard_overlay_max_font"
-                  android:textColor="?attr/overlayButtonTextColor"
-                  android:textColorLink="?attr/overlayButtonTextColor"
-                  android:background="?androidprv:attr/colorAccentSecondary"
+                  android:textColor="@color/materialColorOnSecondary"
+                  android:textColorLink="@color/materialColorOnSecondary"
+                  android:background="@color/materialColorSecondary"
                   android:layout_width="@dimen/clipboard_preview_size"
                   android:layout_height="@dimen/clipboard_preview_size"/>
         <ImageView
@@ -160,8 +168,8 @@
             android:padding="8dp"
             android:gravity="center"
             android:textSize="14sp"
-            android:textColor="?attr/overlayButtonTextColor"
-            android:background="?androidprv:attr/colorAccentSecondary"
+            android:textColor="@color/materialColorOnSecondary"
+            android:background="@color/materialColorSecondary"
             android:layout_width="@dimen/clipboard_preview_size"
             android:layout_height="@dimen/clipboard_preview_size"/>
     </FrameLayout>
@@ -171,20 +179,22 @@
         android:layout_height="wrap_content"
         android:visibility="gone"
         android:elevation="7dp"
-        android:padding="8dp"
+        android:padding="12dp"
         app:layout_constraintBottom_toTopOf="@id/indication_container"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="@dimen/overlay_action_container_margin_horizontal"
-        android:layout_marginBottom="@dimen/overlay_action_container_margin_bottom"
-        android:background="@drawable/clipboard_minimized_background">
+        android:layout_marginStart="4dp"
+        android:layout_marginBottom="2dp"
+        android:importantForAccessibility="yes"
+        android:contentDescription="@string/clipboard_overlay_window_name"
+        android:background="@drawable/clipboard_minimized_background_inset">
         <ImageView
             android:src="@drawable/ic_content_paste"
-            android:tint="?attr/overlayButtonTextColor"
+            android:tint="@color/materialColorOnSecondary"
             android:layout_width="24dp"
             android:layout_height="24dp"/>
         <ImageView
             android:src="@*android:drawable/ic_chevron_end"
-            android:tint="?attr/overlayButtonTextColor"
+            android:tint="@color/materialColorOnSecondary"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:paddingEnd="-8dp"
@@ -204,27 +214,4 @@
         android:orientation="vertical"
         app:barrierDirection="end"
         app:constraint_referenced_ids="clipboard_preview,minimized_preview"/>
-    <FrameLayout
-        android:id="@+id/dismiss_button"
-        android:layout_width="@dimen/overlay_dismiss_button_tappable_size"
-        android:layout_height="@dimen/overlay_dismiss_button_tappable_size"
-        android:elevation="10dp"
-        android:visibility="gone"
-        android:alpha="0"
-        app:layout_constraintStart_toEndOf="@id/clipboard_content_end"
-        app:layout_constraintEnd_toEndOf="@id/clipboard_content_end"
-        app:layout_constraintTop_toTopOf="@id/clipboard_content_top"
-        app:layout_constraintBottom_toTopOf="@id/clipboard_content_top"
-        android:contentDescription="@string/clipboard_dismiss_description">
-        <ImageView
-            android:id="@+id/dismiss_image"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="@dimen/overlay_dismiss_button_margin"
-            android:background="@drawable/circular_background"
-            android:backgroundTint="?androidprv:attr/materialColorPrimaryFixedDim"
-            android:tint="?androidprv:attr/materialColorOnPrimaryFixed"
-            android:padding="4dp"
-            android:src="@drawable/ic_close"/>
-    </FrameLayout>
 </com.android.systemui.clipboardoverlay.ClipboardOverlayView>

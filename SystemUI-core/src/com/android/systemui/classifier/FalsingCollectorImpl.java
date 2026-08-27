@@ -31,13 +31,17 @@ import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardUpdateMonitorCallback;
 import com.android.systemui.Flags;
 import com.android.systemui.communal.domain.interactor.CommunalInteractor;
+import com.android.systemui.communal.domain.interactor.CommunalSceneInteractor;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor;
+import com.android.systemui.deviceentry.domain.interactor.DeviceUnlockedInteractor;
+import com.android.systemui.deviceentry.shared.model.DeviceUnlockSource;
+import com.android.systemui.deviceentry.shared.model.DeviceUnlockStatus;
 import com.android.systemui.dock.DockManager;
+import com.android.systemui.keyguard.domain.interactor.KeyguardOcclusionInteractor;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
-import com.android.systemui.scene.domain.interactor.SceneContainerOcclusionInteractor;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.statusbar.StatusBarState;
@@ -87,6 +91,7 @@ class FalsingCollectorImpl implements FalsingCollector {
     private final KeyguardStateController mKeyguardStateController;
     private final Lazy<ShadeInteractor> mShadeInteractorLazy;
     private final Lazy<CommunalInteractor> mCommunalInteractorLazy;
+    private final Lazy<CommunalSceneInteractor> mCommunalSceneInteractorLazy;
     private final BatteryController mBatteryController;
     private final DockManager mDockManager;
     private final DelayableExecutor mMainExecutor;
@@ -94,7 +99,8 @@ class FalsingCollectorImpl implements FalsingCollector {
     private final SystemClock mSystemClock;
     private final Lazy<SelectedUserInteractor> mUserInteractor;
     private final Lazy<DeviceEntryInteractor> mDeviceEntryInteractor;
-    private final Lazy<SceneContainerOcclusionInteractor> mSceneContainerOcclusionInteractor;
+    private final Lazy<KeyguardOcclusionInteractor> mOcclusionInteractor;
+    private final Lazy<DeviceUnlockedInteractor> mDeviceUnlockedInteractor;
 
     private int mState;
     private boolean mShowingAod;
@@ -178,8 +184,10 @@ class FalsingCollectorImpl implements FalsingCollector {
             SystemClock systemClock,
             Lazy<SelectedUserInteractor> userInteractor,
             Lazy<CommunalInteractor> communalInteractorLazy,
+            Lazy<CommunalSceneInteractor> communalSceneInteractorLazy,
             Lazy<DeviceEntryInteractor> deviceEntryInteractor,
-            Lazy<SceneContainerOcclusionInteractor> sceneContainerOcclusionInteractor) {
+            Lazy<KeyguardOcclusionInteractor> occlusionInteractor,
+            Lazy<DeviceUnlockedInteractor> deviceUnlockedInteractor) {
         mFalsingDataProvider = falsingDataProvider;
         mFalsingManager = falsingManager;
         mKeyguardUpdateMonitor = keyguardUpdateMonitor;
@@ -195,8 +203,10 @@ class FalsingCollectorImpl implements FalsingCollector {
         mSystemClock = systemClock;
         mUserInteractor = userInteractor;
         mCommunalInteractorLazy = communalInteractorLazy;
+        mCommunalSceneInteractorLazy = communalSceneInteractorLazy;
         mDeviceEntryInteractor = deviceEntryInteractor;
-        mSceneContainerOcclusionInteractor = sceneContainerOcclusionInteractor;
+        mOcclusionInteractor = occlusionInteractor;
+        mDeviceUnlockedInteractor = deviceUnlockedInteractor;
     }
 
     @Override
@@ -213,24 +223,30 @@ class FalsingCollectorImpl implements FalsingCollector {
                     this::isDeviceEnteredChanged
             );
             mJavaAdapter.alwaysCollectFlow(
-                    mSceneContainerOcclusionInteractor.get().getInvisibleDueToOcclusion(),
-                    this::isInvisibleDueToOcclusionChanged
+                    mOcclusionInteractor.get().isKeyguardOccluded(),
+                    this::isKeyguardOccluded
+            );
+            mJavaAdapter.alwaysCollectFlow(
+                    mDeviceUnlockedInteractor.get().getDeviceUnlockStatus(),
+                    this::deviceUnlockSourceChanged
             );
         } else {
             mKeyguardStateController.addCallback(mKeyguardStateControllerCallback);
+            mKeyguardUpdateMonitor.registerCallback(mKeyguardUpdateCallback);
         }
-
-        mKeyguardUpdateMonitor.registerCallback(mKeyguardUpdateCallback);
 
         mJavaAdapter.alwaysCollectFlow(
                 mShadeInteractorLazy.get().isQsExpanded(),
                 this::onQsExpansionChanged
         );
         final CommunalInteractor communalInteractor = mCommunalInteractorLazy.get();
+        final CommunalSceneInteractor communalSceneInteractor = mCommunalSceneInteractorLazy.get();
         mJavaAdapter.alwaysCollectFlow(
-                BooleanFlowOperators.INSTANCE.allOf(
+                BooleanFlowOperators.allOf(
                         communalInteractor.isCommunalEnabled(),
-                        communalInteractor.isCommunalShowing()),
+                        SceneContainerFlag.isEnabled()
+                                ? communalSceneInteractor.isCommunalCurrentScene()
+                                : communalSceneInteractor.isIdleOnCommunal()),
                 this::onShowingCommunalHubChanged
         );
 
@@ -238,11 +254,23 @@ class FalsingCollectorImpl implements FalsingCollector {
         mDockManager.addListener(mDockEventListener);
     }
 
+    private void deviceUnlockSourceChanged(DeviceUnlockStatus deviceUnlockStatus) {
+        DeviceUnlockSource source = deviceUnlockStatus.getDeviceUnlockSource();
+        if (source != null) {
+            if (deviceUnlockStatus.getDeviceUnlockSource()
+                    instanceof DeviceUnlockSource.FaceWithoutBypass) {
+                mFalsingDataProvider.setJustUnlockedWithFace(true);
+            } else if (deviceUnlockStatus.getDeviceUnlockSource().getDismissesLockscreen()) {
+                mFalsingDataProvider.setUnlockedAndDismissing(true);
+            }
+        }
+    }
+
     public void isDeviceEnteredChanged(boolean unused) {
         updateSensorRegistration();
     }
 
-    public void isInvisibleDueToOcclusionChanged(boolean unused) {
+    public void isKeyguardOccluded(boolean unused) {
         updateSensorRegistration();
     }
 
@@ -273,6 +301,7 @@ class FalsingCollectorImpl implements FalsingCollector {
     private void onShowingCommunalHubChanged(boolean isShowing) {
         logDebug("REAL: onShowingCommunalHubChanged(" + isShowing + ")");
         mShowingCommunalHub = isShowing;
+        mFalsingDataProvider.setShowingCommunalHub(isShowing);
         updateSessionActive();
     }
 
@@ -469,6 +498,7 @@ class FalsingCollectorImpl implements FalsingCollector {
             logDebug("Starting Session");
             mSessionStarted = true;
             mFalsingDataProvider.setJustUnlockedWithFace(false);
+            mFalsingDataProvider.setUnlockedAndDismissing(false);
             mFalsingDataProvider.onSessionStarted();
         }
     }
@@ -516,7 +546,7 @@ class FalsingCollectorImpl implements FalsingCollector {
      */
     private boolean isKeyguardOccluded() {
         if (SceneContainerFlag.isEnabled()) {
-            return mSceneContainerOcclusionInteractor.get().getInvisibleDueToOcclusion().getValue();
+            return mOcclusionInteractor.get().isKeyguardOccluded().getValue();
         } else {
             return mKeyguardStateController.isOccluded();
         }

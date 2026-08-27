@@ -18,14 +18,14 @@ package com.android.systemui.qs.panels.ui.viewmodel
 
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import com.android.systemui.lifecycle.ExclusiveActivatable
-import com.android.systemui.lifecycle.Hydrator
+import com.android.systemui.lifecycle.HydratedActivatable
 import com.android.systemui.media.controls.ui.controller.MediaLocation
+import com.android.systemui.media.remedia.ui.compose.MediaUiBehavior
+import com.android.systemui.qs.panels.domain.interactor.LargeTileSpanInteractor
 import com.android.systemui.qs.panels.domain.interactor.QSColumnsInteractor
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -40,10 +40,10 @@ class QSColumnsViewModel
 constructor(
     interactor: QSColumnsInteractor,
     mediaInRowInLandscapeViewModelFactory: MediaInRowInLandscapeViewModel.Factory,
+    private val largeTileSpanInteractor: LargeTileSpanInteractor,
     @Assisted @MediaLocation mediaLocation: Int?,
-) : ExclusiveActivatable() {
-
-    private val hydrator = Hydrator("QSColumnsViewModelWithMedia")
+    @Assisted mediaUiBehavior: MediaUiBehavior?,
+) : HydratedActivatable() {
 
     val columns by derivedStateOf {
         if (mediaInRowInLandscapeViewModel?.shouldMediaShowInRow == true) {
@@ -53,24 +53,39 @@ constructor(
         }
     }
 
+    private val maxSpan by
+        largeTileSpanInteractor.tileMaxWidth.hydratedStateOf(
+            initialValue = largeTileSpanInteractor.defaultTileMaxWidth
+        )
+
+    private val useExtraLargeTiles by
+        largeTileSpanInteractor.useExtraLargeTiles.hydratedStateOf(initialValue = false)
+
+    val largeSpan: Int
+        get() =
+            if (useExtraLargeTiles) {
+                if (columns > maxSpan) columns / 2 else columns
+            } else {
+                largeTileSpanInteractor.defaultTileMaxWidth
+            }
+
     private val mediaInRowInLandscapeViewModel =
-        mediaLocation?.let { mediaInRowInLandscapeViewModelFactory.create(it) }
-
-    private val columnsWithoutMedia by
-        hydrator.hydratedStateOf(traceName = "columnsWithoutMedia", source = interactor.columns)
-
-    override suspend fun onActivated(): Nothing {
-        coroutineScope {
-            launch { hydrator.activate() }
-            launch { mediaInRowInLandscapeViewModel?.activate() }
-            awaitCancellation()
+        if (mediaLocation != null && mediaUiBehavior != null) {
+            mediaInRowInLandscapeViewModelFactory.create(mediaLocation, mediaUiBehavior)
+        } else {
+            null
         }
+
+    private val columnsWithoutMedia by interactor.columns.hydratedStateOf()
+
+    override suspend fun onActivated() {
+        coroutineScope { launch { mediaInRowInLandscapeViewModel?.activate() } }
     }
 
     @AssistedFactory
     interface Factory {
-        fun create(mediaLocation: Int?): QSColumnsViewModel
+        fun create(mediaLocation: Int?, mediaUiBehavior: MediaUiBehavior?): QSColumnsViewModel
 
-        fun createWithoutMediaTracking() = create(null)
+        fun createWithoutMediaTracking() = create(null, null)
     }
 }

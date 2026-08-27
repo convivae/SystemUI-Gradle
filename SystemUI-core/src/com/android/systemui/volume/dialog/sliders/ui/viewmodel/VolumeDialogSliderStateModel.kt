@@ -16,21 +16,12 @@
 
 package com.android.systemui.volume.dialog.sliders.ui.viewmodel
 
-import androidx.annotation.DrawableRes
-import com.android.systemui.volume.dialog.shared.model.VolumeDialogStreamModel
+import com.android.systemui.common.shared.model.Icon
 
 data class VolumeDialogSliderStateModel(
-    val minValue: Float,
-    val maxValue: Float,
     val value: Float,
-    @DrawableRes val iconRes: Int,
+    val isDisabled: Boolean,
+    val valueRange: ClosedFloatingPointRange<Float>,
+    val icon: Icon.Loaded,
+    val label: String,
 )
-
-fun VolumeDialogStreamModel.toStateModel(@DrawableRes iconRes: Int): VolumeDialogSliderStateModel {
-    return VolumeDialogSliderStateModel(
-        minValue = levelMin.toFloat(),
-        value = level.toFloat(),
-        maxValue = levelMax.toFloat(),
-        iconRes = iconRes,
-    )
-}

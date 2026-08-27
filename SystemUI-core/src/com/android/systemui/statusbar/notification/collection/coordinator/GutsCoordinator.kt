@@ -15,21 +15,28 @@
  */
 package com.android.systemui.statusbar.notification.collection.coordinator
 
+import android.os.Handler
 import android.util.ArraySet
+import androidx.annotation.VisibleForTesting
 import com.android.systemui.Dumpable
+import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
-import com.android.systemui.statusbar.notification.collection.ListEntry
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.statusbar.notification.collection.EntryAdapter
 import com.android.systemui.statusbar.notification.collection.NotifPipeline
 import com.android.systemui.statusbar.notification.collection.NotificationEntry
+import com.android.systemui.statusbar.notification.collection.PipelineEntry
 import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifLifetimeExtender
 import com.android.systemui.statusbar.notification.collection.notifcollection.NotifLifetimeExtender.OnEndLifetimeExtensionCallback
+import com.android.systemui.statusbar.notification.collection.notifcollection.SelfTrackingLifetimeExtender
 import com.android.systemui.statusbar.notification.collection.render.NotifGutsViewListener
 import com.android.systemui.statusbar.notification.collection.render.NotifGutsViewManager
 import com.android.systemui.statusbar.notification.row.NotificationGuts
 import com.android.systemui.statusbar.notification.row.NotificationGutsManager
 import com.android.systemui.util.asIndenting
 import com.android.systemui.util.printCollection
+import com.android.systemui.util.printSection
 import com.android.systemui.util.println
 import com.android.systemui.util.withIncreasedIndent
 import java.io.PrintWriter
@@ -38,24 +45,30 @@ import javax.inject.Inject
 private const val TAG = "GutsCoordinator"
 
 /**
- * Coordinates the guts displayed by the [NotificationGutsManager] with the pipeline.
- * Specifically, this just adds the lifetime extension necessary to keep guts from disappearing.
+ * Coordinates the guts displayed by the [NotificationGutsManager] with the pipeline. Specifically,
+ * this just adds the lifetime extension necessary to keep guts from disappearing.
  */
 @CoordinatorScope
-class GutsCoordinator @Inject constructor(
+class GutsCoordinator
+@Inject
+constructor(
     private val notifGutsViewManager: NotifGutsViewManager,
     private val logger: GutsCoordinatorLogger,
-    dumpManager: DumpManager
+    @Main private val mMainHandler: Handler,
+    dumpManager: DumpManager,
 ) : Coordinator, Dumpable {
 
-    /** Keys of any Notifications for which we've been told the guts are open  */
+    /** Keys of any Notifications for which we've been told the guts are open */
     private val notifsWithOpenGuts = ArraySet<String>()
 
-    /** Keys of any Notifications we've extended the lifetime for, based on guts  */
+    /** Keys of any Notifications we've extended the lifetime for, based on guts */
     private val notifsExtendingLifetime = ArraySet<String>()
 
-    /** Callback for ending lifetime extension  */
+    /** Callback for ending lifetime extension */
     private var onEndLifetimeExtensionCallback: OnEndLifetimeExtensionCallback? = null
+
+    /** Tracks any Notifications we've extended the lifetime for. */
+    private val gutsOpenExtender = GutsOpenExtender()
 
     init {
         dumpManager.registerDumpable(this)
@@ -63,63 +76,97 @@ class GutsCoordinator @Inject constructor(
 
     override fun attach(pipeline: NotifPipeline) {
         notifGutsViewManager.setGutsListener(mGutsListener)
-        pipeline.addNotificationLifetimeExtender(mLifetimeExtender)
-    }
-
-    override fun dump(pw: PrintWriter, args: Array<String>) = pw.asIndenting().run {
-        withIncreasedIndent {
-            printCollection("notifsWithOpenGuts", notifsWithOpenGuts)
-            printCollection("notifsExtendingLifetime", notifsExtendingLifetime)
-            println("onEndLifetimeExtensionCallback", onEndLifetimeExtensionCallback)
+        if (SceneContainerFlag.isEnabled) {
+            pipeline.addNotificationLifetimeExtender(gutsOpenExtender)
+        } else {
+            pipeline.addNotificationLifetimeExtender(mLifetimeExtender)
         }
     }
 
-    private val mLifetimeExtender: NotifLifetimeExtender = object : NotifLifetimeExtender {
-        override fun getName(): String {
-            return TAG
-        }
-
-        override fun setCallback(callback: OnEndLifetimeExtensionCallback) {
-            onEndLifetimeExtensionCallback = callback
-        }
-
-        override fun maybeExtendLifetime(entry: NotificationEntry, reason: Int): Boolean {
-            val isShowingGuts = isCurrentlyShowingGuts(entry)
-            if (isShowingGuts) {
-                notifsExtendingLifetime.add(entry.key)
-            }
-            return isShowingGuts
-        }
-
-        override fun cancelLifetimeExtension(entry: NotificationEntry) {
-            notifsExtendingLifetime.remove(entry.key)
-        }
-    }
-
-    private val mGutsListener: NotifGutsViewListener = object : NotifGutsViewListener {
-        override fun onGutsOpen(entry: NotificationEntry, guts: NotificationGuts) {
-            logger.logGutsOpened(entry.key, guts)
-            if (guts.isLeavebehind) {
-                // leave-behind guts should not extend the lifetime of the notification
-                closeGutsAndEndLifetimeExtension(entry)
-            } else {
-                notifsWithOpenGuts.add(entry.key)
+    override fun dump(pw: PrintWriter, args: Array<String>) =
+        pw.asIndenting().run {
+            withIncreasedIndent {
+                printCollection("notifsWithOpenGuts", notifsWithOpenGuts)
+                if (SceneContainerFlag.isEnabled) {
+                    printSection("notifsExtendingLifetime") { gutsOpenExtender.dump(this, args) }
+                } else {
+                    printCollection("notifsExtendingLifetime", notifsExtendingLifetime)
+                    println("onEndLifetimeExtensionCallback", onEndLifetimeExtensionCallback)
+                }
             }
         }
 
-        override fun onGutsClose(entry: NotificationEntry) {
-            logger.logGutsClosed(entry.key)
-            closeGutsAndEndLifetimeExtension(entry)
-        }
-    }
+    private val mLifetimeExtender: NotifLifetimeExtender =
+        object : NotifLifetimeExtender {
+            override fun getName(): String {
+                return TAG
+            }
 
-    private fun isCurrentlyShowingGuts(entry: ListEntry) =
-            notifsWithOpenGuts.contains(entry.key)
+            override fun setCallback(callback: OnEndLifetimeExtensionCallback) {
+                onEndLifetimeExtensionCallback = callback
+            }
+
+            override fun maybeExtendLifetime(entry: NotificationEntry, reason: Int): Boolean {
+                val isShowingGuts = isCurrentlyShowingGuts(entry)
+                if (isShowingGuts) {
+                    notifsExtendingLifetime.add(entry.key)
+                }
+                return isShowingGuts
+            }
+
+            override fun cancelLifetimeExtension(entry: NotificationEntry) {
+                notifsExtendingLifetime.remove(entry.key)
+            }
+        }
+
+    private val mGutsListener: NotifGutsViewListener =
+        object : NotifGutsViewListener {
+            override fun onGutsOpen(entryAdapter: EntryAdapter, guts: NotificationGuts) {
+                logger.logGutsOpened(entryAdapter.key, guts)
+                if (guts.isLeavebehind) {
+                    // leave-behind guts should not extend the lifetime of the notification
+                    closeGutsAndEndLifetimeExtension(entryAdapter)
+                } else {
+                    notifsWithOpenGuts.add(entryAdapter.key)
+                }
+            }
+
+            override fun onGutsClose(entryAdapter: EntryAdapter) {
+                logger.logGutsClosed(entryAdapter.key)
+                closeGutsAndEndLifetimeExtension(entryAdapter)
+            }
+        }
+
+    private fun isCurrentlyShowingGuts(entry: PipelineEntry) =
+        notifsWithOpenGuts.contains(entry.key)
 
     private fun closeGutsAndEndLifetimeExtension(entry: NotificationEntry) {
         notifsWithOpenGuts.remove(entry.key)
-        if (notifsExtendingLifetime.remove(entry.key)) {
-            onEndLifetimeExtensionCallback?.onEndLifetimeExtension(mLifetimeExtender, entry)
+        if (SceneContainerFlag.isEnabled) {
+            gutsOpenExtender.endLifetimeExtension(entry.key)
+        } else {
+            if (notifsExtendingLifetime.remove(entry.key)) {
+                onEndLifetimeExtensionCallback?.onEndLifetimeExtension(mLifetimeExtender, entry)
+            }
         }
+    }
+
+    private fun closeGutsAndEndLifetimeExtension(entryAdapter: EntryAdapter) {
+        notifsWithOpenGuts.remove(entryAdapter.key)
+        if (SceneContainerFlag.isEnabled) {
+            gutsOpenExtender.endLifetimeExtension(entryAdapter.key)
+        } else {
+            if (notifsExtendingLifetime.remove(entryAdapter.key)) {
+                entryAdapter.endLifetimeExtension(onEndLifetimeExtensionCallback, mLifetimeExtender)
+            }
+        }
+    }
+
+    @VisibleForTesting
+    inner class GutsOpenExtender :
+        SelfTrackingLifetimeExtender(TAG, "GutsOpen", false, mMainHandler) {
+
+        override fun queryShouldExtendLifetime(entry: NotificationEntry): Boolean =
+            isCurrentlyShowingGuts(entry)
     }
 }

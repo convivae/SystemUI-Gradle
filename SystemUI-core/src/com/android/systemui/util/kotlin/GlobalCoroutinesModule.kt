@@ -16,9 +16,14 @@
 
 package com.android.systemui.util.kotlin
 
+import androidx.compose.ui.platform.AndroidUiDispatcher
+import com.android.systemui.Flags
 import com.android.systemui.coroutines.newTracingContext
+import com.android.systemui.dagger.qualifiers.AndroidUi
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.dagger.qualifiers.MainImmediate
+import com.android.systemui.util.compose.state.SnapshotFlowBuilder
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
@@ -38,17 +43,57 @@ class GlobalCoroutinesModule {
 
     @Provides
     @Singleton
+    @MainImmediate
+    fun mainImmediateScope(@MainImmediate dispatcherContext: CoroutineContext): CoroutineScope =
+        CoroutineScope(dispatcherContext + newTracingContext("MainImmediateScope"))
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @Provides
+    @Singleton
     @Main
     @Deprecated(
         "Use @Main CoroutineContext instead",
         ReplaceWith("mainCoroutineContext()", "kotlin.coroutines.CoroutineContext"),
     )
-    fun mainDispatcher(): CoroutineDispatcher = Dispatchers.Main.immediate
+    fun mainDispatcher(): CoroutineDispatcher =
+        if (Flags.useAndroidUiDispatcher()) {
+            AndroidUiDispatcher.Main[CoroutineDispatcher.Key]!!
+        } else {
+            if (Flags.doNotUseImmediateCoroutineDispatcher()) {
+                Dispatchers.Main
+            } else {
+                Dispatchers.Main.immediate
+            }
+        }
+
+    @Provides
+    @Singleton
+    @MainImmediate
+    fun mainImmediateDispatcher(): CoroutineDispatcher = Dispatchers.Main.immediate
+
+    @Provides
+    @Singleton
+    @AndroidUi
+    fun androidUiDispatcher(): CoroutineContext = AndroidUiDispatcher.Main
 
     @Provides
     @Singleton
     @Main
-    fun mainCoroutineContext(): CoroutineContext {
-        return Dispatchers.Main.immediate
-    }
+    fun mainCoroutineContext(): CoroutineContext =
+        if (Flags.useAndroidUiDispatcher()) {
+            AndroidUiDispatcher.Main
+        } else {
+            if (Flags.doNotUseImmediateCoroutineDispatcher()) {
+                Dispatchers.Main
+            } else {
+                Dispatchers.Main.immediate
+            }
+        }
+
+    @Provides
+    @Singleton
+    @MainImmediate
+    fun mainImmediateContext(): CoroutineContext = Dispatchers.Main.immediate
+
+    @Provides @Singleton @Main fun mainSnapshotFlowBuilder() = SnapshotFlowBuilder.Main
 }

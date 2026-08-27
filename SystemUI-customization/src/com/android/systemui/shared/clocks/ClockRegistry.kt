@@ -18,37 +18,43 @@ import android.app.UserSwitchObserver
 import android.content.Context
 import android.database.ContentObserver
 import android.net.Uri
+import android.os.Trace
 import android.os.UserHandle
 import android.provider.Settings
 import androidx.annotation.OpenForTesting
-import com.android.systemui.log.LogBuffer
+import com.android.systemui.log.LogcatOnlyMessageBuffer
 import com.android.systemui.log.core.LogLevel
-import com.android.systemui.log.core.LogcatOnlyMessageBuffer
 import com.android.systemui.log.core.Logger
+import com.android.systemui.log.core.MessageBuffer
 import com.android.systemui.plugins.PluginLifecycleManager
 import com.android.systemui.plugins.PluginListener
 import com.android.systemui.plugins.PluginManager
-import com.android.systemui.plugins.clocks.ClockController
-import com.android.systemui.plugins.clocks.ClockId
-import com.android.systemui.plugins.clocks.ClockMessageBuffers
-import com.android.systemui.plugins.clocks.ClockMetadata
-import com.android.systemui.plugins.clocks.ClockPickerConfig
-import com.android.systemui.plugins.clocks.ClockProvider
-import com.android.systemui.plugins.clocks.ClockProviderPlugin
-import com.android.systemui.plugins.clocks.ClockSettings
+import com.android.systemui.plugins.keyguard.VPointF
+import com.android.systemui.plugins.keyguard.VRectF
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockController
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockEventListener
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockId
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockMessageBuffers
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockMetadata
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockPickerConfig
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockProvider
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockProviderPlugin
+import com.android.systemui.plugins.keyguard.ui.clocks.ClockSettings
 import com.android.systemui.util.ThreadAssert
 import java.io.PrintWriter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-private val KEY_TIMESTAMP = "appliedTimestamp"
-private val KNOWN_PLUGINS =
-    mapOf<String, List<ClockMetadata>>(
+private const val KEY_TIMESTAMP = "appliedTimestamp"
+private val KNOWN_PLUGINS: Map<String, List<ClockMetadata>> =
+    mapOf(
         "com.android.systemui.clocks.bignum" to listOf(ClockMetadata("ANALOG_CLOCK_BIGNUM")),
         "com.android.systemui.clocks.calligraphy" to
             listOf(ClockMetadata("DIGITAL_CLOCK_CALLIGRAPHY")),
@@ -62,6 +68,8 @@ private val KNOWN_PLUGINS =
             listOf(ClockMetadata("DIGITAL_CLOCK_NUMBEROVERLAP")),
         "com.android.systemui.clocks.weather" to listOf(ClockMetadata("DIGITAL_CLOCK_WEATHER")),
     )
+private const val TRACE_CLOCK_CHANGE = "LOCKSCREEN_CLOCK_CHANGE"
+private const val TRACE_STYLE_CHANGE = "LOCKSCREEN_CLOCK_STYLE_CHANGE"
 
 private fun <TKey : Any, TVal : Any> ConcurrentHashMap<TKey, TVal>.concurrentGetOrPut(
     key: TKey,
@@ -82,10 +90,9 @@ open class ClockRegistry(
     val scope: CoroutineScope,
     val mainDispatcher: CoroutineDispatcher,
     val bgDispatcher: CoroutineDispatcher,
-    val isEnabled: Boolean,
     val handleAllUsers: Boolean,
     defaultClockProvider: ClockProvider,
-    val fallbackClockId: ClockId = DEFAULT_CLOCK_ID,
+    private val fallbackClockId: ClockId = DEFAULT_CLOCK_ID,
     val clockBuffers: ClockMessageBuffers? = null,
     val keepAllLoaded: Boolean,
     subTag: String,
@@ -103,6 +110,7 @@ open class ClockRegistry(
         fun onAvailableClocksChanged() {}
     }
 
+    private val replacementMap = ConcurrentHashMap<ClockId, ClockId>()
     private val availableClocks = ConcurrentHashMap<ClockId, ClockInfo>()
     private val clockChangeListeners = mutableListOf<ClockChangeListener>()
     private val settingObserver =
@@ -119,33 +127,32 @@ open class ClockRegistry(
 
     private val pluginListener =
         object : PluginListener<ClockProviderPlugin> {
+            override val logBuffer: MessageBuffer = logger.buffer
+
             override fun onPluginAttached(
                 manager: PluginLifecycleManager<ClockProviderPlugin>
             ): Boolean {
-                manager.setLogFunc({ tag, msg ->
-                    (clockBuffers?.infraMessageBuffer as LogBuffer?)?.log(tag, LogLevel.DEBUG, msg)
-                })
                 if (keepAllLoaded) {
                     // Always load new plugins if requested
+                    logger.d({ "Loading clock package: $str1" }) { str1 = manager.packageName }
                     return true
                 }
 
-                val knownClocks = KNOWN_PLUGINS.get(manager.getPackage())
+                val knownClocks = KNOWN_PLUGINS[manager.packageName]
                 if (knownClocks == null) {
                     logger.w({ "Loading unrecognized clock package: $str1" }) {
-                        str1 = manager.getPackage()
+                        str1 = manager.packageName
                     }
                     return true
                 }
 
-                logger.i({ "Skipping initial load of known clock package package: $str1" }) {
-                    str1 = manager.getPackage()
+                logger.i({ "Skipping initial load of known clock package: $str1" }) {
+                    str1 = manager.packageName
                 }
 
                 var isCurrentClock = false
                 var isClockListChanged = false
                 for (metadata in knownClocks) {
-                    isCurrentClock = isCurrentClock || currentClockId == metadata.clockId
                     val id = metadata.clockId
                     val info =
                         availableClocks.concurrentGetOrPut(id, ClockInfo(metadata, null, manager)) {
@@ -156,15 +163,17 @@ open class ClockRegistry(
                     if (manager != info.manager) {
                         logger.e({
                             "Clock Id conflict on attach: " +
-                                "$str1 is double registered by $str2 and $str3"
+                                "$str1 is double registered by $str2 and $str3. " +
+                                "Using $str2 since it was attached first."
                         }) {
                             str1 = id
-                            str2 = info.manager.toString()
+                            str2 = info.manager?.toString() ?: info.provider?.toString()
                             str3 = manager.toString()
                         }
                         continue
                     }
 
+                    isCurrentClock = isCurrentClock || currentClockId == metadata.clockId
                     info.provider = null
                 }
 
@@ -197,16 +206,18 @@ open class ClockRegistry(
                     if (manager != info.manager) {
                         logger.e({
                             "Clock Id conflict on load: " +
-                                "$str1 is double registered by $str2 and $str3"
+                                "$str1 is double registered by $str2 and $str3. " +
+                                "Using $str2 since it was attached first."
                         }) {
                             str1 = id
-                            str2 = info.manager.toString()
+                            str2 = info.manager?.toString() ?: info.provider?.toString()
                             str3 = manager.toString()
                         }
                         manager.unloadPlugin()
                         continue
                     }
 
+                    clock.replacementTarget?.let { replacementMap[id] = it }
                     info.provider = plugin
                     onLoaded(info)
                 }
@@ -227,10 +238,11 @@ open class ClockRegistry(
                     if (info?.manager != manager) {
                         logger.e({
                             "Clock Id conflict on unload: " +
-                                "$str1 is double registered by $str2 and $str3"
+                                "$str1 is double registered by $str2 and $str3. " +
+                                "Using $str2 since it was attached first."
                         }) {
                             str1 = id
-                            str2 = info?.manager.toString()
+                            str2 = info?.manager?.toString() ?: info?.provider?.toString()
                             str3 = manager.toString()
                         }
                         continue
@@ -269,14 +281,46 @@ open class ClockRegistry(
 
     // TODO(b/267372164): Migrate to flows
     var settings: ClockSettings? = null
-        get() = field
         protected set(value) {
             if (field != value) {
+                beginChangeTrace(field?.clockId, value?.clockId)
                 field = value
                 verifyLoadedProviders()
                 triggerOnCurrentClockChanged()
             }
         }
+
+    private var nextTraceCookie = 0
+    private var endChangeTrace: (() -> Unit)? = null
+
+    private fun beginChangeTrace(current: ClockId?, next: ClockId?) {
+        if (keepAllLoaded) return
+        val label = if (current != next) TRACE_CLOCK_CHANGE else TRACE_STYLE_CHANGE
+        val cookie = nextTraceCookie++
+        var isEnded = false
+
+        Trace.beginAsyncSection(label, cookie)
+        endChangeTrace = {
+            if (!isEnded) {
+                Trace.endAsyncSection(label, cookie)
+                isEnded = true
+            }
+        }
+    }
+
+    private fun attachEndChangeTrace(clock: ClockController) {
+        if (keepAllLoaded) return
+        val onComplete = endChangeTrace?.also { endChangeTrace = null } ?: return
+        clock.eventListeners.attach(
+            object : ClockEventListener {
+                override fun onBoundsChanged(currentBounds: VRectF, isLargeClock: Boolean) {}
+
+                override fun onMaxSizeChanged(maxSize: VPointF, isLargeClock: Boolean) {}
+
+                override fun onChangeComplete() = onComplete()
+            }
+        )
+    }
 
     var isRegistered: Boolean = false
         private set
@@ -299,8 +343,7 @@ open class ClockRegistry(
                             Settings.Secure.LOCK_SCREEN_CUSTOM_CLOCK_FACE,
                         )
                     }
-
-                ClockSettings.fromJson(JSONObject(json))
+                json?.let { ClockSettings.fromJson(JSONObject(it)) }
             } catch (ex: Exception) {
                 logger.e("Failed to parse clock settings", ex)
                 null
@@ -369,7 +412,7 @@ open class ClockRegistry(
         }
     }
 
-    public suspend fun mutateSetting(mutator: (ClockSettings) -> ClockSettings) {
+    suspend fun mutateSetting(mutator: (ClockSettings) -> ClockSettings) {
         withContext(bgDispatcher) { applySettings(mutator(settings ?: ClockSettings())) }
     }
 
@@ -391,10 +434,11 @@ open class ClockRegistry(
     // TODO: Merge w/ CurrentClockId when we convert to a flow. We shouldn't need both behaviors.
     val activeClockId: String
         get() {
-            if (!availableClocks.containsKey(currentClockId)) {
+            val id = currentClockId
+            if (!availableClocks.containsKey(id)) {
                 return DEFAULT_CLOCK_ID
             }
-            return currentClockId
+            return replacementMap[id] ?: id
         }
 
     init {
@@ -402,6 +446,7 @@ open class ClockRegistry(
         defaultClockProvider.initialize(clockBuffers)
         for (clock in defaultClockProvider.getClocks()) {
             availableClocks[clock.clockId] = ClockInfo(clock, defaultClockProvider, null)
+            clock.replacementTarget?.let { replacementMap[clock.clockId] = it }
         }
 
         // Something has gone terribly wrong if the default clock isn't present
@@ -413,7 +458,7 @@ open class ClockRegistry(
     }
 
     fun registerListeners() {
-        if (!isEnabled || isRegistered) {
+        if (isRegistered) {
             return
         }
 
@@ -560,9 +605,11 @@ open class ClockRegistry(
         }
     }
 
-    fun getClocks(): List<ClockMetadata> {
-        if (!isEnabled) return listOf(availableClocks[DEFAULT_CLOCK_ID]!!.metadata)
-        return availableClocks.map { (_, clock) -> clock.metadata }
+    fun getClocks(includeDeprecated: Boolean = false): List<ClockMetadata> {
+        return when {
+            includeDeprecated -> availableClocks.map { (_, clock) -> clock.metadata }
+            else -> availableClocks.map { (_, clock) -> clock.metadata }.filter { !it.isDeprecated }
+        }
     }
 
     fun getClockPickerConfig(clockId: ClockId): ClockPickerConfig? {
@@ -571,7 +618,33 @@ open class ClockRegistry(
         return availableClocks[clockId]?.provider?.getClockPickerConfig(clockSettings)
     }
 
-    fun createExampleClock(clockId: ClockId): ClockController? = createClock(clockId)
+    fun createExampleClock(ctx: Context, clockId: ClockId): ClockController? {
+        return createClock(ctx, clockId)
+    }
+
+    suspend fun createPreviewClockAsync(
+        ctx: Context,
+        settings: ClockSettings,
+    ): Deferred<ClockController> {
+        return withContext(bgDispatcher) {
+            async {
+                synchronized(availableClocks) {
+                    availableClocks[settings.clockId]?.manager?.loadPlugin()
+                    val result = createClock(ctx, settings)
+                    verifyLoadedProviders()
+
+                    if (result != null) {
+                        return@async result
+                    }
+
+                    logger.e({ "Failed to create preview clock: '$str1'; using default" }) {
+                        str1 = settings.clockId
+                    }
+                    return@async createDefaultClock(ctx)
+                }
+            }
+        }
+    }
 
     /**
      * Adds [listener] to receive future clock changes.
@@ -593,30 +666,47 @@ open class ClockRegistry(
         clockChangeListeners.remove(listener)
     }
 
-    fun createCurrentClock(): ClockController {
-        val clockId = currentClockId
-        if (isEnabled && clockId.isNotEmpty()) {
-            val clock = createClock(clockId)
-            if (clock != null) {
-                logger.i({ "Rendering clock $str1" }) { str1 = clockId }
-                return clock
-            } else if (availableClocks.containsKey(clockId)) {
-                logger.w({ "Clock $str1 not loaded; using default" }) { str1 = clockId }
-                verifyLoadedProviders()
-            } else {
-                logger.e({ "Clock $str1 not found; using default" }) { str1 = clockId }
-            }
-        }
-
-        return createClock(DEFAULT_CLOCK_ID)!!
+    private fun createDefaultClock(
+        ctx: Context,
+        func: ClockController.() -> Unit = {},
+    ): ClockController {
+        val clock = createClock(ctx, DEFAULT_CLOCK_ID)!!
+        func(clock)
+        return clock
     }
 
-    private fun createClock(targetClockId: ClockId): ClockController? {
+    fun createCurrentClock(ctx: Context): ClockController {
+        val clockId = currentClockId
+        if (clockId.isEmpty()) {
+            return createDefaultClock(ctx) { attachEndChangeTrace(this) }
+        }
+
+        val clock = createClock(ctx, clockId)
+        if (clock != null) {
+            logger.i({ "Rendering clock $str1" }) { str1 = clockId }
+            attachEndChangeTrace(clock)
+            return clock
+        }
+
+        if (availableClocks.containsKey(clockId)) {
+            logger.w({ "Clock $str1 not loaded; using default" }) { str1 = clockId }
+            return createDefaultClock(ctx) { verifyLoadedProviders() }
+        }
+
+        logger.e({ "Clock $str1 not found; using default" }) { str1 = clockId }
+        return createDefaultClock(ctx) { attachEndChangeTrace(this) }
+    }
+
+    private fun createClock(ctx: Context, targetClockId: ClockId): ClockController? {
         var settings = this.settings ?: ClockSettings()
         if (targetClockId != settings.clockId) {
             settings = settings.copy(clockId = targetClockId)
         }
-        return availableClocks[targetClockId]?.provider?.createClock(settings)
+        return createClock(ctx, settings)
+    }
+
+    private fun createClock(ctx: Context, settings: ClockSettings): ClockController? {
+        return availableClocks[settings.clockId]?.provider?.createClock(ctx, settings)
     }
 
     fun dump(pw: PrintWriter, args: Array<out String>) {

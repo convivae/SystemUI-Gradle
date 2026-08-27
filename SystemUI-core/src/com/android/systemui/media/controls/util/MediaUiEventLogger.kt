@@ -24,6 +24,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.media.controls.shared.model.MediaData
 import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager
 import com.android.systemui.media.controls.ui.controller.MediaLocation
+import com.android.systemui.media.remedia.ui.compose.Media
 import com.android.systemui.res.R
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
@@ -45,7 +46,7 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
         uid: Int,
         packageName: String,
         instanceId: InstanceId,
-        playbackLocation: Int
+        playbackLocation: Int,
     ) {
         val event =
             when (playbackLocation) {
@@ -61,7 +62,7 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
         uid: Int,
         packageName: String,
         instanceId: InstanceId,
-        playbackLocation: Int
+        playbackLocation: Int,
     ) {
         val event =
             when (playbackLocation) {
@@ -112,7 +113,7 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
             MediaUiEvent.OPEN_SETTINGS_LONG_PRESS,
             uid,
             packageName,
-            instanceId
+            instanceId,
         )
     }
 
@@ -145,6 +146,7 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
         logger.logWithInstanceId(MediaUiEvent.MEDIA_TAP_CONTENT_VIEW, uid, packageName, instanceId)
     }
 
+    @Deprecated(message = "Use logCarouselLocation for any new location to log")
     fun logCarouselPosition(@MediaLocation location: Int) {
         val event =
             when (location) {
@@ -156,55 +158,24 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
                     MediaUiEvent.MEDIA_CAROUSEL_LOCATION_DREAM
                 MediaHierarchyManager.LOCATION_COMMUNAL_HUB ->
                     MediaUiEvent.MEDIA_CAROUSEL_LOCATION_COMMUNAL
+                MediaHierarchyManager.LOCATION_STATUS_BAR_POPUP ->
+                    MediaUiEvent.MEDIA_CAROUSEL_LOCATION_STATUS_BAR_POPUP
                 else -> throw IllegalArgumentException("Unknown media carousel location $location")
             }
         logger.log(event)
     }
 
-    fun logRecommendationAdded(packageName: String, instanceId: InstanceId?) {
-        logger.logWithInstanceId(
-            MediaUiEvent.MEDIA_RECOMMENDATION_ADDED,
-            0,
-            packageName,
-            instanceId
-        )
-    }
-
-    fun logRecommendationRemoved(packageName: String, instanceId: InstanceId?) {
-        logger.logWithInstanceId(
-            MediaUiEvent.MEDIA_RECOMMENDATION_REMOVED,
-            0,
-            packageName,
-            instanceId
-        )
-    }
-
-    fun logRecommendationActivated(uid: Int, packageName: String, instanceId: InstanceId) {
-        logger.logWithInstanceId(
-            MediaUiEvent.MEDIA_RECOMMENDATION_ACTIVATED,
-            uid,
-            packageName,
-            instanceId
-        )
-    }
-
-    fun logRecommendationItemTap(packageName: String, instanceId: InstanceId?, position: Int) {
-        logger.logWithInstanceIdAndPosition(
-            MediaUiEvent.MEDIA_RECOMMENDATION_ITEM_TAP,
-            0,
-            packageName,
-            instanceId,
-            position
-        )
-    }
-
-    fun logRecommendationCardTap(packageName: String, instanceId: InstanceId?) {
-        logger.logWithInstanceId(
-            MediaUiEvent.MEDIA_RECOMMENDATION_CARD_TAP,
-            0,
-            packageName,
-            instanceId
-        )
+    fun logCarouselLocation(location: Media.Location) {
+        val event =
+            when (location) {
+                Media.Location.SHADE -> MediaUiEvent.MEDIA_CAROUSEL_LOCATION_QQS
+                Media.Location.QS -> MediaUiEvent.MEDIA_CAROUSEL_LOCATION_QS
+                Media.Location.LOCKSCREEN -> MediaUiEvent.MEDIA_CAROUSEL_LOCATION_LOCKSCREEN
+                Media.Location.COMMUNAL_HUB -> MediaUiEvent.MEDIA_CAROUSEL_LOCATION_COMMUNAL
+                Media.Location.STATUS_BAR_POPUP ->
+                    MediaUiEvent.MEDIA_CAROUSEL_LOCATION_STATUS_BAR_POPUP
+            }
+        logger.log(event)
     }
 
     fun logOpenBroadcastDialog(uid: Int, packageName: String, instanceId: InstanceId) {
@@ -212,7 +183,7 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
             MediaUiEvent.MEDIA_OPEN_BROADCAST_DIALOG,
             uid,
             packageName,
-            instanceId
+            instanceId,
         )
     }
 
@@ -221,7 +192,7 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
             MediaUiEvent.MEDIA_CAROUSEL_SINGLE_PLAYER,
             uid,
             packageName,
-            instanceId
+            instanceId,
         )
     }
 
@@ -230,7 +201,7 @@ class MediaUiEventLogger @Inject constructor(private val logger: UiEventLogger) 
             MediaUiEvent.MEDIA_CAROUSEL_MULTIPLE_PLAYERS,
             uid,
             packageName,
-            instanceId
+            instanceId,
         )
     }
 }
@@ -280,6 +251,8 @@ enum class MediaUiEvent(val metricId: Int) : UiEventLogger.UiEventEnum {
     MEDIA_CAROUSEL_LOCATION_DREAM(1040),
     @UiEvent(doc = "The media carousel moved to the communal hub UI")
     MEDIA_CAROUSEL_LOCATION_COMMUNAL(1520),
+    @UiEvent(doc = "The media carousel moved to the status bar popup")
+    MEDIA_CAROUSEL_LOCATION_STATUS_BAR_POPUP(2170),
     @UiEvent(doc = "A media recommendation card was added to the media carousel")
     MEDIA_RECOMMENDATION_ADDED(1041),
     @UiEvent(doc = "A media recommendation card was removed from the media carousel")

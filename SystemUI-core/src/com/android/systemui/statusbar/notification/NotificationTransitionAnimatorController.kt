@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.systemui.animation.ActivityTransitionAnimator
 import com.android.systemui.animation.TransitionAnimator
+import com.android.systemui.statusbar.notification.collection.GroupEntry
 import com.android.systemui.statusbar.notification.domain.interactor.NotificationLaunchAnimationInteractor
 import com.android.systemui.statusbar.notification.headsup.HeadsUpManager
 import com.android.systemui.statusbar.notification.headsup.HeadsUpUtil
@@ -72,8 +73,7 @@ class NotificationTransitionAnimatorController(
         const val ANIMATION_DURATION_TOP_ROUNDING = 100L
     }
 
-    private val notificationEntry = notification.entry
-    private val notificationKey = notificationEntry.sbn.key
+    private val notificationKey = notification.key
 
     override val isLaunching: Boolean = true
 
@@ -83,9 +83,13 @@ class NotificationTransitionAnimatorController(
             // Do nothing. Notifications are always animated inside their rootView.
         }
 
+    private var isCancelled = false
+
     override fun createAnimatorState(): TransitionAnimator.State {
         // If the notification panel is collapsed, the clip may be larger than the height.
-        val height = max(0, notification.actualHeight - notification.clipBottomAmount)
+        val clipBottomAmount =
+            notification.clipBottomAmount.coerceAtLeast(notification.bottomOverlap)
+        val height = max(0, notification.actualHeight - clipBottomAmount)
         val location = notification.locationOnScreen
 
         val clipStartLocation = notificationListContainer.topClippingStartLocation
@@ -115,9 +119,7 @@ class NotificationTransitionAnimatorController(
         params.startTranslationZ = notification.translationZ
         params.startNotificationTop = location[1]
         params.notificationParentTop =
-            notificationListContainer
-                .getViewParentForNotification(notificationEntry)
-                .locationOnScreen[1]
+            notificationListContainer.getViewParentForNotification().locationOnScreen[1]
         params.startRoundedTopClipping = roundedTopClipping
         params.startClipTopAmount = notification.clipTopAmount
         if (notification.isChildInGroup) {
@@ -142,12 +144,14 @@ class NotificationTransitionAnimatorController(
     }
 
     override fun onIntentStarted(willAnimate: Boolean) {
-        val reason = "onIntentStarted(willAnimate=$willAnimate)"
+        val reason = "onIntentStarted(willAnimate=$willAnimate) isCancelled=$isCancelled"
         if (ActivityTransitionAnimator.DEBUG_TRANSITION_ANIMATION) {
             Log.d(TAG, reason)
         }
+        if (isCancelled) return
+
         notificationLaunchAnimationInteractor.setIsLaunchAnimationRunning(willAnimate)
-        notificationEntry.isExpandAnimationRunning = willAnimate
+        notification.isLaunchAnimationRunning = willAnimate
 
         if (!willAnimate) {
             removeHun(animate = true, reason)
@@ -157,8 +161,8 @@ class NotificationTransitionAnimatorController(
 
     private val headsUpNotificationRow: ExpandableNotificationRow?
         get() {
-            val summaryEntry = notificationEntry.parent?.summary
-
+            val pipelineParent = notification.entryAdapter?.parent
+            val summaryEntry = (pipelineParent as? GroupEntry)?.summary
             return when {
                 headsUpManager.isHeadsUpEntry(notificationKey) -> notification
                 summaryEntry == null -> null
@@ -173,12 +177,7 @@ class NotificationTransitionAnimatorController(
         // TODO: b/297247841 - Call on the row we're removing, which may differ from notification.
         HeadsUpUtil.setNeedsHeadsUpDisappearAnimationAfterClick(notification, animate)
 
-        headsUpManager.removeNotification(
-            row.entry.key,
-            true /* releaseImmediately */,
-            animate,
-            reason,
-        )
+        headsUpManager.removeNotification(row.key, true /* releaseImmediately */, animate, reason)
     }
 
     override fun onTransitionAnimationCancelled(newKeyguardOccludedState: Boolean?) {
@@ -186,10 +185,11 @@ class NotificationTransitionAnimatorController(
             Log.d(TAG, "onLaunchAnimationCancelled()")
         }
 
+        isCancelled = true
         // TODO(b/184121838): Should we call InteractionJankMonitor.cancel if the animation started
         // here?
         notificationLaunchAnimationInteractor.setIsLaunchAnimationRunning(false)
-        notificationEntry.isExpandAnimationRunning = false
+        notification.isLaunchAnimationRunning = false
         removeHun(animate = true, "onLaunchAnimationCancelled()")
         onFinishAnimationCallback?.run()
     }
@@ -209,7 +209,7 @@ class NotificationTransitionAnimatorController(
 
         notification.isExpandAnimationRunning = false
         notificationLaunchAnimationInteractor.setIsLaunchAnimationRunning(false)
-        notificationEntry.isExpandAnimationRunning = false
+        notification.isLaunchAnimationRunning = false
         notificationListContainer.setExpandingNotification(null)
         applyParams(null)
         removeHun(animate = false, "onLaunchAnimationEnd()")

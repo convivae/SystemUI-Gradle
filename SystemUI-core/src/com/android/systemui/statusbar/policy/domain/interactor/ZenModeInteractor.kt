@@ -16,8 +16,8 @@
 
 package com.android.systemui.statusbar.policy.domain.interactor
 
-import android.app.NotificationManager.INTERRUPTION_FILTER_NONE
 import android.content.Context
+import android.media.AudioManager
 import android.provider.Settings
 import android.provider.Settings.Secure.ZEN_DURATION_FOREVER
 import android.provider.Settings.Secure.ZEN_DURATION_PROMPT
@@ -26,13 +26,14 @@ import android.service.notification.ZenPolicy.VISUAL_EFFECT_NOTIFICATION_LIST
 import android.util.Log
 import androidx.concurrent.futures.await
 import com.android.settingslib.notification.data.repository.ZenModeRepository
-import com.android.settingslib.notification.modes.ZenIcon
 import com.android.settingslib.notification.modes.ZenIconLoader
 import com.android.settingslib.notification.modes.ZenMode
+import com.android.settingslib.volume.shared.model.AudioStream
+import com.android.systemui.common.shared.model.ContentDescription
+import com.android.systemui.common.shared.model.Icon
+import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
-import com.android.systemui.modes.shared.ModesUi
 import com.android.systemui.shared.notifications.data.repository.NotificationSettingsRepository
-import com.android.systemui.statusbar.notification.emptyshade.shared.ModesEmptyShadeFix
 import com.android.systemui.statusbar.policy.data.repository.DeviceProvisioningRepository
 import com.android.systemui.statusbar.policy.data.repository.UserSetupRepository
 import com.android.systemui.statusbar.policy.domain.model.ActiveZenModes
@@ -46,7 +47,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.stateIn
  * An interactor that performs business logic related to the status and configuration of Zen Mode
  * (or Do Not Disturb/DND Mode).
  */
+@SysUISingleton
 class ZenModeInteractor
 @Inject
 constructor(
@@ -67,6 +68,20 @@ constructor(
     deviceProvisioningRepository: DeviceProvisioningRepository,
     userSetupRepository: UserSetupRepository,
 ) {
+    /**
+     * List of predicates to determine if the [ZenMode] blocks an audio stream. Typical use case
+     * would be: `zenModeByStreamPredicates[stream](zenMode)`
+     */
+    private val zenModeByStreamPredicates =
+        mapOf<Int, (ZenMode) -> Boolean>(
+            AudioManager.STREAM_MUSIC to { it.policy.priorityCategoryMedia == STATE_DISALLOW },
+            AudioManager.STREAM_ALARM to { it.policy.priorityCategoryAlarms == STATE_DISALLOW },
+            AudioManager.STREAM_SYSTEM to { it.policy.priorityCategorySystem == STATE_DISALLOW },
+            AudioManager.STREAM_ASSISTANT to { it.policy.priorityCategoryMedia == STATE_DISALLOW },
+        )
+
+    val hasNextAlarm: StateFlow<Boolean> = zenModeRepository.hasNextAlarm
+
     val isZenAvailable: Flow<Boolean> =
         combine(
             deviceProvisioningRepository.isDeviceProvisioned,
@@ -101,7 +116,7 @@ constructor(
             }
             .distinctUntilChanged()
 
-    val modes: Flow<List<ZenMode>> = zenModeRepository.modes
+    val modes: StateFlow<List<ZenMode>> = zenModeRepository.modes
 
     /**
      * Returns the special "manual DND" mode.
@@ -111,11 +126,21 @@ constructor(
      * explicitly wants a shortcut to DND). Please prefer using [modes] or [activeModes] in all
      * other scenarios.
      */
-    val dndMode: StateFlow<ZenMode?> by lazy {
-        ModesUi.assertInNewMode()
+    val dndMode: StateFlow<ZenMode?> =
         zenModeRepository.modes
             .map { modes -> modes.singleOrNull { it.isManualDnd } }
             .stateIn(scope = backgroundScope, started = SharingStarted.Eagerly, initialValue = null)
+
+    /**
+     * Returns the current state of the special "manual DND" mode.
+     *
+     * This should only be used when there is a strong reason to handle DND specifically (such as
+     * legacy UI pieces that haven't been updated to use modes more generally, or if the user
+     * explicitly wants a shortcut to DND). Please prefer using [modes] or [activeModes] in all
+     * other scenarios.
+     */
+    fun getDndMode(): ZenMode {
+        return zenModeRepository.getModes().single { it.isManualDnd }
     }
 
     /** Flow returning the currently active mode(s), if any. */
@@ -125,61 +150,60 @@ constructor(
             .flowOn(bgDispatcher)
             .distinctUntilChanged()
 
-    val activeModesBlockingEverything: Flow<ActiveZenModes> = getFilteredActiveModesFlow { mode ->
-        mode.interruptionFilter == INTERRUPTION_FILTER_NONE
-    }
+    fun canBeBlockedByZenMode(stream: AudioStream): Boolean =
+        zenModeByStreamPredicates.containsKey(stream.value)
 
-    val activeModesBlockingMedia: Flow<ActiveZenModes> = getFilteredActiveModesFlow { mode ->
-        mode.policy.priorityCategoryMedia == STATE_DISALLOW
-    }
-
-    val activeModesBlockingAlarms: Flow<ActiveZenModes> = getFilteredActiveModesFlow { mode ->
-        mode.policy.priorityCategoryAlarms == STATE_DISALLOW
-    }
-
-    private fun getFilteredActiveModesFlow(predicate: (ZenMode) -> Boolean): Flow<ActiveZenModes> {
+    fun activeModesBlockingStream(stream: AudioStream): Flow<ActiveZenModes> {
+        val isBlockingStream = zenModeByStreamPredicates[stream.value]
+        require(isBlockingStream != null) {
+            "$stream is unsupported. Use canBeBlockedByZenMode to check if the stream can be affected by the Zen Mode."
+        }
         return modes
-            .map { modes -> modes.filter { mode -> predicate(mode) } }
+            .map { modes -> modes.filter { isBlockingStream(it) } }
             .map { modes -> buildActiveZenModes(modes) }
             .flowOn(bgDispatcher)
             .distinctUntilChanged()
     }
 
-    suspend fun getActiveModes() = buildActiveZenModes(zenModeRepository.getModes())
-
     private suspend fun buildActiveZenModes(modes: List<ZenMode>): ActiveZenModes {
         val activeModesList =
             modes.filter { mode -> mode.isActive }.sortedWith(ZenMode.PRIORITIZING_COMPARATOR)
         val mainActiveMode =
-            activeModesList.firstOrNull()?.let { ZenModeInfo(it.name, getModeIcon(it)) }
+            activeModesList.firstOrNull()?.let { ZenModeInfo(it.id, it.name, getModeIcon(it)) }
 
         return ActiveZenModes(activeModesList.map { m -> m.name }, mainActiveMode)
     }
 
-    val mainActiveMode: Flow<ZenModeInfo?> =
-        activeModes.map { a -> a.mainMode }.distinctUntilChanged()
+    val mainActiveMode: Flow<ZenModeInfo?> = activeModes.map { a -> a.main }.distinctUntilChanged()
 
-    val modesHidingNotifications: Flow<List<ZenMode>> by lazy {
-        if (ModesEmptyShadeFix.isUnexpectedlyInLegacyMode() || !ModesUi.isEnabled) {
-            flowOf(listOf())
-        } else {
-            modes
-                .map { modes ->
-                    modes.filter { mode ->
-                        mode.isActive &&
-                            !mode.policy.isVisualEffectAllowed(
-                                /* effect = */ VISUAL_EFFECT_NOTIFICATION_LIST,
-                                /* defaultVal = */ true,
-                            )
-                    }
+    val modesHidingNotifications: Flow<ActiveZenModes> by lazy {
+        modes
+            .map { modes ->
+                modes.filter { mode ->
+                    mode.isActive &&
+                        !mode.policy.isVisualEffectAllowed(
+                            /* effect = */ VISUAL_EFFECT_NOTIFICATION_LIST,
+                            /* defaultVal = */ true,
+                        )
                 }
-                .flowOn(bgDispatcher)
-                .distinctUntilChanged()
-        }
+            }
+            .map { modes -> buildActiveZenModes(modes) }
+            .flowOn(bgDispatcher)
+            .distinctUntilChanged()
     }
 
-    suspend fun getModeIcon(mode: ZenMode): ZenIcon {
-        return iconLoader.getIcon(context, mode).await()
+    suspend fun getModeIcon(mode: ZenMode): Icon.Loaded {
+        val zenIcon = iconLoader.getIcon(context, mode).await()
+        val drawable = zenIcon.drawable
+        // Return a copy of the icon, to prevent callers from making changes that will be reflected
+        // everywhere.
+        val drawableCopy = drawable.constantState?.newDrawable()?.mutate() ?: drawable.mutate()
+        return Icon.Loaded(
+            drawable = drawableCopy,
+            contentDescription = ContentDescription.Loaded(mode.name),
+            packageName = zenIcon.key.resPackage,
+            resId = zenIcon.key.resId,
+        )
     }
 
     fun activateMode(zenMode: ZenMode) {
@@ -209,11 +233,20 @@ constructor(
         zenModeRepository.deactivateMode(zenMode)
     }
 
+    fun setHasNextAlarm(hasNextAlarm: Boolean) {
+        zenModeRepository.hasNextAlarm.value = hasNextAlarm
+    }
+
     fun deactivateAllModes() {
-        for (mode in zenModeRepository.getModes()) {
-            if (mode.isActive) {
-                deactivateMode(mode)
-            }
+        // Deactivate in reverse order of priority. This will prevent flickering in the
+        // "active mode" icon (which is the highest-priority one).
+        val modesToDeactivate =
+            zenModeRepository
+                .getModes()
+                .filter { it.isActive }
+                .sortedWith(ZenMode.PRIORITIZING_COMPARATOR.reversed())
+        for (mode in modesToDeactivate) {
+            deactivateMode(mode)
         }
     }
 

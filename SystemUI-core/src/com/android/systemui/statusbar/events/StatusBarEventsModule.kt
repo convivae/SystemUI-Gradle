@@ -16,14 +16,17 @@
 
 package com.android.systemui.statusbar.events
 
+import android.view.Display
+import com.android.app.displaylib.PerDisplayRepository
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Default
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.LogBufferFactory
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 
-@Module(includes = [SystemEventChipAnimationControllerModule::class])
+@Module
 interface StatusBarEventsModule {
 
     companion object {
@@ -34,11 +37,21 @@ interface StatusBarEventsModule {
         fun provideSystemStatusAnimationSchedulerLogBuffer(factory: LogBufferFactory): LogBuffer {
             return factory.create("SystemStatusAnimationSchedulerLog", 60)
         }
-    }
 
-    @Binds
-    @SysUISingleton
-    fun bindSystemStatusAnimationScheduler(
-        systemStatusAnimationSchedulerImpl: SystemStatusAnimationSchedulerImpl
-    ): SystemStatusAnimationScheduler
+        @Provides
+        @SysUISingleton
+        @SystemEventCoordinatorLog
+        fun provideSystemEventCoordinatorLogBuffer(factory: LogBufferFactory): LogBuffer {
+            return factory.create("SystemEventCoordinatorLog", 60)
+        }
+
+        @Provides
+        @Default
+        @SysUISingleton
+        fun provideSystemStatusAnimationScheduler(
+            displaySubcomponentRepo: PerDisplayRepository<SystemUIDisplaySubcomponent>
+        ): SystemStatusAnimationScheduler {
+            return displaySubcomponentRepo[Display.DEFAULT_DISPLAY]!!.systemStatusAnimationScheduler
+        }
+    }
 }

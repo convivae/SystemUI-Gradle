@@ -17,7 +17,6 @@
 package com.android.systemui.unfold
 
 import com.android.systemui.CoreStartable
-import com.android.systemui.Flags
 import com.android.systemui.unfold.dagger.UnfoldBg
 import com.android.systemui.unfold.progress.UnfoldTransitionProgressForwarder
 import java.util.Optional
@@ -32,8 +31,6 @@ constructor(
     @UnfoldBg
     private val unfoldBgTransitionProgressProviderOptional:
         Optional<UnfoldTransitionProgressProvider>,
-    private val unfoldTransitionProgressProviderOptional:
-        Optional<UnfoldTransitionProgressProvider>,
     private val unfoldTransitionProgressForwarder: Optional<UnfoldTransitionProgressForwarder>
 ) : CoreStartable {
     override fun start() {
@@ -44,18 +41,13 @@ constructor(
             c.getUnfoldTransitionWallpaperController().init()
             c.getUnfoldHapticsPlayer()
             c.getNaturalRotationUnfoldProgressProvider().init()
-            c.getUnfoldLatencyTracker().init()
         }
 
         foldStateLoggingProviderOptional.ifPresent { obj: FoldStateLoggingProvider -> obj.init() }
         foldStateLoggerOptional.ifPresent { obj: FoldStateLogger -> obj.init() }
 
         val unfoldTransitionProgressProvider: Optional<UnfoldTransitionProgressProvider> =
-            if (Flags.unfoldAnimationBackgroundProgress()) {
-                unfoldBgTransitionProgressProviderOptional
-            } else {
-                unfoldTransitionProgressProviderOptional
-            }
+            unfoldBgTransitionProgressProviderOptional
         unfoldTransitionProgressProvider.ifPresent {
             progressProvider: UnfoldTransitionProgressProvider ->
             unfoldTransitionProgressForwarder.ifPresent {

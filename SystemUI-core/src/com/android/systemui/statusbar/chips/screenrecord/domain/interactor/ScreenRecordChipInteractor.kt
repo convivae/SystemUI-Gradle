@@ -17,9 +17,9 @@
 package com.android.systemui.statusbar.chips.screenrecord.domain.interactor
 
 import android.media.projection.StopReason
-import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.LogLevel
 import com.android.systemui.mediaprojection.data.model.MediaProjectionState
@@ -30,8 +30,8 @@ import com.android.systemui.statusbar.chips.StatusBarChipLogTags.pad
 import com.android.systemui.statusbar.chips.StatusBarChipsLog
 import com.android.systemui.statusbar.chips.screenrecord.domain.model.ScreenRecordChipModel
 import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,11 +43,11 @@ import kotlinx.coroutines.launch
 
 /** Interactor for the screen recording chip shown in the status bar. */
 @SysUISingleton
-@OptIn(ExperimentalCoroutinesApi::class)
 class ScreenRecordChipInteractor
 @Inject
 constructor(
     @Application private val scope: CoroutineScope,
+    @Background private val backgroundContext: CoroutineContext,
     private val screenRecordRepository: ScreenRecordRepository,
     private val mediaProjectionRepository: MediaProjectionRepository,
     @StatusBarChipsLog private val logger: LogBuffer,
@@ -87,18 +87,16 @@ constructor(
                 mediaProjectionRepository.mediaProjectionState,
                 shouldAssumeIsRecording,
             ) { screenRecordState, mediaProjectionState, shouldAssumeIsRecording ->
-                if (
-                    Flags.statusBarAutoStartScreenRecordChip() &&
-                        shouldAssumeIsRecording &&
-                        screenRecordState is ScreenRecordModel.Starting
-                ) {
+                if (shouldAssumeIsRecording && screenRecordState is ScreenRecordModel.Starting) {
                     logger.log(
                         TAG,
                         LogLevel.INFO,
                         {},
-                        { "State: Recording(taskPackage=null) due to force-start" },
+                        {
+                            "State: Recording(hostPackage=null, taskPackage=null) due to force-start"
+                        },
                     )
-                    ScreenRecordChipModel.Recording(recordedTask = null)
+                    ScreenRecordChipModel.Recording(hostPackage = null, recordedTask = null)
                 } else {
                     when (screenRecordState) {
                         is ScreenRecordModel.DoingNothing -> {
@@ -126,13 +124,25 @@ constructor(
                                 } else {
                                     null
                                 }
+                            val hostPackage =
+                                if (mediaProjectionState is MediaProjectionState.Projecting) {
+                                    mediaProjectionState.hostPackage
+                                } else {
+                                    null
+                                }
                             logger.log(
                                 TAG,
                                 LogLevel.INFO,
-                                { str1 = recordedTask?.baseIntent?.component?.packageName },
-                                { "State: Recording(taskPackage=$str1)" },
+                                {
+                                    str1 = hostPackage
+                                    str2 = recordedTask?.baseIntent?.component?.packageName
+                                },
+                                { "State: Recording(hostPackage=$str1, taskPackage=$str2)" },
                             )
-                            ScreenRecordChipModel.Recording(recordedTask)
+                            ScreenRecordChipModel.Recording(
+                                hostPackage = hostPackage,
+                                recordedTask = recordedTask,
+                            )
                         }
                     }
                 }
@@ -141,7 +151,9 @@ constructor(
 
     /** Stops the recording. */
     fun stopRecording() {
-        scope.launch { screenRecordRepository.stopRecording(StopReason.STOP_PRIVACY_CHIP) }
+        scope.launch(backgroundContext) {
+            screenRecordRepository.stopRecording(StopReason.STOP_PRIVACY_CHIP)
+        }
     }
 
     companion object {

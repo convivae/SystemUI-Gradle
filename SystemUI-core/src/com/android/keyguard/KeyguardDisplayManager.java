@@ -26,11 +26,9 @@ import android.hardware.display.DisplayManager;
 import android.media.MediaRouter;
 import android.media.MediaRouter.RouteInfo;
 import android.os.Trace;
-import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.Display;
-import android.view.DisplayAddress;
 import android.view.DisplayInfo;
 import android.view.View;
 import android.view.WindowManager;
@@ -41,13 +39,14 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Application;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dagger.qualifiers.UiBackground;
+import com.android.systemui.display.data.repository.DisplayRepository;
 import com.android.systemui.navigationbar.NavigationBarController;
 import com.android.systemui.navigationbar.views.NavigationBarView;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.shade.ShadeDisplayAware;
 import com.android.systemui.shade.data.repository.ShadeDisplaysRepository;
-import com.android.systemui.shade.shared.flag.ShadeWindowGoesAround;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
+import com.android.systemui.wallpapers.WallpaperPresentationEnabled;
 
 import dagger.Lazy;
 
@@ -58,6 +57,12 @@ import java.util.concurrent.Executor;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
+/**
+ * Manages Keyguard Presentations for non-primary display(s).
+ *
+ * Note that after [Flag.enableConnectedDisplaysWallpaperPresentations] is enabled, the presentation
+ * is set from [WallpaperPresentationManager].
+ */
 @SysUISingleton
 public class KeyguardDisplayManager {
     protected static final String TAG = "KeyguardDisplayManager";
@@ -68,8 +73,10 @@ public class KeyguardDisplayManager {
     private final DisplayTracker mDisplayTracker;
     private final Lazy<NavigationBarController> mNavigationBarControllerLazy;
     private final Provider<ShadeDisplaysRepository> mShadePositionRepositoryProvider;
-    private final ConnectedDisplayKeyguardPresentation.Factory
+    private final ConnectedDisplayKeyguardPresentationFactory
             mConnectedDisplayKeyguardPresentationFactory;
+    private final Boolean mIsCentralizedWallpaperPresentationEnabled;
+    private final DisplayRepository mDisplayRepository;
     private final Context mContext;
 
     private boolean mShowing;
@@ -112,10 +119,12 @@ public class KeyguardDisplayManager {
             @UiBackground Executor uiBgExecutor,
             DeviceStateHelper deviceStateHelper,
             KeyguardStateController keyguardStateController,
-            ConnectedDisplayKeyguardPresentation.Factory
+            ConnectedDisplayKeyguardPresentationFactory
                     connectedDisplayKeyguardPresentationFactory,
             Provider<ShadeDisplaysRepository> shadePositionRepositoryProvider,
-            @Application CoroutineScope appScope) {
+            @Application CoroutineScope appScope,
+            @WallpaperPresentationEnabled Boolean isCentralizedWallpaperPresentationEnabled,
+            DisplayRepository displayRepository) {
         mContext = context;
         mNavigationBarControllerLazy = navigationBarControllerLazy;
         mShadePositionRepositoryProvider = shadePositionRepositoryProvider;
@@ -126,10 +135,10 @@ public class KeyguardDisplayManager {
         mDeviceStateHelper = deviceStateHelper;
         mKeyguardStateController = keyguardStateController;
         mConnectedDisplayKeyguardPresentationFactory = connectedDisplayKeyguardPresentationFactory;
-        if (ShadeWindowGoesAround.isEnabled()) {
-            collectFlow(appScope, shadePositionRepositoryProvider.get().getDisplayId(),
-                    (id) -> onShadeWindowMovedToDisplayId(id));
-        }
+        mIsCentralizedWallpaperPresentationEnabled = isCentralizedWallpaperPresentationEnabled;
+        mDisplayRepository = displayRepository;
+        collectFlow(appScope, shadePositionRepositoryProvider.get().getPendingDisplayId(),
+                (id) -> onShadeWindowMovedToDisplayId(id));
     }
 
     private void onShadeWindowMovedToDisplayId(int shadeDisplayId) {
@@ -139,52 +148,53 @@ public class KeyguardDisplayManager {
         }
     }
 
-    private boolean isKeyguardShowable(Display display) {
+    /**
+     * Returns `true` if the keyguard can be shown for a given {@code display}. Otherwise, `false`.
+     */
+    public boolean isKeyguardShowable(Display display, int shadeDisplayId) {
         if (display == null) {
-            if (DEBUG) Log.i(TAG, "Cannot show Keyguard on null display");
+            Log.i(TAG, "Cannot show Keyguard on null display");
             return false;
         }
-        if (ShadeWindowGoesAround.isEnabled()) {
-            int shadeDisplayId = mShadePositionRepositoryProvider.get().getDisplayId().getValue();
-            if (display.getDisplayId() == shadeDisplayId) {
-                if (DEBUG) {
-                    Log.i(TAG,
-                            "Do not show KeyguardPresentation on the shade window display");
-                }
-                return false;
-            }
-        } else {
-            if (display.getDisplayId() == mDisplayTracker.getDefaultDisplayId()) {
-                if (DEBUG) Log.i(TAG, "Do not show KeyguardPresentation on the default display");
-                return false;
-            }
+        if (display.getDisplayId() == shadeDisplayId) {
+            Log.i(
+                TAG,
+                "Secondary Keyguard presentation not shown on display "
+                    + display.getDisplayId()
+                    + " because shade window is on it (with the primary keyguard)");
+
+            return false;
         }
         display.getDisplayInfo(mTmpDisplayInfo);
         if ((mTmpDisplayInfo.flags & Display.FLAG_PRIVATE) != 0) {
-            if (DEBUG) Log.i(TAG, "Do not show KeyguardPresentation on a private display");
+            Log.i(TAG, "Do not show KeyguardPresentation on a private display");
             return false;
         }
         if ((mTmpDisplayInfo.flags & Display.FLAG_ALWAYS_UNLOCKED) != 0) {
-            if (DEBUG) {
-                Log.i(TAG, "Do not show KeyguardPresentation on an unlocked display");
-            }
+            Log.i(TAG, "Do not show KeyguardPresentation on an unlocked display");
             return false;
         }
-        if (mKeyguardStateController.isOccluded()
-                && mDeviceStateHelper.isConcurrentDisplayActive(display)) {
-            if (DEBUG) {
-                // When activities with FLAG_SHOW_WHEN_LOCKED are shown on top of Keyguard, the
-                // Keyguard state becomes "occluded". In this case, we should not show the
-                // KeyguardPresentation, since the activity is presenting content onto the
-                // non-default display.
-                Log.i(TAG, "Do not show KeyguardPresentation when occluded and concurrent"
-                        + " display is active");
-            }
+
+        final boolean deviceStateOccludesKeyguard =
+                mDeviceStateHelper.isConcurrentDisplayActive(display)
+                        || mDeviceStateHelper.isRearDisplayOuterDefaultActive(display);
+        if (mKeyguardStateController.isOccluded() && deviceStateOccludesKeyguard) {
+            // When activities with FLAG_SHOW_WHEN_LOCKED are shown on top of Keyguard, the Keyguard
+            // state becomes "occluded". In this case, we should not show the KeyguardPresentation,
+            // since the activity is presenting content onto the non-default display.
+            Log.i(TAG, "Do not show KeyguardPresentation when occluded and concurrent or rear"
+                    + " display is active");
             return false;
         }
 
         return true;
     }
+
+    private int getShadeDisplayId() {
+        return mShadePositionRepositoryProvider
+            .get().getPendingDisplayId().getValue();
+    }
+
     /**
      * @param display The display to show the presentation on.
      * @return {@code true} if a presentation was added.
@@ -192,8 +202,12 @@ public class KeyguardDisplayManager {
      *         was already there.
      */
     private boolean showPresentation(Display display) {
-        if (!isKeyguardShowable(display)) return false;
-        if (DEBUG) Log.i(TAG, "Keyguard enabled on display: " + display);
+        if (mIsCentralizedWallpaperPresentationEnabled) {
+            // Handled in WallpaperPresentationManager.
+            return false;
+        }
+        if (!isKeyguardShowable(display, getShadeDisplayId())) return false;
+        Log.i(TAG, "Keyguard enabled on display: " + display);
         final int displayId = display.getDisplayId();
         Presentation presentation = mPresentations.get(displayId);
         if (presentation == null) {
@@ -226,6 +240,10 @@ public class KeyguardDisplayManager {
      * @param displayId The id of the display to hide the presentation off.
      */
     private void hidePresentation(int displayId) {
+        if (mIsCentralizedWallpaperPresentationEnabled) {
+            // Handled in WallpaperPresentationManager.
+            return;
+        }
         final Presentation presentation = mPresentations.get(displayId);
         if (presentation != null) {
             presentation.dismiss();
@@ -235,7 +253,7 @@ public class KeyguardDisplayManager {
 
     public void show() {
         if (!mShowing) {
-            if (DEBUG) Log.v(TAG, "show");
+            Log.v(TAG, "show");
             if (mMediaRouter != null) {
                 mMediaRouter.addCallback(MediaRouter.ROUTE_TYPE_REMOTE_DISPLAY,
                         mMediaRouterCallback, MediaRouter.CALLBACK_FLAG_PASSIVE_DISCOVERY);
@@ -249,7 +267,7 @@ public class KeyguardDisplayManager {
 
     public void hide() {
         if (mShowing) {
-            if (DEBUG) Log.v(TAG, "hide");
+            Log.v(TAG, "hide");
             if (mMediaRouter != null) {
                 mMediaRouter.removeCallback(mMediaRouterCallback);
             }
@@ -289,13 +307,19 @@ public class KeyguardDisplayManager {
                 changed |= showPresentation(display);
             }
         } else {
-            changed = mPresentations.size() > 0;
-            for (int i = mPresentations.size() - 1; i >= 0; i--) {
-                int displayId = mPresentations.keyAt(i);
-                updateNavigationBarVisibility(displayId, true /* navBarVisible */);
-                mPresentations.valueAt(i).dismiss();
+            if (mIsCentralizedWallpaperPresentationEnabled) {
+                for (int displayId : mDisplayRepository.getDisplayIds().getValue()) {
+                    updateNavigationBarVisibility(displayId, true /* navBarVisible */);
+                }
+            } else {
+                changed = mPresentations.size() > 0;
+                for (int i = mPresentations.size() - 1; i >= 0; i--) {
+                    int displayId = mPresentations.keyAt(i);
+                    updateNavigationBarVisibility(displayId, true /* navBarVisible */);
+                    mPresentations.valueAt(i).dismiss();
+                }
+                mPresentations.clear();
             }
-            mPresentations.clear();
         }
         return changed;
     }
@@ -326,44 +350,45 @@ public class KeyguardDisplayManager {
     public static class DeviceStateHelper implements DeviceStateManager.DeviceStateCallback {
 
         @Nullable
-        private final DisplayAddress.Physical mRearDisplayPhysicalAddress;
-
-        // TODO(b/271317597): These device states should be defined in DeviceStateManager
-        private final int mConcurrentState;
-        private boolean mIsInConcurrentDisplayState;
+        private DeviceState mDeviceState;
 
         @Inject
         DeviceStateHelper(
-                @ShadeDisplayAware Context context,
                 DeviceStateManager deviceStateManager,
                 @Main Executor mainExecutor) {
-
-            final String rearDisplayPhysicalAddress = context.getResources().getString(
-                    com.android.internal.R.string.config_rearDisplayPhysicalAddress);
-            if (TextUtils.isEmpty(rearDisplayPhysicalAddress)) {
-                mRearDisplayPhysicalAddress = null;
-            } else {
-                mRearDisplayPhysicalAddress = DisplayAddress
-                        .fromPhysicalDisplayId(Long.parseLong(rearDisplayPhysicalAddress));
-            }
-
-            mConcurrentState = context.getResources().getInteger(
-                    com.android.internal.R.integer.config_deviceStateConcurrentRearDisplay);
             deviceStateManager.registerCallback(mainExecutor, this);
         }
 
         @Override
         public void onDeviceStateChanged(@NonNull DeviceState state) {
-            // When concurrent state ends, the display also turns off. This is enforced in various
-            // ExtensionRearDisplayPresentationTest CTS tests. So, we don't need to invoke
-            // hide() since that will happen through the onDisplayRemoved callback.
-            mIsInConcurrentDisplayState = state.getIdentifier() == mConcurrentState;
+            // When dual display or rear display mode ends, the display also turns off. This is
+            // enforced in various ExtensionRearDisplayPresentationTest CTS tests. So, we don't need
+            // to invoke hide() since that will happen through the onDisplayRemoved callback.
+            mDeviceState = state;
         }
 
-        boolean isConcurrentDisplayActive(Display display) {
-            return mIsInConcurrentDisplayState
-                    && mRearDisplayPhysicalAddress != null
-                    && mRearDisplayPhysicalAddress.equals(display.getAddress());
+        /**
+         * @return true if the device is in Dual Display mode, and the specified display is the
+         * rear facing (outer) display.
+         */
+        boolean isConcurrentDisplayActive(@NonNull Display display) {
+            return mDeviceState != null
+                    && mDeviceState.hasProperty(
+                            DeviceState.PROPERTY_FEATURE_DUAL_DISPLAY_INTERNAL_DEFAULT)
+                    && (display.getFlags() & Display.FLAG_REAR) != 0;
+        }
+
+        /**
+         * @return true if the device is the updated Rear Display mode, and the specified display is
+         * the inner display. See {@link DeviceState.PROPERTY_FEATURE_REAR_DISPLAY_OUTER_DEFAULT}.
+         * Note that in this state, the outer display is the default display, while the inner
+         * display is the "rear" display.
+         */
+        boolean isRearDisplayOuterDefaultActive(@NonNull Display display) {
+            return mDeviceState != null
+                    && mDeviceState.hasProperty(
+                            DeviceState.PROPERTY_FEATURE_REAR_DISPLAY_OUTER_DEFAULT)
+                    && (display.getFlags() & Display.FLAG_REAR) != 0;
         }
     }
 }

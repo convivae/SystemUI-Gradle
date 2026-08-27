@@ -50,7 +50,6 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.inputmethod.Flags;
 import android.widget.ImageView;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -60,8 +59,8 @@ import com.android.internal.logging.UiEventLogger;
 import com.android.internal.logging.UiEventLoggerImpl;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.systemui.Dependency;
+import com.android.systemui.LauncherProxyService;
 import com.android.systemui.assist.AssistManager;
-import com.android.systemui.recents.OverviewProxyService;
 import com.android.systemui.res.R;
 import com.android.systemui.shared.navigationbar.KeyButtonRipple;
 import com.android.systemui.shared.system.QuickStepContract;
@@ -82,7 +81,7 @@ public class KeyButtonView extends ImageView implements ButtonInterface {
     @VisibleForTesting boolean mLongClicked;
     private OnClickListener mOnClickListener;
     private final KeyButtonRipple mRipple;
-    private final OverviewProxyService mOverviewProxyService;
+    private final LauncherProxyService mLauncherProxyService;
     private final MetricsLogger mMetricsLogger = Dependency.get(MetricsLogger.class);
     private final InputManagerGlobal mInputManagerGlobal;
     private final Paint mOvalBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -181,7 +180,7 @@ public class KeyButtonView extends ImageView implements ButtonInterface {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 
         mRipple = new KeyButtonRipple(context, this, R.dimen.key_button_ripple_max_width);
-        mOverviewProxyService = Dependency.get(OverviewProxyService.class);
+        mLauncherProxyService = Dependency.get(LauncherProxyService.class);
         mInputManagerGlobal = manager;
         setBackground(mRipple);
         setWillNotDraw(false);
@@ -248,7 +247,7 @@ public class KeyButtonView extends ImageView implements ButtonInterface {
      */
     @Nullable
     private CharSequence getAccessibilityLongClickActionLabel() {
-        if (Flags.imeSwitcherRevamp() && getId() == R.id.ime_switcher) {
+        if (getId() == R.id.ime_switcher) {
             return getContext().getText(
                     com.android.internal.R.string.input_method_ime_switch_long_click_action_desc);
         }
@@ -282,7 +281,7 @@ public class KeyButtonView extends ImageView implements ButtonInterface {
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        final boolean showSwipeUI = mOverviewProxyService.shouldShowSwipeUpUI();
+        final boolean showSwipeUI = mLauncherProxyService.shouldShowSwipeUpUI();
         final int action = ev.getAction();
         int x, y;
         if (action == MotionEvent.ACTION_DOWN) {

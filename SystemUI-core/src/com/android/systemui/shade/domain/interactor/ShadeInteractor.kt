@@ -16,9 +16,9 @@
 
 package com.android.systemui.shade.domain.interactor
 
-import androidx.annotation.FloatRange
+import android.graphics.Rect
 import com.android.compose.animation.scene.TransitionKey
-import com.android.systemui.shade.shared.model.ShadeMode
+import com.android.systemui.shade.ShadeOverlayBoundsListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,7 +49,8 @@ interface ShadeInteractor : BaseShadeInteractor {
     /**
      * Whether the user is expanding or collapsing either the shade or quick settings with user
      * input (i.e. dragging a pointer). This will be true even if the user's input gesture had ended
-     * but a transition they initiated is still animating.
+     * but a transition they initiated is still animating. It will also be true if the gesture was
+     * originated by the user but outside of System UI.
      */
     val isUserInteracting: StateFlow<Boolean>
 
@@ -58,36 +59,6 @@ interface ShadeInteractor : BaseShadeInteractor {
 
     /** Whether the shade can be expanded from QQS to QS. */
     val isExpandToQsEnabled: Flow<Boolean>
-
-    /**
-     * The version of the shade layout to use.
-     *
-     * Note: Most likely, you want to read [isShadeLayoutWide] instead of this.
-     */
-    val shadeMode: StateFlow<ShadeMode>
-
-    /**
-     * Whether the shade layout should be wide (true) or narrow (false).
-     *
-     * In a wide layout, notifications and quick settings each take up only half the screen width
-     * (whether they are shown at the same time or not). In a narrow layout, they can each be as
-     * wide as the entire screen.
-     */
-    val isShadeLayoutWide: StateFlow<Boolean>
-
-    /**
-     * The fraction between [0..1] (i.e., percentage) of screen width to consider the threshold
-     * between "top-left" and "top-right" for the purposes of dual-shade invocation.
-     *
-     * When the dual-shade is not wide, this always returns 0.5 (the top edge is evenly split). On
-     * wide layouts however, a larger fraction is returned because only the area of the system
-     * status icons is considered top-right.
-     *
-     * Note that this fraction only determines the split between the absolute left and right
-     * directions. In RTL layouts, the "top-start" edge will resolve to "top-right", and "top-end"
-     * will resolve to "top-left".
-     */
-    @FloatRange(from = 0.0, to = 1.0) fun getTopEdgeSplitFraction(): Float
 }
 
 /** ShadeInteractor methods with implementations that differ between non-empty impls. */
@@ -106,8 +77,23 @@ interface BaseShadeInteractor {
      */
     val isAnyExpanded: StateFlow<Boolean>
 
+    /**
+     * Whether either the shade or QS is partially or fully expanded, i.e. not fully collapsed. This
+     * should be called in places where the edge cases in the legacy implementation of this
+     * interface are not necessary. With the scene container enabled, this should be equivalent to
+     * isAnyExpanded. When the scene container is disabled, this is simply a check if any expansion
+     * values are positive.
+     *
+     * TODO(b/300258424) replace all calls to this with isAnyExpanded
+     */
+    @Deprecated("consider using isAnyExpanded instead")
+    val isAnyExpansionGreaterThanZero: StateFlow<Boolean>
+
     /** The amount [0-1] that the Notifications Shade has been opened. */
     val shadeExpansion: StateFlow<Float>
+
+    /** Whether the Notifications Shade is expanded a non-zero amount. */
+    val isNotificationsExpanded: StateFlow<Boolean>
 
     /**
      * The amount [0-1] QS has been opened. Normal shade with notifications (QQS) visible will
@@ -173,11 +159,26 @@ interface BaseShadeInteractor {
         bypassNotificationsShade: Boolean = false,
     )
 
+    /** Toggles the Notifications shade. Will replace the QuickSettings shade if it's open. */
+    fun toggleNotificationsShade(loggingReason: String, transitionKey: TransitionKey? = null)
+
+    /** Toggles the Quick Settings shade. Will replace the Notifications shade if it's open. */
+    fun toggleQuickSettingsShade(loggingReason: String, transitionKey: TransitionKey? = null)
+
     /**
      * Triggers the collapse (closing) of the notifications shade or quick settings shade, whichever
      * is open. If both are already collapsed, this has no effect.
      */
     fun collapseEitherShade(loggingReason: String, transitionKey: TransitionKey? = null)
+
+    /** Sets the bounds of the currently visible shade overlay in window coordinates. */
+    fun setShadeOverlayBounds(bounds: Rect?)
+
+    /** Add a listener for shade overlay bounds changes. */
+    fun addShadeOverlayBoundsListener(listener: ShadeOverlayBoundsListener)
+
+    /** Remove a listener for shade overlay bounds changes. */
+    fun removeShadeOverlayBoundsListener(listener: ShadeOverlayBoundsListener)
 }
 
 fun createAnyExpansionFlow(

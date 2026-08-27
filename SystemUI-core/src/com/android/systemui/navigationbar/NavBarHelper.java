@@ -18,7 +18,6 @@ package com.android.systemui.navigationbar;
 
 import static android.app.StatusBarManager.WINDOW_NAVIGATION_BAR;
 import static android.app.StatusBarManager.WindowVisibleState;
-import static android.provider.Settings.Secure.ACCESSIBILITY_BUTTON_MODE_FLOATING_MENU;
 import static android.provider.Settings.Secure.ACCESSIBILITY_BUTTON_MODE_NAVIGATION_BAR;
 import static android.view.WindowInsetsController.APPEARANCE_LOW_PROFILE_BARS;
 import static android.view.WindowInsetsController.APPEARANCE_OPAQUE_NAVIGATION_BARS;
@@ -32,12 +31,13 @@ import static com.android.systemui.accessibility.SystemActions.SYSTEM_ACTION_ID_
 import static com.android.systemui.accessibility.SystemActions.SYSTEM_ACTION_ID_ACCESSIBILITY_BUTTON_CHOOSER;
 import static com.android.systemui.shared.statusbar.phone.BarTransitions.MODE_LIGHTS_OUT;
 import static com.android.systemui.shared.statusbar.phone.BarTransitions.MODE_LIGHTS_OUT_TRANSPARENT;
-import static com.android.systemui.shared.statusbar.phone.BarTransitions.MODE_OPAQUE;
+import static com.android.systemui.shared.statusbar.phone.BarTransitions.MODE_OPAQUE_DARK;
 import static com.android.systemui.shared.statusbar.phone.BarTransitions.MODE_SEMI_TRANSPARENT;
 import static com.android.systemui.shared.statusbar.phone.BarTransitions.MODE_TRANSPARENT;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_A11Y_BUTTON_CLICKABLE;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_A11Y_BUTTON_LONG_CLICKABLE;
 
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Configuration;
@@ -48,7 +48,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Process;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -61,12 +60,14 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityManager;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.systemui.Dumpable;
+import com.android.systemui.LauncherProxyService;
 import com.android.systemui.accessibility.AccessibilityButtonModeObserver;
 import com.android.systemui.accessibility.AccessibilityButtonTargetsObserver;
 import com.android.systemui.accessibility.AccessibilityGestureTargetsObserver;
@@ -77,7 +78,7 @@ import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.navigationbar.gestural.EdgeBackGestureHandler;
-import com.android.systemui.recents.OverviewProxyService;
+import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.settings.DisplayTracker;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.shared.Flags;
@@ -115,7 +116,7 @@ public final class NavBarHelper implements
         AccessibilityButtonModeObserver.ModeChangedListener,
         AccessibilityButtonTargetsObserver.TargetsChangedListener,
         AccessibilityGestureTargetsObserver.TargetsChangedListener,
-        OverviewProxyService.OverviewProxyListener, NavigationModeController.ModeChangedListener,
+        LauncherProxyService.LauncherProxyListener, NavigationModeController.ModeChangedListener,
         Dumpable, CommandQueue.Callbacks, ConfigurationController.ConfigurationListener {
     private static final String TAG = NavBarHelper.class.getSimpleName();
 
@@ -199,7 +200,7 @@ public final class NavBarHelper implements
             AccessibilityButtonTargetsObserver accessibilityButtonTargetsObserver,
             AccessibilityGestureTargetsObserver accessibilityGestureTargetsObserver,
             SystemActions systemActions,
-            OverviewProxyService overviewProxyService,
+            LauncherProxyService launcherProxyService,
             Lazy<AssistManager> assistManagerLazy,
             Lazy<Optional<CentralSurfaces>> centralSurfacesOptionalLazy,
             KeyguardStateController keyguardStateController,
@@ -215,7 +216,7 @@ public final class NavBarHelper implements
             @Main Executor mainExecutor,
             @Background Handler bgHandler) {
         // b/319489709: This component shouldn't be running for a non-primary user
-        if (!Process.myUserHandle().equals(UserHandle.SYSTEM)) {
+        if (!launcherProxyService.isSystemOrVisibleBgUser()) {
             Log.wtf(TAG, "Unexpected initialization for non-primary user", new Throwable());
         }
         mContext = context;
@@ -240,7 +241,7 @@ public final class NavBarHelper implements
         mNavBarMode = navigationModeController.addListener(this);
         mCommandQueue.addCallback(this);
         configurationController.addCallback(this);
-        overviewProxyService.addCallback(this);
+        launcherProxyService.addCallback(this);
         dumpManager.registerDumpable(this);
     }
 
@@ -402,22 +403,15 @@ public final class NavBarHelper implements
         mEdgeBackGestureHandler.onConfigurationChanged(newConfig);
     }
 
-    private int getNumOfA11yShortcutTargetsForNavSystem() {
+    @MainThread
+    private int getShortcutType() {
         final int buttonMode = mAccessibilityButtonModeObserver.getCurrentAccessibilityButtonMode();
-        final int shortcutType;
-        if (!android.provider.Flags.a11yStandaloneGestureEnabled()) {
-            shortcutType = buttonMode
-                    != ACCESSIBILITY_BUTTON_MODE_FLOATING_MENU ? SOFTWARE : DEFAULT;
-            // If accessibility button is floating menu mode, there are no clickable targets.
+        if (mNavBarMode == NAV_BAR_MODE_GESTURAL) {
+            return GESTURE;
         } else {
-            if (mNavBarMode == NAV_BAR_MODE_GESTURAL) {
-                shortcutType = GESTURE;
-            } else {
-                shortcutType = buttonMode == ACCESSIBILITY_BUTTON_MODE_NAVIGATION_BAR
-                        ? SOFTWARE : DEFAULT;
-            }
+            return buttonMode == ACCESSIBILITY_BUTTON_MODE_NAVIGATION_BAR
+                    ? SOFTWARE : DEFAULT;
         }
-        return mAccessibilityManager.getAccessibilityShortcutTargets(shortcutType).size();
     }
 
     /**
@@ -426,15 +420,30 @@ public final class NavBarHelper implements
      * {@link Secure#ACCESSIBILITY_BUTTON_MODE_GESTURE}, otherwise it is reset to 0.
      */
     @VisibleForTesting
+    @SuppressLint("MissingPermission")
     void updateA11yState() {
+        final int shortcutType = getShortcutType();
+        if (SceneContainerFlag.isEnabled()) {
+            mBgHandler.post(() -> {
+                // AccessibilityManager#getAccessibilityShortcutTargets is a binder call, so put it
+                // on the background.
+                int clickableServices = mAccessibilityManager
+                        .getAccessibilityShortcutTargets(shortcutType).size();
+                mMainExecutor.execute(() -> onNumClickableServicesReceived(clickableServices));
+            });
+        } else {
+            int clickableServices = mAccessibilityManager
+                    .getAccessibilityShortcutTargets(shortcutType).size();
+            onNumClickableServicesReceived(clickableServices);
+        }
+    }
+
+    private void onNumClickableServicesReceived(int clickableServices) {
         final long prevState = mA11yButtonState;
-        final boolean clickable;
-        final boolean longClickable;
-        int clickableServices = getNumOfA11yShortcutTargetsForNavSystem();
-        clickable = clickableServices >= 1;
+        final boolean clickable = clickableServices >= 1;
         // `longClickable` is used to determine whether to pop up the accessibility chooser
         // dialog or not, and it’s also only for multiple services.
-        longClickable = clickableServices >= 2;
+        final boolean longClickable = clickableServices >= 2;
         mA11yButtonState = (clickable ? SYSUI_STATE_A11Y_BUTTON_CLICKABLE : 0)
                 | (longClickable ? SYSUI_STATE_A11Y_BUTTON_LONG_CLICKABLE : 0);
 
@@ -536,10 +545,12 @@ public final class NavBarHelper implements
     }
 
     /**
-     * @return Whether the IME is shown on top of the screen given the {@code vis} flag of
-     * {@link InputMethodService} and the keyguard states.
+     * Checks whether the IME is visible on top of the screen, based on the given IME window
+     * visibility flags, and the current keyguard state.
+     *
+     * @param vis the IME window visibility.
      */
-    public boolean isImeShown(@ImeWindowVisibility int vis) {
+    public boolean isImeVisible(@ImeWindowVisibility int vis) {
         View shadeWindowView =  mNotificationShadeWindowController.getWindowRootView();
         boolean isKeyguardShowing = mKeyguardStateController.isShowing();
         boolean imeVisibleOnShade = shadeWindowView != null && shadeWindowView.isAttachedToWindow()
@@ -605,7 +616,7 @@ public final class NavBarHelper implements
         } else if ((appearance & APPEARANCE_LOW_PROFILE_BARS) != 0) {
             return MODE_LIGHTS_OUT_TRANSPARENT;
         } else if ((appearance & APPEARANCE_OPAQUE_NAVIGATION_BARS) != 0) {
-            return MODE_OPAQUE;
+            return MODE_OPAQUE_DARK;
         } else if ((appearance & APPEARANCE_SEMI_TRANSPARENT_NAVIGATION_BARS) != 0) {
             return MODE_SEMI_TRANSPARENT;
         } else {

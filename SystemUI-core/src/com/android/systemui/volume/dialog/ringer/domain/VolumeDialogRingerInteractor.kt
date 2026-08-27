@@ -47,7 +47,6 @@ constructor(
     private val audioSystemRepository: AudioSystemRepository,
     private val ringerFeedbackRepository: VolumeDialogRingerFeedbackRepository,
 ) {
-
     val ringerModel: Flow<VolumeDialogRingerModel> =
         volumeDialogStateInteractor.volumeDialogState
             .mapNotNull { toRingerModel(it) }
@@ -60,7 +59,10 @@ constructor(
                 availableModes =
                     mutableListOf(RingerMode(RINGER_MODE_NORMAL), RingerMode(RINGER_MODE_SILENT))
                         .also { list ->
-                            if (controller.hasVibrator()) {
+                            if (
+                                controller.hasVibrator() ||
+                                    state.ringerModeInternal == RINGER_MODE_VIBRATE
+                            ) {
                                 list.add(RingerMode(RINGER_MODE_VIBRATE))
                             }
                         },

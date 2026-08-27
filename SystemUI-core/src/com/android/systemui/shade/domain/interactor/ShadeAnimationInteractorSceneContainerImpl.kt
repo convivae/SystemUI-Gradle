@@ -21,10 +21,10 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.model.Scenes
+import com.android.systemui.shade.ShadeWindowLogger
 import com.android.systemui.shade.data.repository.ShadeAnimationRepository
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -36,14 +36,14 @@ import kotlinx.coroutines.flow.stateIn
 @SysUISingleton
 class ShadeAnimationInteractorSceneContainerImpl
 @Inject
-@OptIn(ExperimentalCoroutinesApi::class)
 constructor(
     @Background scope: CoroutineScope,
     shadeAnimationRepository: ShadeAnimationRepository,
     sceneInteractor: SceneInteractor,
-) : ShadeAnimationInteractor(shadeAnimationRepository) {
+    shadeWindowLogger: ShadeWindowLogger,
+) : ShadeAnimationInteractor(shadeAnimationRepository, shadeWindowLogger) {
     override val isAnyCloseAnimationRunning =
-        sceneInteractor.transitionState
+        sceneInteractor.transitionStateFlow
             .flatMapLatest { state ->
                 when (state) {
                     is ObservableTransitionState.Idle -> flowOf(false)
@@ -64,7 +64,7 @@ constructor(
             .stateIn(scope, SharingStarted.Eagerly, false)
 
     override val isAnyFlingAnimationRunning =
-        sceneInteractor.transitionState
+        sceneInteractor.transitionStateFlow
             .flatMapLatest { state ->
                 when (state) {
                     is ObservableTransitionState.Idle -> flowOf(false)

@@ -22,8 +22,9 @@ import android.util.Log
 import android.view.MotionEvent
 import com.android.systemui.biometrics.AuthController
 import com.android.systemui.biometrics.shared.model.UdfpsOverlayParams
+import com.android.systemui.biometrics.ui.viewmodel.UdfpsTouchOverlayViewModel
 import com.android.systemui.common.coroutine.ChannelExt.trySendWithFailureLogging
-import com.android.systemui.common.coroutine.ConflatedCallbackFlow
+import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.res.R
@@ -31,6 +32,7 @@ import com.android.systemui.user.domain.interactor.SelectedUserInteractor
 import javax.inject.Inject
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +42,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /** Encapsulates business logic for interacting with the UDFPS overlay. */
 @SysUISingleton
@@ -50,7 +53,7 @@ constructor(
     private val authController: AuthController,
     private val selectedUserInteractor: SelectedUserInteractor,
     private val fingerprintManager: FingerprintManager?,
-    @Application scope: CoroutineScope,
+    @Application private val scope: CoroutineScope,
 ) {
     private fun calculateIconSize(): Int {
         val pixelPitch = context.resources.getFloat(R.dimen.pixel_pitch)
@@ -101,7 +104,7 @@ constructor(
 
     /** Returns the current udfpsOverlayParams */
     val udfpsOverlayParams: StateFlow<UdfpsOverlayParams> =
-        ConflatedCallbackFlow.conflatedCallbackFlow {
+        conflatedCallbackFlow {
                 val callback =
                     object : AuthController.Callback {
                         override fun onUdfpsLocationChanged(
@@ -130,6 +133,35 @@ constructor(
                 max(0, (nativePadding * params.scaleFactor).toInt())
             }
             .distinctUntilChanged()
+
+    private var isUpdatingSetHandleTouchesJob: Job? = null
+
+    fun stopHandlingTouches() {
+        isUpdatingSetHandleTouchesJob?.cancel()
+        isUpdatingSetHandleTouchesJob = null
+    }
+
+    fun setTouchHandlingViewModel(touchOverlayViewModel: UdfpsTouchOverlayViewModel) {
+        if (isUpdatingSetHandleTouchesJob != null) {
+            Log.w(
+                TAG,
+                "$touchOverlayViewModel setTouchHandlingViewModel is called when " +
+                    "there's already an existing viewModel handling touches. This shouldn't occur.",
+            )
+            stopHandlingTouches()
+        }
+        isUpdatingSetHandleTouchesJob =
+            scope.launch {
+                touchOverlayViewModel.shouldHandleTouches.collect {
+                    Log.d(TAG, "$touchOverlayViewModel update shouldHandleTouches=$it")
+                    setHandleTouches(it)
+                }
+            }
+        isUpdatingSetHandleTouchesJob?.invokeOnCompletion {
+            Log.d(TAG, "$touchOverlayViewModel" + " invokeOnCompletion shouldHandleTouches=false")
+            setHandleTouches(false)
+        }
+    }
 
     companion object {
         private const val TAG = "UdfpsOverlayInteractor"

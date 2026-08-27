@@ -17,17 +17,16 @@
 
 package com.android.systemui.user.ui.viewmodel
 
+import android.content.Context
 import android.graphics.drawable.Drawable
 import com.android.systemui.animation.Expandable
 import com.android.systemui.common.shared.model.Text
 import com.android.systemui.user.domain.interactor.UserSwitcherInteractor
+import com.android.systemui.util.kotlin.mapDirect
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.mapLatest
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class StatusBarUserChipViewModel
 @Inject
 constructor(private val interactor: UserSwitcherInteractor) {
@@ -40,16 +39,18 @@ constructor(private val interactor: UserSwitcherInteractor) {
         if (!chipEnabled) {
             flowOf(false)
         } else {
-            interactor.users.mapLatest { users -> users.size > 1 }
+            interactor.users.mapDirect { users -> users.size > 1 }
         }
 
     /** The display name of the current user */
-    val userName: Flow<Text> = interactor.selectedUser.mapLatest { userModel -> userModel.name }
+    val userName: Flow<Text> = interactor.selectedUser.mapDirect { userModel -> userModel.name }
 
     /** Avatar for the current user */
     val userAvatar: Flow<Drawable> =
-        interactor.selectedUser.mapLatest { userModel -> userModel.image }
+        interactor.selectedUser.mapDirect { userModel -> userModel.image }
 
     /** Action to execute on click. Should launch the user switcher */
-    val onClick: (Expandable) -> Unit = { interactor.showUserSwitcher(it) }
+    val onClick: (Expandable, Context) -> Unit = { expandable, context ->
+        interactor.showUserSwitcher(expandable, context)
+    }
 }

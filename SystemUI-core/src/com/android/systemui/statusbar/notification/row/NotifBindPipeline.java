@@ -172,7 +172,6 @@ public final class NotifBindPipeline {
      */
     private void startPipeline(NotificationEntry entry) {
         mLogger.logStartPipeline(entry);
-
         if (mStage == null) {
             throw new IllegalStateException("No stage was ever set on the pipeline");
         }
@@ -217,6 +216,11 @@ public final class NotifBindPipeline {
             }
             mStage.deleteStageParams(entry);
             mStartProcessor.cancel(entry);
+        }
+
+        @Override
+        public void onEntryRemoved(NotificationEntry entry, int reason) {
+            entry.removeRow();
         }
     };
 

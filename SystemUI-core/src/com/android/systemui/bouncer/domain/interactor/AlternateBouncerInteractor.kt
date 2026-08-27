@@ -16,23 +16,32 @@
 
 package com.android.systemui.bouncer.domain.interactor
 
+import android.app.StatusBarManager
 import android.util.Log
-import com.android.systemui.biometrics.data.repository.FingerprintPropertyRepository
+import com.android.internal.logging.UiEventLogger
+import com.android.systemui.Flags
+import com.android.systemui.biometrics.domain.interactor.FingerprintPropertyInteractor
 import com.android.systemui.bouncer.data.repository.KeyguardBouncerRepository
+import com.android.systemui.bouncer.shared.logging.BouncerUiEvent
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryBiometricsAllowedInteractor
+import com.android.systemui.display.domain.interactor.DisplayStateInteractor
+import com.android.systemui.display.domain.interactor.DisplayTypeInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
+import com.android.systemui.log.SessionTracker
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes
+import com.android.systemui.securelockdevice.domain.interactor.SecureLockDeviceInteractor
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.util.kotlin.BooleanFlowOperators.anyOf
-import com.android.systemui.util.time.SystemClock
 import dagger.Lazy
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
@@ -46,26 +55,35 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
 /** Encapsulates business logic for interacting with the lock-screen alternate bouncer. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class AlternateBouncerInteractor
 @Inject
 constructor(
     private val bouncerRepository: KeyguardBouncerRepository,
-    fingerprintPropertyRepository: FingerprintPropertyRepository,
-    private val systemClock: SystemClock,
+    fingerprintPropertyInteractor: FingerprintPropertyInteractor,
+    @ShadeDisplayAware private val displayTypeInteractor: DisplayTypeInteractor,
     private val deviceEntryBiometricsAllowedInteractor:
         Lazy<DeviceEntryBiometricsAllowedInteractor>,
     private val keyguardInteractor: Lazy<KeyguardInteractor>,
     keyguardTransitionInteractor: Lazy<KeyguardTransitionInteractor>,
+    displayStateInteractor: Lazy<DisplayStateInteractor>,
     sceneInteractor: Lazy<SceneInteractor>,
+    secureLockDeviceInteractor: Lazy<SecureLockDeviceInteractor>,
     @Application scope: CoroutineScope,
+    private val uiEventLogger: UiEventLogger,
+    private val sessionTracker: SessionTracker,
 ) {
-    var receivedDownTouch = false
-    val isVisible: Flow<Boolean> = bouncerRepository.alternateBouncerVisible
-    private val alternateBouncerUiAvailableFromSource: HashSet<String> = HashSet()
+    private var receivedDownTouch = false
+
+    val isVisible: StateFlow<Boolean> = bouncerRepository.alternateBouncerVisible
+
     val alternateBouncerSupported: StateFlow<Boolean> =
-        fingerprintPropertyRepository.sensorType
-            .map { sensorType -> sensorType.isUdfps() || sensorType.isPowerButton() }
+        combine(fingerprintPropertyInteractor.isUdfps, fingerprintPropertyInteractor.isSideFps) {
+                isUdfps,
+                isSideFps ->
+                isUdfps || isSideFps
+            }
             .stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = false)
 
     private val isDozingOrAod: Flow<Boolean> =
@@ -79,6 +97,18 @@ constructor(
             )
             .distinctUntilChanged()
 
+    private val currentDisplaySupported: Flow<Boolean> =
+        combine(
+            displayTypeInteractor.isInternalDisplay,
+            fingerprintPropertyInteractor.isSideFps,
+            displayStateInteractor.get().isInRearDisplayMode,
+        ) { isInternalDisplay, isSideFps, isInRearDisplayMode ->
+            // Alternate Bouncer is only supported on internal displays
+            (!Flags.standaloneFingerprintLockScreenUxFix() || isInternalDisplay) &&
+                // SideFPS doesn't support AlternateBouncer in rear display mode
+                !(isSideFps && isInRearDisplayMode)
+        }
+
     /**
      * Whether the current biometric, bouncer, and keyguard states allow the alternate bouncer to
      * show.
@@ -90,10 +120,14 @@ constructor(
                     combine(
                             keyguardTransitionInteractor.get().currentKeyguardState,
                             sceneInteractor.get().currentScene,
-                            ::Pair,
+                            secureLockDeviceInteractor.get().isSecureLockDeviceEnabled,
+                            ::Triple,
                         )
-                        .flatMapLatest { (currentKeyguardState, transitionState) ->
-                            if (currentKeyguardState == KeyguardState.GONE) {
+                        .flatMapLatest {
+                            (currentKeyguardState, transitionState, secureLockDeviceEnabled) ->
+                            if (secureLockDeviceEnabled) {
+                                flowOf(false)
+                            } else if (currentKeyguardState == KeyguardState.GONE) {
                                 flowOf(false)
                             } else if (
                                 SceneContainerFlag.isEnabled && transitionState == Scenes.Gone
@@ -105,17 +139,20 @@ constructor(
                                         .get()
                                         .isFingerprintAuthCurrentlyAllowed,
                                     keyguardInteractor.get().isKeyguardDismissible,
-                                    bouncerRepository.primaryBouncerShow,
+                                    keyguardInteractor.get().primaryBouncerShowing,
                                     isDozingOrAod,
+                                    currentDisplaySupported,
                                 ) {
                                     fingerprintAllowed,
                                     keyguardDismissible,
                                     primaryBouncerShowing,
-                                    dozing ->
+                                    dozing,
+                                    currentDisplaySupported ->
                                     fingerprintAllowed &&
                                         !keyguardDismissible &&
                                         !primaryBouncerShowing &&
-                                        !dozing
+                                        !dozing &&
+                                        currentDisplaySupported
                                 }
                             }
                         }
@@ -132,6 +169,12 @@ constructor(
      * calling this.
      */
     fun forceShow() {
+        uiEventLogger.logWithInstanceId(
+            BouncerUiEvent.ALTERNATE_BOUNCER_SHOWN,
+            0,
+            null,
+            sessionTracker.getSessionId(StatusBarManager.SESSION_KEYGUARD),
+        )
         bouncerRepository.setAlternateVisible(true)
     }
 
@@ -158,15 +201,6 @@ constructor(
     }
 
     /**
-     * Whether the alt bouncer has shown for a minimum time before allowing touches to dismiss the
-     * alternate bouncer and show the primary bouncer.
-     */
-    fun hasAlternateBouncerShownWithMinTime(): Boolean {
-        return (systemClock.uptimeMillis() - bouncerRepository.lastAlternateBouncerVisibleTime) >
-            MIN_VISIBILITY_DURATION_UNTIL_TOUCHES_DISMISS_ALTERNATE_BOUNCER_MS
-    }
-
-    /**
      * Should only be called through StatusBarKeyguardViewManager which propagates the source of
      * truth to other concerned controllers. Will hide the alternate bouncer if it's no longer
      * allowed to show.
@@ -181,8 +215,6 @@ constructor(
     }
 
     companion object {
-        private const val MIN_VISIBILITY_DURATION_UNTIL_TOUCHES_DISMISS_ALTERNATE_BOUNCER_MS = 200L
-
         private const val TAG = "AlternateBouncerInteractor"
     }
 }

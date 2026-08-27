@@ -23,20 +23,20 @@ import androidx.constraintlayout.widget.ConstraintSet
 import com.android.systemui.deviceentry.ui.binder.UdfpsAccessibilityOverlayBinder
 import com.android.systemui.deviceentry.ui.view.UdfpsAccessibilityOverlay
 import com.android.systemui.deviceentry.ui.viewmodel.DeviceEntryUdfpsAccessibilityOverlayViewModel
-import com.android.systemui.keyguard.KeyguardBottomAreaRefactor
+import com.android.systemui.keyguard.domain.interactor.KeyguardTouchHandlingInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardSection
 import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.util.boundsOnScreen
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /** Positions the UDFPS accessibility overlay on the bottom half of the keyguard. */
-@ExperimentalCoroutinesApi
 class DefaultUdfpsAccessibilityOverlaySection
 @Inject
 constructor(
     @ShadeDisplayAware private val context: Context,
     private val viewModel: DeviceEntryUdfpsAccessibilityOverlayViewModel,
+    private val keyguardTouchHandlingInteractor: KeyguardTouchHandlingInteractor,
 ) : KeyguardSection() {
     private val viewId = R.id.udfps_accessibility_overlay
     private var cachedConstraintLayout: ConstraintLayout? = null
@@ -47,10 +47,7 @@ constructor(
     }
 
     override fun bindData(constraintLayout: ConstraintLayout) {
-        UdfpsAccessibilityOverlayBinder.bind(
-            constraintLayout.findViewById(viewId)!!,
-            viewModel,
-        )
+        UdfpsAccessibilityOverlayBinder.bind(constraintLayout.findViewById(viewId)!!, viewModel)
     }
 
     override fun applyConstraints(constraintSet: ConstraintSet) {
@@ -67,16 +64,17 @@ constructor(
                 ConstraintSet.BOTTOM,
             )
 
-            if (KeyguardBottomAreaRefactor.isEnabled) {
-                connect(
-                    viewId,
-                    ConstraintSet.BOTTOM,
-                    R.id.keyguard_indication_area,
-                    ConstraintSet.TOP,
-                )
-            } else {
-                connect(viewId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM)
-            }
+            connect(viewId, ConstraintSet.BOTTOM, R.id.keyguard_indication_area, ConstraintSet.TOP)
+        }
+        val udfpsAccessibilityOverlay =
+            cachedConstraintLayout?.findViewById<UdfpsAccessibilityOverlay>(
+                R.id.udfps_accessibility_overlay
+            )
+        val udfpsAccessibilityOverlayBounds = udfpsAccessibilityOverlay?.boundsOnScreen
+        if (udfpsAccessibilityOverlayBounds != null) {
+            keyguardTouchHandlingInteractor.setUdfpsAccessibilityOverlayBounds(
+                udfpsAccessibilityOverlayBounds
+            )
         }
     }
 

@@ -35,7 +35,6 @@ import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.PluginDependencyProvider;
 import com.android.systemui.plugins.VolumeDialog;
 import com.android.systemui.plugins.VolumeDialogController;
-import com.android.systemui.qs.tiles.DndTile;
 import com.android.systemui.statusbar.policy.ExtensionController;
 import com.android.systemui.tuner.TunerService;
 
@@ -163,7 +162,6 @@ public class VolumeDialogComponent implements VolumeComponent, TunerService.Tuna
 
     private void applyConfiguration() {
         mController.setVolumePolicy(mVolumePolicy);
-        mController.showDndTile();
     }
 
     @Override
@@ -193,7 +191,6 @@ public class VolumeDialogComponent implements VolumeComponent, TunerService.Tuna
     @Override
     public void register() {
         mController.register();
-        DndTile.setCombinedIcon(mContext, true);
     }
 
     @Override
@@ -204,7 +201,7 @@ public class VolumeDialogComponent implements VolumeComponent, TunerService.Tuna
         mActivityStarter.startActivity(intent, true /* onlyProvisioned */, true /* dismissShade */);
     }
 
-    private final VolumeDialogImpl.Callback mVolumeDialogCallback = new VolumeDialogImpl.Callback() {
+    private final VolumeDialog.Callback mVolumeDialogCallback = new VolumeDialog.Callback() {
         @Override
         public void onZenSettingsClicked() {
             startSettings(ZEN_SETTINGS);

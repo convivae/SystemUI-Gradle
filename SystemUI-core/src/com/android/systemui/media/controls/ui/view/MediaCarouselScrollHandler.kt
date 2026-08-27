@@ -23,24 +23,26 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
-import androidx.core.view.GestureDetectorCompat
+import androidx.annotation.VisibleForTesting
 import androidx.dynamicanimation.animation.FloatPropertyCompat
 import androidx.dynamicanimation.animation.SpringForce
 import com.android.app.tracing.TraceStateLogger
-import com.android.internal.annotations.VisibleForTesting
 import com.android.settingslib.Utils
 import com.android.systemui.Gefingerpoken
-import com.android.systemui.classifier.Classifier.NOTIFICATION_DISMISS
+import com.android.systemui.classifier.Classifier.MEDIA_CAROUSEL_SWIPE
 import com.android.systemui.media.controls.util.MediaUiEventLogger
+import com.android.systemui.media.remedia.shared.flag.MediaControlsInComposeFlag
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.qs.PageIndicator
 import com.android.systemui.res.R
 import com.android.systemui.util.animation.TransitionLayout
 import com.android.systemui.util.concurrency.DelayableExecutor
 import com.android.wm.shell.shared.animation.PhysicsAnimator
+import kotlin.math.abs
+import kotlin.math.sign
 
 private const val FLING_SLOP = 1000000
-private const val DISMISS_DELAY = 100L
+@VisibleForTesting const val DISMISS_DELAY = 100L
 private const val SCROLL_DELAY = 100L
 private const val RUBBERBAND_FACTOR = 0.2f
 private const val SETTINGS_BUTTON_TRANSLATION_FRACTION = 0.3f
@@ -63,8 +65,8 @@ class MediaCarouselScrollHandler(
     private var seekBarUpdateListener: (visibleToUser: Boolean) -> Unit,
     private val closeGuts: (immediate: Boolean) -> Unit,
     private val falsingManager: FalsingManager,
-    private val logSmartspaceImpression: (Boolean) -> Unit,
-    private val logger: MediaUiEventLogger
+    private val onVisibleCardChanged: () -> Unit,
+    private val logger: MediaUiEventLogger,
 ) {
     /** Trace state logger for media carousel visibility */
     private val visibleStateLogger = TraceStateLogger("$TAG#visibleToUser")
@@ -89,14 +91,14 @@ class MediaCarouselScrollHandler(
     private var mediaContent: ViewGroup
 
     /** The gesture detector to detect touch gestures */
-    private val gestureDetector: GestureDetectorCompat
+    private val gestureDetector: GestureDetector
 
     /** The settings button view */
     private lateinit var settingsButton: View
 
     /** What's the currently visible player index? */
     var visibleMediaIndex: Int = 0
-        private set
+        @VisibleForTesting set
 
     /** How much are we scrolled into the current media? */
     private var scrollIntoCurrentMedia: Int = 0
@@ -127,6 +129,9 @@ class MediaCarouselScrollHandler(
             scrollView.relativeScrollX = newRelativeScroll
         }
 
+    /** Is scrolling disabled for the carousel */
+    var scrollingDisabled: Boolean = false
+
     /** Does the dismiss currently show the setting cog? */
     var showsSettingsButton: Boolean = false
 
@@ -137,14 +142,14 @@ class MediaCarouselScrollHandler(
                 eStart: MotionEvent?,
                 eCurrent: MotionEvent,
                 vX: Float,
-                vY: Float
+                vY: Float,
             ) = onFling(vX, vY)
 
             override fun onScroll(
                 down: MotionEvent?,
                 lastMotion: MotionEvent,
                 distanceX: Float,
-                distanceY: Float
+                distanceY: Float,
             ) = onScroll(down!!, lastMotion, distanceX)
 
             override fun onDown(e: MotionEvent): Boolean {
@@ -157,27 +162,31 @@ class MediaCarouselScrollHandler(
     val touchListener =
         object : Gefingerpoken {
             override fun onTouchEvent(motionEvent: MotionEvent?) = onTouch(motionEvent!!)
+
             override fun onInterceptTouchEvent(ev: MotionEvent?) = onInterceptTouch(ev!!)
         }
 
     /** A listener that is invoked when the scrolling changes to update player visibilities */
-    private val scrollChangedListener =
+    @VisibleForTesting
+    val scrollChangedListener =
         object : View.OnScrollChangeListener {
             override fun onScrollChange(
                 v: View?,
                 scrollX: Int,
                 scrollY: Int,
                 oldScrollX: Int,
-                oldScrollY: Int
+                oldScrollY: Int,
             ) {
                 if (playerWidthPlusPadding == 0) {
                     return
                 }
 
-                val relativeScrollX = scrollView.relativeScrollX
+                // Absolute value so we get the correct index - this can occasionally be flipped
+                // when adding new players in RTL mode
+                val relativeScrollX = abs(scrollView.relativeScrollX)
                 onMediaScrollingChanged(
                     relativeScrollX / playerWidthPlusPadding,
-                    relativeScrollX % playerWidthPlusPadding
+                    relativeScrollX % playerWidthPlusPadding,
                 )
             }
         }
@@ -196,23 +205,25 @@ class MediaCarouselScrollHandler(
     var qsExpanded: Boolean = false
 
     init {
-        gestureDetector = GestureDetectorCompat(scrollView.context, gestureListener)
-        scrollView.touchListener = touchListener
-        scrollView.setOverScrollMode(View.OVER_SCROLL_NEVER)
+        gestureDetector = GestureDetector(scrollView.context, gestureListener)
         mediaContent = scrollView.contentContainer
-        scrollView.setOnScrollChangeListener(scrollChangedListener)
-        scrollView.outlineProvider =
-            object : ViewOutlineProvider() {
-                override fun getOutline(view: View?, outline: Outline?) {
-                    outline?.setRoundRect(
-                        0,
-                        0,
-                        carouselWidth,
-                        carouselHeight,
-                        cornerRadius.toFloat()
-                    )
+        if (!MediaControlsInComposeFlag.isEnabled) {
+            scrollView.touchListener = touchListener
+            scrollView.setOverScrollMode(View.OVER_SCROLL_NEVER)
+            scrollView.setOnScrollChangeListener(scrollChangedListener)
+            scrollView.outlineProvider =
+                object : ViewOutlineProvider() {
+                    override fun getOutline(view: View?, outline: Outline?) {
+                        outline?.setRoundRect(
+                            0,
+                            0,
+                            carouselWidth,
+                            carouselHeight,
+                            cornerRadius.toFloat(),
+                        )
+                    }
                 }
-            }
+        }
     }
 
     fun onSettingsButtonUpdated(button: View) {
@@ -235,7 +246,7 @@ class MediaCarouselScrollHandler(
                     getMaxTranslation().toFloat(),
                     0.0f,
                     1.0f,
-                    Math.abs(contentTranslation)
+                    Math.abs(contentTranslation),
                 )
             val settingsTranslation =
                 (1.0f - settingsOffset) *
@@ -269,6 +280,10 @@ class MediaCarouselScrollHandler(
     }
 
     private fun onTouch(motionEvent: MotionEvent): Boolean {
+        if (scrollingDisabled) {
+            return false
+        }
+
         val isUp = motionEvent.action == MotionEvent.ACTION_UP
         if (gestureDetector.onTouchEvent(motionEvent)) {
             if (isUp) {
@@ -323,7 +338,7 @@ class MediaCarouselScrollHandler(
                         CONTENT_TRANSLATION,
                         newTranslation,
                         startVelocity = 0.0f,
-                        config = translationConfig
+                        config = translationConfig,
                     )
                     .start()
                 scrollView.animationTargetX = newTranslation
@@ -334,7 +349,7 @@ class MediaCarouselScrollHandler(
     }
 
     private fun isFalseTouch() =
-        falsingProtectionNeeded && falsingManager.isFalseTouch(NOTIFICATION_DISMISS)
+        falsingProtectionNeeded && falsingManager.isFalseTouch(MEDIA_CAROUSEL_SWIPE)
 
     private fun getMaxTranslation() =
         if (showsSettingsButton) {
@@ -348,6 +363,10 @@ class MediaCarouselScrollHandler(
     }
 
     fun onScroll(down: MotionEvent, lastMotion: MotionEvent, distanceX: Float): Boolean {
+        if (scrollingDisabled) {
+            return false
+        }
+
         val totalX = lastMotion.x - down.x
         val currentTranslation = scrollView.getContentTranslation()
         if (currentTranslation != 0.0f || !scrollView.canScrollHorizontally((-totalX).toInt())) {
@@ -391,7 +410,7 @@ class MediaCarouselScrollHandler(
                         CONTENT_TRANSLATION,
                         newTranslation,
                         startVelocity = 0.0f,
-                        config = translationConfig
+                        config = translationConfig,
                     )
                     .start()
             } else {
@@ -404,6 +423,10 @@ class MediaCarouselScrollHandler(
     }
 
     private fun onFling(vX: Float, vY: Float): Boolean {
+        if (scrollingDisabled) {
+            return false
+        }
+
         if (vX * vX < 0.5 * vY * vY) {
             return false
         }
@@ -430,7 +453,7 @@ class MediaCarouselScrollHandler(
                     CONTENT_TRANSLATION,
                     newTranslation,
                     startVelocity = vX,
-                    config = translationConfig
+                    config = translationConfig,
                 )
                 .start()
             scrollView.animationTargetX = newTranslation
@@ -478,7 +501,6 @@ class MediaCarouselScrollHandler(
             val oldIndex = visibleMediaIndex
             visibleMediaIndex = newIndex
             if (oldIndex != visibleMediaIndex && visibleToUser) {
-                logSmartspaceImpression(qsExpanded)
                 logger.logMediaCarouselPage(newIndex)
             }
             closeGuts(false)
@@ -529,6 +551,10 @@ class MediaCarouselScrollHandler(
             val visible = (i == visibleMediaIndex) || ((i == (visibleMediaIndex + 1)) && scrolledIn)
             view.visibility = if (visible) View.VISIBLE else View.INVISIBLE
         }
+        if (!scrolledIn) {
+            // Ignore events with a partial scroll, only proceed if the card is fully visible.
+            onVisibleCardChanged()
+        }
     }
 
     /**
@@ -575,6 +601,9 @@ class MediaCarouselScrollHandler(
      * @param destIndex destination index to indicate where the scroll should end.
      */
     fun scrollToPlayer(sourceIndex: Int = -1, destIndex: Int) {
+        if (scrollingDisabled) {
+            return
+        }
         if (sourceIndex >= 0 && sourceIndex < mediaContent.childCount) {
             scrollView.relativeScrollX = sourceIndex * playerWidthPlusPadding
         }
@@ -583,8 +612,36 @@ class MediaCarouselScrollHandler(
         // We need to post this to wait for the active player becomes visible.
         mainExecutor.executeDelayed(
             { scrollView.smoothScrollTo(view.left, scrollView.scrollY) },
-            SCROLL_DELAY
+            SCROLL_DELAY,
         )
+    }
+
+    /**
+     * Scrolls the media carousel by the number of players specified by [step]. If scrolling beyond
+     * the carousel's bounds:
+     * - If the carousel is not dismissible, the settings button is displayed.
+     * - If the carousel is dismissible, no action taken.
+     *
+     * @param step A positive number means next, and negative means previous.
+     */
+    fun scrollByStep(step: Int) {
+        if (scrollingDisabled) {
+            return
+        }
+        val destIndex = visibleMediaIndex + step
+        if (destIndex >= mediaContent.childCount || destIndex < 0) {
+            if (!showsSettingsButton) return
+            var translation = getMaxTranslation() * sign(-step.toFloat())
+            translation = if (isRtl) -translation else translation
+            PhysicsAnimator.getInstance(this)
+                .spring(CONTENT_TRANSLATION, translation, config = translationConfig)
+                .start()
+            scrollView.animationTargetX = translation
+        } else if (scrollView.getContentTranslation() != 0.0f) {
+            resetTranslation(true)
+        } else {
+            scrollToPlayer(destIndex = destIndex)
+        }
     }
 
     companion object {

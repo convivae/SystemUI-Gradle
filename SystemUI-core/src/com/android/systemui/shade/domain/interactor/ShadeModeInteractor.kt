@@ -16,17 +16,26 @@
 
 package com.android.systemui.shade.domain.interactor
 
-import androidx.annotation.FloatRange
-import com.android.systemui.dagger.qualifiers.Application
-import com.android.systemui.shade.data.repository.ShadeRepository
-import com.android.systemui.shade.shared.flag.DualShade
+import android.util.Log
+import androidx.compose.ui.Alignment
+import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.log.table.TableLogBuffer
+import com.android.systemui.log.table.logDiffsForTable
+import com.android.systemui.scene.domain.SceneFrameworkTableLog
+import com.android.systemui.shade.data.repository.ShadeConfigRepository
+import com.android.systemui.shade.shared.flag.DualShadeFlag
 import com.android.systemui.shade.shared.model.ShadeMode
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -35,21 +44,26 @@ import kotlinx.coroutines.flow.stateIn
  */
 interface ShadeModeInteractor {
 
-    /**
-     * The version of the shade layout to use.
-     *
-     * Note: Most likely, you want to read [isShadeLayoutWide] instead of this.
-     */
+    /** The version of the shade layout to use. */
     val shadeMode: StateFlow<ShadeMode>
 
     /**
-     * Whether the shade layout should be wide (true) or narrow (false).
+     * Whether the shade layout should be full width (true) or floating (false).
      *
-     * In a wide layout, notifications and quick settings each take up only half the screen width
-     * (whether they are shown at the same time or not). In a narrow layout, they can each be as
-     * wide as the entire screen.
+     * In a floating (aka wide) layout, notifications and quick settings each take up only up to
+     * half the screen width (whether they are shown at the same time or not).
+     *
+     * In a full width (aka narrow) layout, they can each be as wide as the entire screen.
+     *
+     * Note: In non-Dual-Shade modes, this value may be `true` even when the screen is wide.
      */
-    val isShadeLayoutWide: StateFlow<Boolean>
+    val isFullWidthShade: StateFlow<Boolean>
+
+    /**
+     * The horizontal alignment of the notification stack on the screen. This determines the
+     * position of the notifications shade, lockscreen content columns, HUNs, etc.
+     */
+    val notificationStackHorizontalAlignment: StateFlow<Alignment.Horizontal>
 
     /** Convenience shortcut for querying whether the current [shadeMode] is [ShadeMode.Dual]. */
     val isDualShade: Boolean
@@ -58,64 +72,135 @@ interface ShadeModeInteractor {
     /** Convenience shortcut for querying whether the current [shadeMode] is [ShadeMode.Split]. */
     val isSplitShade: Boolean
         get() = shadeMode.value is ShadeMode.Split
-
-    /**
-     * The fraction between [0..1] (i.e., percentage) of screen width to consider the threshold
-     * between "top-left" and "top-right" for the purposes of dual-shade invocation.
-     *
-     * When the dual-shade is not wide, this always returns 0.5 (the top edge is evenly split). On
-     * wide layouts however, a larger fraction is returned because only the area of the system
-     * status icons is considered top-right.
-     *
-     * Note that this fraction only determines the split between the absolute left and right
-     * directions. In RTL layouts, the "top-start" edge will resolve to "top-right", and "top-end"
-     * will resolve to "top-left".
-     */
-    @FloatRange(from = 0.0, to = 1.0) fun getTopEdgeSplitFraction(): Float
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ShadeModeInteractorImpl
 @Inject
 constructor(
-    @Application applicationScope: CoroutineScope,
-    private val repository: ShadeRepository,
+    @Background applicationScope: CoroutineScope,
+    private val shadeConfigRepository: ShadeConfigRepository,
+    @SceneFrameworkTableLog private val tableLogBuffer: TableLogBuffer,
 ) : ShadeModeInteractor {
 
-    override val isShadeLayoutWide: StateFlow<Boolean> = repository.isShadeLayoutWide
+    private val isDualShadeEnabled: StateFlow<Boolean> =
+        if (DualShadeFlag.isEnabled) {
+            shadeConfigRepository.useDualShadeSetting
+                .flatMapLatest { useSetting ->
+                    if (useSetting) {
+                        Log.d(TAG, "Using Dual Shade setting")
+                        shadeConfigRepository.isDualShadeSettingEnabled.onEach {
+                            Log.d(
+                                TAG,
+                                "Dual Shade is ${if (it) "enabled" else "disabled"} by the setting",
+                            )
+                        }
+                    } else {
+                        Log.d(TAG, "Overriding Dual Shade setting")
+                        shadeConfigRepository.isDualShadeEnabledByDefault.onEach {
+                            Log.d(
+                                TAG,
+                                "Dual Shade is ${if (it) "enabled" else "disabled"} by default",
+                            )
+                        }
+                    }
+                }
+                .stateIn(
+                    applicationScope,
+                    SharingStarted.Eagerly,
+                    initialValue = shadeConfigRepository.isDualShadeEnabledByDefault(),
+                )
+        } else {
+            Log.d(TAG, "The Dual Shade feature flag is disabled")
+            MutableStateFlow(false)
+        }
 
-    override val shadeMode: StateFlow<ShadeMode> =
-        isShadeLayoutWide
-            .map(this::determineShadeMode)
+    override val isFullWidthShade: StateFlow<Boolean> =
+        if (DualShadeFlag.isEnabled) {
+                isDualShadeEnabled.flatMapLatest { isDualShadeEnabled ->
+                    if (isDualShadeEnabled) {
+                        // Dual Shade should be shown
+                        Log.d(TAG, "Shade layout is derived from the Dual Shade config")
+                        shadeConfigRepository.isFullWidthShade
+                    } else {
+                        // Single shade should be shown
+                        Log.d(TAG, "Single shade is always full-width")
+                        flowOf(true)
+                    }
+                }
+            } else {
+                Log.d(TAG, "Shade layout is derived from the legacy config")
+                shadeConfigRepository.legacyUseSplitShade.map { !it }
+            }
+            .logDiffsForTable(
+                tableLogBuffer = tableLogBuffer,
+                initialValue = shadeConfigRepository.isFullWidthShade(),
+                columnName = "isFullWidthShade",
+            )
             .stateIn(
                 applicationScope,
                 SharingStarted.Eagerly,
-                initialValue = determineShadeMode(isShadeLayoutWide.value),
+                initialValue = shadeConfigRepository.isFullWidthShade(),
             )
 
-    @FloatRange(from = 0.0, to = 1.0)
-    override fun getTopEdgeSplitFraction(): Float {
-        // Note: this implicitly relies on isShadeLayoutWide being hot (i.e. collected). This
-        // assumption allows us to query its value on demand (during swipe source detection) instead
-        // of running another infinite coroutine.
-        // TODO(b/338577208): Instead of being fixed at 0.8f, this should dynamically updated based
-        //  on the position of system-status icons in the status bar.
-        return if (repository.isShadeLayoutWide.value) 0.8f else 0.5f
+    private val shadeModeInitialValue: ShadeMode
+        get() =
+            determineShadeMode(
+                isDualShadeEnabled = isDualShadeEnabled.value,
+                isFullWidthShade = isFullWidthShade.value,
+            )
+
+    override val shadeMode: StateFlow<ShadeMode> =
+        combine(isDualShadeEnabled, isFullWidthShade, ::determineShadeMode)
+            .logDiffsForTable(tableLogBuffer = tableLogBuffer, initialValue = shadeModeInitialValue)
+            .stateIn(applicationScope, SharingStarted.Eagerly, initialValue = shadeModeInitialValue)
+
+    private fun determineShadeMode(
+        isDualShadeEnabled: Boolean,
+        isFullWidthShade: Boolean,
+    ): ShadeMode {
+        return if (DualShadeFlag.isEnabled) {
+            if (isDualShadeEnabled) ShadeMode.Dual else ShadeMode.Single
+        } else {
+            if (isFullWidthShade) ShadeMode.Single else ShadeMode.Split
+        }
     }
 
-    private fun determineShadeMode(isShadeLayoutWide: Boolean): ShadeMode {
-        return when {
-            DualShade.isEnabled -> ShadeMode.Dual
-            isShadeLayoutWide -> ShadeMode.Split
-            else -> ShadeMode.Single
-        }
+    override val notificationStackHorizontalAlignment: StateFlow<Alignment.Horizontal> =
+        combine(shadeMode, isFullWidthShade, shadeConfigRepository.isNotificationShadeOnTopEnd) {
+                shadeMode,
+                isFullWidthShade,
+                isNotificationShadeOnTopEnd ->
+                when (shadeMode) {
+                    is ShadeMode.Single -> Alignment.CenterHorizontally
+                    is ShadeMode.Split -> Alignment.End
+                    is ShadeMode.Dual ->
+                        if (isFullWidthShade) {
+                            Alignment.CenterHorizontally
+                        } else if (isNotificationShadeOnTopEnd) {
+                            Alignment.End
+                        } else {
+                            Alignment.Start
+                        }
+                }
+            }
+            .stateIn(
+                scope = applicationScope,
+                started = SharingStarted.Eagerly,
+                initialValue = Alignment.CenterHorizontally,
+            )
+
+    companion object {
+        private const val TAG = "ShadeModeInteractorImpl"
     }
 }
 
-class ShadeModeInteractorEmptyImpl @Inject constructor() : ShadeModeInteractor {
+open class ShadeModeInteractorEmptyImpl @Inject constructor() : ShadeModeInteractor {
 
     override val shadeMode: StateFlow<ShadeMode> = MutableStateFlow(ShadeMode.Single)
 
-    override val isShadeLayoutWide: StateFlow<Boolean> = MutableStateFlow(false)
+    override val isFullWidthShade: StateFlow<Boolean> = MutableStateFlow(true)
 
-    override fun getTopEdgeSplitFraction(): Float = 0.5f
+    override val notificationStackHorizontalAlignment: StateFlow<Alignment.Horizontal> =
+        MutableStateFlow(Alignment.CenterHorizontally)
 }

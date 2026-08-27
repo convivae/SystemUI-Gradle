@@ -16,23 +16,26 @@
 
 package com.android.systemui.touchpad.tutorial.ui.composable
 
-import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.android.compose.theme.LocalAndroidColorScheme
+import com.android.systemui.Flags
 import com.android.systemui.inputdevice.tutorial.ui.composable.TutorialScreenConfig
 import com.android.systemui.inputdevice.tutorial.ui.composable.rememberColorFilterProperty
 import com.android.systemui.res.R
-import com.android.systemui.touchpad.tutorial.ui.gesture.GestureFlowAdapter
-import com.android.systemui.touchpad.tutorial.ui.gesture.GestureRecognizer
-import com.android.systemui.touchpad.tutorial.ui.gesture.HomeGestureRecognizer
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import com.android.systemui.touchpad.tutorial.ui.viewmodel.EasterEggGestureViewModel
+import com.android.systemui.touchpad.tutorial.ui.viewmodel.HomeGestureScreenViewModel
 
 @Composable
-fun HomeGestureTutorialScreen(onDoneButtonClicked: () -> Unit, onBack: () -> Unit) {
+fun HomeGestureTutorialScreen(
+    viewModel: HomeGestureScreenViewModel,
+    easterEggGestureViewModel: EasterEggGestureViewModel,
+    onDoneButtonClicked: () -> Unit,
+    onBack: () -> Unit,
+    onAutoProceed: (suspend () -> Unit)? = null,
+) {
+    val updatedTutorialFlagEnabled = Flags.touchpadGestureTutorialBugFixes()
     val screenConfig =
         TutorialScreenConfig(
             colors = rememberScreenColors(),
@@ -42,29 +45,36 @@ fun HomeGestureTutorialScreen(onDoneButtonClicked: () -> Unit, onBack: () -> Uni
                     bodyResId = R.string.touchpad_home_gesture_guidance,
                     titleSuccessResId = R.string.touchpad_home_gesture_success_title,
                     bodySuccessResId = R.string.touchpad_home_gesture_success_body,
+                    titleErrorResId = R.string.gesture_error_title,
+                    bodyErrorResId = R.string.touchpad_home_gesture_error_body,
+                    titlePartialSuccessResId =
+                        if (updatedTutorialFlagEnabled)
+                            R.string.touchpad_home_gesture_partial_success_title
+                        else null,
+                    bodyPartialSuccessResId =
+                        if (updatedTutorialFlagEnabled)
+                            R.string.touchpad_home_gesture_partial_success_body
+                        else null,
                 ),
-            animations = TutorialScreenConfig.Animations(educationResId = R.raw.trackpad_home_edu),
+            animations =
+                TutorialScreenConfig.Animations(
+                    if (updatedTutorialFlagEnabled) R.raw.trackpad_recent_then_home_edu
+                    else R.raw.trackpad_home_edu
+                ),
         )
-    val recognizer = rememberHomeGestureRecognizer(LocalContext.current.resources)
-    val gestureUiState: Flow<GestureUiState> =
-        remember(recognizer) {
-            GestureFlowAdapter(recognizer).gestureStateAsFlow.map {
-                it.toGestureUiState(
-                    progressStartMarker = "drag with gesture",
-                    progressEndMarker = "release playback realtime",
-                    successAnimation = R.raw.trackpad_home_success,
-                )
-            }
-        }
-    GestureTutorialScreen(screenConfig, recognizer, gestureUiState, onDoneButtonClicked, onBack)
-}
-
-@Composable
-private fun rememberHomeGestureRecognizer(resources: Resources): GestureRecognizer {
-    val distance =
-        resources.getDimensionPixelSize(R.dimen.touchpad_tutorial_gestures_distance_threshold)
-    val velocity = resources.getDimension(R.dimen.touchpad_home_gesture_velocity_threshold)
-    return remember(distance) { HomeGestureRecognizer(distance, velocity) }
+    GestureTutorialScreen(
+        screenConfig = screenConfig,
+        tutorialStateFlow = viewModel.tutorialState,
+        motionEventConsumer = {
+            easterEggGestureViewModel.accept(it)
+            viewModel.handleEvent(it)
+        },
+        easterEggTriggeredFlow = easterEggGestureViewModel.easterEggTriggered,
+        onEasterEggFinished = easterEggGestureViewModel::onEasterEggFinished,
+        onDoneButtonClicked = onDoneButtonClicked,
+        onBack = onBack,
+        onAutoProceed = onAutoProceed,
+    )
 }
 
 @Composable

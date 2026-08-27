@@ -20,10 +20,12 @@ import static android.permission.flags.Flags.sensitiveNotificationAppProtection;
 import static android.provider.Settings.Global.DISABLE_SCREEN_SHARE_PROTECTIONS_FOR_APPS_AND_NOTIFICATIONS;
 
 import static com.android.server.notification.Flags.screenshareNotificationHiding;
-import static com.android.systemui.Flags.screenshareNotificationHidingBugFix;
 
 import android.annotation.MainThread;
 import android.app.IActivityManager;
+import android.app.role.OnRoleHoldersChangedListener;
+import android.app.role.RoleManager;
+import android.companion.AssociationRequest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.ExecutorContentObserver;
@@ -51,6 +53,8 @@ import com.android.systemui.util.Assert;
 import com.android.systemui.util.ListenerSet;
 import com.android.systemui.util.settings.GlobalSettings;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.Executor;
 
@@ -63,12 +67,14 @@ public class SensitiveNotificationProtectionControllerImpl
     private static final String LOG_TAG = "SNPC";
     private final SensitiveNotificationProtectionControllerLogger mLogger;
     private final PackageManager mPackageManager;
+    private final RoleManager mRoleManager;
     // Packages exempt from projection session protections (if they start a projection session)
     private final ArraySet<String> mSessionProtectionExemptPackages = new ArraySet<>();
     // Packages exempt from individual notification protections (if they post a notification)
     private final ArraySet<String> mNotificationProtectionExemptPackages = new ArraySet<>();
     private final ListenerSet<Runnable> mListeners = new ListenerSet<>();
     private volatile MediaProjectionInfo mProjection;
+    private ArraySet<RoleHolder> mNotificationProtectionExemptByRolePackages = new ArraySet<>();
     private SensitiveNotificatioMediaProjectionSession mActiveMediaProjectionSession;
     boolean mDisableScreenShareProtections = false;
 
@@ -128,6 +134,27 @@ public class SensitiveNotificationProtectionControllerImpl
                 }
             };
 
+    @VisibleForTesting
+    final OnRoleHoldersChangedListener mRoleHoldersChangedListener =
+            new OnRoleHoldersChangedListener() {
+                @Override
+                public void onRoleHoldersChanged(@NonNull String roleName,
+                        @NonNull UserHandle user) {
+                    if (!roleName.equals(AssociationRequest.DEVICE_PROFILE_APP_STREAMING)) {
+                        return;
+                    }
+
+                    List<String> appStreamingRoleHolders = mRoleManager.getRoleHoldersAsUser(
+                            roleName, user);
+                    ArraySet<RoleHolder> roleHolders = new ArraySet<>();
+                    for (String appStreamingRoleHolder : appStreamingRoleHolders) {
+                        RoleHolder roleHolder = new RoleHolder(appStreamingRoleHolder, user);
+                        roleHolders.add(roleHolder);
+                    }
+                    mNotificationProtectionExemptByRolePackages = roleHolders;
+                }
+            };
+
     private void logSensitiveContentProtectionSessionStart(
             long sessionId, int projectionAppUid, boolean exempt) {
         mActiveMediaProjectionSession =
@@ -166,11 +193,13 @@ public class SensitiveNotificationProtectionControllerImpl
             IActivityManager activityManager,
             PackageManager packageManager,
             TelephonyManager telephonyManager,
+            RoleManager roleManager,
             @Main Handler mainHandler,
             @Background Executor bgExecutor,
             SensitiveNotificationProtectionControllerLogger logger) {
         mLogger = logger;
         mPackageManager = packageManager;
+        mRoleManager = roleManager;
 
         if (!screenshareNotificationHiding()) {
             return;
@@ -215,6 +244,8 @@ public class SensitiveNotificationProtectionControllerImpl
         });
 
         mediaProjectionManager.addCallback(mMediaProjectionCallback, mainHandler);
+        roleManager.addOnRoleHoldersChangedListenerAsUser(bgExecutor, mRoleHoldersChangedListener,
+                UserHandle.ALL);
     }
 
     @NonNull
@@ -245,20 +276,18 @@ public class SensitiveNotificationProtectionControllerImpl
 
         // Get Emergency Assistance Package, all notifications from this package should not be
         // hidden/redacted.
-        if (screenshareNotificationHidingBugFix()) {
-            try {
-                String emergencyAssistancePackageName =
-                        telephonyManager.getEmergencyAssistancePackageName();
-                if (emergencyAssistancePackageName != null) {
-                    notificationProtectionExemptPackages.add(emergencyAssistancePackageName);
-                }
-            } catch (IllegalStateException e) {
-                Log.w(
-                        LOG_TAG,
-                        "Error adding emergency assistance package to exemption",
-                        e);
-                // silent failure, skip adding packages to exemption
+        try {
+            String emergencyAssistancePackageName =
+                    telephonyManager.getEmergencyAssistancePackageName();
+            if (emergencyAssistancePackageName != null) {
+                notificationProtectionExemptPackages.add(emergencyAssistancePackageName);
             }
+        } catch (IllegalStateException e) {
+            Log.w(
+                    LOG_TAG,
+                    "Error adding emergency assistance package to exemption",
+                    e);
+            // silent failure, skip adding packages to exemption
         }
         return notificationProtectionExemptPackages;
     }
@@ -274,9 +303,7 @@ public class SensitiveNotificationProtectionControllerImpl
             ArraySet<String> notificationProtectionExemptPackages) {
         Assert.isMainThread();
         mSessionProtectionExemptPackages.addAll(sessionProtectionExemptPackages);
-        if (screenshareNotificationHidingBugFix()) {
-            mNotificationProtectionExemptPackages.addAll(notificationProtectionExemptPackages);
-        }
+        mNotificationProtectionExemptPackages.addAll(notificationProtectionExemptPackages);
 
         if (mProjection != null) {
             updateProjectionStateAndNotifyListeners(mProjection);
@@ -314,6 +341,10 @@ public class SensitiveNotificationProtectionControllerImpl
             Log.w(LOG_TAG, "Screen share protections exempt for package " + info.getPackageName()
                     + " via permission");
             return null;
+        } else if (info != null && isAppStreamingRoleHolder(info)) {
+            Log.w(LOG_TAG, "Screen share protections exempt for package " + info.getPackageName()
+                    + " via role(s) held");
+            return null;
         } else if (info != null && info.getLaunchCookie() != null) {
             // Only enable sensitive content protection if sharing full screen
             // Launch cookie only set (non-null) if sharing single app/task
@@ -323,11 +354,16 @@ public class SensitiveNotificationProtectionControllerImpl
         return info;
     }
 
+    private boolean isAppStreamingRoleHolder(@NonNull MediaProjectionInfo info) {
+        return mNotificationProtectionExemptByRolePackages.contains(
+                new RoleHolder(info.getPackageName(), info.getUserHandle()));
+    }
+
     private boolean canRecordSensitiveContent(@NonNull String packageName) {
         // RECORD_SENSITIVE_CONTENT is flagged api on sensitiveNotificationAppProtection
         if (sensitiveNotificationAppProtection()) {
             return mPackageManager.checkPermission(
-                            android.Manifest.permission.RECORD_SENSITIVE_CONTENT, packageName)
+                    android.Manifest.permission.RECORD_SENSITIVE_CONTENT, packageName)
                     == PackageManager.PERMISSION_GRANTED;
         }
         return false;
@@ -367,12 +403,11 @@ public class SensitiveNotificationProtectionControllerImpl
             return false;
         }
 
-        if (screenshareNotificationHidingBugFix() && UserHandle.isCore(sbn.getUid())) {
+        if (UserHandle.isCore(sbn.getUid())) {
             return false; // do not hide/redact notifications from system uid
         }
 
-        if (screenshareNotificationHidingBugFix()
-                && mNotificationProtectionExemptPackages.contains(sbn.getPackageName())) {
+        if (mNotificationProtectionExemptPackages.contains(sbn.getPackageName())) {
             return false; // do not hide/redact notifications from emergency app
         }
 
@@ -381,5 +416,27 @@ public class SensitiveNotificationProtectionControllerImpl
         boolean notificationRequestsRedaction = entry.isNotificationVisibilityPrivate();
         boolean userForcesRedaction = entry.isChannelVisibilityPrivate();
         return notificationRequestsRedaction || userForcesRedaction;
+    }
+
+    private static final class RoleHolder {
+        private final String mPackageName;
+        private final UserHandle mUserHandle;
+
+        RoleHolder(String packageName, UserHandle userHandle) {
+            mPackageName = packageName;
+            mUserHandle = userHandle;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof RoleHolder that)) return false;
+            return Objects.equals(mPackageName, that.mPackageName) && Objects.equals(
+                    mUserHandle, that.mUserHandle);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mPackageName, mUserHandle);
+        }
     }
 }

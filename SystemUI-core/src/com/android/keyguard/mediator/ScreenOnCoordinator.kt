@@ -19,9 +19,10 @@ package com.android.keyguard.mediator
 import android.annotation.BinderThread
 import android.os.Handler
 import android.os.Trace
-import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
+import com.android.systemui.shade.display.EnsureWallpaperDrawnOnDisplaySwitch
+import com.android.systemui.shade.display.PendingDisplayChangeController
 import com.android.systemui.unfold.SysUIUnfoldComponent
 import com.android.systemui.util.concurrency.PendingTasksContainer
 import com.android.systemui.util.kotlin.getOrNull
@@ -40,6 +41,7 @@ class ScreenOnCoordinator
 constructor(
     unfoldComponent: Optional<SysUIUnfoldComponent>,
     @Main private val mainHandler: Handler,
+    private val pendingDisplayChangeController: PendingDisplayChangeController
 ) {
 
     private val foldAodAnimationController =
@@ -53,7 +55,7 @@ constructor(
      * called on a binder thread from [com.android.systemui.keyguard.KeyguardService].
      */
     @BinderThread
-    fun onScreenTurningOn(onDrawn: Runnable) {
+    fun onScreenTurningOn(reason: Int, onDrawn: Runnable) {
         Trace.beginSection("ScreenOnCoordinator#onScreenTurningOn")
 
         pendingTasks.reset()
@@ -63,13 +65,14 @@ constructor(
             it.onScreenTurningOn(pendingTasks.registerTask(it::class.java.simpleName))
         }
 
+        if (EnsureWallpaperDrawnOnDisplaySwitch.isEnabled) {
+            pendingDisplayChangeController.onScreenTurningOn(reason,
+                pendingTasks.registerTask("pending-display-change-controller"));
+        }
+
         pendingTasks.onTasksComplete {
-            if (Flags.enableBackgroundKeyguardOndrawnCallback()) {
-                // called by whatever thread completes the last task registered.
-                onDrawn.run()
-            } else {
-                mainHandler.post { onDrawn.run() }
-            }
+            // called by whatever thread completes the last task registered.
+            onDrawn.run()
         }
         Trace.endSection()
     }

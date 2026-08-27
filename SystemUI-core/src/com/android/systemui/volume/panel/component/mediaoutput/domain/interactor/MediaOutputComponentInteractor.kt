@@ -16,8 +16,8 @@
 
 package com.android.systemui.volume.panel.component.mediaoutput.domain.interactor
 
-import com.android.settingslib.media.PhoneMediaDevice.inputRoutingEnabledAndIsDesktop
 import android.content.Context
+import com.android.settingslib.media.PhoneMediaDevice.inputRoutingEnabledAndIsDesktop
 import com.android.settingslib.volume.domain.interactor.AudioModeInteractor
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.volume.domain.interactor.AudioOutputInteractor
@@ -31,7 +31,6 @@ import com.android.systemui.volume.panel.shared.model.filterData
 import com.android.systemui.volume.panel.shared.model.wrapInResult
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +43,6 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 
 /** Gathers together a domain state for the Media Output Volume Panel component. */
-@OptIn(ExperimentalCoroutinesApi::class)
 @VolumePanelScope
 class MediaOutputComponentInteractor
 @Inject
@@ -71,11 +69,7 @@ constructor(
                 }
             }
             .wrapInResult()
-            .stateIn(
-                coroutineScope,
-                SharingStarted.Eagerly,
-                Result.Loading(),
-            )
+            .stateIn(coroutineScope, SharingStarted.Eagerly, Result.Loading())
 
     private val currentAudioDevice: Flow<AudioOutputDevice> =
         audioOutputInteractor.currentAudioDevice.filter { it !is AudioOutputDevice.Unavailable }
@@ -106,8 +100,7 @@ constructor(
                                 device = currentAudioDevice,
                                 isInAudioSharing = isInAudioSharing,
                                 canOpenAudioSwitcher =
-                                    !isInAudioSharing &&
-                                        currentAudioDevice !is AudioOutputDevice.Unknown,
+                                    currentAudioDevice !is AudioOutputDevice.Unknown,
                             )
                         } else {
                             MediaOutputComponentModel.MediaSession(
@@ -116,8 +109,7 @@ constructor(
                                 device = currentAudioDevice,
                                 isInAudioSharing = isInAudioSharing,
                                 canOpenAudioSwitcher =
-                                    !isInAudioSharing &&
-                                        currentAudioDevice !is AudioOutputDevice.Unknown,
+                                    currentAudioDevice !is AudioOutputDevice.Unknown,
                             )
                         }
                     }

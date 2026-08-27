@@ -78,7 +78,16 @@ class CommunalAppWidgetHost(
     }
 
     override fun startListening() {
-        super.startListening()
+        try {
+            super.startListening()
+        } catch (e: Exception) {
+            if (!e.isBinderSizeError()) {
+                throw RuntimeException(e)
+            }
+            // We ignore the binder size error, which is caused by the list of RemoteViews passed
+            // back being too large that the binder buffer space runs out. See b/14255011 and
+            // b/402970061 for more context.
+        }
         backgroundScope.launch {
             synchronized(observers) {
                 observers.forEach { observer -> observer.onHostStartListening() }
@@ -87,8 +96,8 @@ class CommunalAppWidgetHost(
     }
 
     override fun stopListening() {
-        super.stopListening()
         backgroundScope.launch {
+            super.stopListening()
             synchronized(observers) {
                 observers.forEach { observer -> observer.onHostStopListening() }
             }

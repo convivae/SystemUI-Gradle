@@ -17,8 +17,10 @@
 
 package com.android.systemui.keyguard.ui.viewmodel
 
+import com.android.systemui.accessibility.domain.interactor.AccessibilityInteractor
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.common.shared.model.Text
+import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.keyguard.domain.interactor.KeyguardTouchHandlingInteractor
 import com.android.systemui.res.R
 import javax.inject.Inject
@@ -29,19 +31,21 @@ class KeyguardSettingsMenuViewModel
 @Inject
 constructor(
     private val interactor: KeyguardTouchHandlingInteractor,
+    configurationInteractor: ConfigurationInteractor,
+    accessibilityInteractor: AccessibilityInteractor,
 ) {
     val isVisible: Flow<Boolean> = interactor.isMenuVisible
     val shouldOpenSettings: Flow<Boolean> = interactor.shouldOpenSettings
 
-    val icon: Icon =
-        Icon.Resource(
-            res = R.drawable.ic_palette,
-            contentDescription = null,
-        )
+    val icon: Icon = Icon.Resource(resId = R.drawable.ic_palette, contentDescription = null)
 
-    val text: Text =
-        Text.Resource(
-            res = R.string.lock_screen_settings,
+    val text: Text = Text.Resource(res = R.string.lock_screen_settings)
+
+    val shouldAddClickListenerForA11y = accessibilityInteractor.isEnabled
+
+    val textSize =
+        configurationInteractor.dimensionPixelSize(
+            com.android.internal.R.dimen.text_size_small_material
         )
 
     fun onTouchGestureStarted() {
@@ -49,9 +53,15 @@ constructor(
     }
 
     fun onTouchGestureEnded(isClick: Boolean) {
-        interactor.onMenuTouchGestureEnded(
-            isClick = isClick,
-        )
+        interactor.onMenuTouchGestureEnded(isClick = isClick)
+    }
+
+    fun clickKeyguardSettingsPopupMenu() {
+        interactor.onMenuTouchGestureEnded(isClick = true)
+    }
+
+    fun openKeyguardSettingsPopupMenu() {
+        interactor.onLongPress()
     }
 
     fun onSettingsShown() {

@@ -22,13 +22,12 @@ import android.content.res.Resources
 import android.os.UserHandle
 import com.android.systemui.camera.data.repository.CameraAutoRotateRepository
 import com.android.systemui.camera.data.repository.CameraSensorPrivacyRepository
-import com.android.systemui.qs.tiles.base.interactor.DataUpdateTrigger
-import com.android.systemui.qs.tiles.base.interactor.QSTileDataInteractor
+import com.android.systemui.qs.tiles.base.domain.interactor.QSTileDataInteractor
+import com.android.systemui.qs.tiles.base.domain.model.DataUpdateTrigger
 import com.android.systemui.qs.tiles.impl.rotation.domain.model.RotationLockTileModel
 import com.android.systemui.shade.ShadeDisplayAware
-import com.android.systemui.statusbar.policy.BatteryController
+import com.android.systemui.statusbar.pipeline.battery.data.repository.BatteryRepository
 import com.android.systemui.statusbar.policy.RotationLockController
-import com.android.systemui.util.kotlin.isBatteryPowerSaveEnabled
 import com.android.systemui.util.kotlin.isRotationLockEnabled
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -40,7 +39,7 @@ class RotationLockTileDataInteractor
 @Inject
 constructor(
     private val rotationLockController: RotationLockController,
-    private val batteryController: BatteryController,
+    private val batteryRepository: BatteryRepository,
     private val cameraAutoRotateRepository: CameraAutoRotateRepository,
     private val cameraSensorPrivacyRepository: CameraSensorPrivacyRepository,
     private val packageManager: PackageManager,
@@ -54,7 +53,7 @@ constructor(
         combine(
             rotationLockController.isRotationLockEnabled(),
             cameraSensorPrivacyRepository.isEnabled(user),
-            batteryController.isBatteryPowerSaveEnabled(),
+            batteryRepository.isPowerSaveEnabled,
             cameraAutoRotateRepository.isCameraAutoRotateSettingEnabled(user),
         ) {
             isRotationLockEnabled,

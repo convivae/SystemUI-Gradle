@@ -21,12 +21,14 @@ import android.window.OnBackAnimationCallback
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import android.window.WindowOnBackInvokedDispatcher
+import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.CoreStartable
 import com.android.systemui.Flags.predictiveBackAnimateShade
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.plugins.statusbar.StatusBarStateController
 import com.android.systemui.scene.domain.interactor.WindowRootViewVisibilityInteractor
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.QuickSettingsController
 import com.android.systemui.shade.ShadeController
 import com.android.systemui.shade.domain.interactor.ShadeBackActionInteractor
@@ -35,7 +37,6 @@ import com.android.systemui.statusbar.StatusBarState
 import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import com.android.app.tracing.coroutines.launchTraced as launch
 
 /** Handles requests to go back either from a button or gesture. */
 @SysUISingleton
@@ -80,6 +81,10 @@ constructor(
             notificationShadeWindowController.windowRootView?.viewRootImpl?.onBackInvokedDispatcher
 
     override fun start() {
+        if (SceneContainerFlag.isEnabled) {
+            return
+        }
+
         scope.launch {
             windowRootViewVisibilityInteractor.isLockscreenOrShadeVisibleAndInteractive.collect {
                 visible ->
@@ -93,12 +98,20 @@ constructor(
     }
 
     fun shouldBackBeHandled(): Boolean {
+        if (SceneContainerFlag.isEnabled) {
+            return false
+        }
+
         return statusBarStateController.state != StatusBarState.KEYGUARD &&
             statusBarStateController.state != StatusBarState.SHADE_LOCKED &&
             !statusBarKeyguardViewManager.isBouncerShowingOverDream
     }
 
     fun onBackRequested(): Boolean {
+        if (SceneContainerFlag.isEnabled) {
+            return false
+        }
+
         if (statusBarKeyguardViewManager.canHandleBackPressed()) {
             statusBarKeyguardViewManager.onBackPressed()
             return true
@@ -111,9 +124,6 @@ constructor(
             shadeBackActionInteractor.animateCollapseQs(false)
             return true
         }
-        if (shadeBackActionInteractor.closeUserSwitcherIfOpen()) {
-            return true
-        }
         if (shouldBackBeHandled()) {
             if (shadeBackActionInteractor.canBeCollapsed()) {
                 // this is the Shade dismiss animation, so make sure QQS closes when it ends.
@@ -123,6 +133,10 @@ constructor(
             return true
         }
         return false
+    }
+
+    fun isBackCallbackRegistered(): Boolean {
+        return isCallbackRegistered
     }
 
     private fun registerBackCallback() {

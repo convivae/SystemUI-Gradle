@@ -18,15 +18,17 @@ package com.android.systemui.qs.panels.ui.viewmodel
 
 import android.content.res.Configuration
 import android.content.res.Resources
-import androidx.compose.runtime.getValue
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
-import com.android.systemui.dagger.qualifiers.Main
-import com.android.systemui.lifecycle.ExclusiveActivatable
-import com.android.systemui.lifecycle.Hydrator
+import com.android.systemui.lifecycle.HydratedActivatable
+import com.android.systemui.media.controls.domain.pipeline.interactor.MediaCarouselInteractor
 import com.android.systemui.media.controls.ui.controller.MediaHostStatesManager
 import com.android.systemui.media.controls.ui.controller.MediaLocation
 import com.android.systemui.media.controls.ui.view.MediaHostState
+import com.android.systemui.media.remedia.shared.flag.MediaControlsInComposeFlag
+import com.android.systemui.media.remedia.ui.compose.MediaUiBehavior
+import com.android.systemui.media.remedia.ui.viewmodel.MediaCarouselVisibility
 import com.android.systemui.qs.composefragment.dagger.QSFragmentComposeModule
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shade.shared.model.ShadeMode
 import com.android.systemui.utils.coroutines.flow.conflatedCallbackFlow
@@ -46,38 +48,40 @@ import kotlinx.coroutines.flow.onStart
 class MediaInRowInLandscapeViewModel
 @AssistedInject
 constructor(
-    @Main resources: Resources,
+    @ShadeDisplayAware resources: Resources,
     configurationInteractor: ConfigurationInteractor,
     shadeModeInteractor: ShadeModeInteractor,
     private val mediaHostStatesManager: MediaHostStatesManager,
     @Named(QSFragmentComposeModule.QS_USING_MEDIA_PLAYER) private val usingMedia: Boolean,
+    mediaCarouselInteractor: MediaCarouselInteractor,
     @Assisted @MediaLocation private val inLocation: Int,
-) : ExclusiveActivatable() {
-
-    private val hydrator = Hydrator("MediaInRowInLanscapeViewModel - $inLocation")
+    @Assisted private val mediaUiBehavior: MediaUiBehavior,
+) : HydratedActivatable(traceName = "MediaInRowInLandscapeViewModel - $inLocation") {
 
     val shouldMediaShowInRow: Boolean
         get() = usingMedia && inSingleShade && isLandscapeAndLong && isMediaVisible
 
     private val inSingleShade: Boolean by
-        hydrator.hydratedStateOf(
-            traceName = "inSingleShade",
-            initialValue = shadeModeInteractor.shadeMode.value == ShadeMode.Single,
-            source = shadeModeInteractor.shadeMode.map { it == ShadeMode.Single },
-        )
+        shadeModeInteractor.shadeMode
+            .map { it == ShadeMode.Single }
+            .hydratedStateOf(initialValue = shadeModeInteractor.shadeMode.value == ShadeMode.Single)
 
     private val isLandscapeAndLong: Boolean by
-        hydrator.hydratedStateOf(
-            traceName = "isLandscapeAndLong",
-            initialValue = resources.configuration.isLandscapeAndLong,
-            source = configurationInteractor.configurationValues.map { it.isLandscapeAndLong },
-        )
+        configurationInteractor.configurationValues
+            .map { it.isLandscapeAndLong }
+            .hydratedStateOf(initialValue = resources.configuration.isLandscapeAndLong)
 
     private val isMediaVisible by
-        hydrator.hydratedStateOf(
-            traceName = "isMediaVisible",
-            initialValue = false,
-            source =
+        if (MediaControlsInComposeFlag.isEnabled) {
+                if (
+                    mediaUiBehavior.carouselVisibility ==
+                        MediaCarouselVisibility.WhenAnyCardIsActive
+                ) {
+                    mediaCarouselInteractor.hasActiveMedia
+                } else {
+                    mediaCarouselInteractor.hasAnyMedia
+                }
+            } else {
                 conflatedCallbackFlow {
                         val callback =
                             object : MediaHostStatesManager.Callback {
@@ -98,16 +102,16 @@ constructor(
                         emit(
                             mediaHostStatesManager.mediaHostStates.get(inLocation)?.visible ?: false
                         )
-                    },
-        )
-
-    override suspend fun onActivated(): Nothing {
-        hydrator.activate()
-    }
+                    }
+            }
+            .hydratedStateOf(initialValue = false)
 
     @AssistedFactory
     interface Factory {
-        fun create(@MediaLocation inLocation: Int): MediaInRowInLandscapeViewModel
+        fun create(
+            @MediaLocation inLocation: Int,
+            mediaUiBehavior: MediaUiBehavior,
+        ): MediaInRowInLandscapeViewModel
     }
 }
 

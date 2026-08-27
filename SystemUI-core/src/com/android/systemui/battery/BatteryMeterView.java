@@ -17,9 +17,7 @@ package com.android.systemui.battery;
 
 import static android.provider.Settings.System.SHOW_BATTERY_PERCENT;
 
-import static com.android.settingslib.flags.Flags.newStatusBarIcons;
 import static com.android.systemui.DejankUtils.whitelistIpcs;
-import static com.android.systemui.Flags.gsfQuickSettings;
 
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
@@ -34,7 +32,6 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -59,6 +56,7 @@ import com.android.systemui.battery.unified.ColorProfile;
 import com.android.systemui.plugins.DarkIconDispatcher;
 import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
 import com.android.systemui.res.R;
+import com.android.systemui.statusbar.core.NewStatusBarIcons;
 import com.android.systemui.statusbar.policy.BatteryController;
 
 import java.io.PrintWriter;
@@ -100,7 +98,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
     private BatteryEstimateFetcher mBatteryEstimateFetcher;
 
-    // for Flags.newStatusBarIcons. The unified battery icon can show percent inside
+    // for NewStatusBarIcons. The unified battery icon can show percent inside
     @Nullable private BatteryLayersDrawable mUnifiedBattery;
     private BatteryColors mUnifiedBatteryColors = BatteryColors.LIGHT_THEME_COLORS;
     private BatteryDrawableState mUnifiedBatteryState =
@@ -131,7 +129,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         setupLayoutTransition();
 
         mBatteryIconView = new ImageView(context);
-        if (newStatusBarIcons()) {
+        if (NewStatusBarIcons.isEnabled()) {
             mUnifiedBattery = BatteryLayersDrawable.Companion
                     .newBatteryDrawable(context, mUnifiedBatteryState);
             mBatteryIconView.setImageDrawable(mUnifiedBattery);
@@ -163,7 +161,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
 
     private void setBatteryDrawableState(BatteryDrawableState newState) {
-        if (!newStatusBarIcons()) return;
+        if (!NewStatusBarIcons.isEnabled()) return;
 
         mUnifiedBatteryState = newState;
         mUnifiedBattery.setBatteryState(mUnifiedBatteryState);
@@ -245,7 +243,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mDrawable.setBatteryLevel(level);
         updatePercentText();
 
-        if (newStatusBarIcons()) {
+        if (NewStatusBarIcons.isEnabled()) {
             Drawable attr = mUnifiedBatteryState.getAttribution();
             if (isCharging != wasCharging) {
                 attr = getBatteryAttribution(isCharging);
@@ -266,7 +264,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     // Potentially reloads any attribution. Should not be called if the state hasn't changed
     @SuppressLint("UseCompatLoadingForDrawables")
     private Drawable getBatteryAttribution(boolean isCharging) {
-        if (!newStatusBarIcons()) return null;
+        if (!NewStatusBarIcons.isEnabled()) return null;
 
         int resId = 0;
         if (mPowerSaveEnabled) {
@@ -314,7 +312,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             return;
         }
         mPowerSaveEnabled = isPowerSave;
-        if (!newStatusBarIcons()) {
+        if (!NewStatusBarIcons.isEnabled()) {
             mDrawable.setPowerSaveEnabled(isPowerSave);
         } else {
             setBatteryDrawableState(
@@ -337,7 +335,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         }
 
         updateContentDescription();
-        if (!newStatusBarIcons()) {
+        if (!NewStatusBarIcons.isEnabled()) {
             // The battery drawable is a different size depending on whether it's currently
             // overheated or not, so we need to re-scale the view when overheated changes.
             scaleBatteryMeterViews();
@@ -357,7 +355,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         boolean valueChanged = mIsIncompatibleCharging != isIncompatibleCharging;
         mIsIncompatibleCharging = isIncompatibleCharging;
         if (valueChanged) {
-            if (newStatusBarIcons()) {
+            if (NewStatusBarIcons.isEnabled()) {
                 setBatteryDrawableState(
                         new BatteryDrawableState(
                                 mUnifiedBatteryState.getLevel(),
@@ -386,9 +384,6 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         }
         float fontHeight = mBatteryPercentView.getPaint().getFontMetricsInt(null);
         mBatteryPercentView.setLineHeight(TypedValue.COMPLEX_UNIT_PX, fontHeight);
-        if (gsfQuickSettings()) {
-            mBatteryPercentView.setTypeface(Typeface.create("gsf-label-large", Typeface.NORMAL));
-        }
         if (mTextColor != 0) mBatteryPercentView.setTextColor(mTextColor);
         addView(mBatteryPercentView, new LayoutParams(
                 LayoutParams.WRAP_CONTENT,
@@ -415,7 +410,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     void updatePercentText() {
-        if (!newStatusBarIcons()) {
+        if (!NewStatusBarIcons.isEnabled()) {
             updatePercentTextLegacy();
             return;
         }
@@ -527,7 +522,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     void updateShowPercent() {
-        if (!newStatusBarIcons()) {
+        if (!NewStatusBarIcons.isEnabled()) {
             updateShowPercentLegacy();
             return;
         }
@@ -616,7 +611,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     void scaleBatteryMeterViews() {
-        if (!newStatusBarIcons()) {
+        if (!NewStatusBarIcons.isEnabled()) {
             scaleBatteryMeterViewsLegacy();
             return;
         }
@@ -695,7 +690,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     public void onDarkChanged(ArrayList<Rect> areas, float darkIntensity, int tint) {
         if (mIsStaticColor) return;
 
-        if (!newStatusBarIcons()) {
+        if (!NewStatusBarIcons.isEnabled()) {
             onDarkChangedLegacy(areas, darkIntensity, tint);
             return;
         }
@@ -753,9 +748,9 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         }
     }
 
-    /** For newStatusBarIcons(), we use a BatteryColors object to declare the theme */
+    /** For NewStatusBarIcons, we use a BatteryColors object to declare the theme */
     public void setUnifiedBatteryColors(BatteryColors colors) {
-        if (!newStatusBarIcons()) return;
+        if (!NewStatusBarIcons.isEnabled()) return;
 
         mUnifiedBatteryColors = colors;
         mUnifiedBattery.setColors(mUnifiedBatteryColors);
@@ -782,7 +777,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         pw.println("    mPluggedIn: " + mPluggedIn);
         pw.println("    mLevel: " + mLevel);
         pw.println("    mMode: " + mShowPercentMode);
-        if (newStatusBarIcons()) {
+        if (NewStatusBarIcons.isEnabled()) {
             pw.println("    mUnifiedBatteryState: " + mUnifiedBatteryState);
         }
     }

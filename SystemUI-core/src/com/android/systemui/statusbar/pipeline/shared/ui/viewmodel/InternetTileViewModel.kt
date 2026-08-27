@@ -22,12 +22,14 @@ import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.ContentDescription.Companion.loadContentDescription
 import com.android.systemui.common.shared.model.Text
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.tileimpl.QSTileImpl.ResourceIcon
 import com.android.systemui.res.R
-import com.android.systemui.statusbar.pipeline.airplane.data.repository.AirplaneModeRepository
+import com.android.systemui.statusbar.connectivity.ui.MobileContextProvider
+import com.android.systemui.statusbar.pipeline.airplane.domain.interactor.AirplaneModeInteractor
 import com.android.systemui.statusbar.pipeline.ethernet.domain.EthernetInteractor
+import com.android.systemui.statusbar.pipeline.mobile.NewSatelliteIcon
 import com.android.systemui.statusbar.pipeline.mobile.domain.interactor.MobileIconsInteractor
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
 import com.android.systemui.statusbar.pipeline.shared.data.repository.ConnectivityRepository
@@ -38,7 +40,6 @@ import com.android.systemui.statusbar.pipeline.wifi.shared.model.WifiNetworkMode
 import com.android.systemui.statusbar.pipeline.wifi.ui.model.WifiIcon
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,18 +53,18 @@ import kotlinx.coroutines.flow.stateIn
  * InternetTileModel objects, so that updating the tile is as simple as collecting on this state
  * flow and then calling [QSTileImpl.refreshState]
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
 class InternetTileViewModel
 @Inject
 constructor(
-    airplaneModeRepository: AirplaneModeRepository,
+    airplaneModeInteractor: AirplaneModeInteractor,
     connectivityRepository: ConnectivityRepository,
     ethernetInteractor: EthernetInteractor,
     mobileIconsInteractor: MobileIconsInteractor,
+    mobileContextProvider: MobileContextProvider,
     wifiInteractor: WifiInteractor,
     private val context: Context,
-    @Application scope: CoroutineScope,
+    @Background scope: CoroutineScope,
 ) {
     private val internetLabel: String = context.getString(R.string.quick_settings_internet_label)
 
@@ -77,7 +78,7 @@ constructor(
                 flowOf(
                     InternetTileModel.Active(
                         secondaryTitle = secondary,
-                        icon = ResourceIcon.get(wifiIcon.icon.res),
+                        icon = ResourceIcon.get(wifiIcon.icon.resId),
                         stateDescription = wifiIcon.contentDescription,
                         contentDescription = ContentDescription.Loaded("$internetLabel,$secondary"),
                     )
@@ -92,17 +93,49 @@ constructor(
             if (it == null) {
                 flowOf(null)
             } else {
-                combine(it.isRoaming, it.networkTypeIconGroup) { isRoaming, networkTypeIconGroup ->
-                    val cd = loadString(networkTypeIconGroup.contentDescription)
-                    if (isRoaming) {
-                        val roaming = context.getString(R.string.data_connection_roaming)
-                        if (cd != null) {
-                            context.getString(R.string.mobile_data_text_format, roaming, cd)
+                if (NewSatelliteIcon.isEnabled) {
+                    combine(it.isRoaming, it.networkTypeIconGroup, it.isNonTerrestrial) {
+                        isRoaming,
+                        networkTypeIconGroup,
+                        isNonTerrestrial ->
+                        val mobileContext =
+                            mobileContextProvider.getMobileContextForSub(it.subscriptionId, context)
+                        val cd = loadString(networkTypeIconGroup.contentDescription, mobileContext)
+                        if (isNonTerrestrial) {
+                            mobileContext.getString(
+                                com.android.internal.R.string.satellite_indicator
+                            )
+                        } else if (isRoaming) {
+                            val roaming = mobileContext.getString(R.string.data_connection_roaming)
+                            if (cd != null) {
+                                mobileContext.getString(
+                                    R.string.mobile_data_text_format,
+                                    roaming,
+                                    cd,
+                                )
+                            } else {
+                                roaming
+                            }
                         } else {
-                            roaming
+                            cd
                         }
-                    } else {
-                        cd
+                    }
+                } else {
+                    combine(it.isRoaming, it.networkTypeIconGroup) { isRoaming, networkTypeIconGroup
+                        ->
+                        val mobileContext =
+                            mobileContextProvider.getMobileContextForSub(it.subscriptionId, context)
+                        val cd = loadString(networkTypeIconGroup.contentDescription, mobileContext)
+                        if (isRoaming) {
+                            val roaming = context.getString(R.string.data_connection_roaming)
+                            if (cd != null) {
+                                context.getString(R.string.mobile_data_text_format, roaming, cd)
+                            } else {
+                                roaming
+                            }
+                        } else {
+                            cd
+                        }
                     }
                 }
             }
@@ -113,17 +146,16 @@ constructor(
             if (it == null) {
                 notConnectedFlow
             } else {
-                combine(
-                    it.networkName,
-                    it.signalLevelIcon,
-                    mobileDataContentName,
-                ) { networkNameModel, signalIcon, dataContentDescription ->
+                combine(it.networkName, it.signalLevelIcon, mobileDataContentName) {
+                    networkNameModel,
+                    signalIcon,
+                    dataContentDescription ->
                     when (signalIcon) {
-                        is SignalIconModel.Cellular -> {
+                        is SignalIconModel.CellularTypeIconModel -> {
                             val secondary =
                                 mobileDataContentConcat(
                                     networkNameModel.name,
-                                    dataContentDescription
+                                    dataContentDescription,
                                 )
                             InternetTileModel.Active(
                                 secondaryTitle = secondary,
@@ -137,7 +169,7 @@ constructor(
                                 signalIcon.icon.contentDescription.loadContentDescription(context)
                             InternetTileModel.Active(
                                 secondaryTitle = secondary,
-                                iconId = signalIcon.icon.res,
+                                iconId = signalIcon.icon.resId,
                                 stateDescription = ContentDescription.Loaded(secondary),
                                 contentDescription = ContentDescription.Loaded(internetLabel),
                             )
@@ -149,7 +181,7 @@ constructor(
 
     private fun mobileDataContentConcat(
         networkName: String?,
-        dataContentDescription: CharSequence?
+        dataContentDescription: CharSequence?,
     ): CharSequence {
         if (dataContentDescription == null) {
             return networkName ?: ""
@@ -162,13 +194,13 @@ constructor(
             context.getString(
                 R.string.mobile_carrier_text_format,
                 networkName,
-                dataContentDescription
+                dataContentDescription,
             ),
-            0
+            0,
         )
     }
 
-    private fun loadString(resId: Int): CharSequence? =
+    private fun loadString(resId: Int, context: Context): CharSequence? =
         if (resId > 0) {
             context.getString(resId)
         } else {
@@ -184,7 +216,7 @@ constructor(
                 flowOf(
                     InternetTileModel.Active(
                         secondaryLabel = secondary?.toText(),
-                        iconId = it.res,
+                        iconId = it.resId,
                         stateDescription = null,
                         contentDescription = secondary,
                     )
@@ -193,10 +225,9 @@ constructor(
         }
 
     private val notConnectedFlow: StateFlow<InternetTileModel> =
-        combine(
-                wifiInteractor.areNetworksAvailable,
-                airplaneModeRepository.isAirplaneMode,
-            ) { networksAvailable, isAirplaneMode ->
+        combine(wifiInteractor.areNetworksAvailable, airplaneModeInteractor.isAirplaneMode) {
+                networksAvailable,
+                isAirplaneMode ->
                 when {
                     isAirplaneMode -> {
                         val secondary = context.getString(R.string.status_bar_airplane)
@@ -215,7 +246,7 @@ constructor(
                             iconId = R.drawable.ic_qs_no_internet_available,
                             stateDescription = null,
                             contentDescription =
-                                ContentDescription.Loaded("$internetLabel,$secondary")
+                                ContentDescription.Loaded("$internetLabel,$secondary"),
                         )
                     }
                     else -> {
@@ -230,7 +261,7 @@ constructor(
      * the interim providers (wifi, mobile, ethernet, or not-connected)
      */
     private val activeModelProvider: Flow<InternetTileModel> =
-        connectivityRepository.defaultConnections.flatMapLatest {
+        connectivityRepository.resolvedConnections.flatMapLatest {
             when {
                 it.ethernet.isDefault -> ethernetIconFlow
                 it.mobile.isDefault || it.carrierMerged.isDefault -> mobileIconFlow

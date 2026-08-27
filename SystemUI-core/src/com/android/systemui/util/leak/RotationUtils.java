@@ -138,7 +138,10 @@ public final class RotationUtils {
             default:
                 throw new IllegalArgumentException("Unknown rotation: " + rot);
         }
-        Configuration c = new Configuration(context.getResources().getConfiguration());
+        // Create an empty config to use as an override. This ensures the new context inherits
+        // other configuration values from the base context and stays up to date.
+        // we only want to override the orientation, and not anything else.
+        Configuration c = new Configuration();
         c.orientation = orientation;
         Context rotated = context.createConfigurationContext(c);
         return rotated.getResources();

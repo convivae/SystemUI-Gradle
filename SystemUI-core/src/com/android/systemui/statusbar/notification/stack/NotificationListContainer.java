@@ -25,7 +25,6 @@ import com.android.systemui.plugins.statusbar.NotificationSwipeActionHelper;
 import com.android.systemui.statusbar.notification.LaunchAnimationParameters;
 import com.android.systemui.statusbar.notification.VisibilityLocationProvider;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
-import com.android.systemui.statusbar.notification.logging.NotificationLogger;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 import com.android.systemui.statusbar.notification.row.ExpandableView;
 
@@ -100,9 +99,6 @@ public interface NotificationListContainer extends
      */
     void addContainerViewAt(View v, int index);
 
-    /** Sets whether the notificatios are displayed on the unoccluded lockscreen. */
-    void setOnLockscreen(boolean isOnKeyguard);
-
     /**
      * Sets the maximum number of notifications to display.
      *
@@ -113,10 +109,9 @@ public interface NotificationListContainer extends
     /**
      * Get the view parent for a notification entry. For example, NotificationStackScrollLayout.
      *
-     * @param entry entry to get the view parent for
      * @return the view parent for entry
      */
-    ViewGroup getViewParentForNotification(NotificationEntry entry);
+    ViewGroup getViewParentForNotification();
 
     /**
      * Resets the currently exposed menu view.
@@ -140,15 +135,6 @@ public interface NotificationListContainer extends
      * @param entry the entry whose view's view state needs to be cleaned up (say that 5 times fast)
      */
     void cleanUpViewStateForEntry(NotificationEntry entry);
-
-
-    /**
-     * Sets a listener to listen for changes in notification locations.
-     *
-     * @param listener listener to set
-     */
-    void setChildLocationsChangedListener(
-            NotificationLogger.OnChildLocationsChangedListener listener);
 
     /**
      * Called when an update to the notification view hierarchy is completed.

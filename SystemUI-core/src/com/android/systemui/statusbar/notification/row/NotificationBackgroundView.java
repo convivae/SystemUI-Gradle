@@ -16,6 +16,8 @@
 
 package com.android.systemui.statusbar.notification.row;
 
+import static com.android.systemui.Flags.lockscreenBlurForNotifications;
+import static com.android.systemui.Flags.notificationRowTransparency;
 import static com.android.systemui.util.ColorUtilKt.hexColorString;
 
 import android.content.Context;
@@ -33,12 +35,16 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.UiThread;
+import androidx.annotation.VisibleForTesting;
 
+import com.android.internal.graphics.drawable.BackgroundBlurDrawable;
 import com.android.internal.util.ContrastColorUtil;
-import com.android.settingslib.Utils;
 import com.android.systemui.Dumpable;
+import com.android.systemui.common.shared.colors.SurfaceEffectColors;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.notification.shared.NotificationAddXOnHoverToDismiss;
+import com.android.systemui.util.Assert;
 import com.android.systemui.util.DrawableDumpKt;
 
 import java.io.PrintWriter;
@@ -53,6 +59,8 @@ public class NotificationBackgroundView extends View implements Dumpable,
     private final boolean mDontModifyCorners;
     private Drawable mBackground;
     private int mClipTopAmount;
+    private int mTopOverlap;
+    private int mBottomOverlap;
     private int mClipBottomAmount;
     private int mTintColor;
     @Nullable private Integer mRippleColor;
@@ -69,12 +77,16 @@ public class NotificationBackgroundView extends View implements Dumpable,
     private int mDrawableAlpha = 255;
     private final ColorStateList mLightColoredStatefulColors;
     private final ColorStateList mDarkColoredStatefulColors;
-    private final int mNormalColor;
+    private int mNormalColor;
     private final int convexR = 9;
     private final int concaveR = 22;
+    private BackgroundBlurDrawable mBackgroundBlurDrawable;
+    @VisibleForTesting
+    protected View.OnAttachStateChangeListener mOnAttachStateChangeListener;
 
     // True only if the dismiss button is visible.
     private boolean mDrawDismissButtonCutout = false;
+    private boolean mOnKeyguard = true;
 
     public NotificationBackgroundView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -83,8 +95,12 @@ public class NotificationBackgroundView extends View implements Dumpable,
                 R.color.notification_state_color_light);
         mDarkColoredStatefulColors = getResources().getColorStateList(
                 R.color.notification_state_color_dark);
-        mNormalColor = Utils.getColorAttrDefaultColor(mContext,
-                com.android.internal.R.attr.materialColorSurfaceContainerHigh);
+        if (notificationRowTransparency()) {
+            mNormalColor = SurfaceEffectColors.surfaceEffect1(getContext());
+        } else  {
+            mNormalColor = mContext.getColor(
+                    com.android.internal.R.color.materialColorSurfaceContainerHigh);
+        }
         mFocusOverlayStroke = getResources().getDimension(R.dimen.notification_focus_stroke_width);
     }
 
@@ -102,29 +118,38 @@ public class NotificationBackgroundView extends View implements Dumpable,
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (mClipTopAmount + mClipBottomAmount < getActualHeight() || mExpandAnimationRunning) {
+        float clipTop = Math.max(mClipTopAmount, mTopOverlap);
+        int clipBottomAmount = Math.max(mClipBottomAmount, mBottomOverlap);
+        if (clipTop + clipBottomAmount < getActualHeight() || mExpandAnimationRunning) {
             canvas.save();
             if (!mExpandAnimationRunning) {
-                canvas.clipRect(0, mClipTopAmount, getWidth(),
-                        getActualHeight() - mClipBottomAmount);
+                canvas.clipRect(0, clipTop, getWidth(),
+                        getActualHeight() - clipBottomAmount);
             }
 
             if (!NotificationAddXOnHoverToDismiss.isEnabled()) {
-                draw(canvas, mBackground);
+                if (mBackgroundBlurDrawable != null) {
+                    draw(canvas, mBackgroundBlurDrawable);
+                } else {
+                    draw(canvas, mBackground);
+                }
                 canvas.restore();
                 return;
             }
 
             Rect backgroundBounds = null;
-            if (mBackground != null || mDrawDismissButtonCutout) {
+            if (mBackground != null || mBackgroundBlurDrawable != null
+                    || mDrawDismissButtonCutout) {
                 backgroundBounds = calculateBackgroundBounds();
             }
 
             if (mDrawDismissButtonCutout) {
                 canvas.clipPath(calculateDismissButtonCutoutPath(backgroundBounds));
             }
-
-            if (mBackground != null) {
+            if (mBackgroundBlurDrawable != null) {
+                mBackgroundBlurDrawable.setBounds(backgroundBounds);
+                mBackgroundBlurDrawable.draw(canvas);
+            } else if (mBackground != null) {
                 mBackground.setBounds(backgroundBounds);
                 mBackground.draw(canvas);
             }
@@ -168,14 +193,14 @@ public class NotificationBackgroundView extends View implements Dumpable,
         if (mBottomIsRounded
                 && mBottomAmountClips
                 && !mExpandAnimationRunning) {
-            bottom -= mClipBottomAmount;
+            bottom -= Math.max(mClipBottomAmount, mBottomOverlap);
         }
-        final boolean isRtl = isLayoutRtl();
+        final boolean alignedToRight = isAlignedToRight();
         final int width = getWidth();
         final int actualWidth = getActualWidth();
 
-        int left = isRtl ? width - actualWidth : 0;
-        int right = isRtl ? width : actualWidth;
+        int left = alignedToRight ? width - actualWidth : 0;
+        int right = alignedToRight ? width : actualWidth;
 
         if (mExpandAnimationRunning) {
             // Horizontally center this background view inside of the container
@@ -184,6 +209,15 @@ public class NotificationBackgroundView extends View implements Dumpable,
         }
 
         return new Rect(left, top, right, bottom);
+    }
+
+    /**
+     * @return Whether the background view should be right-aligned. This only matters if the
+     * actualWidth is different than the full (measured) width. In other words, this is used to
+     * define the short-shelf alignment.
+     */
+    protected boolean isAlignedToRight() {
+        return isLayoutRtl();
     }
 
     private void draw(Canvas canvas, Drawable drawable) {
@@ -195,14 +229,15 @@ public class NotificationBackgroundView extends View implements Dumpable,
             if (mBottomIsRounded
                     && mBottomAmountClips
                     && !mExpandAnimationRunning) {
-                bottom -= mClipBottomAmount;
+                bottom -= Math.max(mClipBottomAmount, mBottomOverlap);
             }
-            final boolean isRtl = isLayoutRtl();
+
+            final boolean alignedToRight = isAlignedToRight();
             final int width = getWidth();
             final int actualWidth = getActualWidth();
 
-            int left = isRtl ? width - actualWidth : 0;
-            int right = isRtl ? width : actualWidth;
+            int left = alignedToRight ? width - actualWidth : 0;
+            int right = alignedToRight ? width : actualWidth;
 
             if (mExpandAnimationRunning) {
                 // Horizontally center this background view inside of the container
@@ -232,14 +267,31 @@ public class NotificationBackgroundView extends View implements Dumpable,
     }
 
     /**
+     * Update the view on whether the device is currently on the keyguard.
+     */
+    public void setOnKeyguard(boolean onKeyguard) {
+        if (onKeyguard == mOnKeyguard) {
+            return;
+        }
+
+        // TODO: (b/445495701) - Determine why this value is opposite of expected, then use in #draw
+        // to restrict the blurred background to the keyguard only.
+        mOnKeyguard = onKeyguard;
+    }
+
+    /**
      * Stateful colors are colors that will overlay on the notification original color when one of
      * hover states, pressed states or other similar states is activated.
      */
     private void setStatefulColors() {
+        Drawable statefulLayer = getStatefulBackgroundLayer();
+        if (statefulLayer == null) {
+            return;
+        }
         if (mTintColor != mNormalColor) {
             ColorStateList newColor = ContrastColorUtil.isColorDark(mTintColor)
                     ? mDarkColoredStatefulColors : mLightColoredStatefulColors;
-            ((GradientDrawable) getStatefulBackgroundLayer().mutate()).setColor(newColor);
+            ((GradientDrawable) statefulLayer.mutate()).setColor(newColor);
         }
     }
 
@@ -271,7 +323,66 @@ public class NotificationBackgroundView extends View implements Dumpable,
         setCustomBackground(d);
     }
 
-    private Drawable getBaseBackgroundLayer() {
+    /**
+     * Update whether this view should allow a blurred background or not.
+     *
+     * @param enabled - If true, queues creation of a {BackgroundBlurDrawable}. If false, removes
+     *     any reference to a blurred drawable.
+     */
+    @UiThread
+    public void setBlurBackgroundEnabled(boolean enabled) {
+        if (!lockscreenBlurForNotifications()) {
+            return;
+        }
+        Assert.isMainThread();
+
+        if (enabled && mBackgroundBlurDrawable == null) {
+            if (mOnAttachStateChangeListener != null) {
+                removeOnAttachStateChangeListener(mOnAttachStateChangeListener);
+            }
+            mOnAttachStateChangeListener =
+                    new OnAttachStateChangeListener() {
+                        @Override
+                        public void onViewAttachedToWindow(View view) {
+                            if (mBackgroundBlurDrawable == null) {
+                                mBackgroundBlurDrawable =
+                                        view.getViewRootImpl().createBackgroundBlurDrawable();
+                                mBackgroundBlurDrawable.setBlurRadius(
+                                        getResources().getDimensionPixelSize(
+                                                R.dimen.notification_background_blur_radius));
+                                mBackgroundBlurDrawable.setXfermode(null);
+                                mBackgroundBlurDrawable.setCallback(
+                                        NotificationBackgroundView.this);
+                                mBackgroundBlurDrawable.setColor(mNormalColor);
+
+                                updateBackgroundRadii();
+                                invalidate();
+                            }
+                            NotificationBackgroundView.this.removeOnAttachStateChangeListener(this);
+                            mOnAttachStateChangeListener = null;
+                        }
+
+                        @Override
+                        public void onViewDetachedFromWindow(View view) {}
+                    };
+            addOnAttachStateChangeListener(mOnAttachStateChangeListener);
+
+            if (isAttachedToWindow()) {
+                mOnAttachStateChangeListener.onViewAttachedToWindow(this);
+            }
+        } else if (!enabled) {
+            if (mOnAttachStateChangeListener != null) {
+                removeOnAttachStateChangeListener(mOnAttachStateChangeListener);
+                mOnAttachStateChangeListener = null;
+            }
+            if (mBackgroundBlurDrawable != null) {
+                mBackgroundBlurDrawable.setCallback(null);
+            }
+            mBackgroundBlurDrawable = null;
+        }
+    }
+
+    public Drawable getBaseBackgroundLayer() {
         return ((LayerDrawable) mBackground).getDrawable(0);
     }
 
@@ -281,8 +392,15 @@ public class NotificationBackgroundView extends View implements Dumpable,
 
     public void setTint(int tintColor) {
         Drawable baseLayer = getBaseBackgroundLayer();
-        baseLayer.mutate().setTintMode(PorterDuff.Mode.SRC_ATOP);
-        baseLayer.setTint(tintColor);
+        if (notificationRowTransparency()) {
+            ((GradientDrawable) baseLayer.mutate()).setColor(tintColor);
+        } else {
+            baseLayer.mutate().setTintMode(PorterDuff.Mode.SRC_ATOP);
+            baseLayer.setTint(tintColor);
+        }
+        if (mBackgroundBlurDrawable != null) {
+            mBackgroundBlurDrawable.setColor(tintColor);
+        }
         mTintColor = tintColor;
         setStatefulColors();
         invalidate();
@@ -323,6 +441,28 @@ public class NotificationBackgroundView extends View implements Dumpable,
         invalidate();
     }
 
+    /**
+     * Sets the overlap on the top of the view with other views. As a result we should clip the
+     * background and content such that no overlap is visible anymore.
+     * This is related to setClipTopAmount, however it is a separate way to clip which is usually
+     * then combined with the clipTopAmount to take the maximum.
+     */
+    public void setTopOverlap(int topOverlap) {
+        mTopOverlap = topOverlap;
+        invalidate();
+    }
+
+    /**
+     * Sets the overlap on the bottom of the view with other views. As a result we should clip the
+     * background and content such that no overlap is visible anymore.
+     * This is related to setClipBottomAmount, however it is a separate way to clip which is usually
+     * then combined with the clipBottomAmount to take the maximum.
+     */
+    public void setBottomOverlap(int bottomOverlap) {
+        mBottomOverlap = bottomOverlap;
+        invalidate();
+    }
+
     public void setClipBottomAmount(int clipBottomAmount) {
         mClipBottomAmount = clipBottomAmount;
         invalidate();
@@ -357,6 +497,9 @@ public class NotificationBackgroundView extends View implements Dumpable,
             return;
         }
         mBackground.setAlpha(drawableAlpha);
+        if (mBackgroundBlurDrawable != null) {
+            mBackgroundBlurDrawable.setAlpha(drawableAlpha);
+        }
     }
 
     /**
@@ -385,6 +528,11 @@ public class NotificationBackgroundView extends View implements Dumpable,
         }
     }
 
+    @VisibleForTesting
+    protected boolean isBlurEnabled() {
+        return mBackgroundBlurDrawable != null;
+    }
+
     private void updateBackgroundRadii() {
         if (mDontModifyCorners) {
             return;
@@ -397,12 +545,20 @@ public class NotificationBackgroundView extends View implements Dumpable,
             }
             updateFocusOverlayRadii(layerDrawable);
         }
+        if (mBackgroundBlurDrawable != null) {
+            mBackgroundBlurDrawable.setCornerRadius(mCornerRadii[0], mCornerRadii[1],
+                    mCornerRadii[2], mCornerRadii[3], mCornerRadii[4], mCornerRadii[5],
+                    mCornerRadii[6], mCornerRadii[7]);
+        }
     }
 
     private void updateFocusOverlayRadii(LayerDrawable background) {
         GradientDrawable overlay =
                 (GradientDrawable) background.findDrawableByLayerId(
                         R.id.notification_focus_overlay);
+        if (overlay == null) {
+            return;
+        }
         for (int i = 0; i < mCornerRadii.length; i++) {
             // in theory subtracting mFocusOverlayStroke/2 should be enough but notification
             // background is still peeking a bit from below - probably due to antialiasing or
@@ -440,6 +596,8 @@ public class NotificationBackgroundView extends View implements Dumpable,
         pw.println("mDontModifyCorners: " + mDontModifyCorners);
         pw.println("mClipTopAmount: " + mClipTopAmount);
         pw.println("mClipBottomAmount: " + mClipBottomAmount);
+        pw.println("mTopOverlap: " + mTopOverlap);
+        pw.println("mBottomOverlap: " + mBottomOverlap);
         pw.println("mCornerRadii: " + Arrays.toString(mCornerRadii));
         pw.println("mBottomIsRounded: " + mBottomIsRounded);
         pw.println("mBottomAmountClips: " + mBottomAmountClips);
@@ -448,6 +606,8 @@ public class NotificationBackgroundView extends View implements Dumpable,
         pw.println("mTintColor: " + hexColorString(mTintColor));
         pw.println("mRippleColor: " + hexColorString(mRippleColor));
         pw.println("mBackground: " + DrawableDumpKt.dumpToString(mBackground));
+        pw.println("mBackgroundBlurDrawable: "
+                + DrawableDumpKt.dumpToString(mBackgroundBlurDrawable));
     }
 
     /** create a concise dump of this view's colors */
@@ -456,6 +616,7 @@ public class NotificationBackgroundView extends View implements Dumpable,
                 + " tintColor=" + hexColorString(mTintColor)
                 + " rippleColor=" + hexColorString(mRippleColor)
                 + " bgColor=" + DrawableDumpKt.getSolidColor(mBackground)
+                + " blurEnabled=" + (mBackgroundBlurDrawable != null)
                 + ">";
 
     }

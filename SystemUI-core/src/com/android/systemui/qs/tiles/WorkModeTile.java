@@ -129,12 +129,8 @@ public class WorkModeTile extends QSTileImpl<BooleanState> implements
             state.value = mProfileController.isWorkModeEnabled();
         }
 
-        if (mIcon == null) {
-            mIcon = maybeLoadResourceIcon(
-                    com.android.internal.R.drawable.stat_sys_managed_profile_status);
-        }
-
-        state.icon = mIcon;
+        state.icon = maybeLoadResourceIcon(state.value ? R.drawable.qs_work_mode_icon_on
+                : R.drawable.qs_work_mode_icon_off);
         state.label = getTileLabel();
         state.contentDescription = state.label;
         state.expandedAccessibilityClassName = Switch.class.getName();

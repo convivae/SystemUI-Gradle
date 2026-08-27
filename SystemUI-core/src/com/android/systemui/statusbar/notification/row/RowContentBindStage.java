@@ -21,6 +21,7 @@ import static com.android.systemui.statusbar.notification.row.NotificationRowCon
 import androidx.annotation.NonNull;
 
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.statusbar.notification.collection.EntryAdapter;
 import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.BindParams;
 import com.android.systemui.statusbar.notification.row.NotificationRowContentBinder.InflationCallback;
@@ -52,7 +53,7 @@ public class RowContentBindStage extends BindStage<RowContentBindParams> {
 
     @Override
     protected void executeStage(
-            @NonNull NotificationEntry entry,
+            final @NonNull NotificationEntry entry,
             @NonNull ExpandableNotificationRow row,
             @NonNull StageCallback callback) {
         RowContentBindParams params = getStageParams(entry);
@@ -72,23 +73,30 @@ public class RowContentBindStage extends BindStage<RowContentBindParams> {
         // Bind/unbind with parameters
         mBinder.unbindContent(entry, row, contentToUnbind);
 
-        BindParams bindParams = new BindParams();
-        bindParams.isMinimized = params.useMinimized();
-        bindParams.usesIncreasedHeight = params.useIncreasedHeight();
-        bindParams.usesIncreasedHeadsUpHeight = params.useIncreasedHeadsUpHeight();
+        BindParams bindParams = new BindParams(params.useMinimized(), params.getRedactionType());
         boolean forceInflate = params.needsReinflation();
 
         InflationCallback inflationCallback = new InflationCallback() {
             @Override
-            public void handleInflationException(NotificationEntry entry, Exception e) {
+            public void handleInflationException(NotificationEntry errorEntry, Exception e) {
                 mNotifInflationErrorManager.setInflationError(entry, e);
             }
 
             @Override
-            public void onAsyncInflationFinished(NotificationEntry entry) {
+            public void handleInflationException(Exception e) {
+
+            }
+
+            @Override
+            public void onAsyncInflationFinished(NotificationEntry finishedEntry) {
                 mNotifInflationErrorManager.clearInflationError(entry);
                 getStageParams(entry).clearDirtyContentViews();
                 callback.onStageFinished(entry);
+            }
+
+            @Override
+            public void onAsyncInflationFinished() {
+
             }
         };
         mBinder.cancelBind(entry, row);

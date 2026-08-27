@@ -33,6 +33,7 @@ import com.android.systemui.broadcast.BroadcastDispatcher
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.globalactions.GlobalActionsDialogLite
+import com.android.systemui.globalactions.shared.model.GlobalActionsEvent
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.qs.FgsManagerController
 import com.android.systemui.qs.QSSecurityFooterUtils
@@ -40,12 +41,15 @@ import com.android.systemui.qs.footer.data.model.UserSwitcherStatusModel
 import com.android.systemui.qs.footer.data.repository.ForegroundServicesRepository
 import com.android.systemui.qs.footer.domain.model.SecurityButtonConfig
 import com.android.systemui.security.data.repository.SecurityRepository
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.policy.DeviceProvisionedController
+import com.android.systemui.supervision.data.repository.SupervisionRepository
 import com.android.systemui.user.data.repository.UserSwitcherRepository
 import com.android.systemui.user.domain.interactor.UserSwitcherInteractor
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -104,14 +108,20 @@ constructor(
     private val fgsManagerController: FgsManagerController,
     private val userSwitcherInteractor: UserSwitcherInteractor,
     securityRepository: SecurityRepository,
+    supervisionRepository: SupervisionRepository,
     foregroundServicesRepository: ForegroundServicesRepository,
     userSwitcherRepository: UserSwitcherRepository,
     broadcastDispatcher: BroadcastDispatcher,
     @Background bgDispatcher: CoroutineDispatcher,
+    @ShadeDisplayAware private val context: Context,
 ) : FooterActionsInteractor {
     override val securityButtonConfig: Flow<SecurityButtonConfig?> =
-        securityRepository.security.map { security ->
-            withContext(bgDispatcher) { qsSecurityFooterUtils.getButtonConfig(security) }
+        securityRepository.security.combine(supervisionRepository.supervision) {
+                security,
+                supervision ->
+            withContext(bgDispatcher) {
+                qsSecurityFooterUtils.getButtonConfig(security, supervision)
+            }
         }
 
     override val foregroundServicesCount: Flow<Int> =
@@ -152,11 +162,12 @@ constructor(
         globalActionsDialogLite: GlobalActionsDialogLite,
         expandable: Expandable,
     ) {
-        uiEventLogger.log(GlobalActionsDialogLite.GlobalActionsEvent.GA_OPEN_QS)
+        uiEventLogger.log(GlobalActionsEvent.GA_OPEN_QS)
         globalActionsDialogLite.showOrHideDialog(
             /* keyguardShowing= */ false,
             /* isDeviceProvisioned= */ true,
             expandable,
+            context.displayId,
         )
     }
 

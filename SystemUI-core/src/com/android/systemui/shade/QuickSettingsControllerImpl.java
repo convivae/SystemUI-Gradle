@@ -19,7 +19,9 @@ package com.android.systemui.shade;
 
 import static android.view.WindowInsets.Type.ime;
 
+import static com.android.systemui.Flags.shadeQsvisibleLogic;
 import static com.android.systemui.classifier.Classifier.QS_COLLAPSE;
+import static com.android.systemui.navigationbar.gestural.Utilities.isTrackpadThreeFingerSwipe;
 import static com.android.systemui.shade.NotificationPanelViewController.COUNTER_PANEL_OPEN_QS;
 import static com.android.systemui.shade.NotificationPanelViewController.FLING_COLLAPSE;
 import static com.android.systemui.shade.NotificationPanelViewController.FLING_EXPAND;
@@ -40,10 +42,10 @@ import android.graphics.Region;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.MathUtils;
+import android.view.Display;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.ViewConfiguration;
-import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
@@ -51,8 +53,10 @@ import android.view.accessibility.AccessibilityManager;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.app.animation.Interpolators;
+import com.android.app.displaylib.PerDisplayRepository;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.jank.Cuj;
 import com.android.internal.jank.InteractionJankMonitor;
@@ -62,22 +66,24 @@ import com.android.internal.policy.ScreenDecorationsUtils;
 import com.android.internal.policy.SystemBarUtils;
 import com.android.systemui.DejankUtils;
 import com.android.systemui.Dumpable;
+import com.android.systemui.Flags;
 import com.android.systemui.classifier.Classifier;
 import com.android.systemui.communal.ui.viewmodel.CommunalTransitionViewModel;
 import com.android.systemui.dagger.SysUISingleton;
+import com.android.systemui.dagger.qualifiers.Default;
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryFaceAuthInteractor;
+import com.android.systemui.display.dagger.ReferenceSysUIDisplaySubcomponent;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.fragments.FragmentHostManager;
-import com.android.systemui.keyguard.MigrateClocksToBlueprint;
 import com.android.systemui.media.controls.domain.pipeline.MediaDataManager;
 import com.android.systemui.media.controls.ui.controller.MediaHierarchyManager;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.qs.QS;
-import com.android.systemui.qs.flags.QSComposeFragment;
 import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
-import com.android.systemui.screenrecord.RecordingController;
+import com.android.systemui.screenrecord.ScreenRecordUxController;
 import com.android.systemui.shade.data.repository.ShadeRepository;
+import com.android.systemui.shade.domain.interactor.ShadeDisplaysInteractor;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.shared.system.QuickStepContract;
 import com.android.systemui.statusbar.LockscreenShadeTransitionController;
@@ -86,8 +92,8 @@ import com.android.systemui.statusbar.NotificationShadeDepthController;
 import com.android.systemui.statusbar.PulseExpansionHandler;
 import com.android.systemui.statusbar.QsFrameTranslateController;
 import com.android.systemui.statusbar.StatusBarState;
+import com.android.systemui.statusbar.gesture.StatusBarLongPressGestureDetector;
 import com.android.systemui.statusbar.notification.domain.interactor.ActiveNotificationsInteractor;
-import com.android.systemui.statusbar.notification.footer.shared.FooterViewRefactor;
 import com.android.systemui.statusbar.notification.stack.AmbientState;
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayout;
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController;
@@ -97,13 +103,14 @@ import com.android.systemui.statusbar.phone.KeyguardStatusBarView;
 import com.android.systemui.statusbar.phone.LightBarController;
 import com.android.systemui.statusbar.phone.LockscreenGestureLogger;
 import com.android.systemui.statusbar.phone.ScrimController;
-import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager;
 import com.android.systemui.statusbar.phone.ShadeTouchableRegionManager;
+import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager;
 import com.android.systemui.statusbar.policy.CastController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.SplitShadeStateController;
 import com.android.systemui.util.LargeScreenUtils;
 import com.android.systemui.util.kotlin.JavaAdapter;
+import com.android.systemui.utils.windowmanager.WindowManagerProvider;
 
 import dalvik.annotation.optimization.NeverCompile;
 
@@ -116,9 +123,7 @@ import java.io.PrintWriter;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
-/** Handles QuickSettings touch handling, expansion and animation state
- * TODO (b/264460656) make this dumpable
- */
+/** Handles QuickSettings touch handling, expansion and animation state. */
 @SysUISingleton
 public class QuickSettingsControllerImpl implements QuickSettingsController, Dumpable {
     public static final String TAG = "QuickSettingsController";
@@ -126,6 +131,9 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     public static final int SHADE_BACK_ANIM_SCALE_MULTIPLIER = 100;
 
     private QS mQs;
+    private final PerDisplayRepository<ReferenceSysUIDisplaySubcomponent>
+            mDisplaySubcomponentRepository;
+    private final Lazy<ShadeDisplaysInteractor> mShadeDisplaysInteractorLazy;
     private final Lazy<NotificationPanelViewController> mPanelViewControllerLazy;
 
     private final NotificationPanelView mPanelView;
@@ -151,7 +159,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     private final MediaDataManager mMediaDataManager;
     private final MediaHierarchyManager mMediaHierarchyManager;
     private final AmbientState mAmbientState;
-    private final RecordingController mRecordingController;
+    private final ScreenRecordUxController mRecordingController;
     private final LockscreenGestureLogger mLockscreenGestureLogger;
     private final ShadeLogger mShadeLog;
     private final DeviceEntryFaceAuthInteractor mDeviceEntryFaceAuthInteractor;
@@ -230,6 +238,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     private boolean mExpansionEnabledPolicy = true;
     private boolean mExpansionEnabledAmbient = true;
     private float mQuickQsHeaderHeight;
+    private boolean mLastMediaVisibility = false;
     /**
      * Determines if QS should be already expanded when expanding shade.
      * Used for split shade, two finger gesture as well as accessibility shortcut to QS.
@@ -296,13 +305,21 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     private ValueAnimator mSizeChangeAnimator;
 
     private ExpansionHeightListener mExpansionHeightListener;
-    private QsStateUpdateListener mQsStateUpdateListener;
     private ApplyClippingImmediatelyListener mApplyClippingImmediatelyListener;
     private FlingQsWithoutClickListener mFlingQsWithoutClickListener;
     private ExpansionHeightSetToMaxListener mExpansionHeightSetToMaxListener;
     private final QS.HeightListener mQsHeightListener = this::onHeightChanged;
+    private final QS.QqsHeightListener mQqsHeightListener = new QS.QqsHeightListener() {
+        @Override
+        public void onQqsHeightChanged() {
+            updateHeightsOnShadeLayoutChange();
+            mPanelViewControllerLazy.get().positionClockAndNotifications();
+        }
+    };
     private final Runnable mQsCollapseExpandAction = this::collapseOrExpandQs;
     private final QS.ScrollListener mQsScrollListener = this::onScroll;
+
+    private final WindowManagerProvider mWindowManagerProvider;
 
     @Inject
     public QuickSettingsControllerImpl(
@@ -318,14 +335,16 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             NotificationShadeDepthController notificationShadeDepthController,
             ShadeHeaderController shadeHeaderController,
             ShadeTouchableRegionManager shadeTouchableRegionManager,
-            Provider<StatusBarLongPressGestureDetector> statusBarLongPressGestureDetector,
+            @Default Provider<StatusBarLongPressGestureDetector> statusBarLongPressGestureDetector,
+            PerDisplayRepository<ReferenceSysUIDisplaySubcomponent> displaySubcomponentRepository,
+            Lazy<ShadeDisplaysInteractor> shadeDisplaysInteractorLazy,
             KeyguardStateController keyguardStateController,
             KeyguardBypassController keyguardBypassController,
             ScrimController scrimController,
             MediaDataManager mediaDataManager,
             MediaHierarchyManager mediaHierarchyManager,
             AmbientState ambientState,
-            RecordingController recordingController,
+            ScreenRecordUxController recordingController,
             FalsingManager falsingManager,
             AccessibilityManager accessibilityManager,
             LockscreenGestureLogger lockscreenGestureLogger,
@@ -341,8 +360,11 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             CastController castController,
             SplitShadeStateController splitShadeStateController,
             Lazy<CommunalTransitionViewModel> communalTransitionViewModelLazy,
-            Lazy<LargeScreenHeaderHelper> largeScreenHeaderHelperLazy
+            Lazy<LargeScreenHeaderHelper> largeScreenHeaderHelperLazy,
+            WindowManagerProvider windowManagerProvider
     ) {
+        mDisplaySubcomponentRepository = displaySubcomponentRepository;
+        mShadeDisplaysInteractorLazy = shadeDisplaysInteractorLazy;
         SceneContainerFlag.assertInLegacyMode();
         mPanelViewControllerLazy = panelViewControllerLazy;
         mPanelView = panelView;
@@ -392,6 +414,8 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
 
         mLockscreenShadeTransitionController.addCallback(new LockscreenShadeTransitionCallback());
         dumpManager.registerDumpable(this);
+
+        mWindowManagerProvider = windowManagerProvider;
     }
 
     @VisibleForTesting
@@ -401,10 +425,6 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
 
     void setExpansionHeightListener(ExpansionHeightListener listener) {
         mExpansionHeightListener = listener;
-    }
-
-    void setQsStateUpdateListener(QsStateUpdateListener listener) {
-        mQsStateUpdateListener = listener;
     }
 
     void setApplyClippingImmediatelyListener(ApplyClippingImmediatelyListener listener) {
@@ -430,9 +450,12 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                 mPanelView.getContext());
         mFalsingThreshold = mResources.getDimensionPixelSize(R.dimen.qs_falsing_threshold);
         mLockscreenNotificationPadding = mResources.getDimensionPixelSize(
-                R.dimen.notification_side_paddings);
+                R.dimen.notification_side_paddings_single);
         mDistanceForFullShadeTransition = mResources.getDimensionPixelSize(
                 R.dimen.lockscreen_shade_qs_transition_distance);
+        Log.d("b/445707756",
+                "loadDimens in QuickSettingsControllerImpl for display=" + getDisplayId()
+                        + " mScrimCornerRadius=" + mScrimCornerRadius);
     }
 
     void updateResources() {
@@ -497,11 +520,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
 
     int getHeaderHeight() {
         if (isQsFragmentCreated()) {
-            if (QSComposeFragment.isEnabled()) {
-                return mQs.getHeaderHeight();
-            } else {
-                return mQs.getHeader().getHeight();
-            }
+            return mQs.getHeaderHeight();
         } else {
             return 0;
         }
@@ -532,8 +551,8 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
 
     /** Returns whether split shade is enabled and an x coordinate is outside of the QS frame. */
     private boolean isSplitShadeAndTouchXOutsideQs(float touchX) {
-        return mSplitShadeEnabled && touchX < mQsFrame.getX()
-                || touchX > mQsFrame.getX() + mQsFrame.getWidth();
+        return mSplitShadeEnabled
+                && (touchX < mQsFrame.getX() || touchX > mQsFrame.getX() + mQsFrame.getWidth());
     }
 
     /**
@@ -541,7 +560,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
      *  on ACTION_DOWN, and safely queried repeatedly thereafter during ACTION_MOVE events.
      */
     void updateGestureInsetsCache() {
-        WindowManager wm = this.mPanelView.getContext().getSystemService(WindowManager.class);
+        WindowManager wm = mWindowManagerProvider.getWindowManager(this.mPanelView.getContext());
         WindowMetrics windowMetrics = wm.getCurrentWindowMetrics();
         mCachedGestureInsets = windowMetrics.getWindowInsets().getInsets(
                 WindowInsets.Type.systemGestures());
@@ -564,7 +583,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         }
         // TODO (b/265193930): remove dependency on NPVC
         // Let's reject anything at the very bottom around the home handle in gesture nav
-        if (mPanelViewControllerLazy.get().isInGestureNavHomeHandleArea(x, y)) {
+        if (mPanelViewControllerLazy.get().isInGestureNavHomeHandleArea(y)) {
             return false;
         }
         return y <= mNotificationStackScrollLayoutController.getBottomMostNotificationBottom()
@@ -599,6 +618,13 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     @Override
     public boolean getExpanded() {
         return mShadeRepository.getLegacyIsQsExpanded().getValue();
+    }
+
+    @Override
+    public void setPanelExpanded(boolean panelExpanded) {
+        if (mQs != null) {
+            mQs.setPanelExpanded(panelExpanded);
+        }
     }
 
     @VisibleForTesting
@@ -668,10 +694,15 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
      * Returns Whether we should intercept a gesture to open Quick Settings.
      */
     @Override
-    public boolean shouldQuickSettingsIntercept(float x, float y, float yDiff) {
+    public boolean shouldQuickSettingsIntercept(float x, float y, float yDiff,
+            @Nullable MotionEvent event) {
+        if (event != null && isTrackpadThreeFingerSwipe(event)) {
+            return false;
+        }
         boolean keyguardShowing = mBarState == KEYGUARD;
         if (!isExpansionEnabled() || mCollapsedOnDown || (keyguardShowing
-                && mKeyguardBypassController.getBypassEnabled()) || mSplitShadeEnabled) {
+                && mKeyguardBypassController.getBypassEnabled() && !Flags.expandQsBypassEnabled())
+                || mSplitShadeEnabled) {
             return false;
         }
         int headerTop, headerBottom;
@@ -679,13 +710,8 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             headerTop = mKeyguardStatusBar.getTop();
             headerBottom = mKeyguardStatusBar.getBottom();
         } else {
-            if (QSComposeFragment.isEnabled()) {
-                headerTop = mQs.getHeaderTop();
-                headerBottom = mQs.getHeaderBottom();
-            } else {
-                headerTop = mQs.getHeader().getTop();
-                headerBottom = mQs.getHeader().getBottom();
-            }
+            headerTop = mQs.getHeaderTop();
+            headerBottom = mQs.getHeaderBottom();
         }
         int frameTop = keyguardShowing
                 || mQs == null ? 0 : mQsFrame.getTop();
@@ -744,11 +770,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         if (mQs == null) {
             headerBottom = mKeyguardStatusBar.getBottom();
         } else {
-            if (QSComposeFragment.isEnabled()) {
-                headerBottom = mQs.getHeaderBottom();
-            } else {
-                headerBottom = mQs.getHeader().getBottom();
-            }
+            headerBottom = mQs.getHeaderBottom();
         }
         return downX >= mQsFrame.getX() && downX <= mQsFrame.getX() + mQsFrame.getWidth()
                 && downY <= headerBottom;
@@ -806,7 +828,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         if (changed) {
             mShadeRepository.setLegacyIsQsExpanded(expanded);
             updateQsState();
-            mPanelViewControllerLazy.get().onQsExpansionChanged(expanded);
+            mPanelViewControllerLazy.get().onQsExpansionChanged();
             mShadeLog.logQsExpansionChanged("QS Expansion Changed.", expanded,
                     getMinExpansionHeight(), getMaxExpansionHeight(),
                     mStackScrollerOverscrolling, mAnimatorExpand, mAnimating);
@@ -859,6 +881,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             mMaxExpansionHeight = mQs.getDesiredHeight();
             mNotificationStackScrollLayoutController.setMaxTopPadding(
                     getMaxExpansionHeight());
+            mMediaHierarchyManager.onQsHeightUpdated();
         }
         return oldMaxHeight;
     }
@@ -968,6 +991,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     void setShadeExpansion(float expandedHeight, float expandedFraction) {
         mShadeExpandedHeight = expandedHeight;
         mShadeExpandedFraction = expandedFraction;
+        mMediaHierarchyManager.setShadeExpandedFraction(expandedFraction);
     }
 
     @VisibleForTesting
@@ -1023,16 +1047,6 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     }
 
     void updateQsState() {
-        if (!FooterViewRefactor.isEnabled()) {
-            // Update full screen state; note that this will be true if the QS panel is only
-            // partially expanded, and that is fixed with the footer view refactor.
-            setQsFullScreen(/* qsFullScreen = */ getExpanded() && !mSplitShadeEnabled);
-        }
-
-        if (mQsStateUpdateListener != null) {
-            mQsStateUpdateListener.onQsStateUpdated(getExpanded(), mStackScrollerOverscrolling);
-        }
-
         if (mQs == null) return;
         mQs.setExpanded(getExpanded());
     }
@@ -1045,6 +1059,8 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             squishiness = 1;
         } else if (mTransitioningToFullShadeProgress > 0.0f) {
             squishiness = mLockscreenShadeTransitionController.getQsSquishTransitionFraction();
+        } else if (getFullyExpanded() || mPanelViewControllerLazy.get().isFullyExpanded()) {
+            squishiness = 1;
         } else {
             squishiness = mNotificationStackScrollLayoutController
                     .getNotificationSquishinessFraction();
@@ -1095,10 +1111,8 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         // Update the light bar
         mLightBarController.setQsExpanded(mFullyExpanded);
 
-        if (FooterViewRefactor.isEnabled()) {
-            // Update full screen state
-            setQsFullScreen(/* qsFullScreen = */ mFullyExpanded && !mSplitShadeEnabled);
-        }
+        // Update full screen state
+        setQsFullScreen(/* qsFullScreen = */ mFullyExpanded && !mSplitShadeEnabled);
     }
 
     float getLockscreenShadeDragProgress() {
@@ -1175,10 +1189,6 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         if (getExpanded()) {
             onExpansionStarted();
         }
-        // Since there are QS tiles in the header now, we need to make sure we start listening
-        // immediately so they can be up to date.
-        if (mQs == null) return;
-        mQs.setHeaderListening(true);
     }
 
     /** Set animate next notification bounds. */
@@ -1195,14 +1205,18 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     void setClippingBounds() {
         float qsExpansionFraction = computeExpansionFraction();
         final int qsPanelBottomY = calculateBottomPosition(qsExpansionFraction);
+        int top = calculateTopClippingBound(qsPanelBottomY);
         // Split shade has no QQS
-        final boolean qqsVisible =
-                !mSplitShadeEnabled && qsExpansionFraction == 0 && qsPanelBottomY > 0;
+        final boolean qqsVisible;
+        if (shadeQsvisibleLogic()) {
+            qqsVisible = !mSplitShadeEnabled && qsExpansionFraction == 0 && top > 0;
+        } else {
+            qqsVisible = !mSplitShadeEnabled && qsExpansionFraction == 0 && qsPanelBottomY > 0;
+        }
+
         final boolean qsVisible = qsExpansionFraction > 0;
         final boolean qsOrQqsVisible = qqsVisible || qsVisible;
-        checkCorrectScrimVisibility(qsExpansionFraction);
 
-        int top = calculateTopClippingBound(qsPanelBottomY);
         int bottom = calculateBottomClippingBound(top);
         int left = calculateLeftClippingBound();
         int right = calculateRightClippingBound();
@@ -1214,7 +1228,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     /**
      * Applies clipping to quick settings, notifications layout and
      * updates bounds of the notifications background (notifications scrim).
-     *
+     * <p>
      * The parameters are bounds of the notifications area rectangle, this function
      * calculates bounds for the QS clipping based on the notifications bounds.
      */
@@ -1404,21 +1418,6 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         }
     }
 
-    private void checkCorrectScrimVisibility(float expansionFraction) {
-        // issues with scrims visible on keyguard occur only in split shade
-        if (mSplitShadeEnabled) {
-            // TODO (b/265193930): remove dependency on NPVC
-            boolean keyguardViewsVisible = mBarState == KEYGUARD
-                            && mPanelViewControllerLazy.get().getKeyguardOnlyContentAlpha() == 1;
-            // expansionFraction == 1 means scrims are fully visible as their size/visibility depend
-            // on QS expansion
-            if (expansionFraction == 1 && keyguardViewsVisible) {
-                Log.wtf(TAG,
-                        "Incorrect state, scrim is visible at the same time when clock is visible");
-            }
-        }
-    }
-
     @Override
     public float calculateNotificationsTopPadding(boolean isShadeExpanding,
             int keyguardNotificationStaticPadding, float expandedFraction) {
@@ -1605,7 +1604,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         }
         if (mAccessibilityManager.isEnabled()) {
             // TODO (b/265193930): remove dependency on NPVC
-            mPanelView.setAccessibilityPaneTitle(
+            mPanelView.getRootView().setAccessibilityPaneTitle(
                     mPanelViewControllerLazy.get().determineAccessibilityPaneTitle());
         }
         mNotificationStackScrollLayoutController.setMaxTopPadding(mMaxExpansionHeight);
@@ -1649,17 +1648,35 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
     /** handles touches in Qs panel area */
     boolean handleTouch(MotionEvent event, boolean isFullyCollapsed,
             boolean isShadeOrQsHeightAnimationRunning) {
+        if (isTrackpadThreeFingerSwipe(event)) {
+            return false;
+        }
         if (isSplitShadeAndTouchXOutsideQs(event.getX())) {
+            mShadeLog.logMotionEvent(event, "handleQsTouch: touch outside QS");
             return false;
         }
         boolean isInStatusBar = event.getY(event.getActionIndex()) < mStatusBarMinHeight;
-        if (ShadeExpandsOnStatusBarLongPress.isEnabled() && isInStatusBar) {
-            mStatusBarLongPressGestureDetector.get().handleTouch(event);
+        if (isInStatusBar) {
+            if (Flags.statusBarLongPressGestureDetectorPerDisplay()) {
+                int shadeDisplayId = mShadeDisplaysInteractorLazy.get().getDisplayId().getValue();
+                ReferenceSysUIDisplaySubcomponent displaySubcomponent =
+                        mDisplaySubcomponentRepository.get(shadeDisplayId);
+                if (displaySubcomponent != null) {
+                    displaySubcomponent.getStatusBarLongPressGestureDetector().handleTouch(event);
+                }
+            } else {
+                mStatusBarLongPressGestureDetector.get().handleTouch(event);
+            }
         }
         final int action = event.getActionMasked();
         boolean collapsedQs = !getExpanded() && !mSplitShadeEnabled;
+        boolean expansionEnabled = isExpansionEnabled();
+        if (!expansionEnabled) {
+            mShadeLog.logQsExpansionNotEnabled(mExpansionEnabledPolicy, mExpansionEnabledAmbient,
+                    mRemoteInputManager.isRemoteInputActive());
+        }
         boolean expandedShadeCollapsedQs = mShadeExpandedFraction == 1f
-                && mBarState != KEYGUARD && collapsedQs && isExpansionEnabled();
+                && mBarState != KEYGUARD && collapsedQs && expansionEnabled;
         if (action == MotionEvent.ACTION_DOWN && expandedShadeCollapsedQs) {
             // Down in the empty area while fully expanded - go to QS.
             mShadeLog.logMotionEvent(event, "handleQsTouch: down action, QS tracking enabled");
@@ -1688,6 +1705,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         }
         if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
             mConflictingExpansionGesture = false;
+            resetEarlyExpansion();
         }
         if (action == MotionEvent.ACTION_DOWN && isFullyCollapsed && isExpansionEnabled()) {
             mTwoFingerExpandPossible = true;
@@ -1719,7 +1737,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                     return;
                 }
             }
-            if (shouldQuickSettingsIntercept(event.getX(), event.getY(), -1)) {
+            if (shouldQuickSettingsIntercept(event.getX(), event.getY(), -1, event)) {
                 mShadeLog.logMotionEvent(event,
                         "handleQsDown: down action, QS tracking enabled");
                 setTracking(true);
@@ -1756,6 +1774,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                 mInitialHeightOnTouch = mExpansionHeight;
                 initVelocityTracker();
                 trackMovement(event);
+                setEarlyExpansion();
                 break;
 
             case MotionEvent.ACTION_POINTER_UP:
@@ -1793,6 +1812,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                     flingQsWithCurrentVelocity(y,
                             event.getActionMasked() == MotionEvent.ACTION_CANCEL);
                 } else {
+                    resetEarlyExpansion();
                     traceQsJank(false,
                             event.getActionMasked() == MotionEvent.ACTION_CANCEL);
                 }
@@ -1827,16 +1847,6 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                     mShadeLog.logMotionEvent(event,
                             "onQsIntercept: down action, QS partially expanded/collapsed");
                     return true;
-                }
-                // TODO (b/265193930): remove dependency on NPVC
-                if (mPanelViewControllerLazy.get().isKeyguardShowing()
-                        && shouldQuickSettingsIntercept(mInitialTouchX, mInitialTouchY, 0)) {
-                    // Dragging down on the lockscreen statusbar should prohibit other interactions
-                    // immediately, otherwise we'll wait on the touchslop. This is to allow
-                    // dragging down to expanded quick settings directly on the lockscreen.
-                    if (!MigrateClocksToBlueprint.isEnabled()) {
-                        mPanelView.getParent().requestDisallowInterceptTouchEvent(true);
-                    }
                 }
                 if (mExpansionAnimator != null) {
                     mInitialHeightOnTouch = mExpansionHeight;
@@ -1878,10 +1888,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                 if ((h > touchSlop || (h < -touchSlop && getExpanded()))
                         && Math.abs(h) > Math.abs(x - mInitialTouchX)
                         && shouldQuickSettingsIntercept(
-                        mInitialTouchX, mInitialTouchY, h)) {
-                    if (!MigrateClocksToBlueprint.isEnabled()) {
-                        mPanelView.getParent().requestDisallowInterceptTouchEvent(true);
-                    }
+                        mInitialTouchX, mInitialTouchY, h, event)) {
                     mShadeLog.onQsInterceptMoveQsTrackingEnabled(h);
                     setTracking(true);
                     traceQsJank(true, false);
@@ -1891,6 +1898,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                     mInitialTouchY = y;
                     mInitialTouchX = x;
                     mNotificationStackScrollLayoutController.cancelLongPress();
+                    setEarlyExpansion();
                     return true;
                 } else {
                     mShadeLog.logQsTrackingNotStarted(mInitialTouchY, y, h, touchSlop,
@@ -2071,134 +2079,148 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                 (int) ((y - getInitialTouchY()) / displayDensity), (int) (vel / displayDensity));
     }
 
+    private void setEarlyExpansion() {
+        if (mQs != null) {
+            mQs.setExpanded(true);
+            mMediaHierarchyManager.setQsExpanded(true);
+        }
+    }
+
+    private void resetEarlyExpansion() {
+        updateQsState();
+        mMediaHierarchyManager.setQsExpanded(getExpanded());
+    }
+
     @NeverCompile
     @Override
     public void dump(@NonNull PrintWriter pw, @NonNull String[] args) {
         pw.println(TAG + ":");
         IndentingPrintWriter ipw = asIndenting(pw);
         ipw.increaseIndent();
-        ipw.print("mIsFullWidth=");
-        ipw.println(mIsFullWidth);
-        ipw.print("mTouchSlop=");
-        ipw.println(mTouchSlop);
-        ipw.print("mSlopMultiplier=");
-        ipw.println(mSlopMultiplier);
+        ipw.print("getExpanded()=");
+        ipw.println(getExpanded());
+        ipw.print("isExpandImmediate()=");
+        ipw.println(isExpandImmediate());
+        ipw.print("mAnimateNextNotificationBounds=");
+        ipw.println(mAnimateNextNotificationBounds);
+        ipw.print("mAnimating=");
+        ipw.println(mAnimating);
+        ipw.print("mAnimatingHiddenFromCollapsed=");
+        ipw.println(mAnimatingHiddenFromCollapsed);
+        ipw.print("mAnimatorExpand=");
+        ipw.println(mAnimatorExpand);
         ipw.print("mBarState=");
         ipw.println(mBarState);
-        ipw.print("mStatusBarMinHeight=");
-        ipw.println(mStatusBarMinHeight);
-        ipw.print("mScrimEnabled=");
-        ipw.println(mScrimEnabled);
-        ipw.print("mScrimCornerRadius=");
-        ipw.println(mScrimCornerRadius);
-        ipw.print("mScreenCornerRadius=");
-        ipw.println(mScreenCornerRadius);
-        ipw.print("mUseLargeScreenShadeHeader=");
-        ipw.println(mUseLargeScreenShadeHeader);
-        ipw.print("mLargeScreenShadeHeaderHeight=");
-        ipw.println(mLargeScreenShadeHeaderHeight);
-        ipw.print("mDisplayRightInset=");
-        ipw.println(mDisplayRightInset);
+        ipw.print("mCachedGestureInsets=");
+        ipw.println(mCachedGestureInsets);
+        ipw.print("mCachedWindowWidth=");
+        ipw.println(mCachedWindowWidth);
+        ipw.print("mClippingAnimationEndBounds=");
+        ipw.println(mClippingAnimationEndBounds);
+        ipw.print("mCollapsedOnDown=");
+        ipw.println(mCollapsedOnDown);
+        ipw.print("mConflictingExpansionGesture=");
+        ipw.println(mConflictingExpansionGesture);
+        ipw.print("mDistanceForFullShadeTransition=");
+        ipw.println(mDistanceForFullShadeTransition);
         ipw.print("mDisplayLeftInset=");
         ipw.println(mDisplayLeftInset);
-        ipw.print("mSplitShadeEnabled=");
-        ipw.println(mSplitShadeEnabled);
-        ipw.print("mLockscreenNotificationPadding=");
-        ipw.println(mLockscreenNotificationPadding);
-        ipw.print("mSplitShadeNotificationsScrimMarginBottom=");
-        ipw.println(mSplitShadeNotificationsScrimMarginBottom);
+        ipw.print("mDisplayRightInset=");
+        ipw.println(mDisplayRightInset);
         ipw.print("mDozing=");
         ipw.println(mDozing);
         ipw.print("mEnableClipping=");
         ipw.println(mEnableClipping);
+        ipw.print("mExpandedWhenExpandingStarted=");
+        ipw.println(mExpandedWhenExpandingStarted);
+        ipw.print("mExpansionEnabledAmbient=");
+        ipw.println(mExpansionEnabledAmbient);
+        ipw.print("mExpansionEnabledPolicy=");
+        ipw.println(mExpansionEnabledPolicy);
+        ipw.print("mExpansionFromOverscroll=");
+        ipw.println(mExpansionFromOverscroll);
+        ipw.print("mExpansionHeight=");
+        ipw.println(mExpansionHeight);
         ipw.print("mFalsingThreshold=");
         ipw.println(mFalsingThreshold);
-        ipw.print("mTransitionToFullShadePosition=");
-        ipw.println(mTransitionToFullShadePosition);
-        ipw.print("mCollapsedOnDown=");
-        ipw.println(mCollapsedOnDown);
-        ipw.print("mShadeExpandedHeight=");
-        ipw.println(mShadeExpandedHeight);
-        ipw.print("mLastShadeFlingWasExpanding=");
-        ipw.println(mLastShadeFlingWasExpanding);
+        ipw.print("mFullyExpanded=");
+        ipw.println(mFullyExpanded);
         ipw.print("mInitialHeightOnTouch=");
         ipw.println(mInitialHeightOnTouch);
         ipw.print("mInitialTouchX=");
         ipw.println(mInitialTouchX);
         ipw.print("mInitialTouchY=");
         ipw.println(mInitialTouchY);
-        ipw.print("mTouchAboveFalsingThreshold=");
-        ipw.println(mTouchAboveFalsingThreshold);
-        ipw.print("mTracking=");
-        ipw.println(isTracking());
-        ipw.print("mTrackingPointer=");
-        ipw.println(mTrackingPointer);
-        ipw.print("mExpanded=");
-        ipw.println(getExpanded());
-        ipw.print("mFullyExpanded=");
-        ipw.println(mFullyExpanded);
-        ipw.print("isExpandImmediate()=");
-        ipw.println(isExpandImmediate());
-        ipw.print("mExpandedWhenExpandingStarted=");
-        ipw.println(mExpandedWhenExpandingStarted);
-        ipw.print("mAnimatingHiddenFromCollapsed=");
-        ipw.println(mAnimatingHiddenFromCollapsed);
-        ipw.print("mVisible=");
-        ipw.println(mVisible);
-        ipw.print("mExpansionHeight=");
-        ipw.println(mExpansionHeight);
-        ipw.print("mMinExpansionHeight=");
-        ipw.println(mMinExpansionHeight);
-        ipw.print("mMaxExpansionHeight=");
-        ipw.println(mMaxExpansionHeight);
-        ipw.print("mShadeExpandedFraction=");
-        ipw.println(mShadeExpandedFraction);
-        ipw.print("mLastOverscroll=");
-        ipw.println(mLastOverscroll);
-        ipw.print("mExpansionFromOverscroll=");
-        ipw.println(mExpansionFromOverscroll);
-        ipw.print("mExpansionEnabledPolicy=");
-        ipw.println(mExpansionEnabledPolicy);
-        ipw.print("mExpansionEnabledAmbient=");
-        ipw.println(mExpansionEnabledAmbient);
-        ipw.print("mQuickQsHeaderHeight=");
-        ipw.println(mQuickQsHeaderHeight);
-        ipw.print("mTwoFingerExpandPossible=");
-        ipw.println(mTwoFingerExpandPossible);
-        ipw.print("mConflictingExpansionGesture=");
-        ipw.println(mConflictingExpansionGesture);
-        ipw.print("mAnimatorExpand=");
-        ipw.println(mAnimatorExpand);
-        ipw.print("mCachedGestureInsets=");
-        ipw.println(mCachedGestureInsets);
-        ipw.print("mCachedWindowWidth=");
-        ipw.println(mCachedWindowWidth);
-        ipw.print("mTransitioningToFullShadeProgress=");
-        ipw.println(mTransitioningToFullShadeProgress);
-        ipw.print("mDistanceForFullShadeTransition=");
-        ipw.println(mDistanceForFullShadeTransition);
-        ipw.print("mStackScrollerOverscrolling=");
-        ipw.println(mStackScrollerOverscrolling);
-        ipw.print("mAnimating=");
-        ipw.println(mAnimating);
-        ipw.print("mIsTranslationResettingAnimator=");
-        ipw.println(mIsTranslationResettingAnimator);
+        ipw.print("mInterceptRegion=");
+        ipw.println(mInterceptRegion);
+        ipw.print("mIsFullWidth=");
+        ipw.println(mIsFullWidth);
         ipw.print("mIsPulseExpansionResettingAnimator=");
         ipw.println(mIsPulseExpansionResettingAnimator);
-        ipw.print("mTranslationForFullShadeTransition=");
-        ipw.println(mTranslationForFullShadeTransition);
-        ipw.print("mAnimateNextNotificationBounds=");
-        ipw.println(mAnimateNextNotificationBounds);
+        ipw.print("mIsTranslationResettingAnimator=");
+        ipw.println(mIsTranslationResettingAnimator);
+        ipw.print("mLargeScreenShadeHeaderHeight=");
+        ipw.println(mLargeScreenShadeHeaderHeight);
+        ipw.print("mLastClipBounds=");
+        ipw.println(mLastClipBounds);
+        ipw.print("mLastOverscroll=");
+        ipw.println(mLastOverscroll);
+        ipw.print("mLastShadeFlingWasExpanding=");
+        ipw.println(mLastShadeFlingWasExpanding);
+        ipw.print("mLockscreenNotificationPadding=");
+        ipw.println(mLockscreenNotificationPadding);
+        ipw.print("mMaxExpansionHeight=");
+        ipw.println(mMaxExpansionHeight);
+        ipw.print("mMinExpansionHeight=");
+        ipw.println(mMinExpansionHeight);
         ipw.print("mNotificationBoundsAnimationDelay=");
         ipw.println(mNotificationBoundsAnimationDelay);
         ipw.print("mNotificationBoundsAnimationDuration=");
         ipw.println(mNotificationBoundsAnimationDuration);
-        ipw.print("mInterceptRegion=");
-        ipw.println(mInterceptRegion);
-        ipw.print("mClippingAnimationEndBounds=");
-        ipw.println(mClippingAnimationEndBounds);
-        ipw.print("mLastClipBounds=");
-        ipw.println(mLastClipBounds);
+        ipw.print("mQuickQsHeaderHeight=");
+        ipw.println(mQuickQsHeaderHeight);
+        ipw.print("mScrimCornerRadius=");
+        ipw.println(mScrimCornerRadius);
+        ipw.print("mScrimEnabled=");
+        ipw.println(mScrimEnabled);
+        ipw.print("mScreenCornerRadius=");
+        ipw.println(mScreenCornerRadius);
+        ipw.print("mShadeExpandedFraction=");
+        ipw.println(mShadeExpandedFraction);
+        ipw.print("mShadeExpandedHeight=");
+        ipw.println(mShadeExpandedHeight);
+        ipw.print("mSlopMultiplier=");
+        ipw.println(mSlopMultiplier);
+        ipw.print("mSplitShadeEnabled=");
+        ipw.println(mSplitShadeEnabled);
+        ipw.print("mSplitShadeNotificationsScrimMarginBottom=");
+        ipw.println(mSplitShadeNotificationsScrimMarginBottom);
+        ipw.print("mStackScrollerOverscrolling=");
+        ipw.println(mStackScrollerOverscrolling);
+        ipw.print("mStatusBarMinHeight=");
+        ipw.println(mStatusBarMinHeight);
+        ipw.print("mTouchAboveFalsingThreshold=");
+        ipw.println(mTouchAboveFalsingThreshold);
+        ipw.print("mTouchSlop=");
+        ipw.println(mTouchSlop);
+        ipw.print("mTracking=");
+        ipw.println(isTracking());
+        ipw.print("mTrackingPointer=");
+        ipw.println(mTrackingPointer);
+        ipw.print("mTransitionToFullShadePosition=");
+        ipw.println(mTransitionToFullShadePosition);
+        ipw.print("mTransitioningToFullShadeProgress=");
+        ipw.println(mTransitioningToFullShadeProgress);
+        ipw.print("mTranslationForFullShadeTransition=");
+        ipw.println(mTranslationForFullShadeTransition);
+        ipw.print("mTwoFingerExpandPossible=");
+        ipw.println(mTwoFingerExpandPossible);
+        ipw.print("mUseLargeScreenShadeHeader=");
+        ipw.println(mUseLargeScreenShadeHeader);
+        ipw.print("mVisible=");
+        ipw.println(mVisible);
+        ipw.print("displayId=");
+        ipw.println(mPanelView.getContext().getDisplayId());
     }
 
     /** */
@@ -2206,8 +2228,14 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
         return new QsFragmentListener();
     }
 
+    private int getDisplayId() {
+        return mPanelView.getContext().getDisplayId();
+    }
     /** */
     public final class QsFragmentListener implements FragmentHostManager.FragmentListener {
+
+        private int mLastDisplayIdWithMediaVisibilityChange = Display.DEFAULT_DISPLAY;
+
         /** */
         @Override
         public void onFragmentViewCreated(String tag, Fragment fragment) {
@@ -2218,6 +2246,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             mQs.setOverscrolling(mStackScrollerOverscrolling);
             mQs.setInSplitShade(mSplitShadeEnabled);
             mQs.setIsNotificationPanelFullWidth(mIsFullWidth);
+            mQs.setQqsHeightListener(mQqsHeightListener);
 
             // recompute internal state when qspanel height changes
             mQs.getView().addOnLayoutChangeListener(
@@ -2229,30 +2258,43 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                         }
                     });
             mQs.setCollapsedMediaVisibilityChangedListener((visible) -> {
-                if (mQs.isHeaderShown()) {
+                if (visible != mLastMediaVisibility) {
+                    mLastMediaVisibility = visible;
+                    mPanelViewControllerLazy.get().positionClockAndNotifications();
+                }
+                boolean shouldSkipAnimation = false;
+
+                if (mLastDisplayIdWithMediaVisibilityChange
+                        != getDisplayId()) {
+                    // Let's not animate the bounds if the visibility change is due to the
+                    // display being changed, otherwise we'll see some animation after the
+                    // shade changes display.
+                    shouldSkipAnimation = true;
+                    mLastDisplayIdWithMediaVisibilityChange = getDisplayId();
+                }
+                if (mQs.isHeaderShown() && !shouldSkipAnimation) {
                     setAnimateNextNotificationBounds(
                             StackStateAnimator.ANIMATION_DURATION_STANDARD, 0);
                     mNotificationStackScrollLayoutController.animateNextTopPaddingChange();
+
                 }
             });
             mLockscreenShadeTransitionController.setQS(mQs);
-            if (QSComposeFragment.isEnabled()) {
-                QSHeaderBoundsProvider provider = new QSHeaderBoundsProvider(
-                        mQs::getHeaderLeft,
-                        mQs::getHeaderHeight,
-                        rect -> {
-                            mQs.getHeaderBoundsOnScreen(rect);
-                            return Unit.INSTANCE;
-                        }
-                );
+            QSHeaderBoundsProvider provider = new QSHeaderBoundsProvider(
+                    mQs::getHeaderLeft,
+                    mQs::getHeaderHeight,
+                    rect -> {
+                        mQs.getHeaderBoundsOnScreen(rect);
+                        return Unit.INSTANCE;
+                    }
+            );
 
-                mNotificationStackScrollLayoutController.setQsHeaderBoundsProvider(provider);
-            } else {
-                mNotificationStackScrollLayoutController.setQsHeader((ViewGroup) mQs.getHeader());
-            }
+            mNotificationStackScrollLayoutController.setQsHeaderBoundsProvider(provider);
             mQs.setScrollListener(mQsScrollListener);
             updateExpansion();
         }
+
+
 
         /** */
         @Override
@@ -2262,11 +2304,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             // panel, mQs will not need to be null cause it will be tied to the same lifecycle.
             if (fragment == mQs) {
                 // Clear it to remove bindings to mQs from the provider.
-                if (QSComposeFragment.isEnabled()) {
-                    mNotificationStackScrollLayoutController.setQsHeaderBoundsProvider(null);
-                } else {
-                    mNotificationStackScrollLayoutController.setQsHeader(null);
-                }
+                mNotificationStackScrollLayoutController.setQsHeaderBoundsProvider(null);
                 mQs = null;
             }
         }
@@ -2298,11 +2336,9 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
                     setExpansionHeight(qsHeight);
                 }
 
-                boolean hasNotifications = FooterViewRefactor.isEnabled()
-                        ? mActiveNotificationsInteractor.getAreAnyNotificationsPresentValue()
-                        : mNotificationStackScrollLayoutController.getVisibleNotificationCount()
-                                != 0;
-                if (!hasNotifications && !mMediaDataManager.hasActiveMediaOrRecommendation()) {
+                boolean hasNotifications =
+                        mActiveNotificationsInteractor.getAreAnyNotificationsPresentValue();
+                if (!hasNotifications && !mMediaDataManager.hasActiveMedia()) {
                     // No notifications are visible, let's animate to the height of qs instead
                     if (isQsFragmentCreated()) {
                         // Let's interpolate to the header height instead of the top padding,
@@ -2434,10 +2470,6 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
 
     interface ExpansionHeightListener {
         void onQsSetExpansionHeightCalled(boolean qsFullyExpanded);
-    }
-
-    interface QsStateUpdateListener {
-        void onQsStateUpdated(boolean qsExpanded, boolean isStackScrollerOverscrolling);
     }
 
     interface ApplyClippingImmediatelyListener {

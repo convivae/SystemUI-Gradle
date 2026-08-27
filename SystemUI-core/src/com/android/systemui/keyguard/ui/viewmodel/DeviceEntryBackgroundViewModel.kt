@@ -19,14 +19,21 @@ package com.android.systemui.keyguard.ui.viewmodel
 
 import android.content.Context
 import com.android.settingslib.Utils
+import com.android.systemui.Flags.enableLockscreenBlur
+import com.android.systemui.common.shared.colors.SurfaceEffectColors
 import com.android.systemui.common.ui.domain.interactor.ConfigurationInteractor
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
+import com.android.systemui.scene.domain.interactor.SceneInteractor
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
+import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.ShadeDisplayAware
+import com.android.systemui.window.domain.interactor.WindowRootViewBlurInteractor
+import dagger.Lazy
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -35,7 +42,6 @@ import kotlinx.coroutines.flow.onStart
 
 /** Models the UI state for the device entry icon background view. */
 @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
-@ExperimentalCoroutinesApi
 @SysUISingleton
 class DeviceEntryBackgroundViewModel
 @Inject
@@ -62,25 +68,47 @@ constructor(
     primaryBouncerToDozingTransitionViewModel: PrimaryBouncerToDozingTransitionViewModel,
     primaryBouncerToLockscreenTransitionViewModel: PrimaryBouncerToLockscreenTransitionViewModel,
     lockscreenToDozingTransitionViewModel: LockscreenToDozingTransitionViewModel,
+    glanceableHubToAodTransitionViewModel: GlanceableHubToAodTransitionViewModel,
+    glanceableHubToLockscreenTransitionViewModel: GlanceableHubToLockscreenTransitionViewModel,
+    toLockscreenEndStateTransitionViewModel: ToLockscreenEndStateTransitionViewModel,
+    toAodEndStateTransitionViewModel: ToAodEndStateTransitionViewModel,
+    toDozingEndStateTransitionViewModel: ToDozingEndStateTransitionViewModel,
+    windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
+    private val sceneInteractor: Lazy<SceneInteractor>,
 ) {
     val color: Flow<Int> =
         deviceEntryIconViewModel.useBackgroundProtection.flatMapLatest { useBackground ->
             if (useBackground) {
-                configurationInteractor.onAnyConfigurationChange
-                    .map {
-                        Utils.getColorAttrDefaultColor(
-                            context,
-                            com.android.internal.R.attr.colorSurface,
-                        )
-                    }
-                    .onStart {
-                        emit(
+                if (!enableLockscreenBlur()) {
+                    configurationInteractor.onAnyConfigurationChange
+                        .map {
                             Utils.getColorAttrDefaultColor(
                                 context,
                                 com.android.internal.R.attr.colorSurface,
                             )
-                        )
+                        }
+                        .onStart {
+                            emit(
+                                Utils.getColorAttrDefaultColor(
+                                    context,
+                                    com.android.internal.R.attr.colorSurface,
+                                )
+                            )
+                        }
+                } else {
+                    configurationInteractor.onAnyConfigurationChange.combine(
+                        windowRootViewBlurInteractor.isBlurCurrentlySupported
+                    ) { config, isSupported ->
+                        if (isSupported) {
+                            SurfaceEffectColors.surfaceEffect1(context)
+                        } else {
+                            Utils.getColorAttrDefaultColor(
+                                context,
+                                com.android.internal.R.attr.colorSurface,
+                            )
+                        }
                     }
+                }
             } else {
                 flowOf(0)
             }
@@ -108,27 +136,47 @@ constructor(
                         primaryBouncerToLockscreenTransitionViewModel
                             .deviceEntryBackgroundViewAlpha,
                         lockscreenToDozingTransitionViewModel.deviceEntryBackgroundViewAlpha,
+                        glanceableHubToAodTransitionViewModel.deviceEntryBackgroundViewAlpha,
+                        glanceableHubToLockscreenTransitionViewModel.deviceEntryBackgroundViewAlpha,
+                        toLockscreenEndStateTransitionViewModel.deviceEntryBackgroundViewAlpha,
+                        toAodEndStateTransitionViewModel.deviceEntryBackgroundViewAlpha,
+                        toDozingEndStateTransitionViewModel.deviceEntryBackgroundViewAlpha,
                     )
                     .merge()
                     .onStart {
-                        when (
-                            keyguardTransitionInteractor.currentKeyguardState.replayCache.last()
-                        ) {
-                            KeyguardState.GLANCEABLE_HUB,
-                            KeyguardState.GONE,
-                            KeyguardState.OCCLUDED,
-                            KeyguardState.OFF,
-                            KeyguardState.DOZING,
-                            KeyguardState.DREAMING,
-                            KeyguardState.PRIMARY_BOUNCER,
-                            KeyguardState.AOD,
-                            KeyguardState.UNDEFINED -> emit(0f)
-                            KeyguardState.ALTERNATE_BOUNCER,
-                            KeyguardState.LOCKSCREEN -> emit(1f)
-                        }
+                        emit(
+                            calculateDeviceEntryIconBackgroundAlpha(
+                                keyguardTransitionInteractor.currentKeyguardState.replayCache.last()
+                            )
+                        )
                     }
             } else {
                 flowOf(0f)
             }
         }
+
+    private fun calculateDeviceEntryIconBackgroundAlpha(state: KeyguardState): Float {
+        return when (state) {
+            KeyguardState.GLANCEABLE_HUB,
+            KeyguardState.GONE,
+            KeyguardState.OCCLUDED,
+            KeyguardState.OFF,
+            KeyguardState.DOZING,
+            KeyguardState.DREAMING,
+            KeyguardState.PRIMARY_BOUNCER,
+            KeyguardState.AOD -> 0f
+            KeyguardState.ALTERNATE_BOUNCER,
+            KeyguardState.LOCKSCREEN -> 1f
+            KeyguardState.UNDEFINED ->
+                if (SceneContainerFlag.isEnabled) {
+                    when (sceneInteractor.get().currentScene.value) {
+                        Scenes.Shade,
+                        Scenes.QuickSettings -> 1f
+                        else -> 0f
+                    }
+                } else {
+                    1f
+                }
+        }
+    }
 }

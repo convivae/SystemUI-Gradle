@@ -16,10 +16,12 @@
 
 package com.android.systemui.communal.widgets
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application.ActivityLifecycleCallbacks
 import android.content.Intent
 import android.content.IntentSender
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.RemoteException
 import android.util.Log
@@ -36,29 +38,34 @@ import androidx.lifecycle.lifecycleScope
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.compose.theme.PlatformTheme
 import com.android.internal.logging.UiEventLogger
-import com.android.systemui.Flags.communalEditWidgetsActivityFinishFix
 import com.android.systemui.communal.shared.log.CommunalUiEvent
 import com.android.systemui.communal.shared.model.CommunalScenes
 import com.android.systemui.communal.shared.model.CommunalTransitionKeys
 import com.android.systemui.communal.shared.model.EditModeState
 import com.android.systemui.communal.ui.compose.CommunalHub
+import com.android.systemui.communal.ui.compose.TransitionDuration
 import com.android.systemui.communal.ui.view.layout.sections.CommunalAppWidgetSection
 import com.android.systemui.communal.ui.viewmodel.CommunalEditModeViewModel
 import com.android.systemui.communal.util.WidgetPickerIntentUtils.getWidgetExtraFromIntent
+import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor
-import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.Logger
 import com.android.systemui.log.dagger.CommunalLog
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.settings.UserTracker
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 /** An Activity for editing the widgets that appear in hub mode. */
 class EditWidgetsActivity
 @Inject
 constructor(
+    @Application private val applicationScope: CoroutineScope,
     private val communalViewModel: CommunalEditModeViewModel,
     private val keyguardInteractor: KeyguardInteractor,
     private var windowManagerService: IWindowManager? = null,
@@ -91,16 +98,6 @@ constructor(
         fun setActivityFullyVisible(fullyVisible: Boolean) {}
     }
 
-    /**
-     * A nop ActivityController to be use when the communalEditWidgetsActivityFinishFix flag is
-     * false.
-     */
-    class NopActivityController : ActivityController
-
-    /**
-     * A functional ActivityController to be used when the communalEditWidgetsActivityFinishFix flag
-     * is true.
-     */
     class ActivityControllerImpl(activity: Activity) : ActivityController {
         companion object {
             private const val STATE_EXTRA_IS_WAITING_FOR_RESULT = "extra_is_waiting_for_result"
@@ -172,12 +169,28 @@ constructor(
 
     private var shouldOpenWidgetPickerOnStart = false
 
-    private val activityController: ActivityController =
-        if (communalEditWidgetsActivityFinishFix()) ActivityControllerImpl(this)
-        else NopActivityController()
+    private val activityController: ActivityController = ActivityControllerImpl(this)
 
+    // Completes when the activity UI is rendered and ready for the hub to edit mode transition.
+    private val readyDeferred = CompletableDeferred<Unit>()
+
+    // Completes when the lock screen animation is complete and is ready to a scene change.
+    private val lockscreenReadyDeferred = CompletableDeferred<Unit>()
+
+    @SuppressLint("SourceLockedOrientationActivity")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (!communalViewModel.isScreenRotationAllowed()) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+
+        communalViewModel.setEditModeState(EditModeState.CREATED)
+
+        lifecycleScope.launch {
+            delay(TransitionDuration.EDIT_MODE_BACKGROUND_ANIM_DURATION_MS.milliseconds)
+            lockscreenReadyDeferred.complete(Unit)
+        }
 
         listenForTransitionAndChangeScene()
 
@@ -212,33 +225,41 @@ constructor(
     // Handle scene change to show the activity and animate in its content
     private fun listenForTransitionAndChangeScene() {
         lifecycleScope.launch {
-            communalViewModel.canShowEditMode.collect {
-                if (!SceneContainerFlag.isEnabled) {
-                    communalViewModel.changeScene(
-                        scene = CommunalScenes.Blank,
-                        loggingReason = "edit mode opening",
-                        transitionKey = CommunalTransitionKeys.ToEditMode,
-                        keyguardState = KeyguardState.GONE,
-                    )
-                    // wait till transitioned to Blank scene, then animate in communal content in
-                    // edit mode
-                    communalViewModel.currentScene.first { it == CommunalScenes.Blank }
-                }
+            // Wait for the edit mode activity to be ready underneath the hub before starting
+            // the hub to edit mode transition.
+            readyDeferred.await()
+            // Wait for lock screen background animation to finish.
+            lockscreenReadyDeferred.await()
+            // Edit mode activity now ready to show.
+            communalViewModel.setEditModeState(EditModeState.READY_TO_SHOW)
 
-                // Wait for dream to exit, if we were previously dreaming.
-                keyguardInteractor.isDreaming.first { !it }
+            if (!SceneContainerFlag.isEnabled) {
+                communalViewModel.changeScene(
+                    scene = CommunalScenes.Blank,
+                    loggingReason = "edit mode opening",
+                    transitionKey = CommunalTransitionKeys.ToEditMode,
+                )
 
-                communalViewModel.setEditModeState(EditModeState.SHOWING)
+                // Wait for scene change to BLANK.
+                communalViewModel.currentScene.first { it == CommunalScenes.Blank }
+            }
 
-                // Inform the ActivityController that we are now fully visible.
-                activityController.setActivityFullyVisible(true)
+            // Wait for hub to fully transition out.
+            communalViewModel.hubTransitionOut.first { it }
 
-                // Show the widget picker, if necessary, after the edit activity has animated in.
-                // Waiting until after the activity has appeared avoids transitions issues.
-                if (shouldOpenWidgetPickerOnStart) {
-                    onOpenWidgetPicker()
-                    shouldOpenWidgetPickerOnStart = false
-                }
+            // Wait for dream to exit, if we were previously dreaming.
+            keyguardInteractor.isDreaming.first { !it }
+
+            communalViewModel.setEditModeState(EditModeState.SHOWING)
+
+            // Inform the ActivityController that we are now fully visible.
+            activityController.setActivityFullyVisible(true)
+
+            // Show the widget picker, if necessary, after the edit activity has animated in.
+            // Waiting until after the activity has appeared avoids transitions issues.
+            if (shouldOpenWidgetPickerOnStart) {
+                onOpenWidgetPicker()
+                shouldOpenWidgetPickerOnStart = false
             }
         }
     }
@@ -256,8 +277,11 @@ constructor(
     }
 
     private fun onEditDone() {
-        lifecycleScope.launch {
-            communalViewModel.cleanupEditModeState()
+        // The following is run on the application scope instead of the lifecycle scope because the
+        // activity becomes paused after scene change, and the coroutine may get suspended before it
+        // finishes.
+        applicationScope.launch {
+            communalViewModel.onEditDone()
 
             communalViewModel.changeScene(
                 scene = CommunalScenes.Communal,
@@ -348,6 +372,12 @@ constructor(
         uiEventLogger.log(CommunalUiEvent.COMMUNAL_HUB_EDIT_MODE_SHOWN)
     }
 
+    override fun onEnterAnimationComplete() {
+        super.onEnterAnimationComplete()
+
+        readyDeferred.complete(Unit)
+    }
+
     override fun onStop() {
         super.onStop()
         communalViewModel.setEditActivityShowing(false)
@@ -359,7 +389,9 @@ constructor(
     override fun onDestroy() {
         super.onDestroy()
         communalViewModel.cleanupEditModeState()
-        communalViewModel.setEditModeOpen(false)
+        if (!isChangingConfigurations) {
+            communalViewModel.setEditModeOpen(false)
+        }
     }
 
     private fun lockNow() {

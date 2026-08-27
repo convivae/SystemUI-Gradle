@@ -32,6 +32,7 @@ import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.keyguard.shared.model.TransitionState
 import com.android.systemui.keyguard.shared.model.filterState
 import com.android.systemui.power.domain.interactor.PowerInteractor
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.util.kotlin.BooleanFlowOperators.allOf
 import com.android.systemui.util.kotlin.BooleanFlowOperators.not
@@ -77,7 +78,7 @@ constructor(
 
     @SuppressLint("MissingPermission")
     override fun start() {
-        if (!communalSettingsInteractor.isCommunalFlagEnabled()) {
+        if (!communalSettingsInteractor.isCommunalFlagEnabled() || SceneContainerFlag.isEnabled) {
             return
         }
 
@@ -91,13 +92,19 @@ constructor(
                 .launchIn(bgScope)
         }
 
-        // Restart the dream underneath the hub in order to support the ability to swipe
-        // away the hub to enter the dream.
-        startDream
-            .sampleFilter(powerInteractor.isAwake) { isAwake ->
-                !glanceableHubAllowKeyguardWhenDreaming() && dreamManager.canStartDreaming(isAwake)
-            }
-            .onEach { dreamManager.startDream() }
-            .launchIn(bgScope)
+        // With hub v2, we no longer need to keep the dream running underneath the hub as there is
+        // no more swipe between the hub and dream. We can just start the dream on-demand when the
+        // user presses the dream coin.
+        if (!communalSettingsInteractor.isV2FlagEnabled()) {
+            // Restart the dream underneath the hub in order to support the ability to swipe away
+            // the hub to enter the dream.
+            startDream
+                .sampleFilter(powerInteractor.isAwake) { isAwake ->
+                    !glanceableHubAllowKeyguardWhenDreaming() &&
+                        dreamManager.canStartDreaming(isAwake)
+                }
+                .onEach { dreamManager.startDream() }
+                .launchIn(bgScope)
+        }
     }
 }

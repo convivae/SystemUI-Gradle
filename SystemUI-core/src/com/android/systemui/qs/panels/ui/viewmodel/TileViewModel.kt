@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onStart
 
 @Immutable
-class TileViewModel(private val tile: QSTile, val spec: TileSpec) {
+data class TileViewModel(private val tile: QSTile, val spec: TileSpec, val expandable: Expandable) {
     val state: Flow<QSTile.State> =
         conflatedCallbackFlow {
                 val callback = QSTile.Callback { trySend(it.copy()) }
@@ -44,15 +44,30 @@ class TileViewModel(private val tile: QSTile, val spec: TileSpec) {
     val currentState: QSTile.State
         get() = tile.state
 
-    fun onClick(expandable: Expandable?) {
+    /**
+     * Callback for the tile's main click, i.e. the primary function of the tile.
+     *
+     * @param expandable the [Expandable] to use if expanding to a dialog/activity
+     */
+    fun mainClick(expandable: Expandable?) {
         tile.click(expandable)
     }
 
-    fun onLongClick(expandable: Expandable?) {
+    /**
+     * Callback to open the tile's settings page
+     *
+     * @param expandable the [Expandable] to use if expanding to the settings page
+     */
+    fun settingsClick(expandable: Expandable?) {
         tile.longClick(expandable)
     }
 
-    fun onSecondaryClick() {
+    /**
+     * Callback to the tile's toggle function.
+     *
+     * This is used for one-tap operations.
+     */
+    fun toggleClick() {
         tile.secondaryClick(null)
     }
 

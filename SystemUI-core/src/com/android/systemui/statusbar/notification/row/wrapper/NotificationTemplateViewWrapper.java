@@ -37,7 +37,8 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.android.internal.annotations.VisibleForTesting;
+import androidx.annotation.VisibleForTesting;
+
 import com.android.internal.util.ContrastColorUtil;
 import com.android.internal.widget.NotificationActionListLayout;
 import com.android.systemui.Dependency;
@@ -64,6 +65,8 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
     protected ImageView mLeftIcon;
     private ProgressBar mProgressBar;
     private TextView mTitle;
+    private TextView mAltTitle;
+
     private TextView mText;
     protected View mSmartReplyContainer;
     protected View mActionsContainer;
@@ -149,10 +152,11 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
                     }
 
                 }, TRANSFORMING_VIEW_TEXT);
-        mFullHeaderTranslation = ctx.getResources().getDimensionPixelSize(
-                com.android.internal.R.dimen.notification_content_margin)
-                - ctx.getResources().getDimensionPixelSize(
-                com.android.internal.R.dimen.notification_content_margin_top);
+        int contentMargin = ctx.getResources().getDimensionPixelSize(
+                com.android.internal.R.dimen.notification_2025_margin);
+        int contentMarginTop = Notification.Builder.getContentMarginTop(ctx,
+                        com.android.internal.R.dimen.notification_2025_content_margin_top);
+        mFullHeaderTranslation = contentMargin - contentMarginTop;
     }
 
     @MainThread
@@ -167,6 +171,8 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
             mLeftIcon.setTag(ImageTransformState.ICON_TAG, getLargeIcon(sbn.getNotification()));
         }
         mTitle = mView.findViewById(com.android.internal.R.id.title);
+        mAltTitle = mView.findViewById(com.android.internal.R.id.alt_title);
+
         mText = mView.findViewById(com.android.internal.R.id.text);
         final View progress = mView.findViewById(com.android.internal.R.id.progress);
         if (progress instanceof ProgressBar) {
@@ -180,6 +186,7 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
         mActions = mView.findViewById(com.android.internal.R.id.actions);
         mRemoteInputHistory = mView.findViewById(
                 com.android.internal.R.id.notification_material_reply_container);
+
         updatePendingIntentCancellations();
     }
 
@@ -267,7 +274,7 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
     public void onContentUpdated(ExpandableNotificationRow row) {
         // Reinspect the notification. Before the super call, because the super call also updates
         // the transformation types and we need to have our values set by then.
-        resolveTemplateViews(row.getEntry().getSbn());
+        resolveTemplateViews(row.getEntryAdapter().getSbn());
         super.onContentUpdated(row);
         // With the modern templates, a large icon visually overlaps the header, so we can't
         // hide the header, we must show it.
@@ -285,6 +292,9 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
         if (mTitle != null) {
             mTransformationHelper.addTransformedView(TransformableView.TRANSFORMING_VIEW_TITLE,
                     mTitle);
+        } else if (mAltTitle != null && mAltTitle.getVisibility() == View.VISIBLE) {
+            mTransformationHelper.addTransformedView(TransformableView.TRANSFORMING_VIEW_TITLE,
+                    mAltTitle);
         }
         if (mText != null) {
             mTransformationHelper.addTransformedView(TransformableView.TRANSFORMING_VIEW_TEXT,
@@ -351,9 +361,6 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
     @Override
     public int getExtraMeasureHeight() {
         int extra = 0;
-        if (mActions != null) {
-            extra = mActions.getExtraMeasureHeight();
-        }
         if (mRemoteInputHistory != null && mRemoteInputHistory.getVisibility() != View.GONE) {
             extra += mRow.getContext().getResources().getDimensionPixelSize(
                     R.dimen.remote_input_history_extra_height);
@@ -441,6 +448,11 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
                 sUiOffloadThread = Dependency.get(UiOffloadThread.class);
             }
             return sUiOffloadThread;
+        }
+
+        @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+        static void resetUiOffloadThread() {
+            sUiOffloadThread = null;
         }
 
         private final View mView;

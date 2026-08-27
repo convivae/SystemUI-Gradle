@@ -18,20 +18,22 @@ package com.android.systemui.statusbar.chips.ui.model
 
 /** Models multiple active ongoing activity chips at once. */
 data class MultipleOngoingActivityChipsModel(
-    /** The primary chip to show. This will *always* be shown. */
-    val primary: OngoingActivityChipModel = OngoingActivityChipModel.Hidden(),
     /**
-     * The secondary chip to show. If there's not enough room in the status bar, this chip will
-     * *not* be shown.
+     * The chips with a currently ongoing activity which are eligible to be shown, sorted by
+     * priority. These can be either shown or hidden, depending on other system states like which
+     * apps are open and ongoing transitions. If this list contains the maximum number of active and
+     * not-hidden chips allowed, any other lower priority active chip will be hidden and stored in
+     * [overflow].
      */
-    val secondary: OngoingActivityChipModel = OngoingActivityChipModel.Hidden(),
-) {
-    init {
-        if (
-            primary is OngoingActivityChipModel.Hidden &&
-                secondary is OngoingActivityChipModel.Shown
-        ) {
-            throw IllegalArgumentException("`secondary` cannot be Shown if `primary` is Hidden")
-        }
-    }
-}
+    val active: List<OngoingActivityChipModel.Active> = emptyList(),
+    /**
+     * The chips with a currently ongoing activity that have strictly lower priority than those in
+     * [active] and cannot be displayed, sorted by priority. These will *always* be hidden.
+     */
+    val overflow: List<OngoingActivityChipModel.Active> = emptyList(),
+    /**
+     * The chips with no currently ongoing activity, sorted by priority. These will *always* be
+     * hidden.
+     */
+    val inactive: List<OngoingActivityChipModel.Inactive> = emptyList(),
+)

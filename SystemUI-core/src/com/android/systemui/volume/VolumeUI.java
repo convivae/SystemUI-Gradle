@@ -23,12 +23,12 @@ import android.util.Log;
 import com.android.settingslib.volume.data.repository.AudioRepository;
 import com.android.systemui.CoreStartable;
 import com.android.systemui.dagger.SysUISingleton;
-import com.android.systemui.qs.tiles.DndTile;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.util.kotlin.JavaAdapter;
 import com.android.systemui.volume.domain.interactor.AudioSharingInteractor;
 import com.android.systemui.volume.shared.VolumeLogger;
+import com.android.systemui.volume.ui.navigation.VolumeNavigator;
 
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
@@ -49,31 +49,34 @@ public class VolumeUI implements CoreStartable, ConfigurationController.Configur
     private AudioRepository mAudioRepository;
     private JavaAdapter mJavaAdapter;
     private VolumeLogger mVolumeLogger;
+    private final VolumeNavigator mVolumeNavigator;
 
     @Inject
     public VolumeUI(Context context,
-            VolumeDialogComponent volumeDialogComponent,
-            AudioRepository audioRepository,
-            AudioSharingInteractor audioSharingInteractor,
-            JavaAdapter javaAdapter,
-            VolumeLogger volumeLogger) {
+                    VolumeDialogComponent volumeDialogComponent,
+                    AudioRepository audioRepository,
+                    AudioSharingInteractor audioSharingInteractor,
+                    JavaAdapter javaAdapter,
+                    VolumeLogger volumeLogger,
+                    VolumeNavigator volumeNavigator) {
         mContext = context;
         mVolumeComponent = volumeDialogComponent;
         mAudioRepository = audioRepository;
         mAudioSharingInteractor = audioSharingInteractor;
         mJavaAdapter = javaAdapter;
         mVolumeLogger = volumeLogger;
+        mVolumeNavigator = volumeNavigator;
     }
 
     @Override
     public void start() {
-        mAudioRepository.init();
         boolean enableVolumeUi = mContext.getResources().getBoolean(R.bool.enable_volume_ui);
         boolean enableSafetyWarning =
                 mContext.getResources().getBoolean(R.bool.enable_safety_warning);
         mEnabled = enableVolumeUi || enableSafetyWarning;
         if (!mEnabled) return;
 
+        mVolumeNavigator.start();
         mVolumeComponent.setEnableDialogs(enableVolumeUi, enableSafetyWarning);
         setDefaultVolumeController();
         Function1<Throwable, Unit> errorCallback = (ex) -> {
@@ -109,7 +112,6 @@ public class VolumeUI implements CoreStartable, ConfigurationController.Configur
     }
 
     private void setDefaultVolumeController() {
-        DndTile.setVisible(mContext, true);
         if (LOGD) Log.d(TAG, "Registering default volume controller");
         mVolumeComponent.register();
     }

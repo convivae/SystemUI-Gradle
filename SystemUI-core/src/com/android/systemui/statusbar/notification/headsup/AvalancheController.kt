@@ -15,8 +15,8 @@
  */
 package com.android.systemui.statusbar.notification.headsup
 
+import android.app.Notification
 import android.os.Handler
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.android.internal.logging.UiEvent
 import com.android.internal.logging.UiEventLogger
@@ -25,15 +25,19 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.statusbar.notification.headsup.HeadsUpManagerImpl.HeadsUpEntry
+import com.android.systemui.statusbar.notification.shared.AvalancheReplaceHunWhenCritical
 import com.android.systemui.statusbar.notification.shared.NotificationThrottleHun
-import com.android.systemui.util.Compile
 import java.io.PrintWriter
+import java.util.function.BiConsumer
 import javax.inject.Inject
 
 /*
  * Control when heads up notifications show during an avalanche where notifications arrive in fast
  * succession, by delaying visual listener side effects and removal handling from
  * [HeadsUpManagerImpl].
+ *
+ * Dev note: disable suppression so avoid 2min period of no HUNs after every build
+ * Settings > Notifications > General > Notification cooldown
  */
 @SysUISingleton
 class AvalancheController
@@ -46,8 +50,9 @@ constructor(
 ) : Dumpable {
 
     private val tag = "AvalancheController"
-    private val debug = Compile.IS_DEBUG && Log.isLoggable(tag, Log.DEBUG)
+    private val debug = false // Compile.IS_DEBUG && Log.isLoggable(tag, Log.DEBUG)
     var baseEntryMapStr: () -> String = { "baseEntryMapStr not initialized" }
+    var onCleanup: BiConsumer<HeadsUpEntry, String> = BiConsumer { _, _ -> }
 
     var enableAtRuntime = true
         set(value) {
@@ -85,9 +90,8 @@ constructor(
     // Map of Runnable to label for debugging only
     private val debugRunnableLabelMap: MutableMap<Runnable, String> = HashMap()
 
-    // HeadsUpEntry we did not show at all because they are not the top priority hun in their batch
-    // For debugging only
-    @VisibleForTesting var debugDropSet: MutableSet<HeadsUpEntry> = HashSet()
+    // The last state string that was logged. Used to reduce log spam from duplicate state.
+    private var lastStateStr = ""
 
     enum class ThrottleEvent(private val id: Int) : UiEventLogger.UiEventEnum {
         @UiEvent(doc = "HUN was shown.") AVALANCHE_THROTTLING_HUN_SHOWN(1821),
@@ -156,6 +160,11 @@ constructor(
         } else if (entry in nextMap) {
             outcome = "update next"
             nextMap[entry]?.add(runnable)
+            if (AvalancheReplaceHunWhenCritical.isEnabled) {
+                checkReplaceCurrentHun(entry)?.let { outcome = "$outcome & $it" }
+            } else {
+                checkNextPinnedByUser(entry)?.let { outcome = "$outcome & $it" }
+            }
         } else if (headsUpEntryShowing == null) {
             outcome = "show now"
             showNow(entry, arrayListOf(runnable))
@@ -164,19 +173,31 @@ constructor(
             if (entry in nextMap) nextMap.remove(entry)
             if (entry in nextList) nextList.remove(entry)
 
+            outcome = "add next"
             addToNext(entry, runnable)
 
-            // Shorten headsUpEntryShowing display time
-            val nextIndex = nextList.indexOf(entry)
-            val isOnlyNextEntry = nextIndex == 0 && nextList.size == 1
-            if (isOnlyNextEntry) {
-                // HeadsUpEntry.updateEntry recursively calls AvalancheController#update
-                // and goes to the isShowing case above
-                headsUpEntryShowing!!.updateEntry(
-                    /* updatePostTime= */ false,
-                    /* updateEarliestRemovalTime= */ false,
-                    /* reason= */ "avalanche duration update",
-                )
+            val nextReplacementResult =
+                if (AvalancheReplaceHunWhenCritical.isEnabled) {
+                    checkReplaceCurrentHun(entry)
+                } else {
+                    checkNextPinnedByUser(entry)
+                }
+            if (nextReplacementResult != null) {
+                outcome = "$outcome & $nextReplacementResult"
+            } else {
+                // Shorten headsUpEntryShowing display time
+                val nextIndex = nextList.indexOf(entry)
+                val isOnlyNextEntry = nextIndex == 0 && nextList.size == 1
+                if (isOnlyNextEntry) {
+                    // HeadsUpEntry.updateEntry recursively calls AvalancheController#update
+                    // and goes to the isShowing case above
+                    headsUpEntryShowing!!.updateEntry(
+                        /* updatePostTime= */ false,
+                        /* updateEarliestRemovalTime= */ false,
+                        /* ignoreSticky= */ false,
+                        /* reason= */ "shorten duration of previously-last HUN",
+                    )
+                }
             }
         }
         outcome += getStateStr()
@@ -187,6 +208,82 @@ constructor(
     fun addToNext(entry: HeadsUpEntry, runnable: Runnable) {
         nextMap[entry] = arrayListOf(runnable)
         nextList.add(entry)
+        headsUpManagerLogger.logAddToNext(entry.mEntry)
+    }
+
+    /**
+     * Checks if the given entry is requesting [PinnedStatus.PinnedByUser] status and makes the
+     * correct updates if needed.
+     *
+     * @return a string representing the outcome, or null if nothing changed.
+     */
+    private fun checkNextPinnedByUser(entry: HeadsUpEntry): String? {
+        AvalancheReplaceHunWhenCritical.assertInLegacyMode()
+        if (entry.requestedPinnedStatus == PinnedStatus.PinnedByUser) {
+            val string = "next is PinnedByUser"
+            headsUpEntryShowing?.updateEntry(
+                /* updatePostTime= */ false,
+                /* updateEarliestRemovalTime= */ false,
+                /* ignoreSticky= */ false,
+                /* reason= */ string,
+            )
+            return string
+        }
+        return null
+    }
+
+    /**
+     * Checks if the given entry should replace the showing HUN immediately.
+     *
+     * @return a string representing the reason for replacement, or null if should not replace.
+     */
+    private fun checkReplaceCurrentHun(entry: HeadsUpEntry): String? {
+        if (AvalancheReplaceHunWhenCritical.isUnexpectedlyInLegacyMode()) return null
+        var result: String? = null
+        var ignoreSticky = false
+        if (entry.hasFullScreenIntent()) {
+            result = "next has FSI"
+            ignoreSticky = true
+        }
+        if (entry.isCriticalCall()) {
+            result = "$result next is critical call"
+            ignoreSticky = true
+        }
+        if (entry.requestedPinnedStatus == PinnedStatus.PinnedByUser) {
+            result = "$result next is PinnedByUser"
+            ignoreSticky = true
+        }
+
+        if (result != null) {
+            headsUpEntryShowing?.updateEntry(
+                /* updatePostTime= */ false,
+                /* updateEarliestRemovalTime= */ false,
+                /* ignoreSticky= */ ignoreSticky,
+                /* reason= */ result,
+            )
+        }
+
+        return result
+    }
+
+    private fun HeadsUpEntry.hasFullScreenIntent(): Boolean {
+        return this.mEntry?.sbn?.notification?.fullScreenIntent != null
+    }
+
+    /**
+     * Determines if the notification is for a critical call that must display on top of an active
+     * input notification. The call isOngoing check is for a special case of incoming calls where
+     * the call is not yet answered (see b/164291424).
+     */
+    private fun HeadsUpEntry.isCriticalCall(): Boolean {
+        val notificationEntry = this.mEntry ?: return false
+        val notification = notificationEntry.sbn.notification
+        val isIncomingCall =
+            notification.isStyle(Notification.CallStyle::class.java) &&
+                notification.extras.getInt(Notification.EXTRA_CALL_TYPE) ==
+                    Notification.CallStyle.CALL_TYPE_INCOMING
+        return isIncomingCall ||
+            (notificationEntry.sbn.isOngoing && Notification.CATEGORY_CALL == notification.category)
     }
 
     /**
@@ -228,36 +325,38 @@ constructor(
         }
         val outcome: String
         if (entry in nextMap) {
+            onCleanup.accept(entry, caller)
             if (entry in nextMap) nextMap.remove(entry)
             if (entry in nextList) nextList.remove(entry)
             uiEventLogger.log(ThrottleEvent.AVALANCHE_THROTTLING_HUN_REMOVED)
             outcome = "remove from next. ${getStateStr()}"
-        } else if (entry in debugDropSet) {
-            debugDropSet.remove(entry)
-            outcome = "remove from dropset. ${getStateStr()}"
         } else if (isShowing(entry)) {
             previousHunKey = getKey(headsUpEntryShowing)
             // Show the next HUN before removing this one, so that we don't tell listeners
             // onHeadsUpPinnedModeChanged, which causes
             // NotificationPanelViewController.updateTouchableRegion to hide the window while the
             // HUN is animating out, resulting in a flicker.
-            showNext()
+            showNext(caller)
             runnable.run()
             outcome = "remove showing. ${getStateStr()}"
         } else {
             runnable.run()
-            outcome = "run runnable for untracked shown HUN. ${getStateStr()}"
+            outcome =
+                "run runnable for untracked HUN " +
+                    "(was dropped or shown when AC was disabled). ${getStateStr()}"
         }
         headsUpManagerLogger.logAvalancheDelete(caller, isEnabled(), getKey(entry), outcome)
     }
 
     /**
-     * Returns duration based on
+     * Returns how much longer the given entry should show based on:
      * 1) Whether HeadsUpEntry is the last one tracked by AvalancheController
-     * 2) The priority of the top HUN in the next batch Used by
-     *    BaseHeadsUpManager.HeadsUpEntry.calculateFinishTime to shorten display duration.
+     * 2) The priority of the top HUN in the next batch
+     *
+     * Used by [HeadsUpManagerImpl.HeadsUpEntry]'s finishTimeCalculator to shorten display duration.
      */
-    fun getDurationMs(entry: HeadsUpEntry?, autoDismissMs: Int): Int {
+    fun getDuration(entry: HeadsUpEntry?, autoDismissMsValue: Int): RemainingDuration {
+        val autoDismissMs = RemainingDuration.UpdatedDuration(autoDismissMsValue)
         if (!isEnabled()) {
             // Use default duration, like we did before AvalancheController existed
             return autoDismissMs
@@ -272,8 +371,14 @@ constructor(
         }
         nextList.sort()
         val entryList = showingList + nextList
+        val thisKey = getKey(entry)
         if (entryList.isEmpty()) {
-            log { "No avalanche HUNs, use default ms: $autoDismissMs" }
+            headsUpManagerLogger.logAvalancheDuration(
+                thisKey,
+                autoDismissMs,
+                "No avalanche HUNs, use default",
+                nextKey = "",
+            )
             return autoDismissMs
         }
         // entryList.indexOf(entry) returns -1 even when the entry is in entryList
@@ -284,28 +389,115 @@ constructor(
             }
         }
         if (thisEntryIndex == -1) {
-            log { "Untracked entry, use default ms: $autoDismissMs" }
+            headsUpManagerLogger.logAvalancheDuration(
+                thisKey,
+                autoDismissMs,
+                "Untracked entry, use default",
+                nextKey = "",
+            )
             return autoDismissMs
         }
         val nextEntryIndex = thisEntryIndex + 1
-
-        // If last entry, use default duration
         if (nextEntryIndex >= entryList.size) {
-            log { "Last entry, use default ms: $autoDismissMs" }
+            headsUpManagerLogger.logAvalancheDuration(
+                thisKey,
+                autoDismissMs,
+                "Last entry, use default",
+                nextKey = "",
+            )
             return autoDismissMs
         }
         val nextEntry = entryList[nextEntryIndex]
-        if (nextEntry.compareNonTimeFields(entry) == -1) {
-            // Next entry is higher priority
-            log { "Next entry is higher priority: 500ms" }
-            return 500
-        } else if (nextEntry.compareNonTimeFields(entry) == 0) {
-            // Next entry is same priority
-            log { "Next entry is same priority: 1000ms" }
-            return 1000
+        val nextKey = getKey(nextEntry)
+
+        if (nextEntry.requestedPinnedStatus == PinnedStatus.PinnedByUser) {
+            return RemainingDuration.HideImmediately.also {
+                headsUpManagerLogger.logAvalancheDuration(
+                    thisKey,
+                    duration = it,
+                    "next is PinnedByUser",
+                    nextKey,
+                )
+            }
+        }
+        if (AvalancheReplaceHunWhenCritical.isEnabled) {
+            return when (val nextPriority = entry.getNextHunPriority(nextEntry)) {
+
+                // When next is critical, replace immediately
+                is NextHunPriority.ReplaceImmediately -> {
+                    RemainingDuration.HideImmediately.also {
+                        headsUpManagerLogger.logAvalancheDuration(
+                            thisKey,
+                            duration = it,
+                            nextPriority.message,
+                            nextKey,
+                        )
+                    }
+                }
+
+                // When next has higher priority, wait 500ms before replacement
+                is NextHunPriority.HigherPriority -> {
+                    RemainingDuration.UpdatedDuration(500).also {
+                        headsUpManagerLogger.logAvalancheDuration(
+                            thisKey,
+                            duration = it,
+                            "LOWER priority than next: ",
+                            nextKey,
+                        )
+                    }
+                }
+
+                // When next has same priority, wait 1000ms before replacement
+                is NextHunPriority.SamePriority -> {
+                    RemainingDuration.UpdatedDuration(1000).also {
+                        headsUpManagerLogger.logAvalancheDuration(
+                            thisKey,
+                            duration = it,
+                            "SAME priority as next: ",
+                            nextKey,
+                        )
+                    }
+                }
+
+                // When next has lower priority, wait until auto dismiss
+                is NextHunPriority.LowerPriority -> {
+                    headsUpManagerLogger.logAvalancheDuration(
+                        thisKey,
+                        autoDismissMs,
+                        "HIGHER priority than next: ",
+                        nextKey,
+                    )
+                    return autoDismissMs
+                }
+            }
         } else {
-            log { "Next entry is lower priority, use default ms: $autoDismissMs" }
-            return autoDismissMs
+            if (nextEntry.compareNonTimeFields(entry) == -1) {
+                return RemainingDuration.UpdatedDuration(500).also {
+                    headsUpManagerLogger.logAvalancheDuration(
+                        thisKey,
+                        duration = it,
+                        "LOWER priority than next: ",
+                        nextKey,
+                    )
+                }
+            } else if (nextEntry.compareNonTimeFields(entry) == 0) {
+                return RemainingDuration.UpdatedDuration(1000).also {
+                    headsUpManagerLogger.logAvalancheDuration(
+                        thisKey,
+                        duration = it,
+                        "SAME priority as next: ",
+                        nextKey,
+                    )
+                }
+            } else {
+                headsUpManagerLogger.logAvalancheDuration(
+                    thisKey,
+                    autoDismissMs,
+                    "HIGHER priority than next: ",
+                    nextKey,
+                )
+                return autoDismissMs
+            }
         }
     }
 
@@ -358,25 +550,28 @@ constructor(
     }
 
     private fun showNow(entry: HeadsUpEntry, runnableList: MutableList<Runnable>) {
-        log { "SHOW: " + getKey(entry) }
-
+        headsUpManagerLogger.logAvalancheStage("show", getKey(entry))
         uiEventLogger.log(ThrottleEvent.AVALANCHE_THROTTLING_HUN_SHOWN)
         headsUpEntryShowing = entry
 
-        runnableList.forEach {
-            if (it in debugRunnableLabelMap) {
-                log { "RUNNABLE: ${debugRunnableLabelMap[it]}" }
+        runnableList.forEach { runnable ->
+            if (debug) {
+                debugRunnableLabelMap[runnable]?.let { label ->
+                    headsUpManagerLogger.logAvalancheStage("run", label)
+                    // Remove label after logging to avoid memory leak
+                    debugRunnableLabelMap.remove(runnable)
+                }
             }
-            it.run()
+            runnable.run()
         }
     }
 
-    private fun showNext() {
-        log { "SHOW NEXT" }
+    private fun showNext(reason: String = "") {
+        headsUpManagerLogger.logAvalancheStage("show next", key = "")
         headsUpEntryShowing = null
 
         if (nextList.isEmpty()) {
-            log { "NO MORE TO SHOW" }
+            headsUpManagerLogger.logAvalancheStage("no more", key = "")
             previousHunKey = ""
             return
         }
@@ -386,8 +581,11 @@ constructor(
         headsUpEntryShowing = nextList[0]
         headsUpEntryShowingRunnableList = nextMap[headsUpEntryShowing]!!
 
-        // Remove runnable labels for dropped huns
         val listToDrop = nextList.subList(1, nextList.size)
+        for (entry in listToDrop) {
+            // Remove NotificationEntry to prevent memory leak
+            onCleanup.accept(entry, reason)
+        }
         logDroppedHunsInBackground(listToDrop.size)
 
         if (debug) {
@@ -398,8 +596,10 @@ constructor(
                     debugRunnableLabelMap.remove(r)
                 }
             }
-            debugDropSet.addAll(listToDrop)
         }
+
+        val dropListStr = listToDrop.joinToString("\n ") { getKey(it) }
+        headsUpManagerLogger.logDroppedHuns(dropListStr)
 
         clearNext()
         showNow(headsUpEntryShowing!!, headsUpEntryShowingRunnableList)
@@ -422,49 +622,38 @@ constructor(
     }
 
     // Methods below are for logging only ==========================================================
-
-    private inline fun log(s: () -> String) {
-        if (debug) {
-            Log.d(tag, s())
-        }
+    private fun calculateStateStr(): String {
+        return "\n[AC state]" +
+            "\nshow: ${getKey(headsUpEntryShowing)}" +
+            "\nprevious: $previousHunKey" +
+            "\n$nextStr" +
+            "\n[HeadsUpManagerImpl.mHeadsUpEntryMap] " +
+            baseEntryMapStr() +
+            "\n"
     }
 
+    /**
+     * Returns the state string for logging, only if it has changed since the last call.
+     */
     private fun getStateStr(): String {
-        return "\navalanche state:" +
-            "\n\tshowing: [${getKey(headsUpEntryShowing)}]" +
-            "\n\tprevious: [$previousHunKey]" +
-            "\n\tnext list: $nextListStr" +
-            "\n\tnext map: $nextMapStr" +
-            "\n\tdropped: $dropSetStr" +
-            "\nBHUM.mHeadsUpEntryMap: " +
-            baseEntryMapStr()
+        val currentStr = calculateStateStr()
+        if (currentStr == lastStateStr) {
+            return "" // Suppress log if state hasn't changed
+        }
+        lastStateStr = currentStr
+        return currentStr
     }
 
-    private val dropSetStr: String
+    private val nextStr: String
         get() {
-            val queue = ArrayList<String>()
-            for (entry in debugDropSet) {
-                queue.add("[${getKey(entry)}]")
+            val nextListStr = nextList.joinToString("\n ") { getKey(it) }
+            if (nextList.toSet() == nextMap.keys.toSet()) {
+                return "next (${nextList.size}):\n $nextListStr"
             }
-            return java.lang.String.join("\n", queue)
-        }
-
-    private val nextListStr: String
-        get() {
-            val queue = ArrayList<String>()
-            for (entry in nextList) {
-                queue.add("[${getKey(entry)}]")
-            }
-            return java.lang.String.join("\n", queue)
-        }
-
-    private val nextMapStr: String
-        get() {
-            val queue = ArrayList<String>()
-            for (entry in nextMap.keys) {
-                queue.add("[${getKey(entry)}]")
-            }
-            return java.lang.String.join("\n", queue)
+            // This should never happen
+            val nextMapStr = nextMap.keys.joinToString("\n ") { getKey(it) }
+            return "next list (${nextList.size}):\n $nextListStr" +
+                "\nnext map (${nextMap.size}):\n $nextMapStr"
         }
 
     fun getKey(entry: HeadsUpEntry?): String {
@@ -478,6 +667,6 @@ constructor(
     }
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
-        pw.println("AvalancheController: ${getStateStr()}")
+        pw.println("AvalancheController: ${calculateStateStr()}")
     }
 }

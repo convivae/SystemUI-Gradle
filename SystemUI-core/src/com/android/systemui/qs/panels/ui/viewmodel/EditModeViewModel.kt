@@ -43,6 +43,7 @@ import javax.inject.Named
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -54,8 +55,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-@SysUISingleton
 @OptIn(ExperimentalCoroutinesApi::class)
+@SysUISingleton
 class EditModeViewModel
 @Inject
 constructor(
@@ -75,11 +76,9 @@ constructor(
     private val _isEditing = MutableStateFlow(false)
 
     /**
-     * Whether we should be editing right now. Use [startEditing] and [stopEditing] to change this
+     * Whether we should be editing right now. Use [startEditing] and [stopEditing] to change this.
      */
     val isEditing = _isEditing.asStateFlow()
-    private val minimumTiles: Int
-        get() = minTilesInteractor.minNumberOfTiles
 
     val gridLayout: StateFlow<GridLayout> =
         gridLayoutTypeInteractor.layout
@@ -101,9 +100,9 @@ constructor(
      * * Tiles that are not available will be filtered out. None of them can be current (as they
      *   cannot be created), and they won't be able to be added.
      */
-    val tiles =
-        isEditing.flatMapLatest {
-            if (it) {
+    val tiles: Flow<List<EditTileViewModel>> =
+        isEditing.flatMapLatest { isEditing ->
+            if (isEditing) {
                 val editTilesData = editTilesListInteractor.getTilesToEdit()
                 // Query only the non current platform tiles, as any current tile is clearly
                 // available
@@ -116,16 +115,22 @@ constructor(
                 currentTilesInteractor.currentTiles
                     .map { tiles ->
                         val currentSpecs = tiles.map { it.spec }
-                        val canRemoveTiles = currentSpecs.size > minimumTiles
+                        val dualTargetSpecs =
+                            tiles
+                                .filter { it.tile.state.handlesSecondaryClick }
+                                .map { it.spec }
+                                .toSet()
+                        val canRemoveTiles = currentSpecs.size > minTilesInteractor.minNumberOfTiles
                         val allTiles = editTilesData.stockTiles + editTilesData.customTiles
-                        val allTilesMap = allTiles.associate { it.tileSpec to it }
-                        val currentTiles = currentSpecs.map { allTilesMap.get(it) }.filterNotNull()
+                        val allTilesMap = allTiles.associateBy { it.tileSpec }
+                        val currentTiles = currentSpecs.mapNotNull { allTilesMap[it] }
                         val nonCurrentTiles = allTiles.filter { it.tileSpec !in currentSpecs }
 
                         (currentTiles + nonCurrentTiles)
                             .filterNot { it.tileSpec in unavailable }
                             .map {
                                 val current = it.tileSpec in currentSpecs
+                                val isDualTarget = current && it.tileSpec in dualTargetSpecs
                                 val availableActions = buildSet {
                                     if (current) {
                                         add(AvailableEditActions.MOVE)
@@ -141,7 +146,9 @@ constructor(
                                     it.icon,
                                     it.label,
                                     it.appName,
+                                    it.appIcon,
                                     current,
+                                    isDualTarget,
                                     availableActions,
                                     it.category,
                                 )

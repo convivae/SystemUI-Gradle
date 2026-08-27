@@ -22,26 +22,30 @@ import com.android.app.tracing.coroutines.coroutineScopeTraced
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.plugins.VolumeDialog
-import com.android.systemui.volume.SafetyWarningDialog
+import com.android.systemui.volume.CsdWarningAction
+import com.android.systemui.volume.CsdWarningDialogDelegate
+import com.android.systemui.volume.SafetyWarningDialogDelegate
 import com.android.systemui.volume.dialog.dagger.VolumeDialogPluginComponent
+import com.android.systemui.volume.dialog.dagger.factory.VolumeDialogPluginComponentFactory
 import com.android.systemui.volume.dialog.ui.viewmodel.VolumeDialogPluginViewModel
+import java.util.Optional
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class VolumeDialogPlugin
 @Inject
 constructor(
     @Application private val applicationCoroutineScope: CoroutineScope,
     private val context: Context,
     private val audioManager: AudioManager,
-    private val volumeDialogPluginComponentFactory: VolumeDialogPluginComponent.Factory,
+    private val volumeDialogPluginComponentFactory: VolumeDialogPluginComponentFactory,
+    private val csdWarningDialogDelegateFactory: CsdWarningDialogDelegate.Factory,
+    private val safetyWarningDialogDelegateFactory: SafetyWarningDialogDelegate.Factory,
 ) : VolumeDialog {
 
     private var job: Job? = null
@@ -65,7 +69,19 @@ constructor(
         viewModel.isShowingSafetyWarning
             .mapLatest { isShowingSafetyWarning ->
                 if (isShowingSafetyWarning) {
+                    viewModel.onSafetyWarningDialogShown()
                     showSafetyWarningVisibility { viewModel.onSafetyWarningDismissed() }
+                }
+            }
+            .launchIn(this)
+
+        viewModel.csdWarning
+            .mapLatest { csdWarning ->
+                if (csdWarning != null) {
+                    viewModel.onCsdWarningDialogShown()
+                    showCsdWarningDialog(csdWarning, viewModel.csdWarningConfigModel.actions) {
+                        viewModel.onCsdWarningDismissed()
+                    }
                 }
             }
             .launchIn(this)
@@ -79,13 +95,38 @@ constructor(
     private suspend fun showSafetyWarningVisibility(onDismissed: () -> Unit) =
         suspendCancellableCoroutine { continuation ->
             val dialog =
-                object : SafetyWarningDialog(context, audioManager) {
-                    override fun cleanUp() {
+                safetyWarningDialogDelegateFactory
+                    .create(
+                        /* cleanup = */ {
                         onDismissed()
-                        continuation.resume(Unit)
-                    }
-                }
+                        if (!continuation.isCompleted) {
+                            continuation.resume(Unit)
+                        }
+                    })
+                    .createDialog()
             dialog.show()
             continuation.invokeOnCancellation { dialog.dismiss() }
         }
+
+    private suspend fun showCsdWarningDialog(
+        warning: Int,
+        actions: List<CsdWarningAction>,
+        onDismissed: () -> Unit,
+    ) = suspendCancellableCoroutine { continuation ->
+        val dialogDelegate =
+            csdWarningDialogDelegateFactory.create(
+                warning,
+                {
+                    onDismissed()
+                    if (!continuation.isCompleted) {
+                        continuation.resume(Unit)
+                    }
+                },
+                Optional.of(actions),
+            )
+
+        val dialog = dialogDelegate.createDialog()
+        dialog.show()
+        continuation.invokeOnCancellation { dialog.dismiss() }
+    }
 }

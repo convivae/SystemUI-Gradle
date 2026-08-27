@@ -18,16 +18,15 @@ package com.android.systemui.statusbar.notification.icon.ui.viewbinder
 
 import android.view.Display
 import androidx.lifecycle.lifecycleScope
-import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.app.displaylib.PerDisplayRepository
 import com.android.app.tracing.traceSection
 import com.android.systemui.common.ui.ConfigurationState
+import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.shade.ShadeDisplayAware
-import com.android.systemui.statusbar.notification.collection.NotifCollection
+import com.android.systemui.statusbar.notification.collection.NotifPipeline
 import com.android.systemui.statusbar.notification.icon.ui.viewbinder.NotificationIconContainerViewBinder.IconViewStore
 import com.android.systemui.statusbar.notification.icon.ui.viewmodel.NotificationIconContainerStatusBarViewModel
 import com.android.systemui.statusbar.phone.NotificationIconContainer
-import com.android.systemui.statusbar.ui.SystemBarUtilsState
 import javax.inject.Inject
 import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.launch
@@ -37,8 +36,7 @@ class NotificationIconContainerStatusBarViewBinder
 @Inject
 constructor(
     private val viewModel: NotificationIconContainerStatusBarViewModel,
-    @ShadeDisplayAware private val configuration: ConfigurationState,
-    private val systemBarUtilsState: SystemBarUtilsState,
+    private val perDisplaySubcomponentRepository: PerDisplayRepository<SystemUIDisplaySubcomponent>,
     private val failureTracker: StatusBarIconViewBindingFailureTracker,
     private val defaultDisplayViewStore: StatusBarNotificationIconViewStore,
     private val connectedDisplaysViewStoreFactory:
@@ -56,12 +54,17 @@ constructor(
                             lifecycleScope.launch { it.activate() }
                         }
                     }
+                val displaySubcomponent =
+                    perDisplaySubcomponentRepository[displayId]
+                        ?: perDisplaySubcomponentRepository[Display.DEFAULT_DISPLAY]!!
+                val configurationState: ConfigurationState = displaySubcomponent.configurationState
+                val systemBarUtilsState = displaySubcomponent.systemBarUtilsState
                 lifecycleScope.launch {
                     NotificationIconContainerViewBinder.bind(
                         displayId = displayId,
                         view = view,
                         viewModel = viewModel,
-                        configuration = configuration,
+                        configuration = configurationState,
                         systemBarUtilsState = systemBarUtilsState,
                         failureTracker = failureTracker,
                         viewStore = viewStore,
@@ -73,5 +76,5 @@ constructor(
 }
 
 /** [IconViewStore] for the status bar. */
-class StatusBarNotificationIconViewStore @Inject constructor(notifCollection: NotifCollection) :
-    IconViewStore by (notifCollection.iconViewStoreBy { it.statusBarIcon })
+class StatusBarNotificationIconViewStore @Inject constructor(notifPipeline: NotifPipeline) :
+    IconViewStore by (notifPipeline.iconViewStoreBy { it.statusBarIcon })
