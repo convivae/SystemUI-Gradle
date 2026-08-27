@@ -288,3 +288,11 @@
 - Worker corrected a task069 misattribution: 84 res EXTRA are strings_car.xml car leftovers (not main translations).
 - 9 commits pushed: 588b69aa..2132b77d.
 - C4 handover list in docs/issues/2026-08-27-c3-source-realignment-execution.md (9 items).
+
+## 2026-08-28 task071 (C2 libs deletion + AOSP-17 regeneration) — REVIEW-PASS
+
+- Worker `task071` (joycode GLM-5.3, pane w2:p2G) executed C2: script adaptation (4 pre-verified + 9 discovered-in-flight), full libs/ deletion (104 files), regeneration via 7 scripts (102 files), drift report.
+- Chief independent re-verification (12 checks): pytest 290 passed; maven all 2.0.0 / zero 1.x; byte-identical files re-verified against git history; iconloader closure = 144 classes (3-jar merge); framework.jar 29066 classes matches report; forbidden surfaces (gradle/catalog/sources/alignment tool/build_sysuisdk) zero diff; monet.jar delete-and-regen byte-identical (deterministic); aconfig aggregate-subset bytes == real Soong shard framework.jar47 (genuine AOSP bytes, not synthesized); dropped families (security/quickaccesswallet/selector-flags) confirmed zero imports in aligned 17 sources.
+- Notable worker engineering: `extract_aggregate_subset()` content-scans sharded framework-minus-apex javac (shard indices unstable by design; fails loudly on ambiguity) — 6 aconfig families no longer have standalone javac outputs in 17.
+- motion_tool_lib.jar and settingslib-selector-flags.jar retired upstream; C4 removes gradle dependency lines.
+- 6 commits pushed; worker tab closed.
