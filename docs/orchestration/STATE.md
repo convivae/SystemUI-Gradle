@@ -11,6 +11,7 @@
 |---|---|---|---|---|---|
 | 055 | `w2:t1R` / `w2:p1X` (`task055-worker`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; AOSP `out/` writes only via `m -j4`; libs/*-flags.jar + tools + wiring + listed docs; adb emulator-5554 only; commits local, no push |
 | 059 | `w2:t1V` / `w2:p10` (`task059`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; 4 single-consumer AAR families to direct consumption; AGENTS.md §3.2 exception (user-approved); catalog + libs/maven retirement; audit §10 annotations; builds serialized `--max-workers=4`; commits local, no push |
+| 069 | task069 worker pane | main checkout `SystemUI-Gradle` | default session | complete (reported) | Read-only; two report docs + STATE.md line only; no src/res/Gradle changes, no builds, commits local, no push |
 
 Task 050 worker panes (`w2J:p1` agent + `w2J:p2` shell) were closed 2026-08-25; the `SystemUI-Gradle-wt-050`
 evidence worktree and task branch remain on disk untouched. No active Task 050 worker.
@@ -314,6 +315,17 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-08-27 — Task 069 (SysUI-17 source-realignment panorama, read-only) complete (reported):
+baseline counters reproduced exactly (MISSING 1963 / MISPLACED 20 / EXTRA 642 / MODIFIED 2222 /
+APP 0 / RES 438/219/830). Full panorama in
+`docs/architecture/2026-08-27-sysui17-realignment-panorama.md` (S1 drift census incl. EXTRA 3-way
+attribution and MODIFIED vintage proof; S2 bp semantic diff with 6 new production source roots
+covering 40 files outside current alignment mapping, pods test pollution 50/269; S3 CONV inventory
+2237 CONV_DEL + 2 CONV_MOD all class B; S4 per-module C3 execution matrix). Seven user decisions
+required before C3 dispatch (application/src ownership, clocks/common module, pods test exclusion,
+SurfaceEffects AARs, AccessibilityFloatingMenu-res AAR, AAPT2 flag-qualified res dir, res-product
+new grammatical variants). No builds run, no source changes; commits local, not pushed.
 
 2026-08-25 22:15 — Task 059 complete (reported): 4 single-consumer AAR families migrated from local Maven to direct `libs/aars/` consumption (byte-neutral, A/B-proven); 6 of 8 task-043 packets closed; AGENTS.md §3.2 exception added. Task 058 halted by chief; task059 owned the tree exclusively during final serial verification.
 
