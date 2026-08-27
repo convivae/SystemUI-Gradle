@@ -1,0 +1,38 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.android.systemui.customization.clocks.utils
+
+import android.graphics.Canvas
+import android.graphics.Paint
+import com.android.systemui.plugins.keyguard.VPoint
+import com.android.systemui.plugins.keyguard.VPointF
+import com.android.systemui.plugins.keyguard.VRectF
+
+object CanvasUtils {
+    fun Canvas.translate(pt: VPointF) = this.translate(pt.x, pt.y)
+
+    fun Canvas.translate(pt: VPoint) = this.translate(pt.x.toFloat(), pt.y.toFloat())
+
+    inline fun Canvas.withLayer(rect: VRectF, paint: Paint? = null, block: Canvas.() -> Unit) {
+        val checkpoint = saveLayer(rect.left, rect.top, rect.right, rect.bottom, paint)
+        try {
+            block()
+        } finally {
+            restoreToCount(checkpoint)
+        }
+    }
+}

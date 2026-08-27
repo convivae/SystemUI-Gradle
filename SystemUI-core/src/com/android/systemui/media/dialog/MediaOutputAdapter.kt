@@ -1,0 +1,722 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.android.systemui.media.dialog
+
+import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Typeface
+import android.graphics.drawable.AnimatedVectorDrawable
+import android.graphics.drawable.Drawable
+import android.text.BidiFormatter
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
+import android.view.ViewGroup
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import androidx.annotation.VisibleForTesting
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.recyclerview.widget.RecyclerView
+import com.android.settingslib.media.MediaDevice
+import com.android.systemui.FontStyles.GSF_TITLE_MEDIUM_EMPHASIZED
+import com.android.systemui.FontStyles.GSF_TITLE_SMALL
+import com.android.systemui.media.dialog.MediaItem.DeviceGroupMediaItem
+import com.android.systemui.media.dialog.MediaItem.DeviceMediaItem
+import com.android.systemui.media.dialog.MediaItem.GroupDividerMediaItem
+import com.android.systemui.media.dialog.MediaOutputAdapterBase.ConnectionState.CONNECTED
+import com.android.systemui.media.dialog.MediaOutputAdapterBase.ConnectionState.CONNECTING
+import com.android.systemui.media.dialog.MediaOutputAdapterBase.ConnectionState.DISCONNECTED
+import com.android.systemui.res.R
+import com.google.android.material.slider.Slider
+
+/** A RecyclerView adapter for the legacy UI media output dialog device list. */
+class MediaOutputAdapter(controller: MediaSwitchingController) :
+    MediaOutputAdapterBase(controller) {
+
+    /** Refreshes the RecyclerView dataset and forces re-render. */
+    fun updateItems() {
+        mMediaItemList.clear()
+        mMediaItemList.addAll(mController.getMediaItemList())
+
+        notifyDataSetChanged()
+    }
+
+    override fun getItemViewType(position: Int): Int {
+        if (position >= mMediaItemList.size) {
+            Log.d(TAG, "Incorrect position for item type: $position")
+            return TYPE_GROUP_DIVIDER
+        }
+        return when (mMediaItemList[position]) {
+            is DeviceMediaItem -> TYPE_DEVICE
+            is GroupDividerMediaItem -> TYPE_GROUP_DIVIDER
+            is DeviceGroupMediaItem -> TYPE_DEVICE_GROUP
+        }
+    }
+
+    override fun getItemId(position: Int): Long {
+        if (position >= mMediaItemList.size) {
+            Log.e(TAG, "Item position exceeds list size: $position")
+            return RecyclerView.NO_ID
+        }
+        return when (val item = mMediaItemList[position]) {
+            is DeviceMediaItem -> {
+                item.mediaDevice.id?.hashCode()?.toLong() ?: RecyclerView.NO_ID
+            }
+            is GroupDividerMediaItem -> item.title.hashCode().toLong()
+            is DeviceGroupMediaItem -> TYPE_DEVICE_GROUP.toLong()
+        }
+    }
+
+    override fun onCreateViewHolder(viewGroup: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val context = viewGroup.context
+        return when (viewType) {
+            TYPE_GROUP_DIVIDER -> {
+                val holderView =
+                    LayoutInflater.from(context)
+                        .inflate(R.layout.media_output_list_item_group_divider, viewGroup, false)
+                MediaGroupDividerViewHolder(holderView, context)
+            }
+
+            TYPE_DEVICE,
+            TYPE_DEVICE_GROUP -> {
+                val holderView =
+                    LayoutInflater.from(context)
+                        .inflate(R.layout.media_output_list_item_device, viewGroup, false)
+                MediaDeviceViewHolder(holderView, context)
+            }
+
+            else -> throw IllegalArgumentException("Invalid view type: $viewType")
+        }
+    }
+
+    override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
+        require(position < itemCount) { "Invalid position: $position, list size: $itemCount" }
+        when (val item = mMediaItemList[position]) {
+            is GroupDividerMediaItem -> {
+                (viewHolder as MediaGroupDividerViewHolder).onBind(
+                    groupDividerTitle = item.title,
+                    isExpandableDivider = item.isExpandable,
+                    hasTopSeparator = item.hasTopSeparator,
+                )
+            }
+
+            is DeviceMediaItem -> {
+                (viewHolder as MediaDeviceViewHolder).onBindDevice(
+                    mediaItem = item,
+                    position = position,
+                )
+            }
+
+            is DeviceGroupMediaItem -> {
+                (viewHolder as MediaDeviceViewHolder).onBindDeviceGroup()
+            }
+        }
+    }
+
+    val controller: MediaSwitchingController
+        get() = mController
+
+    /** ViewHolder for binding device view. */
+    inner class MediaDeviceViewHolder(view: View, context: Context) :
+        MediaDeviceViewHolderBase(view, context) {
+        @VisibleForTesting val mMainContent: LinearLayout = view.requireViewById(R.id.main_content)
+
+        @VisibleForTesting val mItemLayout: LinearLayout = view.requireViewById(R.id.item_layout)
+
+        @VisibleForTesting val mTitleText: TextView = view.requireViewById(R.id.title)
+
+        @VisibleForTesting val mSubTitleText: TextView = view.requireViewById(R.id.subtitle)
+
+        @VisibleForTesting val mTitleIcon: ImageView = view.requireViewById(R.id.title_icon)
+
+        @VisibleForTesting
+        val mLoadingIndicator: ProgressBar = view.requireViewById(R.id.loading_indicator)
+
+        @VisibleForTesting val mStatusIcon: ImageView = view.requireViewById(R.id.status_icon)
+
+        @VisibleForTesting val mGroupButton: ImageButton = view.requireViewById(R.id.group_button)
+
+        @VisibleForTesting val mDivider: View = view.requireViewById(R.id.divider)
+
+        @VisibleForTesting
+        val mOngoingSessionButton: ImageButton = view.requireViewById(R.id.ongoing_session_button)
+
+        @VisibleForTesting var mSlider: Slider = view.requireViewById(R.id.volume_seekbar)
+        private var mLatestUpdateVolume = NO_VOLUME_SET
+
+        private val mInactivePadding =
+            mContext.resources.getDimension(R.dimen.media_output_item_content_vertical_margin)
+
+        private val mActivePadding =
+            mContext.resources.getDimension(
+                R.dimen.media_output_item_content_vertical_margin_active
+            )
+
+        private val mDisabledContentAlpha =
+            mContext.resources.getFloat(R.dimen.media_output_item_disabled_alpha)
+
+        private val mButtonRippleBackground =
+            AppCompatResources.getDrawable(
+                mContext,
+                R.drawable.media_output_dialog_item_button_ripple,
+            )
+
+        private val mFixedVolumeContentBackground =
+            AppCompatResources.getDrawable(
+                mContext,
+                R.drawable.media_output_dialog_item_fixed_volume_background,
+            )
+
+        fun onBindDevice(mediaItem: DeviceMediaItem, position: Int) {
+            resetViewState()
+            renderItem(mediaItem, position)
+        }
+
+        fun onBindDeviceGroup() {
+            resetViewState()
+            renderDeviceGroupItem()
+        }
+
+        private fun resetViewState() {
+            mItemLayout.visibility = VISIBLE
+            mGroupButton.visibility = GONE
+            mOngoingSessionButton.visibility = GONE
+            mStatusIcon.visibility = GONE
+            mLoadingIndicator.visibility = GONE
+            mDivider.visibility = GONE
+            mSubTitleText.visibility = GONE
+            updateContentClickListener(null)
+        }
+
+        override fun renderDeviceItem(
+            device: MediaDevice,
+            connectionState: ConnectionState,
+            restrictVolumeAdjustment: Boolean,
+            groupStatus: GroupStatus?,
+            ongoingSessionStatus: OngoingSessionStatus?,
+            clickListener: View.OnClickListener?,
+            deviceDisabled: Boolean,
+            subtitle: String?,
+            deviceStatusIcon: Drawable?,
+        ) {
+            val fixedVolumeConnected = connectionState == CONNECTED && restrictVolumeAdjustment
+            val contentAlpha = if (deviceDisabled) mDisabledContentAlpha else DEVICE_ACTIVE_ALPHA
+            val colorTheme = ColorTheme(fixedVolumeConnected, contentAlpha)
+            updateItemBackground()
+            updateTitle(device.name, connectionState, colorTheme)
+            updateTitleIcon(device, connectionState, restrictVolumeAdjustment, colorTheme)
+            updateSubtitle(subtitle, colorTheme)
+            updateSeekBar(device, connectionState, restrictVolumeAdjustment, colorTheme)
+            updateEndArea(device, connectionState, groupStatus, ongoingSessionStatus, colorTheme)
+            updateLoadingIndicator(connectionState, colorTheme)
+            updateDeviceStatusIcon(deviceStatusIcon, colorTheme)
+            updateContentBackground(fixedVolumeConnected, colorTheme)
+            updateContentClickListener(clickListener)
+            updateContentStateDescription(connectionState)
+        }
+
+        override fun renderDeviceGroupItem() {
+            mTitleIcon.visibility = GONE
+            val colorTheme = ColorTheme()
+            updateItemBackground()
+            updateTitle(
+                title =
+                    mController.getSessionName()
+                        ?: mContext.getString(R.string.media_output_dialog_group),
+                connectionState = CONNECTED,
+                colorTheme = colorTheme,
+            )
+            updateGroupSeekBar(colorTheme)
+        }
+
+        private fun updateTitle(
+            title: CharSequence,
+            connectionState: ConnectionState,
+            colorTheme: ColorTheme,
+        ) {
+            mTitleText.text = title
+            val fontFamilyName: String =
+                if (connectionState == CONNECTED) GSF_TITLE_MEDIUM_EMPHASIZED else GSF_TITLE_SMALL
+            mTitleText.typeface = Typeface.create(fontFamilyName, Typeface.NORMAL)
+            mTitleText.setTextColor(colorTheme.titleColor)
+            mTitleText.alpha = colorTheme.contentAlpha
+        }
+
+        private fun updateContentBackground(fixedVolumeConnected: Boolean, colorTheme: ColorTheme) {
+            if (fixedVolumeConnected) {
+                mMainContent.backgroundTintList =
+                    ColorStateList.valueOf(colorTheme.containerRestrictedVolumeBackground)
+                mMainContent.background = mFixedVolumeContentBackground
+            } else {
+                mMainContent.backgroundTintList = null
+                mMainContent.background = mButtonRippleBackground
+            }
+        }
+
+        private fun updateItemBackground() {
+            mItemLayout.setBackgroundColor(mController.getColorScheme().getSurfaceContainer())
+        }
+
+        private fun updateContentPadding(verticalPadding: Float) {
+            mMainContent.setPadding(0, verticalPadding.toInt(), 0, verticalPadding.toInt())
+        }
+
+        private fun updateLayoutForSlider(showSlider: Boolean) {
+            updateContentPadding(if (showSlider) mActivePadding else mInactivePadding)
+            mSlider.visibility = if (showSlider) VISIBLE else GONE
+            mSlider.alpha = if (showSlider) 1f else 0f
+        }
+
+        private fun updateSeekBar(
+            device: MediaDevice,
+            connectionState: ConnectionState,
+            restrictVolumeAdjustment: Boolean,
+            colorTheme: ColorTheme,
+        ) {
+            val showSlider = connectionState == CONNECTED && !restrictVolumeAdjustment
+            if (showSlider) {
+                updateLayoutForSlider(showSlider = true)
+                initSeekbar(
+                    volumeChangeCallback = { volume: Int ->
+                        mController.adjustVolume(device, volume)
+                    },
+                    settleCallback = { mController.logInteractionAdjustVolume(device) },
+                    deviceDrawable = mController.getDeviceIconDrawable(device),
+                    isInputDevice = device.isInputDevice,
+                    isVolumeControlAllowed = mController.isVolumeControlEnabled(device),
+                    currentVolume = device.currentVolume,
+                    maxVolume = device.maxVolume,
+                    colorTheme = colorTheme,
+                )
+            } else {
+                updateLayoutForSlider(showSlider = false)
+            }
+        }
+
+        private fun updateGroupSeekBar(colorTheme: ColorTheme) {
+            mSlider.visibility = VISIBLE
+            updateContentPadding(mActivePadding)
+            val groupDrawable =
+                AppCompatResources.getDrawable(
+                    mContext,
+                    com.android.settingslib.R.drawable.ic_media_group_device,
+                )
+            initSeekbar(
+                volumeChangeCallback = { volume: Int -> mController.adjustSessionVolume(volume) },
+                deviceDrawable = groupDrawable,
+                // No need to show disabled seek bar for volume control disabled session because
+                // devices won't be collapsed.
+                // This is a side effect of broadcast design: broadcast devices should be controlled
+                // separately so they should not be collapsed, so isVolumeControlEnabledForSession
+                // is added to {@link MediaOutputAdapter#updateItems()}. The logic will spread to
+                // casting devices without group volume control, so disabling seek bar will be
+                // unnecessary.
+                isVolumeControlAllowed = true,
+                currentVolume = mController.getSessionVolume(),
+                maxVolume = mController.getSessionVolumeMax(),
+                colorTheme = colorTheme,
+            )
+        }
+
+        private fun updateSubtitle(subtitle: String?, colorTheme: ColorTheme) {
+            if (subtitle.isNullOrEmpty()) {
+                mSubTitleText.visibility = GONE
+            } else {
+                mSubTitleText.text = subtitle
+                mSubTitleText.setTextColor(colorTheme.subtitleColor)
+                mSubTitleText.alpha = colorTheme.contentAlpha
+                mSubTitleText.visibility = VISIBLE
+            }
+        }
+
+        private fun updateLoadingIndicator(
+            connectionState: ConnectionState,
+            colorTheme: ColorTheme,
+        ) {
+            if (connectionState == CONNECTING) {
+                mLoadingIndicator.visibility = VISIBLE
+                mLoadingIndicator.indeterminateDrawable.setTintList(
+                    ColorStateList.valueOf(colorTheme.statusIconColor)
+                )
+            } else {
+                mLoadingIndicator.visibility = GONE
+            }
+        }
+
+        private fun initializeSeekbarVolume(
+            currentVolume: Int,
+            deviceDrawable: Drawable?,
+            muteDrawable: Drawable?,
+        ) {
+            tryResolveVolumeUserRequest(currentVolume)
+            if (!isDragging() && hasNoPendingVolumeRequests()) {
+                mSlider.value = currentVolume.toFloat()
+                updateSliderIconsVisibility(
+                    deviceDrawable = deviceDrawable,
+                    muteDrawable = muteDrawable,
+                    sliderVolume = currentVolume,
+                )
+                mSlider.stateDescription = getSliderStateDescription()
+            }
+        }
+
+        private fun tryResolveVolumeUserRequest(currentVolume: Int) {
+            if (currentVolume == mLatestUpdateVolume) {
+                mLatestUpdateVolume = NO_VOLUME_SET
+            }
+        }
+
+        private fun hasNoPendingVolumeRequests(): Boolean {
+            return mLatestUpdateVolume == NO_VOLUME_SET
+        }
+
+        private fun setLatestVolumeRequest(volume: Int) {
+            mLatestUpdateVolume = volume
+        }
+
+        private fun initSeekbar(
+            volumeChangeCallback: (Int) -> Unit,
+            settleCallback: () -> Unit = {},
+            deviceDrawable: Drawable?,
+            isInputDevice: Boolean = false,
+            isVolumeControlAllowed: Boolean,
+            currentVolume: Int,
+            maxVolume: Int,
+            colorTheme: ColorTheme,
+        ) {
+            if (maxVolume == 0) {
+                Log.e(TAG, "Invalid maxVolume value")
+                // Slider doesn't allow valueFrom == valueTo, return to prevent crash.
+                return
+            }
+
+            if (currentVolume !in 0..maxVolume) {
+                Log.e(TAG, "currentVolume must be between 0 and $maxVolume, actual: $currentVolume")
+                // Slider doesn't allow setting volume out of range, return to prevent crash.
+                return
+            }
+
+            mSlider.isClickable = false
+            mSlider.isEnabled = isVolumeControlAllowed
+            mSlider.valueFrom = 0f
+            mSlider.valueTo = maxVolume.toFloat()
+            mSlider.stepSize = 1f
+            mSlider.thumbTintList = ColorStateList.valueOf(colorTheme.sliderActiveColor)
+            mSlider.trackActiveTintList = ColorStateList.valueOf(colorTheme.sliderActiveColor)
+            mSlider.trackInactiveTintList = ColorStateList.valueOf(colorTheme.sliderInactiveColor)
+            mSlider.trackIconActiveColor = ColorStateList.valueOf(colorTheme.sliderActiveIconColor)
+            mSlider.trackIconInactiveColor =
+                ColorStateList.valueOf(colorTheme.sliderInactiveIconColor)
+            val muteDrawable = getMuteDrawable(isInputDevice)
+            initializeSeekbarVolume(
+                currentVolume = currentVolume,
+                deviceDrawable = deviceDrawable,
+                muteDrawable = muteDrawable,
+            )
+
+            mSlider.clearOnChangeListeners() // Prevent adding multiple listeners
+            mSlider.addOnChangeListener { _: Slider, value: Float, fromUser: Boolean ->
+                mSlider.stateDescription = getSliderStateDescription()
+                if (fromUser) {
+                    val seekBarVolume = value.toInt()
+                    updateSliderIconsVisibility(
+                        deviceDrawable = deviceDrawable,
+                        muteDrawable = muteDrawable,
+                        sliderVolume = seekBarVolume,
+                    )
+                    if (seekBarVolume != currentVolume) {
+                        setLatestVolumeRequest(seekBarVolume)
+                        volumeChangeCallback(seekBarVolume)
+                    }
+                }
+            }
+
+            mSlider.clearOnSliderTouchListeners() // Prevent adding multiple listeners
+            mSlider.addOnSliderTouchListener(
+                object : Slider.OnSliderTouchListener {
+                    override fun onStartTrackingTouch(slider: Slider) {
+                        setIsDragging(true)
+                    }
+
+                    override fun onStopTrackingTouch(slider: Slider) {
+                        setIsDragging(false)
+                        settleCallback()
+                    }
+                }
+            )
+        }
+
+        private fun getSliderStateDescription(): String {
+            val percentage = (mSlider.value * 100 / mSlider.valueTo).toInt()
+            return mContext.getString(R.string.media_output_dialog_volume_percentage, percentage)
+        }
+
+        private fun getMuteDrawable(isInputDevice: Boolean): Drawable? {
+            return AppCompatResources.getDrawable(
+                mContext,
+                if (isInputDevice) R.drawable.ic_mic_off
+                else R.drawable.media_output_icon_volume_off,
+            )
+        }
+
+        private fun updateSliderIconsVisibility(
+            deviceDrawable: Drawable?,
+            muteDrawable: Drawable?,
+            sliderVolume: Int,
+        ) {
+            mSlider.trackIconInactiveEnd = if (sliderVolume == 0) muteDrawable else deviceDrawable
+            mSlider.trackIconActiveEnd =
+                if (sliderVolume == mSlider.valueTo.toInt()) deviceDrawable else null
+        }
+
+        private fun updateTitleIcon(
+            device: MediaDevice,
+            connectionState: ConnectionState,
+            restrictVolumeAdjustment: Boolean,
+            colorTheme: ColorTheme,
+        ) {
+            if (connectionState == CONNECTED && !restrictVolumeAdjustment) {
+                mTitleIcon.visibility = GONE
+            } else {
+                mTitleIcon.imageTintList = ColorStateList.valueOf(colorTheme.iconColor)
+                val drawable = mController.getDeviceIconDrawable(device)
+                mTitleIcon.setImageDrawable(drawable)
+                mTitleIcon.visibility = VISIBLE
+                mTitleIcon.alpha = colorTheme.contentAlpha
+            }
+        }
+
+        private fun updateDeviceStatusIcon(deviceStatusIcon: Drawable?, colorTheme: ColorTheme) {
+            if (deviceStatusIcon == null) {
+                mStatusIcon.visibility = GONE
+            } else {
+                mStatusIcon.setImageDrawable(deviceStatusIcon)
+                mStatusIcon.alpha = colorTheme.contentAlpha
+                mStatusIcon.imageTintList = ColorStateList.valueOf(colorTheme.statusIconColor)
+                mStatusIcon.visibility = VISIBLE
+            }
+        }
+
+        private fun updateEndArea(
+            device: MediaDevice,
+            connectionState: ConnectionState,
+            groupStatus: GroupStatus?,
+            ongoingSessionStatus: OngoingSessionStatus?,
+            colorTheme: ColorTheme,
+        ) {
+            var showDivider = false
+
+            if (ongoingSessionStatus != null) {
+                showDivider = true
+                mOngoingSessionButton.visibility = VISIBLE
+                updateOngoingSessionButton(device, ongoingSessionStatus.host, colorTheme)
+            }
+
+            if (groupStatus != null && shouldShowGroupCheckbox(groupStatus)) {
+                showDivider = true
+                mGroupButton.visibility = VISIBLE
+                updateGroupButton(device, groupStatus, colorTheme)
+            }
+
+            mDivider.visibility =
+                if (showDivider && connectionState == DISCONNECTED) VISIBLE else GONE
+            mDivider.setBackgroundColor(mController.getColorScheme().getOutline())
+        }
+
+        private fun shouldShowGroupCheckbox(groupStatus: GroupStatus): Boolean {
+            val disabled = groupStatus.selected && !groupStatus.deselectable
+            return !disabled
+        }
+
+        private fun updateOngoingSessionButton(
+            device: MediaDevice,
+            isHost: Boolean,
+            colorTheme: ColorTheme,
+        ) {
+            val iconDrawableId =
+                if (isHost) R.drawable.media_output_status_edit_session
+                else R.drawable.ic_sound_bars_anim
+            mOngoingSessionButton.setOnClickListener { v: View ->
+                mController.tryToLaunchInAppRoutingIntent(device.id, v)
+            }
+            val drawable = AppCompatResources.getDrawable(mContext, iconDrawableId)
+            mOngoingSessionButton.setImageDrawable(drawable)
+            mOngoingSessionButton.imageTintList = ColorStateList.valueOf(colorTheme.iconColor)
+            if (drawable is AnimatedVectorDrawable) {
+                drawable.start()
+            }
+        }
+
+        private fun updateGroupButton(
+            device: MediaDevice,
+            groupStatus: GroupStatus,
+            colorTheme: ColorTheme,
+        ) {
+            val resId =
+                if (groupStatus.selected) {
+                    R.string.accessibility_remove_device_from_group_with_name
+                } else {
+                    R.string.accessibility_add_device_to_group_with_name
+                }
+            mGroupButton.contentDescription =
+                mContext.getString(resId, BidiFormatter.getInstance().unicodeWrap(device.name))
+            mGroupButton.setImageResource(
+                if (groupStatus.selected) {
+                    R.drawable.ic_check_circle_filled
+                } else {
+                    R.drawable.ic_add_circle_rounded
+                }
+            )
+            mGroupButton.setOnClickListener {
+                onGroupActionTriggered(!groupStatus.selected, device)
+            }
+            mGroupButton.imageTintList = ColorStateList.valueOf(colorTheme.iconColor)
+        }
+
+        private fun updateContentClickListener(listener: View.OnClickListener?) {
+            mMainContent.setOnClickListener(listener)
+            if (listener == null) {
+                mMainContent.isClickable = false // clickable is not removed automatically.
+            }
+        }
+
+        private fun updateContentStateDescription(connectionState: ConnectionState) {
+            mMainContent.stateDescription =
+                when (connectionState) {
+                    CONNECTED -> mContext.getString(R.string.media_output_item_connected_state)
+                    else -> null
+                }
+        }
+
+        override fun disableSeekBar() {
+            mSlider.isEnabled = false
+        }
+    }
+
+    inner class MediaGroupDividerViewHolder(itemView: View, val mContext: Context) :
+        RecyclerView.ViewHolder(itemView) {
+        private val mItemLayout: ViewGroup = itemView.requireViewById(R.id.item_layout)
+        private val mTopSeparator: View = itemView.requireViewById(R.id.top_separator)
+        private val mTitleText: TextView = itemView.requireViewById(R.id.title)
+        @VisibleForTesting
+        val mExpandButton: ViewGroup = itemView.requireViewById(R.id.expand_button)
+        private val mExpandButtonIcon: ImageView = itemView.requireViewById(R.id.expand_button_icon)
+
+        fun onBind(
+            groupDividerTitle: String?,
+            isExpandableDivider: Boolean,
+            hasTopSeparator: Boolean,
+        ) {
+            mTitleText.text = groupDividerTitle
+            mTitleText.setTextColor(mController.getColorScheme().getPrimary())
+            if (hasTopSeparator) {
+                mTopSeparator.visibility = VISIBLE
+                mTopSeparator.setBackgroundColor(mController.getColorScheme().getOutlineVariant())
+            } else {
+                mTopSeparator.visibility = GONE
+            }
+            mItemLayout.setBackgroundColor(mController.getColorScheme().getSurfaceContainer())
+            updateExpandButton(isExpandableDivider)
+        }
+
+        private fun updateExpandButton(isExpandableDivider: Boolean) {
+            if (!isExpandableDivider) {
+                mExpandButton.visibility = GONE
+                return
+            }
+            val isCollapsed = mController.isGroupListCollapsed()
+            mExpandButtonIcon.setImageDrawable(
+                AppCompatResources.getDrawable(
+                    mContext,
+                    if (isCollapsed) R.drawable.ic_expand_more_rounded
+                    else R.drawable.ic_expand_less_rounded,
+                )
+            )
+            mExpandButton.contentDescription =
+                mContext.getString(
+                    if (isCollapsed) R.string.accessibility_expand_group
+                    else R.string.accessibility_collapse_group
+                )
+            mExpandButton.visibility = VISIBLE
+            mExpandButton.setOnClickListener { toggleGroupList() }
+            mExpandButtonIcon.backgroundTintList =
+                ColorStateList.valueOf(mController.getColorScheme().getOnSurface())
+                    .withAlpha((255 * 0.1).toInt())
+            mExpandButtonIcon.imageTintList =
+                ColorStateList.valueOf(mController.getColorScheme().getOnSurface())
+        }
+
+        private fun toggleGroupList() {
+            mController.setGroupListCollapsed(!mController.isGroupListCollapsed())
+            updateItems()
+        }
+    }
+
+    private inner class ColorTheme(
+        isConnectedWithFixedVolume: Boolean = false,
+        val contentAlpha: Float = DEVICE_ACTIVE_ALPHA,
+    ) {
+        private val colorScheme: MediaOutputColorScheme = mController.getColorScheme()
+        private val isExpandedAudioTileDetailsFeatureEnabled: Boolean =
+            mController.isExpandedAudioTileDetailsFeatureEnabled()
+
+        val titleColor =
+            if (!isExpandedAudioTileDetailsFeatureEnabled && isConnectedWithFixedVolume) {
+                colorScheme.getOnPrimary()
+            } else {
+                colorScheme.getOnSurface()
+            }
+        val subtitleColor =
+            if (!isExpandedAudioTileDetailsFeatureEnabled && isConnectedWithFixedVolume) {
+                colorScheme.getOnPrimary()
+            } else {
+                colorScheme.getOnSurfaceVariant()
+            }
+        val iconColor =
+            if (!isExpandedAudioTileDetailsFeatureEnabled && isConnectedWithFixedVolume) {
+                colorScheme.getOnPrimary()
+            } else {
+                colorScheme.getOnSurface()
+            }
+        val statusIconColor =
+            if (!isExpandedAudioTileDetailsFeatureEnabled && isConnectedWithFixedVolume) {
+                colorScheme.getOnPrimary()
+            } else {
+                colorScheme.getOnSurfaceVariant()
+            }
+        val sliderActiveColor = colorScheme.getPrimary()
+        val sliderActiveIconColor = colorScheme.getOnPrimary()
+        val sliderInactiveColor = colorScheme.getSecondaryContainer()
+        val sliderInactiveIconColor = colorScheme.getOnSurface()
+        val containerRestrictedVolumeBackground = colorScheme.getPrimary()
+    }
+
+    companion object {
+        // All possible RecyclerView item view types, based on the child classes of [MediaItem].
+        const val TYPE_DEVICE = 0
+        const val TYPE_GROUP_DIVIDER = 1
+        const val TYPE_DEVICE_GROUP = 2
+
+        private const val TAG = "MediaOutputAdapter"
+        private const val DEVICE_ACTIVE_ALPHA = 1f
+        private const val NO_VOLUME_SET = -1
+    }
+}

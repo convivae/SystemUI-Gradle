@@ -1,0 +1,56 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.android.systemui.topwindoweffects.dagger
+
+import com.android.systemui.topwindoweffects.data.repository.InvocationEffectEnabler
+import com.android.systemui.topwindoweffects.data.repository.InvocationEffectGestureController
+import com.android.systemui.topwindoweffects.data.repository.InvocationEffectPreferences
+import com.android.systemui.topwindoweffects.data.repository.InvocationEffectPreferencesImpl
+import com.android.systemui.topwindoweffects.data.repository.InvocationEffectSetUiHintsHandler
+import com.android.systemui.topwindoweffects.data.repository.SqueezeEffectRepository
+import com.android.systemui.topwindoweffects.data.repository.SqueezeEffectRepositoryImpl
+import dagger.Binds
+import dagger.Module
+
+@Module
+interface SqueezeEffectRepositoryModule {
+
+    @Binds
+    fun squeezeEffectRepository(
+        squeezeEffectRepositoryImpl: SqueezeEffectRepositoryImpl
+    ): SqueezeEffectRepository
+
+    @Binds
+    fun invocationEffectSetUiHintsHandler(
+        squeezeEffectRepositoryImpl: SqueezeEffectRepositoryImpl
+    ): InvocationEffectSetUiHintsHandler
+
+    @Binds
+    fun invocationEffectEnabler(
+        squeezeEffectRepositoryImpl: SqueezeEffectRepositoryImpl
+    ): InvocationEffectEnabler
+
+    @Binds
+    fun invocationEffectPreferences(
+        invocationEffectPreferencesImpl: InvocationEffectPreferencesImpl
+    ): InvocationEffectPreferences
+
+    @Binds
+    fun invocationEffectUiController(
+        squeezeEffectRepositoryImpl: SqueezeEffectRepositoryImpl
+    ): InvocationEffectGestureController
+}
