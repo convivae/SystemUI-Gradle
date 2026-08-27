@@ -13,6 +13,7 @@
 | 059 | `w2:t1V` / `w2:p10` (`task059`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; 4 single-consumer AAR families to direct consumption; AGENTS.md §3.2 exception (user-approved); catalog + libs/maven retirement; audit §10 annotations; builds serialized `--max-workers=4`; commits local, no push |
 | 069 | task069 worker pane | main checkout `SystemUI-Gradle` | default session | complete (reported) | Read-only; two report docs + STATE.md line only; no src/res/Gradle changes, no builds, commits local, no push |
 | 070 | `w2:p1` (`task070`) | main checkout `SystemUI-Gradle` | joycode GLM-5.3 | complete (reported) | C3 source realignment to AOSP 17: 847 EXTRA git-rm, 34 MISPLACED git-mv, 2566 MISSING cp + 3 new module dirs (application/clocks-common/floatingmenu-res) + 3 manifests, 3067 MODIFIED overwrite (byte-verified), CONV re-mark (5806 marks, 86 res-product files + 1 kt CONV_MOD replay); `--strict` exit 0, all counters 0 except whitelisted MODIFIED; no Gradle, no libs/, no *.gradle.kts, commits local, no push |
+| 071 | worker pane (`task071`) | main checkout `SystemUI-Gradle` | joycode GLM-5.3 | complete (reported) | C2 libs regen for AOSP 17: scripts adapted (iconloader 3-jar closure 144 classes, WM-Shell nano-proto drop 3124 classes, WifiTrackerLib GeneratedManifest, SettingsLib device-kotlin drop 1372 classes, viewcapture 2-jar 22 classes, misc apex31 re-freeze, aconfig aggregate-shard extraction family 14→12 merged 60 classes, maven registry 23 families all 2.0.0), libs/ 104 files deleted + 102 regenerated via 7 scripts only, drift report 9 identical/47 drifted/48 gone/46 new, motion_tool_lib.jar + settingslib-selector-flags.jar no longer produced; no Gradle, no *.gradle.kts/libs.versions.toml (C4), commits local, no push |
 
 Task 050 worker panes (`w2J:p1` agent + `w2J:p2` shell) were closed 2026-08-25; the `SystemUI-Gradle-wt-050`
 evidence worktree and task branch remain on disk untouched. No active Task 050 worker.
@@ -316,6 +317,19 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-08-27 — Task 071 (C2: libs/ 全删 + AOSP-17 适配 + 脚本再生) complete (reported): all 7 packaging
+scripts adapted to the 17 tree and libs/ fully regenerated via scripts only (ADR 0007 Phase C
+proposition). 104 pre-delete files → 102 regenerated; every file traced to a producer script.
+Beyond the chief's four pre-survey items, three further drift classes were found and fixed at
+the owning-artifact level: framework-statsd apex31 variant (misc re-frozen), aconfig framework
+family restructure (6 members extracted from sharded framework-minus-apex javac via validated
+content scan; security/quickaccesswallet/settingslib-selector dropped upstream; family 14→12,
+merged jar 60 classes), and maven registry trimmed 27→23 (Task 059 direct-consumption families) at
+2.0.0. motion_tool_lib.jar and settingslib-selector-flags.jar no longer exist (C4 removes the
+gradle dependency lines; catalog still points at retired 1.x). Drift report: 9 byte-identical /
+47 drifted / 48 gone / 46 new. Full detail: docs/issues/2026-08-27-c2-libs-regen-17.md.
+`uv run pytest tools/tests -q` → 290 passed. Gradle not run by design; commits local, not pushed.
 
 2026-08-27 — Task 069 (SysUI-17 source-realignment panorama, read-only) complete (reported):
 baseline counters reproduced exactly (MISSING 1963 / MISPLACED 20 / EXTRA 642 / MODIFIED 2222 /
