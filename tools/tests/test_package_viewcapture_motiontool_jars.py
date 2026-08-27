@@ -1,9 +1,12 @@
 """Tests for tools/package_viewcapture_motiontool_jars.py.
 
 The packager merges fixed owning-Soong implementation outputs (javac/kotlin,
-never turbine/header/FAT) into two deterministic class-only JARs:
-``libs/view_capture.jar`` (56 classes under com/android/app/viewcapture/) and
-``libs/motion_tool_lib.jar`` (65 classes under com/android/app/motiontool/).
+never turbine/header/FAT) into one deterministic class-only JAR:
+``libs/view_capture.jar`` (22 classes under com/android/app/viewcapture/:
+9 javac + 13 kotlin). AOSP-17: the motion_tool_lib and view_capture_proto
+targets were removed upstream, so the script packages view_capture only; the
+package_target helper itself stays fully covered by the synthetic fixtures
+below (merge/determinism/rejection semantics are target-agnostic).
 """
 
 import importlib.util
@@ -26,7 +29,6 @@ module = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(module)
 
 VIEW_PREFIX = "com/android/app/viewcapture/"
-MOTION_PREFIX = "com/android/app/motiontool/"
 
 
 def write_jar(path, entries):
@@ -77,22 +79,25 @@ class TestViewCaptureMotionToolPackaging(unittest.TestCase):
                 ]),
             )
 
-    def test_motion_target_merges_two_clean_inputs(self):
+    def test_target_merges_two_clean_inputs(self):
+        # Generic two-input merge check (formerly exercised via the removed
+        # motion_tool_lib target): duplicate detection across inputs, sorted
+        # class-only output.
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            first = root / "motion_kotlin.jar"
-            second = root / "motion_proto.jar"
+            first = root / "first_kotlin.jar"
+            second = root / "second_javac.jar"
             write_jar(first, {
-                f"{MOTION_PREFIX}A.class": b"a",
-                f"{MOTION_PREFIX}B.class": b"b",
+                f"{VIEW_PREFIX}A.class": b"a",
+                f"{VIEW_PREFIX}B.class": b"b",
             })
             write_jar(second, {
-                f"{MOTION_PREFIX}C.class": b"c",
-                f"{MOTION_PREFIX}D.class": b"d",
+                f"{VIEW_PREFIX}C.class": b"c",
+                f"{VIEW_PREFIX}D.class": b"d",
                 "dir-entry/": b"",
             })
-            output = root / "motion_tool_lib.jar"
-            counts = module.package_target((first, second), output, MOTION_PREFIX)
+            output = root / "merged.jar"
+            counts = module.package_target((first, second), output, VIEW_PREFIX)
             self.assertEqual(counts, (2, 2))
             with zipfile.ZipFile(output) as archive:
                 names = archive.namelist()

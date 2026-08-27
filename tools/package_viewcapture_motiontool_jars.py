@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Deterministic clean-JAR packager for view_capture and motion_tool_lib.
+"""Deterministic clean-JAR packager for view_capture.
 
 Merges fixed owning-Soong *implementation* outputs (javac/kotlin — never
-turbine, header, combined, or FAT jars) into two class-only repository JARs:
+turbine, header, combined, or FAT jars) into one class-only repository JAR:
 
-* ``libs/view_capture.jar`` — 56 classes under ``com/android/app/viewcapture/``
-  from contributions 9 (javac) + 23 (kotlin) + 24 (view_capture_proto javac);
-* ``libs/motion_tool_lib.jar`` — 65 classes under ``com/android/app/motiontool/``
-  from contributions 8 (kotlin) + 57 (motion_tool_proto javac).
+* ``libs/view_capture.jar`` — 22 classes under ``com/android/app/viewcapture/``
+  from contributions 9 (javac) + 13 (kotlin).
+
+AOSP-17 note: the sibling target ``motion_tool_lib`` (libs/motion_tool_lib.jar,
+65 classes) was dropped — ``frameworks/libs/systemui/motiontoollib`` no longer
+exists upstream and SystemUI-17 has no motiontool references. The historical
+name ``package_viewcapture_motiontool_jars.py`` is kept (git history); the
+script now packages view_capture only. Likewise the ``view_capture_proto``
+target was removed upstream in 17, so the proto javac input is gone.
 
 The packager is deterministic: entries are sorted by path, ZIP timestamps are
 fixed, permissions are fixed, and non-class entries (manifests, directories)
@@ -25,7 +30,6 @@ from pathlib import Path
 
 FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 VIEW_PREFIX = "com/android/app/viewcapture/"
-MOTION_PREFIX = "com/android/app/motiontool/"
 
 from aosp_paths import aosp_root
 
@@ -37,23 +41,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Fixed owning-Soong implementation inputs, relative to the AOSP root.
 # Paths deliberately contain /javac/ or /kotlin/ implementation outputs only.
+# AOSP-17: view_capture_proto target removed upstream — only javac + kotlin
+# implementation outputs survive (chief pre-survey: "viewcapture 2/4 alive").
 VIEW_INPUTS = (
     "out/soong/.intermediates/frameworks/libs/systemui/viewcapturelib/"
     "view_capture/android_common/javac/view_capture.jar",
     "out/soong/.intermediates/frameworks/libs/systemui/viewcapturelib/"
     "view_capture/android_common/kotlin/view_capture.jar",
-    "out/soong/.intermediates/frameworks/libs/systemui/viewcapturelib/"
-    "view_capture_proto/android_common/javac/view_capture_proto.jar",
-)
-MOTION_INPUTS = (
-    "out/soong/.intermediates/frameworks/libs/systemui/motiontoollib/"
-    "motion_tool_lib/android_common/kotlin/motion_tool_lib.jar",
-    "out/soong/.intermediates/frameworks/libs/systemui/motiontoollib/"
-    "motion_tool_proto/android_common/javac/motion_tool_proto.jar",
 )
 
 VIEW_OUTPUT = REPO_ROOT / "libs" / "view_capture.jar"
-MOTION_OUTPUT = REPO_ROOT / "libs" / "motion_tool_lib.jar"
 
 
 class PackagingError(Exception):
@@ -131,7 +128,7 @@ def _resolve(root: Path, relative: str) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--all", action="store_true", help="package both targets")
+    parser.add_argument("--all", action="store_true", help="package all targets")
     parser.add_argument("--aosp-root", type=Path, default=DEFAULT_AOSP_ROOT)
     args = parser.parse_args(argv)
     if not args.all:
@@ -139,7 +136,6 @@ def main(argv: list[str] | None = None) -> int:
 
     targets = (
         ("view_capture", VIEW_INPUTS, VIEW_OUTPUT, VIEW_PREFIX),
-        ("motion_tool_lib", MOTION_INPUTS, MOTION_OUTPUT, MOTION_PREFIX),
     )
     failed = False
     for name, relatives, output, prefix in targets:

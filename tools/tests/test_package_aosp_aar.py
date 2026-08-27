@@ -204,22 +204,26 @@ class TestArtifactConfigs(unittest.TestCase):
         cfg = paar.CONFIGS["WifiTrackerLib"]
         self.assertIn("WifiTrackerLib/android_common/javac/WifiTrackerLib.jar", str(cfg["code"]))
         self.assertIn("WifiTrackerLib/res", str(cfg["res"]))
-        self.assertTrue(str(cfg["manifest"]).endswith("WifiTrackerLib/AndroidManifest.xml"))
+        # AOSP-17: source-tree manifest deleted upstream; Soong GeneratedManifest
+        self.assertTrue(str(cfg["manifest"]).endswith(
+            "WifiTrackerLib/android_common/GeneratedManifest.xml"))
         self.assertIn("WifiTrackerLibRes/android_common/R.txt", str(cfg["rtxt"]))
 
     def test_iconloader_config_paths(self):
         cfg = paar.CONFIGS["iconloader"]
-        # Task 036：code 必须是 owning Soong 的 javac + kotlin implementation 输出（有序两项）
+        # AOSP-17 restructure: iconloader (src_full_lib facades) + iconloader_base
+        # (Java + Kotlin) three-jar closure; iconloader/android_common/kotlin/ gone.
         self.assertEqual(
             cfg["code"],
             [
                 paar.SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/javac/iconloader.jar",
-                paar.SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/kotlin/iconloader.jar",
+                paar.SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader_base/android_common/javac/iconloader_base.jar",
+                paar.SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader_base/android_common/kotlin/iconloader_base.jar",
             ],
         )
         self.assertIn("iconloaderlib/res", str(cfg["res"]))
         self.assertTrue(str(cfg["manifest"]).endswith("iconloaderlib/AndroidManifest.xml"))
-        self.assertIn("iconloader/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("iconloader_base/android_common/R.txt", str(cfg["rtxt"]))
 
     def test_settingslib_config_paths(self):
         cfg = paar.CONFIGS["SettingsLib"]
@@ -265,7 +269,8 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertFalse(cfg.get("reject_sysui", False))
 
     def test_settingslib_program_code_inputs(self):
-        """Task 040：main code = javac discovery + 主 Kotlin + DeviceStateRotationLock Kotlin；
+        """AOSP-17: main code = javac discovery + 主 Kotlin（DeviceStateRotationLock
+        已 Kotlin→Java 重写，其类由 discovery 交付）；
         Theme code = 其 owning Kotlin JAR（不得并入 main）。"""
         cfg = paar.CONFIGS["SettingsLib"]
         discovered = paar._discover_settingslib_code_jars()
@@ -273,13 +278,7 @@ class TestArtifactConfigs(unittest.TestCase):
             paar.SOONG_DIR
             / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar"
         )
-        device_kotlin = (
-            paar.SOONG_DIR
-            / "frameworks/base/packages/SettingsLib/DeviceStateRotationLock/"
-              "SettingsLibDeviceStateRotationLock/android_common/kotlin/"
-              "SettingsLibDeviceStateRotationLock.jar"
-        )
-        self.assertEqual(cfg["code"], discovered + [main_kotlin, device_kotlin])
+        self.assertEqual(cfg["code"], discovered + [main_kotlin])
 
         theme_kotlin = (
             paar.SOONG_DIR
@@ -361,18 +360,14 @@ class TestArtifactConfigs(unittest.TestCase):
 
 
 class TestSettingsLibProgramClosure(unittest.TestCase):
-    """Task 040：SettingsLib 程序类闭包——780 javac + 372 主 Kotlin + 1 RotationLock
-    Kotlin = 1153 类精确不相交并集；Theme 15 类独立交付，零重叠。"""
+    """AOSP-17 (Task 071)：SettingsLib 程序类闭包——34 javac（884 类）+ 主 Kotlin
+    （488 类）= 1372 类精确不相交并集；Theme 29 类独立交付，零重叠。
+    16 时代 1153 = 32 javac + 372 主 Kotlin + 1 RotationLock Kotlin（后者随
+    DeviceStateRotationLock Kotlin→Java 重写消失，由 discovery 交付）。"""
 
     MAIN_KOTLIN = (
         paar.SOONG_DIR
         / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar"
-    )
-    DEVICE_KOTLIN = (
-        paar.SOONG_DIR
-        / "frameworks/base/packages/SettingsLib/DeviceStateRotationLock/"
-          "SettingsLibDeviceStateRotationLock/android_common/kotlin/"
-          "SettingsLibDeviceStateRotationLock.jar"
     )
     THEME_KOTLIN = (
         paar.SOONG_DIR
@@ -393,15 +388,15 @@ class TestSettingsLibProgramClosure(unittest.TestCase):
             contributions.append(classes)
         return contributions
 
-    def test_input_class_sets_pairwise_disjoint_union_1153(self):
+    def test_input_class_sets_pairwise_disjoint_union_1372(self):
         contributions = self._input_union()
-        self.assertEqual(len(contributions), 34)  # 32 javac + 2 Kotlin
+        self.assertEqual(len(contributions), 35)  # 34 javac + 1 Kotlin (AOSP-17)
         union = {}
         for c in contributions:
             self.assertEqual(set(c) & set(union), set(),
                              "输入 class 集存在重叠")
             union.update(c)
-        self.assertEqual(len(union), 1153, len(union))
+        self.assertEqual(len(union), 1372, len(union))
 
     def test_main_classes_jar_exact_union(self):
         contributions = self._input_union()
@@ -418,7 +413,7 @@ class TestSettingsLibProgramClosure(unittest.TestCase):
                          "输出 class 集不是配置输入的精确并集")
         for name, data in expected.items():
             self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
-        self.assertEqual(len(actual), 1153)
+        self.assertEqual(len(actual), 1372)
 
     def test_main_owner_classes_present(self):
         with tempfile.TemporaryDirectory() as d:
@@ -440,9 +435,10 @@ class TestSettingsLibProgramClosure(unittest.TestCase):
         self.assertNotIn("com/android/settingslib/widget/GroupSectionDividerMixin.class", names)
         self.assertNotIn("com/android/settingslib/widget/SettingsThemeHelper.class", names)
 
-    def test_theme_classes_jar_exact_fifteen(self):
+    def test_theme_classes_jar_exact_29(self):
+        # AOSP-17: 15 → 29 owning Kotlin classes
         expected = self._classes_of(self.THEME_KOTLIN)
-        self.assertEqual(len(expected), 15)
+        self.assertEqual(len(expected), 29)
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "SettingsLibSettingsTheme.aar"
             paar.build_artifact("SettingsLibSettingsTheme", out)
@@ -519,7 +515,7 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
         self.assertIn("res/drawable-v34/settingslib_switch_track.xml", names)
 
     def test_classes_jar_contains_only_theme_kotlin_classes(self):
-        """Task 040：classes.jar 恰为其 owning Kotlin JAR 的 15 个类。"""
+        """AOSP-17 (Task 071)：classes.jar 恰为其 owning Kotlin JAR 的 29 个类。"""
         from io import BytesIO
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "SettingsLibSettingsTheme.aar"
@@ -529,7 +525,7 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
                 with zipfile.ZipFile(BytesIO(z.read("classes.jar"))) as cj:
                     classes = [n for n in cj.namelist()
                                if n.endswith(".class")]
-        self.assertEqual(len(classes), 15, classes)
+        self.assertEqual(len(classes), 29, classes)
         for n in classes:
             self.assertTrue(n.startswith("com/android/settingslib/widget/"),
                             f"越界类名: {n}")
@@ -629,7 +625,8 @@ class TestSettingsLibPerTargetProvenance(unittest.TestCase):
 
 class TestSettingsLibNewResourceProvenance(unittest.TestCase):
     """Task 040（Batch 4D）：10 个新 res-only AAR——res 树逐字节溯源不漏不多不改、
-    空 classes.jar、manifest/R.txt 原样、确定性。"""
+    空 classes.jar、manifest/R.txt 原样、确定性。
+    AOSP-17 (Task 071)：各族 res 文件数实测漂移（合计 389，16 时代 346）。"""
 
     NEW_RESOURCE_TARGETS = {
         "SettingsLibMainSwitchPreference": "MainSwitchPreference",
@@ -644,17 +641,18 @@ class TestSettingsLibNewResourceProvenance(unittest.TestCase):
         "SettingsLibSettingsSpinner": "SettingsSpinner",
     }
 
+    # AOSP-17 实测（/home/conv/myspace/aosp SettingsLib/<sub>/res 文件数）
     EXPECTED_COUNTS = {
-        "SettingsLibMainSwitchPreference": 22,
+        "SettingsLibMainSwitchPreference": 24,
         "SettingsLibAppPreference": 91,
-        "SettingsLibBannerMessagePreference": 96,
+        "SettingsLibBannerMessagePreference": 112,
         "SettingsLibBarChartPreference": 6,
-        "SettingsLibButtonPreference": 23,
-        "SettingsLibFooterPreference": 91,
-        "SettingsLibIllustrationPreference": 6,
-        "SettingsLibSliderPreference": 5,
-        "SettingsLibUsageProgressBarPreference": 1,
-        "SettingsLibSettingsSpinner": 5,
+        "SettingsLibButtonPreference": 29,
+        "SettingsLibFooterPreference": 92,
+        "SettingsLibIllustrationPreference": 9,
+        "SettingsLibSliderPreference": 4,
+        "SettingsLibUsageProgressBarPreference": 2,
+        "SettingsLibSettingsSpinner": 20,
     }
 
     def _build(self, target: str, tmpdir: Path) -> Path:
@@ -662,7 +660,7 @@ class TestSettingsLibNewResourceProvenance(unittest.TestCase):
         paar.build_artifact(target, out)
         return out
 
-    def test_source_tree_counts_total_346(self):
+    def test_source_tree_counts_total_389(self):
         total = 0
         for target, subdir in self.NEW_RESOURCE_TARGETS.items():
             src_root = paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"
@@ -670,7 +668,7 @@ class TestSettingsLibNewResourceProvenance(unittest.TestCase):
             self.assertEqual(count, self.EXPECTED_COUNTS[target],
                              f"{target} AOSP 源树文件数变化")
             total += count
-        self.assertEqual(total, 346)
+        self.assertEqual(total, 389)
 
     def test_res_entries_match_aosp_tree_exactly(self):
         for target, subdir in self.NEW_RESOURCE_TARGETS.items():
@@ -722,28 +720,32 @@ class TestSettingsLibNewResourceProvenance(unittest.TestCase):
 
 
 class TestIconloaderProvenance(unittest.TestCase):
-    """Task 036：iconloader AAR 完整 Kotlin closure——59+16=75 类精确并集 + 资源溯源 + 确定性。"""
+    """AOSP-17 (Task 071)：iconloaderlib 拆分重构——
+    iconloader/javac（3 门面类）+ iconloader_base/javac（21）+ iconloader_base/kotlin（120）
+    = 144 类精确不相交并集 + 资源溯源 + 确定性（16 时代 59+16=75）。"""
 
-    def _input_classes(self) -> "tuple[dict, dict]":
-        """返回 (javac 贡献, kotlin 贡献) 的 {class_name: bytes}。"""
-        javac_jar, kotlin_jar = paar.CONFIGS["iconloader"]["code"]
+    def _input_classes(self) -> "list[dict]":
+        """返回三个 code JAR 的 {class_name: bytes} 贡献列表。"""
         contributions = []
-        for jar in (javac_jar, kotlin_jar):
+        for jar in paar.CONFIGS["iconloader"]["code"]:
             with zipfile.ZipFile(jar) as z:
                 contributions.append({
                     n: z.read(n) for n in z.namelist()
                     if n.endswith(".class")
                 })
-        return contributions[0], contributions[1]
+        return contributions
 
     def test_classes_exact_disjoint_union(self):
         from io import BytesIO
-        javac, kotlin = self._input_classes()
-        # 输入贡献必须是精确的 59 + 16，且不相交
-        self.assertEqual(len(javac), 59)
-        self.assertEqual(len(kotlin), 16)
-        self.assertEqual(set(javac) & set(kotlin), set())
-        expected = {**javac, **kotlin}
+        facades, base_javac, base_kotlin = self._input_classes()
+        # 输入贡献必须是精确的 3 + 21 + 120，且两两不相交
+        self.assertEqual(len(facades), 3)
+        self.assertEqual(len(base_javac), 21)
+        self.assertEqual(len(base_kotlin), 120)
+        self.assertEqual(set(facades) & set(base_javac), set())
+        self.assertEqual(set(facades) & set(base_kotlin), set())
+        self.assertEqual(set(base_javac) & set(base_kotlin), set())
+        expected = {**facades, **base_javac, **base_kotlin}
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "iconloader.aar"
             paar.build_artifact("iconloader", out)
@@ -751,10 +753,10 @@ class TestIconloaderProvenance(unittest.TestCase):
                 with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
                     actual = {n: cj.read(n) for n in cj.namelist() if n.endswith(".class")}
         self.assertEqual(set(actual), set(expected),
-                         "输出 class 集不是两输入的精确并集")
+                         "输出 class 集不是三输入的精确并集")
         for name, data in expected.items():
             self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
-        self.assertEqual(len(actual), 75)
+        self.assertEqual(len(actual), 144)
         for name in actual:
             self.assertTrue(name.startswith("com/android/launcher3/"),
                             f"越界类名: {name}")
@@ -795,13 +797,18 @@ class TestIconloaderProvenance(unittest.TestCase):
 
 
 class TestWMShellProtoProvenance(unittest.TestCase):
-    """Task 037：WM-Shell AAR proto closure——(主 javac∪kotlin 去除 exclude)∪40 proto=1888 类精确并集。"""
+    """AOSP-17 (Task 071)：WM-Shell AAR closure——
+    (主 javac∪主 kotlin 去除 exclude)∪lite-proto = 3124 类精确并集。
+    16 时代 nano-proto target（WindowManager-Shell-proto）上游删除：
+    proto/protolog 类（ProtoLogController、ProtoLogImpl_*）实测并入主 jar；
+    lite-proto 命名空间迁至 desktopmode/data/persistence + education/data + apptoweb/data。"""
 
     SHELL = paar.SOONG_DIR / "frameworks/base/libs/WindowManager/Shell"
-    PROTO_JAR = SHELL / "WindowManager-Shell-proto/android_common/javac/WindowManager-Shell-proto.jar"          # noqa: E501  bp L138（nano）
-    LITE_PROTO_JAR = SHELL / "WindowManager-Shell-lite-proto/android_common/javac/WindowManager-Shell-lite-proto.jar"  # noqa: E501  bp L148（lite）
+    LITE_PROTO_JAR = SHELL / "WindowManager-Shell-lite-proto/android_common/javac/WindowManager-Shell-lite-proto.jar"  # noqa: E501  bp（lite）
 
-    # 审计 docs/architecture/2026-08-20-r8-runtime-closure-audit.md §7 的 A4 18 项目标
+    # AOSP-17 实测存活/迁移的 class 级 R8 目标（全部实测自 17 产物）：
+    # education proto（仍在）、persistence proto（迁入 lite 命名空间）、
+    # protolog（并入主 jar）
     R8_TARGETS = (
         "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto.class",
         "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$AppHandleEducation.class",      # noqa: E501
@@ -809,18 +816,13 @@ class TestWMShellProtoProvenance(unittest.TestCase):
         "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$AppToWebEducation.class",       # noqa: E501
         "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$AppToWebEducation$Builder.class",   # noqa: E501
         "com/android/wm/shell/desktopmode/education/data/WindowingEducationProto$Builder.class",               # noqa: E501
-        "com/android/wm/shell/desktopmode/persistence/Desktop.class",
-        "com/android/wm/shell/desktopmode/persistence/Desktop$Builder.class",
-        "com/android/wm/shell/desktopmode/persistence/DesktopPersistentRepositories.class",
-        "com/android/wm/shell/desktopmode/persistence/DesktopPersistentRepositories$Builder.class",            # noqa: E501
-        "com/android/wm/shell/desktopmode/persistence/DesktopRepositoryState.class",
-        "com/android/wm/shell/desktopmode/persistence/DesktopRepositoryState$Builder.class",
-        "com/android/wm/shell/desktopmode/persistence/DesktopTask.class",
-        "com/android/wm/shell/desktopmode/persistence/DesktopTask$Builder.class",
-        "com/android/wm/shell/desktopmode/persistence/DesktopTaskState.class",
-        "com/android/wm/shell/nano/HandlerMapping.class",
-        "com/android/wm/shell/nano/Transition.class",
-        "com/android/wm/shell/nano/WmShellTransitionTraceProto.class",
+        "com/android/wm/shell/desktopmode/data/persistence/Desktop.class",
+        "com/android/wm/shell/desktopmode/data/persistence/Desktop$Builder.class",
+        "com/android/wm/shell/desktopmode/data/persistence/DesktopPersistentRepositories.class",
+        "com/android/wm/shell/desktopmode/data/persistence/DesktopRepositoryState.class",
+        "com/android/wm/shell/desktopmode/data/persistence/DesktopTask.class",
+        "com/android/wm/shell/ProtoLogController.class",
+        "com/android/wm/shell/apptoweb/data/AppToWebProto.class",
     )
 
     def _config_code(self):
@@ -830,14 +832,14 @@ class TestWMShellProtoProvenance(unittest.TestCase):
         with zipfile.ZipFile(jar) as z:
             return {n: z.read(n) for n in z.namelist() if n.endswith(".class")}
 
-    def test_config_code_ordered_four_jars(self):
-        """Task 037：code 必须是主 javac、主 kotlin、proto（nano）、lite-proto 四项有序列表。"""
+    def test_config_code_ordered_three_jars(self):
+        """AOSP-17：code 必须是主 javac、主 kotlin、lite-proto 三项有序列表
+        （nano-proto target 上游删除）。"""
         self.assertEqual(
             self._config_code(),
             [
                 self.SHELL / "WindowManager-Shell/android_common/javac/WindowManager-Shell.jar",
                 self.SHELL / "WindowManager-Shell/android_common/kotlin/WindowManager-Shell.jar",
-                self.PROTO_JAR,
                 self.LITE_PROTO_JAR,
             ],
         )
@@ -846,23 +848,20 @@ class TestWMShellProtoProvenance(unittest.TestCase):
         from io import BytesIO
         javac = self._input_classes(self._config_code()[0])
         kotlin = self._input_classes(self._config_code()[1])
-        proto = self._input_classes(self.PROTO_JAR)
         lite = self._input_classes(self.LITE_PROTO_JAR)
-        # 输入贡献规模固定：主 1183+677（去 exclude 后 1848）、nano 4、lite 36
-        self.assertEqual(len(javac), 1183)
-        self.assertEqual(len(kotlin), 677)
-        self.assertEqual(len(proto), 4)
-        self.assertEqual(len(lite), 36)
+        # 输入贡献规模固定（AOSP-17 实测）：主 1423+1632（16 时代 1183+677）、lite 69
+        self.assertEqual(len(javac), 1423)
+        self.assertEqual(len(kotlin), 1632)
+        self.assertEqual(len(lite), 69)
         excluded = paar.CONFIGS["WindowManager-Shell"]["exclude_prefixes"]
         main = {**javac, **kotlin}
-        main = {n: b for n, b in main.items()
-                if not any(n.startswith(p) for p in excluded)}
-        self.assertEqual(len(main), 1848)
-        # 四个来源两两不相交（主 javac/kotlin 之间由 merge 检查；这里验证 proto 侧）
-        self.assertEqual(set(proto) & set(lite), set())
-        self.assertEqual((set(proto) | set(lite)) & set(main), set())
-        expected = {**main, **proto, **lite}
-        self.assertEqual(len(expected), 1888)
+        # 17 主 jar 已不含 exclude 的 3 个 shared AIDL 类（实测），排除仍为防御性 no-op
+        self.assertEqual(
+            {n for n in main if any(n.startswith(p) for p in excluded)}, set())
+        # 三个来源两两不相交（主 javac/kotlin 之间由 merge 检查；这里验证 lite 侧）
+        self.assertEqual(set(lite) & set(main), set())
+        expected = {**main, **lite}
+        self.assertEqual(len(expected), 3124)
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "WindowManager-Shell.aar"
             paar.build_artifact("WindowManager-Shell", out)
@@ -870,22 +869,21 @@ class TestWMShellProtoProvenance(unittest.TestCase):
                 with zipfile.ZipFile(BytesIO(aar.read("classes.jar"))) as cj:
                     actual = {n: cj.read(n) for n in cj.namelist() if n.endswith(".class")}
         self.assertEqual(set(actual), set(expected),
-                         "输出 class 集不是四输入（去 exclude）的精确并集")
+                         "输出 class 集不是三输入（去 exclude）的精确并集")
         for name, data in expected.items():
             self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
-        self.assertEqual(len(actual), 1888)
-        # 命名空间约束：40 个 proto 类全部在 com/android/wm/shell/ 下；
-        # 主产物带来的 com/android/internal/protolog 2 类是 1.0.0 基线既有
-        # （wm_shell protolog cache，owning Soong javac 产物），不得新增其它越界类
-        proto_names = set(proto) | set(lite)
-        for name in proto_names:
+        self.assertEqual(len(actual), 3124)
+        # 命名空间约束：69 个 lite-proto 类全部在 com/android/wm/shell/ 下；
+        # 主产物带来的 com/android/internal/protolog 2 类（hash 名随 17 漂移）
+        # 不得新增其它越界类
+        for name in lite:
             self.assertTrue(name.startswith("com/android/wm/shell/"),
                             f"proto 越界类名: {name}")
         baseline_ns = {n for n in actual if not n.startswith("com/android/wm/shell/")}
         self.assertEqual(
             baseline_ns,
-            {"com/android/internal/protolog/ProtoLogImpl_992223594.class",
-             "com/android/internal/protolog/ProtoLogImpl_992223594$Cache.class"},
+            {"com/android/internal/protolog/ProtoLogImpl_2006817261.class",
+             "com/android/internal/protolog/ProtoLogImpl_2006817261$Cache.class"},
             "除基线既有的 2 个 protolog 类外出现新增越界类")
 
     def test_proto_r8_targets_present(self):
@@ -935,8 +933,9 @@ class TestWMShellProtoProvenance(unittest.TestCase):
 
 
 class TestTraceurProvenance(unittest.TestCase):
-    """Task 038（Batch 4C）：Traceur 双 AAR——TraceurCommon（15+625=640 类，无 res）
+    """Task 038（Batch 4C）：Traceur 双 AAR——TraceurCommon（无 res）
     + Traceur-res（res-only 105 文件，namespace com.android.traceur.res）。
+    AOSP-17 (Task 071)：14+753=767 类（16 时代 15+625=640）。
 
     依据 packages/apps/Traceur/Android.bp：TraceurCommon.static_libs 含
     perfetto_config_java_protos（与 WM-Shell 并入 proto static_libs 同构，先例 Task 037）。
@@ -984,11 +983,12 @@ class TestTraceurProvenance(unittest.TestCase):
         self.assertEqual(cfg["output"], "libs/aars/Traceur-res.aar")
 
     def test_traceur_common_classes_exact_disjoint_union(self):
-        """640 类 = 15（com/android/traceur/）∪ 625（perfetto/protos/）不相交并集，字节一致。"""
+        """AOSP-17 (Task 071)：767 类 = 14（com/android/traceur/）∪ 753（perfetto/protos/）
+        不相交并集，字节一致（16 时代 640 = 15+625）。"""
         traceur = self._classes_of(paar.CONFIGS["TraceurCommon"]["code"][0])
         protos = self._classes_of(self.PERFETTO_PROTO_JAR)
-        self.assertEqual(len(traceur), 15)
-        self.assertEqual(len(protos), 625)
+        self.assertEqual(len(traceur), 14)
+        self.assertEqual(len(protos), 753)
         self.assertEqual(set(traceur) & set(protos), set())
         for n in traceur:
             self.assertTrue(n.startswith("com/android/traceur/"), f"越界类名: {n}")
@@ -1003,7 +1003,7 @@ class TestTraceurProvenance(unittest.TestCase):
                     actual = {n: cj.read(n) for n in cj.namelist()
                               if n.endswith(".class")}
         expected = {**traceur, **protos}
-        self.assertEqual(len(actual), 640)
+        self.assertEqual(len(actual), 767)
         self.assertEqual(set(actual), set(expected),
                          "输出 class 集不是两输入的精确并集")
         for name, data in expected.items():

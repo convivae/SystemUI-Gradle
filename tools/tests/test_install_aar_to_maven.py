@@ -135,41 +135,37 @@ class InstallAarTest(unittest.TestCase):
 
 class ArtifactRegistryTest(unittest.TestCase):
     def test_iconloader_coordinate(self):
-        """Task 036：iconloader 升级为用户批准的 1.0.1（完整 Kotlin closure）。"""
+        """AOSP-17 (Task 071)：全族随 vintage 16→17 升 2.0.0。"""
         self.assertEqual(
             iam.ARTIFACTS["iconloader"],
-            {"group": "com.android.systemui", "name": "iconloader", "version": "1.0.1"},
+            {"group": "com.android.systemui", "name": "iconloader", "version": "2.0.0"},
         )
 
     def test_wmshell_coordinate(self):
-        """Task 037：WM-Shell 升级为用户批准的 1.0.1（并入两个 proto static_libs）。"""
         self.assertEqual(
             iam.ARTIFACTS["WindowManager-Shell"],
-            {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "1.0.1"},
+            {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "2.0.0"},
         )
 
     def test_wmshell_shared_coordinate_unchanged(self):
-        """Task 037：WindowManager-Shell-shared 保持 1.0.0 不动。"""
         self.assertEqual(
             iam.ARTIFACTS["WindowManager-Shell-shared"],
-            {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "1.0.0"},
+            {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "2.0.0"},
         )
 
     def test_settingslib_main_coordinate(self):
-        """Task 040：SettingsLib 升级为用户批准的 1.0.1（完整 Kotlin program closure）。"""
-        self.assertEqual(iam.ARTIFACTS["SettingsLib"]["version"], "1.0.1")
+        self.assertEqual(iam.ARTIFACTS["SettingsLib"]["version"], "2.0.0")
         self.assertEqual(iam.ARTIFACTS["SettingsLib"]["group"], "com.android.systemui")
         self.assertEqual(iam.ARTIFACTS["SettingsLib"]["name"], "SettingsLib")
 
     def test_settingslib_settings_theme_coordinate(self):
-        """Task 040：SettingsLibSettingsTheme 升级为用户批准的 1.0.1（owning Kotlin 15 类）。"""
         self.assertEqual(
             iam.ARTIFACTS["SettingsLibSettingsTheme"],
-            {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "1.0.1"},
+            {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "2.0.0"},
         )
 
     def test_settingslib_ten_new_resource_targets_coordinates(self):
-        """Task 040（Batch 4D）：10 个新增 res-only AAR 固定坐标 com.android.systemui:<Target>:1.0.0。"""
+        """AOSP-17 (Task 071)：10 个 res-only AAR 坐标 com.android.systemui:<Target>:2.0.0。"""
         expected = {
             "SettingsLibMainSwitchPreference",
             "SettingsLibAppPreference",
@@ -185,7 +181,7 @@ class ArtifactRegistryTest(unittest.TestCase):
         for name in expected:
             self.assertEqual(
                 iam.ARTIFACTS[name],
-                {"group": "com.android.systemui", "name": name, "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": name, "version": "2.0.0"},
             )
 
     def test_artifacts_registry_has_exactly_27_entries(self):
@@ -193,7 +189,7 @@ class ArtifactRegistryTest(unittest.TestCase):
         self.assertEqual(len(iam.ARTIFACTS), 27)
 
     def test_settingslib_pom_carries_seventeen_closure_deps(self):
-        """Task 040（ADR 0005）：SettingsLib POM 依赖边扩展为 17 条，
+        """Task 040（ADR 0005）：SettingsLib POM 依赖边 17 条（随全族 2.0.0），
         按 AOSP 主 bp static_libs 过滤后顺序排列。"""
         deps = iam.ARTIFACTS["SettingsLib"].get("deps")
         expected_names = [
@@ -218,30 +214,18 @@ class ArtifactRegistryTest(unittest.TestCase):
         self.assertEqual(
             deps,
             [
-                {"group": "com.android.systemui", "name": n, "version": "1.0.0"}
+                {"group": "com.android.systemui", "name": n, "version": "2.0.0"}
                 for n in expected_names
             ],
         )
 
-    def test_settingslib_closure_seven_targets_coordinates(self):
-        """Task 015（B2）：7 个 per-target res-only AAR 固定坐标 com.android.systemui:<Target>:1.0.0。"""
-        expected = {
-            "SettingsLibSelectorWithWidgetPreference",
-            "SettingsLibRestrictedLockUtils",
-            "SettingsLibActionButtonsPreference",
-            "SettingsLibProgressBar",
-            "SettingsLibTwoTargetPreference",
-            "SettingsLibLayoutPreference",
-            "SettingsLibAdaptiveIcon",
-        }
-        for name in expected:
-            self.assertEqual(
-                iam.ARTIFACTS[name],
-                {"group": "com.android.systemui", "name": name, "version": "1.0.0"},
-            )
+    def test_all_families_at_vintage_17_major(self):
+        """AOSP-17 (Task 071，AGENTS §3.2.4)：坐标表全族 2.0.0，无 1.x 残留。"""
+        for name, coord in iam.ARTIFACTS.items():
+            self.assertEqual(coord["version"], "2.0.0", f"{name} 未升 2.0.0")
 
     def test_settingslib_closure_seven_targets_coordinates(self):
-        """Task 015（B2）：7 个 per-target res-only AAR 固定坐标 com.android.systemui:<Target>:1.0.0。"""
+        """Task 015（B2）：7 个 per-target res-only AAR 坐标 com.android.systemui:<Target>:2.0.0。"""
         expected = {
             "SettingsLibSelectorWithWidgetPreference",
             "SettingsLibRestrictedLockUtils",
@@ -254,7 +238,7 @@ class ArtifactRegistryTest(unittest.TestCase):
         for name in expected:
             self.assertEqual(
                 iam.ARTIFACTS[name],
-                {"group": "com.android.systemui", "name": name, "version": "1.0.0"},
+                {"group": "com.android.systemui", "name": name, "version": "2.0.0"},
             )
 
     def test_closure_targets_have_no_deps(self):

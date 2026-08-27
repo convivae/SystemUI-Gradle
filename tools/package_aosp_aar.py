@@ -76,33 +76,39 @@ def _build_configs() -> dict:
     "WifiTrackerLib": {
         "code": [SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLib/android_common/javac/WifiTrackerLib.jar"],
         "res": [AOSP_ROOT / "frameworks/opt/net/wifi/libs/WifiTrackerLib/res"],
-        "manifest": AOSP_ROOT / "frameworks/opt/net/wifi/libs/WifiTrackerLib/AndroidManifest.xml",
+        # AOSP-17: source-tree AndroidManifest.xml was deleted upstream (bp has no
+        # manifest line); use Soong's generated manifest instead (package
+        # com.android.wifitrackerlib.nores).
+        "manifest": SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLib/android_common/GeneratedManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLibRes/android_common/R.txt",
         "output": "libs/aars/WifiTrackerLib.aar",
     },
     "iconloader": {
-        # javac JAR (59 Java classes) + kotlin JAR (16 Kotlin classes, 如 ThemedBitmap/
-        # IconThemeController/mono.ThemedIconDrawable) 合并（先例：WM-Shell javac+kotlin）
+        # AOSP-17 restructure: iconloaderlib split into "iconloader"
+        # (src_full_lib — 2 Java facades IconFactory/SimpleIconCache) and
+        # "iconloader_base" (src/ — Java + Kotlin + res + R.txt). The consumer
+        # closure needs all three implementation JARs merged:
+        # iconloader/javac (3) + iconloader_base/javac (21) +
+        # iconloader_base/kotlin (120) = 144 disjoint classes.
+        # Note: iconloader/android_common/kotlin/ does not exist in 17.
         "code": [
             SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/javac/iconloader.jar",
-            SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/kotlin/iconloader.jar",
+            SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader_base/android_common/javac/iconloader_base.jar",
+            SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader_base/android_common/kotlin/iconloader_base.jar",
         ],
         "res": [AOSP_ROOT / "frameworks/libs/systemui/iconloaderlib/res"],
         "manifest": AOSP_ROOT / "frameworks/libs/systemui/iconloaderlib/AndroidManifest.xml",
-        "rtxt": SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader/android_common/R.txt",
+        "rtxt": SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader_base/android_common/R.txt",
         "output": "libs/aars/iconloader.aar",
     },
     "SettingsLib": {
-        # 主 target + 全部 static_libs 子模块 javac JAR（780 classes）
-        # Task 040：追加两个 owning Kotlin 产物——主 SettingsLib Kotlin（372 类，
-        # 含 RestrictedPreferenceHelperProvider 等）+ DeviceStateRotationLock Kotlin
-        # （1 类 PosturesHelper，主 SettingsLib 的 direct static_libs）→ 1153 类。
+        # 主 target + 全部 static_libs 子模块 javac JAR（AOSP-17: 34 JAR, 884 类）
+        # + 主 SettingsLib Kotlin（488 类，含 RestrictedPreferenceHelperProvider 等）
+        # = 1372 类。AOSP-17：DeviceStateRotationLock 已 Kotlin→Java 重写，其 13 类
+        # （含 PosturesHelper）由上方 discovery 的 javac JAR 交付，不再有独立 Kotlin 输入。
         # Theme 的 Kotlin 代码归 SettingsLibSettingsTheme AAR，不得并入。
         "code": _discover_settingslib_code_jars() + [
             SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar",
-            SOONG_DIR / "frameworks/base/packages/SettingsLib/DeviceStateRotationLock/"
-                       "SettingsLibDeviceStateRotationLock/android_common/kotlin/"
-                       "SettingsLibDeviceStateRotationLock.jar",
         ],
         "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/res"],
         "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/AndroidManifest.xml",
@@ -111,18 +117,20 @@ def _build_configs() -> dict:
     },
     "WindowManager-Shell": {
         # javac JAR (Java classes) + kotlin JAR (Kotlin classes, 如 HasWMComponent) 合并；
-        # Task 037：再并入两个 proto static_libs 的 Soong javac 产物（bp L188-189）——
-        # nano proto（bp L138, 4 类）+ lite proto（bp L148, 36 类），共 1888 类
+        # AOSP-17: 上游删除了 WindowManager-Shell-proto (nano) target——proto/protolog 类
+        # （ProtoLogController、ProtoLogImpl 等）已并入主 javac/kotlin jar；lite-proto
+        # static_lib 的 Soong javac 产物仍单独交付（bp L148），共 1423+1632+69=3124 类
         "code": [
             SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/javac/WindowManager-Shell.jar",
             SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/kotlin/WindowManager-Shell.jar",
-            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell-proto/android_common/javac/WindowManager-Shell-proto.jar",
             SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell-lite-proto/android_common/javac/WindowManager-Shell-lite-proto.jar",
         ],
         "res": [AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/res"],
         "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/WindowManager-Shell/android_common/R.txt",
         "output": "libs/aars/WindowManager-Shell.aar",
+        # AOSP-16 时代这些 shared AIDL 类由 WindowManager-Shell-shared 交付，从主 AAR
+        # 剔除；17 主 jar 已不含这三类（实测），前缀保留为防御性 no-op。
         "exclude_prefixes": [
             "com/android/wm/shell/shared/IFocusTransitionListener",
             "com/android/wm/shell/shared/IHomeTransitionListener",
