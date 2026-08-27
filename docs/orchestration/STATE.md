@@ -12,6 +12,7 @@
 | 055 | `w2:t1R` / `w2:p1X` (`task055-worker`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; AOSP `out/` writes only via `m -j4`; libs/*-flags.jar + tools + wiring + listed docs; adb emulator-5554 only; commits local, no push |
 | 059 | `w2:t1V` / `w2:p10` (`task059`) | main checkout `SystemUI-Gradle` | default session (Kimi-K3) | complete (reported) | Serial; 4 single-consumer AAR families to direct consumption; AGENTS.md §3.2 exception (user-approved); catalog + libs/maven retirement; audit §10 annotations; builds serialized `--max-workers=4`; commits local, no push |
 | 069 | task069 worker pane | main checkout `SystemUI-Gradle` | default session | complete (reported) | Read-only; two report docs + STATE.md line only; no src/res/Gradle changes, no builds, commits local, no push |
+| 070 | `w2:p1` (`task070`) | main checkout `SystemUI-Gradle` | joycode GLM-5.3 | complete (reported) | C3 source realignment to AOSP 17: 847 EXTRA git-rm, 34 MISPLACED git-mv, 2566 MISSING cp + 3 new module dirs (application/clocks-common/floatingmenu-res) + 3 manifests, 3067 MODIFIED overwrite (byte-verified), CONV re-mark (5806 marks, 86 res-product files + 1 kt CONV_MOD replay); `--strict` exit 0, all counters 0 except whitelisted MODIFIED; no Gradle, no libs/, no *.gradle.kts, commits local, no push |
 
 Task 050 worker panes (`w2J:p1` agent + `w2J:p2` shell) were closed 2026-08-25; the `SystemUI-Gradle-wt-050`
 evidence worktree and task branch remain on disk untouched. No active Task 050 worker.
