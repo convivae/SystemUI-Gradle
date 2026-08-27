@@ -101,18 +101,25 @@ SOURCE_MAPPINGS = [
     M(["src-release"], "SystemUI-core", "src-release", note="ReleaseJavaFiles"),
     M(["compose/features/src"], "SystemUI-core", "compose/features/src"),
     M(["compose/facade/enabled/src"], "SystemUI-core", "compose/facade/enabled/src"),
-    M(["pods"], "SystemUI-core", "pods", note="全部 pods 生产源码"),
+    M(["pods"], "SystemUI-core", "pods", note="全部 pods 源码（含 test/testFixtures，与 AOSP 原样对齐）"),
 
-    # SystemUI-common: Common + Log + shared-utils 合并
+    # SystemUI-application（17 新增 android_library "SystemUI-application"）
+    M(["application/src"], "SystemUI-application", "src",
+      note="SystemUI-application (PhoneSystemUIAppComponentFactory/InitializerImpl/Reference dagger components)"),
+
+    # SystemUI-common: Common + Log + LogCore + shared-utils 合并
     M(["common/src"], "SystemUI-common", "common/src", note="SystemUICommon"),
     M(["log/src"], "SystemUI-common", "log/src", note="SystemUILogLib"),
+    M(["log/core/src"], "SystemUI-common", "log/core/src", note="SystemUILogCoreLib (17 新增)"),
     M(["utils/src"], "SystemUI-common", "utils/src", note="SystemUI-shared-utils"),
 
     # SystemUI-animation: PlatformAnimationLib + Shader(surfaceeffects) 合并
     M(["animation/src"], "SystemUI-animation", "src", note="PlatformAnimationLib + Shader"),
 
-    # SystemUI-plugin-core: PluginCoreLib runtime API（JVM）
+    # SystemUI-plugin-core: PluginCoreLib runtime API（JVM）+ annotations（17 新增 PluginAnnotationLib）
     M(["plugin_core/src"], "SystemUI-plugin-core", "src", note="PluginCoreLib"),
+    M(["plugin_core/annotations/src"], "SystemUI-plugin-core", "annotations/src",
+      note="PluginAnnotationLib (17 新增)"),
 
     # SystemUI-plugin-processor: PluginAnnotationProcessor（build-time，JVM）
     M(["plugin_core/processor/src"], "SystemUI-plugin-processor", "src",
@@ -129,12 +136,20 @@ SOURCE_MAPPINGS = [
     # SystemUI-unfold
     M(["unfold/src"], "SystemUI-unfold", "src", note="SystemUIUnfoldLib"),
 
-    # SystemUI-customization
+    # SystemUI-customization + SystemUI-clocks-common（17 新增，自有 R namespace）
     M(["customization/src"], "SystemUI-customization", "src", note="SystemUICustomizationLib"),
+    M(["customization/clocks/common/src"], "SystemUI-clocks-common", "src",
+      note="SystemUIClocks-CommonLib (17 新增，自有 R namespace)"),
 
-    # SystemUI-shared: SystemUISharedLib + keyguard child 合并
+    # SystemUI-accessibility-floatingmenu-res（17 新增，res-only 源码 module）
+    # res 无代码，仅在 RES_MAPPINGS 登记（accessibility/accessibilitymenu/res）；
+    # bp 属 packages/SystemUI/**（tier① 源码依赖），自有 R namespace。
+
+    # SystemUI-shared: SystemUISharedLib + keyguard child + flag 子库（17 迁出）合并
     M(["shared/src"], "SystemUI-shared", "src", note="SystemUISharedLib"),
     M(["shared/keyguard/src"], "SystemUI-shared", "keyguard/src", note="SystemUISharedLib-Keyguard"),
+    M(["shared/flag/src"], "SystemUI-shared", "flag/src", note="flag 子库 (17 从 shared/src 迁出)"),
+    M(["shared/flag/types/src"], "SystemUI-shared", "flag/types/src", note="flag types 子库 (17)"),
 
     # SystemUI-shared-biometrics: 独立 R namespace
     M(["shared/biometrics/src"], "SystemUI-shared-biometrics", "src", note="BiometricsSharedLib"),
@@ -148,7 +163,9 @@ SOURCE_MAPPINGS = [
 #   utils/kairos/src, animation/lib/src —— 不在 SOURCE_MAPPINGS 中，故不会被检查，也不会被当作 misplaced 目标。
 
 APP_TOP_FILES = {
-    "AndroidManifest.xml": "app/src/main/AndroidManifest.xml",
+    # 17 起：完整 manifest（1338 行）所有权从 android_app 移到 android_library "SystemUI-application"
+    # （bp L599-620 manifest: "AndroidManifest.xml"）；:app 只保留最小合并壳。
+    "AndroidManifest.xml": "SystemUI-application/src/main/AndroidManifest.xml",
     "proguard.flags": "app/proguard.flags",
     "proguard_common.flags": "app/proguard_common.flags",
     "proguard_kotlin.flags": "app/proguard_kotlin.flags",
@@ -162,6 +179,8 @@ RES_MAPPINGS = [
     ("shared/biometrics/res", "SystemUI-shared-biometrics/res"),
     ("animation/res", "SystemUI-animation/res"),
     ("customization/res", "SystemUI-customization/res"),
+    ("customization/clocks/common/res", "SystemUI-clocks-common/res"),
+    ("accessibility/accessibilitymenu/res", "SystemUI-accessibility-floatingmenu-res/res"),
 ]
 
 
