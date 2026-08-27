@@ -68,12 +68,14 @@ ARTIFACTS = {
         "group": "com.android.systemui", "name": "SettingsLib", "version": "2.0.0",
         "deps": _settingslib_closure_dep_entries(),
     },
-    "WifiTrackerLib": {"group": "com.android.systemui", "name": "WifiTrackerLib", "version": "2.0.0"},
+    # AOSP-17 (Task 071): WifiTrackerLib / iconloader / setupcompat /
+    # LowLightDreamLib 四族已从坐标表移除——Task 059 用户批准的直连 AAR 例外：
+    # 单 artifact、单 consumer、骨架 POM、Maven 副本与 libs/aars/ 字节相同，
+    # 直接经 files("libs/aars/xxx.aar") 消费，不入本地 Maven 仓（与 16 时代
+    # libs/maven/ 的 23 族清单一致，保证脚本再生形状可复现）。
     "WindowManager-Shell": {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "2.0.0"},
     "WindowManager-Shell-shared": {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "2.0.0"},
     "animationlib": {"group": "com.android.systemui", "name": "animationlib", "version": "2.0.0"},
-    "iconloader": {"group": "com.android.systemui", "name": "iconloader", "version": "2.0.0"},
-    "LowLightDreamLib": {"group": "com.android.systemui", "name": "LowLightDreamLib", "version": "2.0.0"},
     "SettingsLibColor": {"group": "com.android.settingslib", "name": "color", "version": "2.0.0"},
     "SettingsLibSettingsTheme": {"group": "com.android.systemui", "name": "SettingsLibSettingsTheme", "version": "2.0.0"},
     # Task 015（B2）：7 个 SettingsLib per-target res-only AAR（坐标与 Soong target 名一致）
@@ -95,7 +97,6 @@ ARTIFACTS = {
     "SettingsLibSliderPreference": {"group": "com.android.systemui", "name": "SettingsLibSliderPreference", "version": "2.0.0"},
     "SettingsLibUsageProgressBarPreference": {"group": "com.android.systemui", "name": "SettingsLibUsageProgressBarPreference", "version": "2.0.0"},
     "SettingsLibSettingsSpinner": {"group": "com.android.systemui", "name": "SettingsLibSettingsSpinner", "version": "2.0.0"},
-    "setupcompat": {"group": "com.android.systemui", "name": "setupcompat", "version": "2.0.0"},
 }
 
 POM_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>

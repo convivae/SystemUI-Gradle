@@ -55,25 +55,46 @@ BATCH2_CONFIGS = {
         Path("libs/settingslib-widget-flags.jar"),
         "com.android.settingslib.widget.flags",
     ),
-    "settingslib-selector-flags": (
-        "frameworks/base/packages/SettingsLib/SelectorWithWidgetPreference/"
-        "settingslib_selectorwithwidgetpreference_flags_lib/android_common/javac/"
-        "settingslib_selectorwithwidgetpreference_flags_lib.jar",
-        Path("libs/settingslib-selector-flags.jar"),
-        "com.android.settingslib.widget.selectorwithwidgetpreference.flags",
-    ),
+    # AOSP-17 (Task 071): settingslib-selector-flags removed upstream —
+    # SelectorWithWidgetPreference no longer declares an aconfig flags lib.
 }
 
 
-BATCH3_CONFIGS = {
-    # Task 055 batch: 11 residual same-family hazards. Each maps the base-variant
-    # android_common/javac JAR of its java_aconfig_library in
-    # frameworks/base/AconfigFlags.bp to libs/ and its runtime package.
+#: AOSP-17 (Task 071): six family members whose standalone javac outputs no
+#: longer exist — their CONFIGS source points at the framework-minus-apex
+#: javac shard directory (AGGREGATE_JAVAC_DIR) and the five-class subsets are
+#: extracted via extract_aggregate_subset().
+AGGREGATE_MEMBERS = {
     "smartspace-flags": (
-        "android.app.smartspace.flags-aconfig-java",
         Path("libs/smartspace-flags.jar"),
         "android.app.smartspace.flags",
     ),
+    "usb-flags": (
+        Path("libs/usb-flags.jar"),
+        "android.hardware.usb.flags",
+    ),
+    "net-platform-flags": (
+        Path("libs/net-platform-flags.jar"),
+        "android.net.platform.flags",
+    ),
+    "permission-flags": (
+        Path("libs/permission-flags.jar"),
+        "android.permission.flags",
+    ),
+    "service-controls-flags": (
+        Path("libs/service-controls-flags.jar"),
+        "android.service.controls.flags",
+    ),
+    "device-state-feature-flags": (
+        Path("libs/device-state-feature-flags.jar"),
+        "android.hardware.devicestate.feature.flags",
+    ),
+}
+
+#: Module-owning javac configs that survived AOSP-17 unchanged.
+BATCH3_CONFIGS = {
+    # Task 055 batch: framework hidden-twin family members with surviving
+    # standalone android_common/javac outputs.
     "content-pm-flags": (
         "android.content.pm.flags-aconfig-java",
         Path("libs/content-pm-flags.jar"),
@@ -84,46 +105,20 @@ BATCH3_CONFIGS = {
         Path("libs/biometrics-flags.jar"),
         "android.hardware.biometrics",
     ),
-    "usb-flags": (
-        "android.hardware.usb.flags-aconfig-java",
-        Path("libs/usb-flags.jar"),
-        "android.hardware.usb.flags",
-    ),
-    "net-platform-flags": (
-        "android.net.platform.flags-aconfig-java",
-        Path("libs/net-platform-flags.jar"),
-        "android.net.platform.flags",
-    ),
-    "permission-flags": (
-        "android.permission.flags-aconfig-java",
-        Path("libs/permission-flags.jar"),
-        "android.permission.flags",
-    ),
     "provider-flags": (
         "android.provider.flags-aconfig-java",
         Path("libs/provider-flags.jar"),
         "android.provider",
-    ),
-    "security-flags": (
-        "android.security.flags-aconfig-java",
-        Path("libs/security-flags.jar"),
-        "android.security",
-    ),
-    "service-controls-flags": (
-        "android.service.controls.flags-aconfig-java",
-        Path("libs/service-controls-flags.jar"),
-        "android.service.controls.flags",
     ),
     "service-notification-flags": (
         "android.service.notification.flags-aconfig-java",
         Path("libs/service-notification-flags.jar"),
         "android.service.notification",
     ),
-    "quickaccesswallet-flags": (
-        "android.service.quickaccesswallet.flags-aconfig-java",
-        Path("libs/quickaccesswallet-flags.jar"),
-        "android.service.quickaccesswallet",
-    ),
+    # AOSP-17 (Task 071): security-flags and quickaccesswallet-flags removed
+    # upstream — the .aconfig packages were renamed (android.security /
+    # android.service.quickaccesswallet); the old runtime packages exist
+    # nowhere in the 17 tree and SystemUI-17 has zero imports of them.
 }
 
 
@@ -174,19 +169,16 @@ class TestAconfigJarPackaging(unittest.TestCase):
         self.assertEqual(destination, Path("libs/window-flags.jar"))
         self.assertEqual(package, "com.android.window.flags")
 
-    def test_device_state_feature_flags_config_uses_framework_owned_javac_runtime(self):
+    def test_device_state_feature_flags_config_uses_aggregate_shards(self):
+        """AOSP-17 (Task 071)：六族 aggregate 成员 source 指向 shard 目录。"""
         source, destination, package = module.CONFIGS["device-state-feature-flags"]
-        self.assertEqual(
-            source,
-            module.AOSP_INTERMEDIATES
-            / "frameworks/base"
-            / "android.hardware.devicestate.feature.flags-aconfig-java"
-            / "android_common/javac"
-            / "android.hardware.devicestate.feature.flags-aconfig-java.jar",
-        )
+        self.assertEqual(source, module.AGGREGATE_JAVAC_DIR)
+        self.assertIn("framework-minus-apex", str(source))
         self.assertNotIn("turbine", str(source))
         self.assertEqual(destination, Path("libs/device-state-feature-flags.jar"))
         self.assertEqual(package, "android.hardware.devicestate.feature.flags")
+        self.assertIn("device-state-feature-flags", module.AGGREGATE_FAMILY)
+        self.assertIn("device-state-feature-flags", module.FRAMEWORK_FAMILY)
 
     def test_android_os_flags_config_uses_framework_owned_javac_runtime(self):
         source, destination, package = module.CONFIGS["android-os-flags"]
@@ -216,8 +208,8 @@ class TestAconfigJarPackaging(unittest.TestCase):
                 self.assertEqual(module.CONFIGS[name][2], package)
 
     def test_batch3_config_matrix(self):
-        # The eleven Batch-3 (task 055) artifacts must map exact owning Soong
-        # javac sources to their destinations and runtime packages.
+        # The module-owning Batch-3 survivors must map exact owning Soong javac
+        # sources to their destinations and runtime packages.
         for name, (soong_module, destination, package) in BATCH3_CONFIGS.items():
             with self.subTest(config=name):
                 self.assertIn(name, module.CONFIGS)
@@ -234,24 +226,53 @@ class TestAconfigJarPackaging(unittest.TestCase):
                 self.assertEqual(module.CONFIGS[name][1], destination)
                 self.assertEqual(module.CONFIGS[name][2], package)
 
+    def test_aggregate_members_point_at_shard_directory(self):
+        # AOSP-17 (Task 071): aggregate members' sources are the shard dir.
+        for name, (destination, package) in AGGREGATE_MEMBERS.items():
+            with self.subTest(config=name):
+                self.assertIn(name, module.CONFIGS)
+                source = module.CONFIGS[name][0]
+                self.assertEqual(source, module.AGGREGATE_JAVAC_DIR)
+                self.assertIn(name, module.AGGREGATE_FAMILY)
+                self.assertEqual(module.CONFIGS[name][1], destination)
+                self.assertEqual(module.CONFIGS[name][2], package)
+
+    def test_upstream_deleted_entries_are_gone(self):
+        # AOSP-17 (Task 071): upstream-deleted aconfig packages must not
+        # resurrect anywhere in the config surface.
+        for name in ("security-flags", "quickaccesswallet-flags",
+                     "settingslib-selector-flags"):
+            self.assertNotIn(name, module.CONFIGS)
+            self.assertNotIn(name, module.FRAMEWORK_FAMILY)
+            self.assertNotIn(name, module.AGGREGATE_FAMILY)
+            self.assertNotIn(name, module.TURBINE_BASELINE_CONFIGS)
+
     def test_framework_family_membership_and_shape(self):
-        # The 14 framework hidden-twin family configs (3 from tasks 053/054 plus
-        # the 11 from task 055) are exactly FRAMEWORK_FAMILY, all pointing at
-        # frameworks/base base-variant javac outputs.
-        self.assertEqual(len(module.FRAMEWORK_FAMILY), 14)
-        self.assertEqual(module.FRAMEWORK_FAMILY, frozenset(BATCH3_CONFIGS) | {
-            "window-flags",
-            "device-state-feature-flags",
-            "android-os-flags",
-        })
+        # AOSP-17 (Task 071): the 12 framework hidden-twin family configs
+        # (3 from tasks 053/054 plus the 11 from task 055, minus the two
+        # upstream-renamed members security-flags/quickaccesswallet-flags)
+        # are exactly FRAMEWORK_FAMILY, split between module-owning javac
+        # outputs and the framework-minus-apex aggregate shard directory.
+        self.assertEqual(len(module.FRAMEWORK_FAMILY), 12)
+        self.assertEqual(
+            module.FRAMEWORK_FAMILY,
+            frozenset(BATCH3_CONFIGS) | set(AGGREGATE_MEMBERS) | {
+                "window-flags",
+                "android-os-flags",
+            },
+        )
         self.assertEqual(
             module.MERGED_FRAMEWORK_JAR, Path("libs/systemui-aconfig-flags.jar")
         )
         for name in module.FRAMEWORK_FAMILY:
             with self.subTest(config=name):
                 source = module.CONFIGS[name][0]
-                self.assertIn("/javac/", str(source))
                 self.assertIn("frameworks/base/", str(source))
+                self.assertNotIn("turbine", str(source))
+                if name in module.AGGREGATE_FAMILY:
+                    self.assertEqual(source, module.AGGREGATE_JAVAC_DIR)
+                else:
+                    self.assertIn("/javac/", str(source))
 
     def test_copy_preserves_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -299,6 +320,113 @@ class TestAconfigJarPackaging(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 module.copy_jar(source, root / "out.jar", "com.example.flags")
+
+class TestExtractAggregateSubset(unittest.TestCase):
+    """AOSP-17 (Task 071): validated five-class subset extraction from the
+    framework-minus-apex javac shards."""
+
+    def _shard_dir(self, root):
+        shard_dir = root / "javac"
+        shard_dir.mkdir()
+        return shard_dir
+
+    def _write_shard(self, shard_dir, index, package, classes=RUNTIME_CLASSES,
+                     extra_entries=None, include_uau=False):
+        path = shard_dir / f"framework.jar{index}"
+        prefix = package.replace(".", "/")
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("android/other/Unrelated.class", b"noise")
+            archive.writestr(f"{prefix}/", b"")
+            for name in classes:
+                archive.writestr(f"{prefix}/{name}.class", f"{name}-bytes".encode())
+                if include_uau and name != "FakeFeatureFlagsImpl":
+                    archive.writestr(f"{prefix}/{name}.uau", b"uau")
+            for entry, data in (extra_entries or {}).items():
+                archive.writestr(entry, data)
+        return path
+
+    def test_extracts_validated_subset_deterministically(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shard_dir = self._shard_dir(root)
+            self._write_shard(shard_dir, 0, "unrelated.one")
+            self._write_shard(
+                shard_dir, 7, "com.example.flags", include_uau=True
+            )
+            self._write_shard(shard_dir, 12, "another.two")
+            with mock.patch.object(module, "AGGREGATE_JAVAC_DIR", shard_dir):
+                out1 = root / "a.jar"
+                out2 = root / "b.jar"
+                module.extract_aggregate_subset("com.example.flags", out1)
+                module.extract_aggregate_subset("com.example.flags", out2)
+            self.assertEqual(out1.read_bytes(), out2.read_bytes())
+            with zipfile.ZipFile(out1) as archive:
+                names = archive.namelist()
+            self.assertEqual(
+                names,
+                ["com/example/flags/"]
+                + sorted(
+                    [f"com/example/flags/{name}.class" for name in RUNTIME_CLASSES]
+                    + [
+                        f"com/example/flags/{name}.uau"
+                        for name in RUNTIME_CLASSES
+                        if name != "FakeFeatureFlagsImpl"
+                    ]
+                ),
+            )
+
+    def test_package_split_across_shards_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shard_dir = self._shard_dir(root)
+            prefix = "com/example/flags"
+            with zipfile.ZipFile(shard_dir / "framework.jar0", "w") as archive:
+                archive.writestr(f"{prefix}/Flags.class", b"x")
+            with zipfile.ZipFile(shard_dir / "framework.jar1", "w") as archive:
+                archive.writestr(f"{prefix}/FeatureFlags.class", b"y")
+            with mock.patch.object(module, "AGGREGATE_JAVAC_DIR", shard_dir):
+                with self.assertRaises(ValueError):
+                    module.extract_aggregate_subset(
+                        "com.example.flags", root / "out.jar"
+                    )
+
+    def test_missing_package_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shard_dir = self._shard_dir(root)
+            self._write_shard(shard_dir, 3, "unrelated.one")
+            with mock.patch.object(module, "AGGREGATE_JAVAC_DIR", shard_dir):
+                with self.assertRaises(FileNotFoundError):
+                    module.extract_aggregate_subset(
+                        "com.example.flags", root / "out.jar"
+                    )
+
+    def test_extra_class_under_prefix_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shard_dir = self._shard_dir(root)
+            self._write_shard(
+                shard_dir,
+                5,
+                "com.example.flags",
+                classes=RUNTIME_CLASSES + ("Unexpected",),
+            )
+            with mock.patch.object(module, "AGGREGATE_JAVAC_DIR", shard_dir):
+                with self.assertRaises(ValueError):
+                    module.extract_aggregate_subset(
+                        "com.example.flags", root / "out.jar"
+                    )
+
+    def test_empty_shard_directory_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shard_dir = self._shard_dir(root)
+            with mock.patch.object(module, "AGGREGATE_JAVAC_DIR", shard_dir):
+                with self.assertRaises(FileNotFoundError):
+                    module.extract_aggregate_subset(
+                        "com.example.flags", root / "out.jar"
+                    )
+
 
 class TestMergeSources(unittest.TestCase):
     """Deterministic union merge used by --merge-framework (task 057)."""

@@ -121,15 +121,21 @@ class TestFrozenMapping(unittest.TestCase):
         self.assertEqual(diff, set())
 
     def test_replaced_jars_are_the_frozen_soong_sources(self):
-        # Pins the task 065 replacement hashes so an accidental revert to the
-        # 2026-07 hand copies is caught by CI.
+        # Pins the task 065 replacement hashes (re-frozen at AOSP-17 in Task
+        # 071; framework-statsd also moved to the apex31 variant) so an
+        # accidental revert to a hand copy is caught by CI.
         self.assertEqual(
             module.CONFIGS["framework-statsd"]["baseline_sha256"],
-            "058f30a1a7ef191b1c4ecef3658b215d996d657f6d0a2591956eb6e3e5aba352",
+            "5d3d05e78367d0a4f101769cf84688b44fb0734218e2ddc05a005677939eacdd",
+        )
+        self.assertEqual(
+            module.CONFIGS["framework-statsd"]["relpath"],
+            "packages/modules/StatsD/framework/framework-statsd.impl/"
+            "android_common_apex31/javac/framework-statsd.jar",
         )
         self.assertEqual(
             module.CONFIGS["android.car"]["baseline_sha256"],
-            "89f04e0a30bf8889ab2198516d9ecf362e90559e3bc7dbad8863b1c6263919c0",
+            "ea64c4c5aaa871af13d5e89b2a39c26620d581878353b673736d3db4abb950f7",
         )
 
     def test_keepanno_shares_the_sysuisdk_frozen_input(self):

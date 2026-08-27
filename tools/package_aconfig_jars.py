@@ -26,6 +26,13 @@ _MERGE_FIXED_DATETIME = (2008, 1, 1, 0, 0, 0)
 #: Config names that make up the framework exportable-aconfig hidden-twin family
 #: (tasks 053/054/055). Their Soong javac sources merge deterministically into
 #: MERGED_FRAMEWORK_JAR; the per-jar five-class validator still runs per source.
+#:
+#: AOSP-17 (Task 071): the family shrank 14 -> 12. Upstream renamed the
+#: android.security.flags / android.service.quickaccesswallet.flags packages
+#: (flags now live directly under android.security / android.service.
+#: quickaccesswallet), so the old runtime packages no longer exist anywhere
+#: in the 17 tree and SystemUI-17 has zero imports of them — both members
+#: were dropped (precedent: motiontoollib removal).
 FRAMEWORK_FAMILY = frozenset(
     (
         # tasks 053/054
@@ -40,10 +47,30 @@ FRAMEWORK_FAMILY = frozenset(
         "net-platform-flags",
         "permission-flags",
         "provider-flags",
-        "security-flags",
         "service-controls-flags",
         "service-notification-flags",
-        "quickaccesswallet-flags",
+    )
+)
+
+#: AOSP-17 (Task 071): six family members whose standalone
+#: ``android_common/javac`` outputs no longer exist — Soong compiles their
+#: public runtime classes directly into the framework-minus-apex aggregate,
+#: whose javac action is sharded (``framework.jar0``..``framework.jarN``;
+#: worker-shard indices are NOT stable across rebuilds, so the shard owning
+#: a package is discovered by validated content scan, never pinned).
+#: ``extract_aggregate_subset`` pulls the exact five-class subset (real
+#: Soong bytes; nothing is synthesized) for the union merge.
+AGGREGATE_JAVAC_DIR = AOSP_INTERMEDIATES / (
+    "frameworks/base/framework-minus-apex/android_common/javac"
+)
+AGGREGATE_FAMILY = frozenset(
+    (
+        "smartspace-flags",
+        "usb-flags",
+        "net-platform-flags",
+        "permission-flags",
+        "service-controls-flags",
+        "device-state-feature-flags",
     )
 )
 
@@ -96,12 +123,16 @@ CONFIGS = {
     # the base-variant android_common/javac JAR (backing API
     # PlatformAconfigPackageInternal, verified on the device bootclasspath)
     # is packaged byte-identically.
+    #
+    # AOSP-17 (Task 071): the six AGGREGATE_FAMILY members below no longer
+    # have standalone android_common/javac outputs (Soong compiles them into
+    # the sharded framework-minus-apex javac aggregate); their "source" field
+    # points at the shard directory and the real bytes are extracted via
+    # extract_aggregate_subset(). Two further 16-era members were dropped
+    # upstream (renamed packages, zero SystemUI-17 imports):
+    # security-flags and quickaccesswallet-flags.
     "smartspace-flags": (
-        _soong(
-            "frameworks/base/android.app.smartspace.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.app.smartspace.flags-aconfig-java.jar"
-        ),
+        AGGREGATE_JAVAC_DIR,
         Path("libs/smartspace-flags.jar"),
         "android.app.smartspace.flags",
     ),
@@ -124,29 +155,17 @@ CONFIGS = {
         "android.hardware.biometrics",
     ),
     "usb-flags": (
-        _soong(
-            "frameworks/base/android.hardware.usb.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.hardware.usb.flags-aconfig-java.jar"
-        ),
+        AGGREGATE_JAVAC_DIR,
         Path("libs/usb-flags.jar"),
         "android.hardware.usb.flags",
     ),
     "net-platform-flags": (
-        _soong(
-            "frameworks/base/android.net.platform.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.net.platform.flags-aconfig-java.jar"
-        ),
+        AGGREGATE_JAVAC_DIR,
         Path("libs/net-platform-flags.jar"),
         "android.net.platform.flags",
     ),
     "permission-flags": (
-        _soong(
-            "frameworks/base/android.permission.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.permission.flags-aconfig-java.jar"
-        ),
+        AGGREGATE_JAVAC_DIR,
         Path("libs/permission-flags.jar"),
         "android.permission.flags",
     ),
@@ -159,21 +178,12 @@ CONFIGS = {
         Path("libs/provider-flags.jar"),
         "android.provider",
     ),
-    "security-flags": (
-        _soong(
-            "frameworks/base/android.security.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.security.flags-aconfig-java.jar"
-        ),
-        Path("libs/security-flags.jar"),
-        "android.security",
-    ),
+    # AOSP-17 (Task 071): security-flags entry removed upstream — the
+    # .aconfig package was renamed from android.security.flags to
+    # android.security; the old package exists nowhere in the 17 tree and
+    # SystemUI-17 does not import it.
     "service-controls-flags": (
-        _soong(
-            "frameworks/base/android.service.controls.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.service.controls.flags-aconfig-java.jar"
-        ),
+        AGGREGATE_JAVAC_DIR,
         Path("libs/service-controls-flags.jar"),
         "android.service.controls.flags",
     ),
@@ -186,15 +196,11 @@ CONFIGS = {
         Path("libs/service-notification-flags.jar"),
         "android.service.notification",
     ),
-    "quickaccesswallet-flags": (
-        _soong(
-            "frameworks/base/android.service.quickaccesswallet.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.service.quickaccesswallet.flags-aconfig-java.jar"
-        ),
-        Path("libs/quickaccesswallet-flags.jar"),
-        "android.service.quickaccesswallet",
-    ),
+    # AOSP-17 (Task 071): quickaccesswallet-flags entry removed upstream —
+    # the .aconfig package was renamed from
+    # android.service.quickaccesswallet.flags to
+    # android.service.quickaccesswallet; the old package exists nowhere in
+    # the 17 tree and SystemUI-17 does not import it.
     "systemui-shared-flags": (
         _soong(
             "frameworks/libs/systemui/aconfig/"
@@ -231,11 +237,7 @@ CONFIGS = {
         "com.android.window.flags",
     ),
     "device-state-feature-flags": (
-        _soong(
-            "frameworks/base/android.hardware.devicestate.feature.flags-aconfig-java/"
-            "android_common/javac/"
-            "android.hardware.devicestate.feature.flags-aconfig-java.jar"
-        ),
+        AGGREGATE_JAVAC_DIR,
         Path("libs/device-state-feature-flags.jar"),
         "android.hardware.devicestate.feature.flags",
     ),
@@ -285,17 +287,11 @@ CONFIGS = {
         Path("libs/settingslib-widget-flags.jar"),
         "com.android.settingslib.widget.flags",
     ),
-    "settingslib-selector-flags": (
-        _soong(
-            "frameworks/base/packages/SettingsLib/"
-            "SelectorWithWidgetPreference/"
-            "settingslib_selectorwithwidgetpreference_flags_lib/"
-            "android_common/javac/"
-            "settingslib_selectorwithwidgetpreference_flags_lib.jar"
-        ),
-        Path("libs/settingslib-selector-flags.jar"),
-        "com.android.settingslib.widget.selectorwithwidgetpreference.flags",
-    ),
+    # AOSP-17 (Task 071): settingslib-selector-flags entry removed upstream —
+    # SettingsLib/SelectorWithWidgetPreference no longer declares an aconfig
+    # flags lib (its Android.bp has no flags static_lib), and SystemUI-17 has
+    # zero imports of the package. libs/settingslib-selector-flags.jar is no
+    # longer produced; the gradle dependency line is retired in C4.
     # Task 064 (regeneration gap closure): the two remaining javac-backed
     # aconfig runtime jars that were hand-copied in 2026-07.
     "settingslib-media-flags": (
@@ -546,13 +542,103 @@ def merge_sources(items: list[tuple[str, Path, str]], destination: Path) -> None
     temporary.replace(destination)
 
 
+def extract_aggregate_subset(runtime_package: str, destination: Path) -> Path:
+    """Extract the validated five-class subset for a package from the shards.
+
+    AOSP-17 (Task 071): six framework-family aconfig modules no longer
+    produce standalone ``android_common/javac`` outputs — Soong compiles their
+    public runtime classes directly into the framework-minus-apex aggregate,
+    whose javac action is sharded (``framework.jar0``..``framework.jarN``).
+    Shard indices are worker artifacts and NOT stable across rebuilds, so the
+    shard owning ``runtime_package`` is discovered by content scan: entries
+    under the package prefix must appear in exactly one shard and must form
+    exactly the expected five-class runtime set (plus optional ``.uau`` and
+    directory entries). Any ambiguity, missing class, or extra class fails
+    loudly — nothing is synthesized, only real Soong bytes are carried over.
+
+    Writes a deterministic interim JAR to ``destination`` (fixed timestamp,
+    sorted entries) that satisfies ``validate_runtime_jar`` like any
+    module-owning source.
+    """
+    import re
+
+    prefix = runtime_package.replace(".", "/") + "/"
+    expected = {f"{prefix}{name}.class" for name in RUNTIME_CLASS_NAMES}
+    shards = sorted(
+        (
+            path
+            for path in AGGREGATE_JAVAC_DIR.glob("framework.jar*")
+            if re.fullmatch(r"framework\.jar\d+", path.name)
+        ),
+        key=lambda path: int(path.name[len("framework.jar") :]),
+    )
+    if not shards:
+        raise FileNotFoundError(
+            f"missing framework-minus-apex javac shards under {AGGREGATE_JAVAC_DIR}"
+        )
+    contributing: dict[str, dict[str, bytes]] = {}
+    for shard in shards:
+        with zipfile.ZipFile(shard) as archive:
+            entries = {
+                name: archive.read(name)
+                for name in archive.namelist()
+                if name.startswith(prefix)
+            }
+        if not entries:
+            continue
+        if len(contributing) > 0:
+            raise ValueError(
+                f"package {runtime_package} is split across aggregate shards "
+                f"({sorted(contributing)} and {shard}); refusing ambiguous input"
+            )
+        contributing[shard.name] = entries
+    if not contributing:
+        raise FileNotFoundError(
+            f"no framework-minus-apex javac shard contains package "
+            f"{runtime_package}"
+        )
+    payload = next(iter(contributing.values()))
+    classes = {name for name in payload if name.endswith(".class")}
+    if classes != expected:
+        raise ValueError(
+            f"unexpected runtime class set in aggregate shard for package "
+            f"{runtime_package}: missing={sorted(expected - classes)} "
+            f"extra={sorted(classes - expected)}"
+        )
+
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(
+        destination, "w", zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as archive:
+        for name in sorted(payload):
+            info = zipfile.ZipInfo(name, _MERGE_FIXED_DATETIME)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            archive.writestr(info, payload[name])
+    return destination
+
+
 def merge_framework_family(destination: Path = MERGED_FRAMEWORK_JAR) -> None:
-    """Merge the 14 framework-family Soong javac sources into one JAR."""
-    items = [
-        (name, CONFIGS[name][0], CONFIGS[name][2])
-        for name in sorted(FRAMEWORK_FAMILY)
-    ]
-    merge_sources(items, destination)
+    """Merge the framework-family Soong javac sources into one JAR.
+
+    AOSP-17 (Task 071): AGGREGATE_FAMILY members contribute via
+    ``extract_aggregate_subset`` (validated five-class subsets of the
+    framework-minus-apex javac shards); the remaining members keep their
+    module-owning javac sources.
+    """
+    import tempfile
+
+    items = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for name in sorted(FRAMEWORK_FAMILY):
+            source, _destination, runtime_package = CONFIGS[name]
+            if name in AGGREGATE_FAMILY:
+                source = extract_aggregate_subset(
+                    runtime_package, Path(tmp) / f"{name}.jar"
+                )
+            items.append((name, source, runtime_package))
+        merge_sources(items, destination)
 
 
 def main() -> int:
@@ -598,6 +684,12 @@ def main() -> int:
         if name in TURBINE_BASELINE_CONFIGS:
             source, destination, runtime_package = TURBINE_BASELINE_CONFIGS[name]
             repack_baseline_stub_jar(source, destination, runtime_package)
+        elif name in AGGREGATE_FAMILY:
+            # AOSP-17 (Task 071): aggregate members have no standalone javac
+            # JAR; deliver the validated five-class subset extracted from the
+            # framework-minus-apex javac shards.
+            source, destination, runtime_package = CONFIGS[name]
+            extract_aggregate_subset(runtime_package, destination)
         else:
             source, destination, runtime_package = CONFIGS[name]
             copy_jar(source, destination, runtime_package)

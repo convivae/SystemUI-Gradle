@@ -134,12 +134,10 @@ class InstallAarTest(unittest.TestCase):
 
 
 class ArtifactRegistryTest(unittest.TestCase):
-    def test_iconloader_coordinate(self):
-        """AOSP-17 (Task 071)：全族随 vintage 16→17 升 2.0.0。"""
-        self.assertEqual(
-            iam.ARTIFACTS["iconloader"],
-            {"group": "com.android.systemui", "name": "iconloader", "version": "2.0.0"},
-        )
+    def test_direct_consumption_families_not_in_registry(self):
+        """Task 059 / Task 071：四族直连 AAR 例外不入本地 Maven 坐标表。"""
+        for name in ("WifiTrackerLib", "iconloader", "setupcompat", "LowLightDreamLib"):
+            self.assertNotIn(name, iam.ARTIFACTS)
 
     def test_wmshell_coordinate(self):
         self.assertEqual(
@@ -147,7 +145,7 @@ class ArtifactRegistryTest(unittest.TestCase):
             {"group": "com.android.systemui", "name": "WindowManager-Shell", "version": "2.0.0"},
         )
 
-    def test_wmshell_shared_coordinate_unchanged(self):
+    def test_wmshell_shared_coordinate(self):
         self.assertEqual(
             iam.ARTIFACTS["WindowManager-Shell-shared"],
             {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "2.0.0"},
@@ -184,9 +182,10 @@ class ArtifactRegistryTest(unittest.TestCase):
                 {"group": "com.android.systemui", "name": name, "version": "2.0.0"},
             )
 
-    def test_artifacts_registry_has_exactly_27_entries(self):
-        """Task 040：17（既有）+ 10（新 resource target）= 27。"""
-        self.assertEqual(len(iam.ARTIFACTS), 27)
+    def test_artifacts_registry_has_exactly_23_entries(self):
+        """Task 071：27 - 4（Task 059 直连 AAR 例外族移除）= 23，
+        与 16 时代 libs/maven/ 的 23 族清单一致。"""
+        self.assertEqual(len(iam.ARTIFACTS), 23)
 
     def test_settingslib_pom_carries_seventeen_closure_deps(self):
         """Task 040（ADR 0005）：SettingsLib POM 依赖边 17 条（随全族 2.0.0），

@@ -56,8 +56,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 #   relpath       path under out/soong/.intermediates (never absolute)
 #   destination   path under the output root (mirrors the real libs/ layout)
 #   source_sha256 fingerprint of the AOSP artifact when this mapping was
-#                 frozen (2026-08-26); a mismatch warns about tree drift
+#                 frozen; a mismatch warns about tree drift
 #   baseline_sha256 fingerprint of the current libs/ jar (MATCH target)
+#
+# AOSP-17 (Task 071, 2026-08-27 re-freeze): all twelve mappings re-frozen
+# against the android-17.0.0_r1 build; baseline = frozen source (the
+# task-065 "script output wins" state). Drift vs the 16-era fingerprints:
+# framework-statsd moved to the android_common_apex31 variant; SystemUI-tags
+# and keepanno-annotations are byte-identical across vintages; the rest
+# drifted in place (byte-level, same owning paths).
 CONFIGS: dict[str, dict] = {
     "framework": {
         "module": "framework",
@@ -65,39 +72,35 @@ CONFIGS: dict[str, dict] = {
                    "turbine-combined/framework.jar",
         "destination": "libs/framework.jar",
         "source_sha256":
-            "0fe39d800f34f6c7b17e5c936571bc29367e1329c8af9c6ab47e894beb05be26",
+            "a2ff898903296097fa12951e786f8620cb213113a0325add81b9e0bb7ff9009d",
         "baseline_sha256":
-            "0fe39d800f34f6c7b17e5c936571bc29367e1329c8af9c6ab47e894beb05be26",
+            "a2ff898903296097fa12951e786f8620cb213113a0325add81b9e0bb7ff9009d",
     },
     "framework-statsd": {
-        # Replaced 2026-08-26 (task 065, user-approved): the 2026-07 hand
-        # copy (39 API-stub classes) had no byte-exact Soong source in the
-        # current build. Baseline is now the frozen source itself: the impl
-        # javac jar (70 entries, real classes, class-name superset of the
-        # old hand copy).
+        # 2026-08-26 (task 065, user-approved): baseline is the impl javac
+        # jar (real classes). AOSP-17 (Task 071): the impl javac output moved
+        # from the android_common_apex30 to the android_common_apex31 variant.
         "module": "framework-statsd.impl",
         "relpath": "packages/modules/StatsD/framework/framework-statsd.impl/"
-                   "android_common_apex30/javac/framework-statsd.jar",
+                   "android_common_apex31/javac/framework-statsd.jar",
         "destination": "libs/framework-statsd.jar",
         "source_sha256":
-            "058f30a1a7ef191b1c4ecef3658b215d996d657f6d0a2591956eb6e3e5aba352",
+            "5d3d05e78367d0a4f101769cf84688b44fb0734218e2ddc05a005677939eacdd",
         "baseline_sha256":
-            "058f30a1a7ef191b1c4ecef3658b215d996d657f6d0a2591956eb6e3e5aba352",
+            "5d3d05e78367d0a4f101769cf84688b44fb0734218e2ddc05a005677939eacdd",
     },
     "android.car": {
-        # Replaced 2026-08-26 (task 065, user-approved): the 2026-07 hand copy
-        # (678 stored stubs) came from a July-era tree state and carried 14
-        # classes that no longer exist upstream. Baseline is now the frozen
-        # turbine-combined closure (1219 stub classes incl. the static dep
-        # closure). compileOnly wiring — stubs are fine.
+        # 2026-08-26 (task 065, user-approved): baseline is the frozen
+        # turbine-combined closure (stub classes incl. the static dep
+        # closure). compileOnly wiring — stubs are fine. Re-frozen at 17.
         "module": "android.car",
         "relpath": "packages/services/Car/car-lib/android.car/android_common/"
                    "turbine-combined/android.car.jar",
         "destination": "libs/android.car.jar",
         "source_sha256":
-            "89f04e0a30bf8889ab2198516d9ecf362e90559e3bc7dbad8863b1c6263919c0",
+            "ea64c4c5aaa871af13d5e89b2a39c26620d581878353b673736d3db4abb950f7",
         "baseline_sha256":
-            "89f04e0a30bf8889ab2198516d9ecf362e90559e3bc7dbad8863b1c6263919c0",
+            "ea64c4c5aaa871af13d5e89b2a39c26620d581878353b673736d3db4abb950f7",
     },
     "android_module_lib_stubs_current": {
         "module": "android_module_lib_stubs_current",
@@ -106,9 +109,9 @@ CONFIGS: dict[str, dict] = {
                    "android_module_lib_stubs_current.jar",
         "destination": "libs/android_module_lib_stubs_current.jar",
         "source_sha256":
-            "af3fc1f18a9cbedebf01900deb9721e9339ab2fb51c3b42d3c8d052a223d13d7",
+            "95b9cec09dde7279a3f7c03d3d877c2e526318492a7c99e11990ecf41f0eb5e2",
         "baseline_sha256":
-            "af3fc1f18a9cbedebf01900deb9721e9339ab2fb51c3b42d3c8d052a223d13d7",
+            "95b9cec09dde7279a3f7c03d3d877c2e526318492a7c99e11990ecf41f0eb5e2",
     },
     "SystemUI-proto": {
         "module": "SystemUI-proto",
@@ -116,9 +119,9 @@ CONFIGS: dict[str, dict] = {
                    "android_common/javac/SystemUI-proto.jar",
         "destination": "libs/SystemUI-proto.jar",
         "source_sha256":
-            "8f24c6b2544aa86227a311d68946329e3afa2569e60eca3eecda0d0cc91a6ea3",
+            "159b2da75a80cfa19bce99d7aef01b6a1f4bf02cec4aa1ac328718082c43ee9a",
         "baseline_sha256":
-            "8f24c6b2544aa86227a311d68946329e3afa2569e60eca3eecda0d0cc91a6ea3",
+            "159b2da75a80cfa19bce99d7aef01b6a1f4bf02cec4aa1ac328718082c43ee9a",
     },
     "SystemUI-statsd": {
         "module": "SystemUI-statsd",
@@ -126,9 +129,9 @@ CONFIGS: dict[str, dict] = {
                    "android_common/javac/SystemUI-statsd.jar",
         "destination": "libs/SystemUI-statsd.jar",
         "source_sha256":
-            "3e96c65367070d15f2fa568de2cf4fba64626e87075e7e8fd2af7165518072bf",
+            "f0ac4c6f0371d969549e0675c19b7a3db31b644f12e9e5b512413dfca5dc75c1",
         "baseline_sha256":
-            "3e96c65367070d15f2fa568de2cf4fba64626e87075e7e8fd2af7165518072bf",
+            "f0ac4c6f0371d969549e0675c19b7a3db31b644f12e9e5b512413dfca5dc75c1",
     },
     "SystemUI-tags": {
         "module": "SystemUI-tags",
@@ -147,9 +150,9 @@ CONFIGS: dict[str, dict] = {
                    "contextualeducationlib.jar",
         "destination": "libs/contextualeducationlib.jar",
         "source_sha256":
-            "21827c3c18dd1f8087eaac1bbecaa339fcb9679818a7d10dff169b6b1bc61385",
+            "ebfae7a06640bfc2efef3c30843260f849ee6797ce0e7bc28255bf925764e0e5",
         "baseline_sha256":
-            "21827c3c18dd1f8087eaac1bbecaa339fcb9679818a7d10dff169b6b1bc61385",
+            "ebfae7a06640bfc2efef3c30843260f849ee6797ce0e7bc28255bf925764e0e5",
     },
     "msdl": {
         "module": "msdl",
@@ -157,9 +160,9 @@ CONFIGS: dict[str, dict] = {
                    "kotlin/msdl.jar",
         "destination": "libs/msdl.jar",
         "source_sha256":
-            "ecbdfe63b8c65ea094110931d93e600d69880d56362928b3ad6ce6c36872468e",
+            "9687cf1bb9e930e2561c90037d07813074d38bf3ecfec3f0d69bd4e8d53a7ffe",
         "baseline_sha256":
-            "ecbdfe63b8c65ea094110931d93e600d69880d56362928b3ad6ce6c36872468e",
+            "9687cf1bb9e930e2561c90037d07813074d38bf3ecfec3f0d69bd4e8d53a7ffe",
     },
     "PlatformMotionTestingComposeValues": {
         "module": "PlatformMotionTestingComposeValues",
@@ -168,9 +171,9 @@ CONFIGS: dict[str, dict] = {
                    "PlatformMotionTestingComposeValues.jar",
         "destination": "libs/PlatformMotionTestingComposeValues.jar",
         "source_sha256":
-            "beb021cfba4d335a05b77ccbaf18a7f935154f04bd1196531d78e4edaafba59e",
+            "eedef559b852823db211006a77d090423240f5dcefbd87a70965eb8f0d1b29dd",
         "baseline_sha256":
-            "beb021cfba4d335a05b77ccbaf18a7f935154f04bd1196531d78e4edaafba59e",
+            "eedef559b852823db211006a77d090423240f5dcefbd87a70965eb8f0d1b29dd",
     },
     "keepanno-annotations": {
         # Same frozen input as build_sysuisdk.py AOSP_INPUT_RELPATHS
@@ -186,17 +189,17 @@ CONFIGS: dict[str, dict] = {
     },
     "tracinglib-platform": {
         # Extracted raw; conflict cleaning (if ever needed again) is the
-        # separate clean_prebuilts.py step. The current on-disk baseline is
-        # byte-identical to the raw kotlin artifact, so no cleaning applies.
+        # separate clean_prebuilts.py step. Re-frozen at 17 (byte drift,
+        # same owning path).
         "module": "tracinglib-platform",
         "relpath": "frameworks/libs/systemui/tracinglib/core/"
                    "tracinglib-platform/android_common/kotlin/"
                    "tracinglib-platform.jar",
         "destination": "libs/prebuilts/tracinglib-platform.jar",
         "source_sha256":
-            "90ec3be83e8af0bc9167046533be67b43fff69f0bb09ca747e7b82ddb83409d4",
+            "aa5077c38e9991970ca2230df7709e8d36fa8c36c79abc9b015668e8f72f6dcd",
         "baseline_sha256":
-            "90ec3be83e8af0bc9167046533be67b43fff69f0bb09ca747e7b82ddb83409d4",
+            "aa5077c38e9991970ca2230df7709e8d36fa8c36c79abc9b015668e8f72f6dcd",
     },
 }
 
