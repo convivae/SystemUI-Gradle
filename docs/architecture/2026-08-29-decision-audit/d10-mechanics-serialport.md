@@ -14,7 +14,7 @@ status: done
 ## 证据链
 
 - 三者均为 `frameworks/**` 下产物（**非** `packages/SystemUI`）→ 规则 F/tier②，产物交付（非源码模块）。
-- 17 SystemUI-core bp static_libs L555/559 列出 `SerialPortAccessDialog`、`mechanics-compose`（agnam 详见 d05/grep）。
+- 17 SystemUI-core bp static_libs 列出 `SerialPortAccessDialog`、`mechanics` / `mechanics-compose`（d05 的 17 bp L550-575 段与本审计 grep 均确认）。
 - mechanics / mechanics-compose 的 bp 无 `resource_dirs:`（compose bp 全文确认 21 行无 res）符
   合 "无资源→JAR" 的三层策略。
 - SerialPortAccessDialog manifest 含 `<activity>` + MANAGE_SERIAL_PORTS permission，theme 引用
@@ -28,7 +28,7 @@ status: done
 
 1. mechanics ×2 以 AAR 交付：无 res，不值 AAR 开销；否。
 2. SerialPort 以 JAR 交付：丢 manifest/permission 合并 → app manifest 缺 activity+permission，
-   运行期 NOT 正确；否。
+   运行期正确性缺失（permission/activity 不注册）；否。
 3. 全部入 maven/catalog：多 consumer 才是时候；单 consumer 下有 E2 先例 → 不选。
 
 ## 判读与建议
