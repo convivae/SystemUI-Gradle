@@ -29,7 +29,7 @@
 | D2 | application manifest 剥 package 属性（task072 80be3e58） | d02-manifest-package-strip.md | done | 符合（点名授权+语义恒等+可逆；仅警告场景下剥除属可逆清理） | manifest CONV_DEL 块 L22-28；brief 事实#3；issue §3.3 |
 | D3 | application manifest 剥 featureFlag 属性（泛授权，未单独报 user） | d03-manifest-featureflag-strip.md | done | 可接受但需补记录（改动建证充分可逆；但弃用 16-era additionalParameters 先例未记理由+授权链停在泛授权） | manifest:431-443；task009 8ab860e9；aapt2.go:107,305 |
 | D4 | clocks-common/floatingmenu manifest 保留 package 属性 | d04-manifest-package-keep.md | done | 符合（不扩授权、零字节差；仅警告代价；与 D2/D3 口径差异待全局裁定） | git log=bdf2dba5 only；两 build.kts 注释 |
-| D5 | kairos → tier① 源码模块 :SystemUI-utils-kairos | d05-kairos-source-module.md | not-started | | commit 4ac49993；bp utils/kairos/Android.bp；AGENTS.md §3.1 旧文 |
+| D5 | kairos → tier① 源码模块 :SystemUI-utils-kairos | d05-kairos-source-module.md | done | 符合（17 bp:569 实证生产依赖；且 git 复核证16 vintage bp 已依赖—16-era 判 test-only 为事实性误判但当时无损；AGENTS §3.1 注释滞后） | 17 bp L476/569；16 bp b110a8e0:540；dec85d64 对比；4ac49993 |
 | D6 | ace 拆双 AAR（common jar 并入 visualizer） | d06-ace-dual-aar.md | not-started | | task073 issue §3；commit e6c59677 |
 | D7 | wmshell-shared AAR 并入 AIDL 闭包 19 类，2.0.0→2.0.1 | d07-wmshell-shared-aidls.md | not-started | | task073 issue §4 批次1 |
 | D8 | aapt2 编译期转发 --feature-flags + systemui-aconfig-flags.txt | d08-aapt2-feature-flags.md | not-started | | task073 issue §4 批次2；commit 6e66a0ea |
