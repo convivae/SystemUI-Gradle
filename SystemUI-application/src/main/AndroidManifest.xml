@@ -429,8 +429,18 @@
     <uses-permission android:name="android.permission.PERSONAL_CONTEXT_RECEIVE_INSIGHTS"/>
 
     <!-- To be able to report UI latency stats to UILatencyStatsService. -->
-    <uses-permission android:name="android.permission.REPORT_UI_LATENCY_STATS"
-        android:featureFlag="com.android.server.ui_latency_stats.ui_latency_stats_service" />
+    <!-- CONV_DEL BEGIN: AGP 9.3.1 aapt2 link 无 feature flags 通道（AaptV2CommandBuilder
+         的 link 命令没有该参数），而 aapt2 对 manifest 元素的 android:featureFlag 默认
+         fail_on_unrecognized_flags（空 flag 表即报 "flag ... not found in flags"）。
+         Soong 侧该 flag 为 READ_WRITE
+         （services/core/.../uilatencystats_flags aconfig-flags.txt），元素保留、由平台
+         运行时过滤；此处剥除属性使 permission 无条件请求（debug 构建可接受偏差，
+         REPORT_UI_LATENCY_STATS 为 signature 权限，无功能面影响）。被删字节保全于
+         下行注释，撤回时恢复即可（ADR 0004 /
+         docs/issues/2026-08-28-c4b-debug-compile-closure.md；Task 073） -->
+    <!--         android:featureFlag="com.android.server.ui_latency_stats.ui_latency_stats_service" -->
+    <!-- CONV_DEL END -->
+    <uses-permission android:name="android.permission.REPORT_UI_LATENCY_STATS" />
 
     <protected-broadcast android:name="com.android.settingslib.action.REGISTER_SLICE_RECEIVER" />
     <protected-broadcast android:name="com.android.settingslib.action.UNREGISTER_SLICE_RECEIVER" />

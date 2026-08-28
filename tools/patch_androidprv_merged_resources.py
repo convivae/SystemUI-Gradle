@@ -23,6 +23,18 @@ Summary line on success: ``scanned=<n> patched=<n> compiled=<n> unresolved=0``.
 Exit codes: 0 success; 2 missing/unusable inputs; 3 zero candidates;
 4 duplicate namespace declaration; 5 AAPT2 compile failure; 6 expected flat
 output missing.
+
+AOSP 17 note (Task 073): merged values XML can reference aconfig feature
+flags via ``android:featureFlag`` (e.g. ``com.android.systemui.dream_overlay_updated_ui``).
+Soong passes flag values to aapt2 with ``--feature-flags @<file>``
+(``Android.bp flags_packages``), but AGP exposes no equivalent: its merge step
+compiles values with the embedded Kotlin aaptcompiler port (no flag
+validation), while this script's standalone ``aapt2 compile`` DOES validate and
+fails with ``Resource flag value undefined``. Fix: forward
+``--feature-flags @<file>`` to every aapt2 compile. The flag-value file is the
+Soong ``aconfig-flags.txt`` product of the ``com_android_systemui_flags``
+aconfig_declarations module, checked in verbatim as
+``libs/systemui-aconfig-flags.txt`` (format: ``<name>:READ_ONLY|READ_WRITE=<bool>``).
 """
 from __future__ import annotations
 
@@ -36,7 +48,13 @@ import tempfile
 from pathlib import Path
 
 PRV_URI = "http://schemas.android.com/apk/prv/res/android"
-PRV_DECL = f'xmlns:androidprv="{PRV_URI}"'
+PRV_DECL = f'xmlns:androidprv="{PRV_URI}"'  # noqa: E702  (f-string w/ quotes)
+
+# Project root (this script lives in <root>/tools/).
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# Default AAPT2 feature-flag values file: Soong aconfig-flags.txt product of
+# com_android_systemui_flags, checked in verbatim (see module docstring).
+_DEFAULT_FEATURE_FLAGS = _PROJECT_ROOT / "libs" / "systemui-aconfig-flags.txt"
 
 _ROOT_RE = re.compile(r"<resources\b[^>]*>")
 
@@ -88,12 +106,14 @@ def select_candidates(merged_dir: Path) -> tuple[list[Path], list[Path]]:
     return scanned, candidates
 
 
-def _compile_one(aapt2: str, src: Path, out_dir: Path, original: Path) -> None:
+def _compile_one(aapt2: str, src: Path, out_dir: Path, original: Path,
+                 feature_flags: Path | None) -> None:
     """Compile *src* with AAPT2; the flat records the original path's name."""
-    result = subprocess.run(
-        [aapt2, "compile", str(src), "-o", str(out_dir)],
-        capture_output=True, text=True,
-    )
+    cmd = [aapt2, "compile", str(src), "-o", str(out_dir)]
+    if feature_flags is not None:
+        # Soong parity: ``--feature-flags @<file>`` (Android.bp flags_packages).
+        cmd[2:2] = ["--feature-flags", f"@{feature_flags}"]
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         sys.stderr.write(
             f"aapt2 compile failed for {original} "
@@ -107,13 +127,19 @@ def _atomic_replace(src: Path, dest: Path) -> None:
     os.replace(tmp, dest)
 
 
-def run(merged_dir: Path, compiled_dir: Path, aapt2: str) -> int:
+def run(merged_dir: Path, compiled_dir: Path, aapt2: str,
+        feature_flags: Path | None = _DEFAULT_FEATURE_FLAGS) -> int:
     for label, path in (("--merged-dir", merged_dir), ("--compiled-dir", compiled_dir)):
         if not path.is_dir():
             sys.stderr.write(f"{label} is not a directory: {path}\n")
             return _EXIT_USAGE
     if not (os.path.isfile(aapt2) and os.access(aapt2, os.X_OK)):
         sys.stderr.write(f"--aapt2 is not an executable file: {aapt2}\n")
+        return _EXIT_USAGE
+    if feature_flags is not None and not feature_flags.is_file():
+        sys.stderr.write(
+            f"feature-flags file not found: {feature_flags} "
+            f"(pass --no-feature-flags to disable, or restore the file)\n")
         return _EXIT_USAGE
 
     scanned, candidates = select_candidates(merged_dir)
@@ -148,7 +174,7 @@ def run(merged_dir: Path, compiled_dir: Path, aapt2: str) -> int:
                 path.read_text(encoding="utf-8")), encoding="utf-8")
             # Compile from a path whose basename matches the original so the
             # generated flat name is identical to AGP's.
-            _compile_one(aapt2, staged, out, path)
+            _compile_one(aapt2, staged, out, path, feature_flags)
             flat = out / flat_name(rel)
             if not flat.is_file():
                 sys.stderr.write(
@@ -177,8 +203,25 @@ def main(argv: list[str] | None = None) -> int:
                         help="AGP compiled merged-res flat directory")
     parser.add_argument("--aapt2", required=True,
                         help="AAPT2 executable (from sdkComponents.aapt2)")
+    ff = parser.add_mutually_exclusive_group()
+    ff.add_argument("--feature-flags", metavar="FILE", default=None,
+                    help=f"AAPT2 feature-flag values file forwarded as "
+                    f"--feature-flags @FILE to every compile (default: "
+                    f"{_DEFAULT_FEATURE_FLAGS} if it exists)")
+    ff.add_argument("--no-feature-flags", action="store_true",
+                    help="compile without feature flags (pre-17 behavior)")
     args = parser.parse_args(argv)
-    return run(Path(args.merged_dir), Path(args.compiled_dir), args.aapt2)
+    feature_flags: Path | None
+    if args.no_feature_flags:
+        feature_flags = None
+    elif args.feature_flags is not None:
+        feature_flags = Path(args.feature_flags)
+    elif _DEFAULT_FEATURE_FLAGS.is_file():
+        feature_flags = _DEFAULT_FEATURE_FLAGS
+    else:
+        feature_flags = None
+    return run(Path(args.merged_dir), Path(args.compiled_dir), args.aapt2,
+               feature_flags)
 
 
 if __name__ == "__main__":

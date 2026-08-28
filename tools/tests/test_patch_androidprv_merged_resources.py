@@ -17,6 +17,7 @@ from pathlib import Path
 
 # Make tools/ importable.
 _TOOLS = Path(__file__).resolve().parent.parent
+_REPO_ROOT = _TOOLS.parent
 if str(_TOOLS) not in sys.path:
     sys.path.insert(0, str(_TOOLS))
 
@@ -31,12 +32,32 @@ import sys
 from pathlib import Path
 
 args = sys.argv[1:]
-if len(args) == 4 and args[0] == 'compile' and args[2] == '-o':
-    src = Path(args[1])
-    out_dir = Path(args[3])
+# Task 073: tolerate an optional `--feature-flags <value>` pair; the flag
+# values file content is embedded into the flat so tests can assert the
+# forwarding happened.
+flags_content = b''
+positional = []
+i = 0
+while i < len(args):
+    if args[i] == '--feature-flags':
+        value = args[i + 1]
+        i += 2
+        if not value.startswith('@'):
+            sys.stderr.write('feature-flags value must be @file\\n')
+            sys.exit(3)
+        flags_content = Path(value[1:]).read_bytes()
+        continue
+    positional.append(args[i])
+    i += 1
+if len(positional) == 4 and positional[0] == 'compile' and positional[2] == '-o':
+    src = Path(positional[1])
+    out_dir = Path(positional[3])
     out_dir.mkdir(parents=True, exist_ok=True)
     flat = out_dir / (src.parent.name + '_' + src.stem + '.arsc.flat')
-    flat.write_bytes(b'FLAT:' + str(src.name).encode())
+    data = b'FLAT:' + str(src.name).encode()
+    if flags_content:
+        data += b'\\n' + flags_content
+    flat.write_bytes(data)
     sys.exit(0)
 sys.stderr.write('usage: aapt2 compile <file> -o <dir>\\n')
 sys.exit(2)
@@ -106,12 +127,16 @@ class FixtureBase(unittest.TestCase):
         p.write_bytes(data)
         return p
 
-    def _run_cli(self, aapt2=None):
+    def _run_cli(self, aapt2=None, extra_args=()):
         cmd = [
             sys.executable, str(_TOOLS / 'patch_androidprv_merged_resources.py'),
             '--merged-dir', str(self.merged),
             '--compiled-dir', str(self.compiled),
             '--aapt2', str(aapt2 or self.aapt2),
+            # legacy behavior unless the caller passes its own flag args
+            *([] if any(a.startswith('--feature-flags') for a in extra_args)
+              else ['--no-feature-flags']),
+            *extra_args,
         ]
         return subprocess.run(cmd, capture_output=True, text=True)
 
@@ -273,6 +298,80 @@ class TestCliSuccess(FixtureBase):
         self.assertIn('patched=0', r.stdout)
         self.assertEqual(
             (self.compiled / 'values_values.arsc.flat').read_bytes(), b'KEEP')
+
+
+# --- Task 073: AAPT2 feature-flags forwarding -------------------------------
+
+class TestFeatureFlagsForwarding(FixtureBase):
+    def _write_flags(self, lines):
+        p = self.root / 'flags.txt'
+        p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        return p
+
+    def test_explicit_flags_file_is_forwarded_to_aapt2(self):
+        src = self._add('values/values.xml', _values_xml(PRV_BODY))
+        self._add_flat('values_values.arsc.flat')
+        flags = self._write_flags(['com.android.systemui.test_flag:READ_ONLY=true'])
+
+        r = self._run_cli(extra_args=['--feature-flags', str(flags)])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        # fake aapt2 embeds the flags file content into the recompiled flat
+        flat = (self.compiled / 'values_values.arsc.flat').read_bytes()
+        self.assertIn(b'FLAT:values.xml\n', flat)
+        self.assertIn(b'com.android.systemui.test_flag:READ_ONLY=true', flat)
+
+    def test_missing_explicit_flags_file_is_usage_error(self):
+        self._add('values/values.xml', _values_xml(PRV_BODY))
+        self._add_flat('values_values.arsc.flat')
+        r = self._run_cli(
+            extra_args=['--feature-flags', str(self.root / 'nope.txt')])
+        self.assertEqual(r.returncode, 2, r.stderr)
+
+    def test_default_discovers_checked_in_flags_file(self):
+        # default (no --no-feature-flags, no explicit file) must auto-discover
+        # the repo's libs/systemui-aconfig-flags.txt and forward it
+        self._add('values/values.xml', _values_xml(PRV_BODY))
+        self._add_flat('values_values.arsc.flat')
+        cmd = [
+            sys.executable, str(_TOOLS / 'patch_androidprv_merged_resources.py'),
+            '--merged-dir', str(self.merged),
+            '--compiled-dir', str(self.compiled),
+            '--aapt2', str(self.aapt2),
+        ]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        flat = (self.compiled / 'values_values.arsc.flat').read_bytes()
+        # first line of the real checked-in flags file (provenance gate)
+        self.assertIn(
+            b'com.android.systemui.accessibility_menu_inputs_for_hiding', flat)
+
+
+class TestCheckedInFlagsFile(unittest.TestCase):
+    """Provenance gate for libs/systemui-aconfig-flags.txt (Task 073).
+
+    Verbatim copy of the Soong ``aconfig-flags.txt`` product of the
+    ``com_android_systemui_flags`` aconfig_declarations module
+    (sha256 031f4e80… at copy time). aapt2 ``--feature-flags`` format:
+    ``<name>:READ_WRITE|READ_ONLY=<bool>`` per line.
+    """
+
+    def _flags_path(self):
+        return _REPO_ROOT / 'libs' / 'systemui-aconfig-flags.txt'
+
+    def test_file_exists_and_format_valid(self):
+        p = self._flags_path()
+        self.assertTrue(p.is_file(), f'missing {p}')
+        pattern = re.compile(
+            r'^com\.android\.systemui\.[a-z0-9_]+:(READ_WRITE|READ_ONLY)=(true|false)$')
+        lines = p.read_text(encoding='utf-8').strip().splitlines()
+        self.assertGreater(len(lines), 100)
+        for line in lines:
+            self.assertRegex(line, pattern)
+
+    def test_contains_both_flags_referenced_by_17_res(self):
+        text = self._flags_path().read_text(encoding='utf-8')
+        self.assertIn('com.android.systemui.dream_overlay_updated_ui:READ_ONLY=true', text)
+        self.assertIn('com.android.systemui.desktop_sizing:READ_ONLY=false', text)
 
 
 if __name__ == '__main__':

@@ -64,6 +64,16 @@ Release/R8 归 task074；runtime 归 C5。
 | R2 | 同上（build2） | FAILED | 0 e:（Kotlin 全清） | 批次 1 修复后 Kotlin 编译全绿；新阻塞：res-product bool product-variant 资源重复 |
 | R3 | `biometrics/plugin-core/shared:compileKotlin`（build3） | FAILED | 2 e:（animation setFilter） | RemoteTransition.setFilter 为 SysUISdk 缺失的 17 新隐藏 API |
 | R4 | 六模块 compile + --continue（build4） | FAILED | 5 e: | biometrics 3（USER_TYPE_PROFILE_SUPERVISING / TYPE_STANDALONE×2）+ animation 2（setFilter）；plugin/unfold/customization/clocks-common/compose 全绿——均属 SysUISdk 缺 API |
+| R5 | `:app:assembleDebug --continue`（build5） | FAILED | 5 e: + patch 任务 exit 5 | res-product CONV_DEL 已落地（用户授权，commit `02e60a60`）后新暴露：`:app:patchDebugAndroidPrvMergedResources` 里独立 aapt2 compile 报 `Resource flag value undefined: 'com.android.systemui.dream_overlay_updated_ui'`（merged values.xml 的 `android:featureFlag` 样式） |
+| R6 | 同上（build6） | FAILED | 5 e: + link 错 | R5 修复（见下批次 2）后 compile 侧过；新暴露 link 侧：merged manifest `uses-permission` 的 `android:featureFlag`（aapt2 link 对 manifest 元素空 flag 表默认 fail_on_unrecognized_flags） |
+| R7/R8 | 同上（build7/build8） | FAILED | 5 e: + link 错 | R6 修复（manifest 属性 CONV_DEL，R7 首次注释含 `--` 非法改写一次）后 link 过 featureFlag 门；最终暴露 20 条 `resource android:color/… not found`（见剩余阻塞 2，与 5 e: 同根因） |
+
+### 批次 2 修复清单（R5→R8，本轮）
+
+| 修复 | 文件 | 说明 |
+|---|---|---|
+| aapt2 compile 转发 feature flags | tools/patch_androidprv_merged_resources.py + libs/systemui-aconfig-flags.txt | Soong 用 `--feature-flags @aconfig-flags.txt`（Android.bp flags_packages）传值，AGP 无等价通道：merge 用的内嵌 Kotlin aaptcompiler 移植版不做 flag 校验，而本脚本独立 aapt2 compile 会校验。修复 = 脚本对每次 compile 转发 `--feature-flags @<file>`；flags 文件 = Soong `com_android_systemui_flags` aconfig_declarations 模块产物（282 行，sha256 `031f4e80…`），按 tier② 产物规则字节保全拷入 `libs/`。CLI：`--feature-flags FILE` / `--no-feature-flags`，默认自动发现 `libs/systemui-aconfig-flags.txt` |
+| manifest featureFlag 属性 CONV_DEL | SystemUI-application/src/main/AndroidManifest.xml | AGP 9.3.1 `AaptV2CommandBuilder` 的 link 命令无 feature-flags 参数（字节码级实证）；唯一受影响元素 = `REPORT_UI_LATENCY_STATS` uses-permission（AOSP 17 manifest 仅此一处 featureFlag）。Soong 侧该 flag 为 READ_WRITE（元素保留、平台运行时过滤）；剥除属性后 permission 无条件请求（signature 权限，无功能面影响）。字节保全于相邻 CONV_DEL 块（同 Task 072 package 属性机制） |
 
 ### 批次 1 修复清单（R1→R2）
 
@@ -76,33 +86,49 @@ Release/R8 归 task074；runtime 归 C5。
 | implementation(:SystemUI-common) | SystemUI-shared-biometrics/build.gradle.kts | BiometricsSharedLib bp static_libs SystemUI-shared-utils |
 | wmshell-shared AAR 并入 aidls javac jar（19 类：IShellTransitions/AnimatedSurface/IHome/IFocus/IOverviewOverlayLeash） | tools/package_aosp_aar.py + install 升 2.0.1 + catalog | 17 WindowManager-Shell-shared bp static_libs WindowManager-Shell-shared-aidls |
 
-### 剩余阻塞（两项，均需 chief/user）
+### 剩余阻塞（一项，需 chief/生成器 owner）
 
-1. **REDLINE res-product**：17 res-product/values/config.xml 新增 `<bool config_enableLargeScreenScreencapture product="default|tablet|desktop">` 三变体；
-   AAPT2 不支持 product 属性 → `packageDebugResources` 报重复。修复需按 ADR 0004 对 tablet/desktop 两行加
-   CONV_DEL 标记（与 task070 对 strings.xml 的 5806 处同类同目录同机制），但 res** 属 CHARTER Part 5.1
-   红线（CONV 也需用户授权），本 brief File Map 仅授权 `SystemUI-*/src` 的 CONV → 停工待授权。
-2. **SysUISdk 需重建（brief authority 字段明确的汇报项）**：SysUISdk android.jar 生成于 2026-08-21，
+1. **SysUISdk 需重建（brief authority 字段明确的汇报项）**：SysUISdk android.jar 生成于 2026-08-21，
    早于 C2/C3 的 17 树再同步（2026-08-27，task071 冻结指纹已记录多处 byte drift）；当前树 framework.jar
    含而 android.jar 缺的 17 新隐藏 API（至少）：`android.window.RemoteTransition.setFilter(TransitionFilter)`
    （animation）、`android.os.UserManager.USER_TYPE_PROFILE_SUPERVISING`、
    `android.hardware.fingerprint.FingerprintSensorProperties.TYPE_STANDALONE`（biometrics）；
    另 ace AAR 类引用 `android.service.personalcontext.insight.ContextInsight`（android.jar 无，dex 期可能报缺）。
+   **R8 新增同类证据（link 侧）**：`processDebugResources` 报 20 条 `resource android:color/… not found`
+   （system_surface_effect_{0..3}×{light,dark,fallback} 12 条、system_error_dim 2、
+   system_on_{primary,secondary}_fixed{,_variant} 6），全部为 17 framework 新增色板资源：
+   AOSP 17 `framework-res.apk`（emu64x）全部存在（aapt2 dump 实证），legacy SysUISdk android.jar 全部缺失。
    修复 = `python3 tools/build_sysuisdk.py --aosp-root /home/conv/myspace/aosp` 重建（脚本本身禁改，运行属重建，
-   按 brief authority 需 chief 批准）。
+   按 brief authority 需 chief 批准）。**即：5 个 Kotlin 错误与 20 条 link 颜色错误同根因，均由同一重建解除。**
+
+   **→ Chief 已批准（裁决 1），2026-08-29 执行，但生成器自身防护拦截（新红线，已停工上报）：**
+
+   | 项 | 记录 |
+   |---|---|
+   | 重建前 android.jar sha256 | `652fd3d4a719724b89fe3c8c8122c4f021ec3692307e3130cf8850c89b157e8e`（framework.aidl `d0497fdc8…464962e`） |
+   | 旧目录处置 | 无 `.sysuisdk-generated.json` marker（旧补丁流程产物）→ 生成器拒 `--replace`；按 ADR 0006 语义整体移开为 `platforms/android-SysUISdk.bak-legacy-pre-aosp17`，全新生成 |
+   | 生成器结果 | **exit 1**：`bridge collision: target entry android/compat/annotation/UnsupportedAppUsage$Container.class differs from the approved source bytes` |
+   | 根因（已实证） | 17 树 framework.jar（turbine-combined）新内嵌 `android/compat/annotation/UnsupportedAppUsage{,$Container}` 两类，其 turbine 字节与桥接专用源 `unsupportedappusage.jar`（javac 产物）不同；javap 比对两者 API 完全一致（`public interface …$Container extends java.lang.annotation.Annotation { public abstract …[] value(); }`），纯编译器产物字节差异。39 个桥接条目中其余 37 个均不在 framework.jar，仅此 2 条碰撞（碰撞检查首条即 abort） |
+   | 为什么停 | 修复需改 `tools/build_sysuisdk.py`（本 brief 禁改文件）：三选一 ①从 `_UNSUPPORTED_APP_USAGE_ENTRIES` 桥接条目移除该 2 条（framework.jar 副本本就会被合入）②桥接优先覆盖（改 collision 语义）③重准 bytes。均属生成器 owner 决策 |
+   | 环境恢复 | SDK 目录已原名恢复（sha256 复验一致），构建环境可用；遗留 `platforms/android-SysUISdk-staging/`（旧流程产物）未动 |
 
 ## 5. 验证记录
 
 | 门 | 命令 | 结果 |
 |---|---|---|
-| 对齐 | `python3 tools/check_source_alignment.py --strict` | exit 0（MISSING/MISPLACED/EXTRA 全 0；MODIFIED 1 = 既有白名单，RES-MODIFIED 86 = task070 CONV 标记） |
-| pytest | `uv run pytest tools/tests -q` | 298 passed + 121 subtests（含 P0/P1 新增断言与 P2a 修正） |
+| 对齐 | `python3 tools/check_source_alignment.py --strict` | exit 0（MISSING/MISPLACED/EXTRA 全 0；MODIFIED 1 = 既有白名单；RES-MODIFIED 87 = task070 5806 处 + task073 config.xml 1 处，均见 §6） |
+| pytest | `uv run pytest tools/tests -q` | 303 passed + 121 subtests（含 P0/P1/P2a 新增断言与批次 2 的 flags 转发/默认发现/来源门测试 20 项） |
 | 冻结指纹 | `uv run python tools/package_misc_jars.py --verify-only` | 17/17 MATCH（含 mechanics×2） |
-| 编译 | 见 §4 演变表；当前剩 2 类 chief 阻塞项 | — |
+| 编译 | 见 §4 演变表；当前剩 1 类阻塞项（SysUISdk 重建，同时解锁 5 e: + 20 link 色） | — |
 
 ## 6. CONV 对账
 
-（待补）
+| 文件 | 标记 | 授权 | 记录 |
+|---|---|---|---|
+| SystemUI-res/res-product/values/config.xml | CONV_DEL ×2 块（tablet/desktop 两行 `config_enableLargeScreenScreencapture`，保留 default） | 用户 2026-08-28（chief 转达），Task 073，commit `02e60a60` | reason: product-variant unsupported by AGP；机制同 task070 strings.xml |
+| SystemUI-application/src/main/AndroidManifest.xml | CONV_DEL ×1 块（`REPORT_UI_LATENCY_STATS` 的 `android:featureFlag` 属性，元素保留） | File Map 授权区（`SystemUI-*/src`）；机制同 Task 072 package 属性先例 | reason: AGP 9.3.1 aapt2 link 无 feature-flags 通道（见 §4 批次 2）；字节保全可撤回 |
+
+（另：task070 既有 5806 处 strings.xml 标记与 task072 manifest package 属性标记不属本任务，不重复对账）
 
 ## 7. 移交 task074 清单
 
