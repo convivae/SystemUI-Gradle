@@ -75,6 +75,9 @@ androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidxCore
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-core-animation = { module = "androidx.core:core-animation", version = "1.0.0" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
+# kairos（utils/kairos Android.bp static_libs androidx.collection_collection）。
+# 1.5.0 = :SystemUI-core 编译类路径经 Compose 闭包当前解析的版本，避免图漂移。
+androidx-collection = { module = "androidx.collection:collection", version = "1.5.0" }
 jsr305 = { module = "com.google.code.findbugs:jsr305", version.ref = "jsr305" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
 androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "androidxCardview" }

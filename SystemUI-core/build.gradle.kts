@@ -135,6 +135,8 @@ dependencies {
     implementation(project(":SystemUI-plugin"))
     implementation(project(":SystemUI-shared"))
     implementation(project(":SystemUI-compose"))
+    // kairos（packages/SystemUI/utils/kairos，tier① 规则 S；17 bp SystemUI-core static_libs）
+    implementation(project(":SystemUI-utils-kairos"))
 
     // compilelib 变体（非 SystemUI 代码，tier② jar；debug/release 仅 IS_DEBUG 常量不同）
     debugImplementation(files("${rootProject.projectDir}/libs/compilelib-debug.jar"))

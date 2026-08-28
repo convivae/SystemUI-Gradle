@@ -157,10 +157,13 @@ SOURCE_MAPPINGS = [
     # SystemUI-compose: Compose Core + Scene 合并
     M(["compose/core/src"], "SystemUI-compose", "core/src", note="PlatformComposeCore"),
     M(["compose/scene/src"], "SystemUI-compose", "scene/src", note="PlatformComposeSceneTransitionLayout"),
+
+    # SystemUI-utils-kairos: kairos（utils/kairos Android.bp，java_library，17 起生产依赖）
+    M(["utils/kairos/src"], "SystemUI-utils-kairos", "src", note="kairos"),
 ]
 
-# 不进源码 module 的 AOSP 根（kairos test-only、animation/lib 非 SystemUI）：
-#   utils/kairos/src, animation/lib/src —— 不在 SOURCE_MAPPINGS 中，故不会被检查，也不会被当作 misplaced 目标。
+# 不进源码 module 的 AOSP 根（animation/lib 非 SystemUI）：
+#   animation/lib/src —— 不在 SOURCE_MAPPINGS 中，故不会被检查，也不会被当作 misplaced 目标。
 
 APP_TOP_FILES = {
     # 17 起：完整 manifest（1338 行）所有权从 android_app 移到 android_library "SystemUI-application"
