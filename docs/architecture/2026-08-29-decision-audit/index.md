@@ -38,7 +38,7 @@
 | D11 | core namespace com.android.systemui → com.android.systemui.core | d11-core-namespace-rename.md | not-started | | task072 issue §3.1；commit d1352d5d |
 | D12 | 生成器碰撞裁决（UnsupportedAppUsage turbine vs javac 字节）——当前挂起 | d12-sysuisdk-bridge-collision.md | not-started | | task073 issue §4 剩余阻塞 1 |
 | P1 | task072/073 brief 把 CONV 权限泛授权给 worker | p01-conv-blanket-authorization.md | not-started | | 两 brief File Map/Forbidden Paths；ADR 0004 |
-| P2 | chief 评审接受 worker 自判项未先报用户 | p02-chief-review-escalation.md | not-started | | review log eb135b98；规则 H |
+| P2 | chief 评审接受 worker 自判项未先报用户 | p02-chief-review-escalation.md | done | 可接受但需补记录（自判项依据充分但缺用户知悉收尾；建议批量上报+AGENTS 判据制修订） | log L304；AGENTS §2.5/§3.2；build.kts:50/249-254 |
 | P3 | worker brief 外扩范围（ace 双 AAR、wmshell 2.0.1） | p03-worker-scope-drift.md | not-started | | commit e6c59677 / 38cd4c4b vs brief |
 | E1 | Task 050：79 处 manifest FQCN 手工改写先例 | e01-task050-fqcn-rewrites.md | done | 可接受但需补记录（授权链完整；缺 CONV 标记+merge commit 标题失真） | commits baf5c25d/2cb578be；brief 050 §A.5；orchestration log L236 |
 | E2 | Task 059：直接 AAR 例外清单原始授权范围 | e02-task059-direct-aar-exception.md | done | 符合（用户明示裁定+字节中性 A/B 证明；判据与清单双写造成扩清单模糊） | AGENTS.md §3.2；issue 2026-08-25；log L256/259 |
