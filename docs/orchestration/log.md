@@ -296,3 +296,10 @@
 - Notable worker engineering: `extract_aggregate_subset()` content-scans sharded framework-minus-apex javac (shard indices unstable by design; fails loudly on ambiguity) — 6 aconfig families no longer have standalone javac outputs in 17.
 - motion_tool_lib.jar and settingslib-selector-flags.jar retired upstream; C4 removes gradle dependency lines.
 - 6 commits pushed; worker tab closed.
+
+## 2026-08-28 — Task 072（C4a Gradle 接线）评审收口
+
+- worker：task072（joycode GLM-5.3，pane w2:p2J）；5 commits `452c9f6c..9afb6a0b`。
+- chief 独立复验全过：`./gradlew help` BUILD SUCCESSFUL（4s）；16 模块全部识别；`check_source_alignment.py --strict` exit 0（MODIFIED 1+86 均为既有白名单）；pytest 293 passed +111 subtests；catalog 23 本地 maven 族全 2.0.0、`libs/maven/` 仅存 2.0.0 目录；四个新产物（surfaceeffects×3 jar、uilatencystats-flags jar、dynamiccolors aar）删除重跑字节一致（REGEN DETERMINISTIC ✓）；禁改面（src/res/对齐工具/build_sysuisdk/CHARTER）零 diff；git status 干净。
+- worker 自主判断 4 项均 review 接受：core namespace→`com.android.systemui.core`（unique-namespace 硬约束 + merger 相对名展开，issue §3.1 有 merger 源码依据）；dynamiccolors 直接 AAR（Task 059 例外形状：单 consumer、记录在案）；plugin 补 `:SystemUI-compose`（17 bp 漂移）；core 16 遗留 manifest 未动（移交 task073）。
+- 结论：**review-PASS**，已 push。task073（编译闭环）待派。
