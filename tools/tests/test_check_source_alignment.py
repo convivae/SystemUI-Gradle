@@ -40,12 +40,17 @@ EXPECTED_OWNERS = {
     "SystemUI-shared",
     "SystemUI-shared-biometrics",
     "SystemUI-compose",
+    # 17 新增（Task 072/073）：application / clocks-common / floatingmenu-res / kairos
+    "SystemUI-application",
+    "SystemUI-clocks-common",
+    "SystemUI-utils-kairos",
 }
 
 FORBIDDEN_OWNERS = {
     "SystemUI-log",
     "SystemUI-animationlib",
-    "SystemUI-utils-kairos",
+    # SystemUI-utils-kairos 已从 FORBIDDEN 移除：16 时代误判 test-only，
+    # 17 bp SystemUI-core static_libs 已含 kairos（生产依赖，Task 073 tier① 源码模块）
     "SystemUI-compose-core",
     "SystemUI-compose-scene",
     "SystemUI-shared-keyguard",
