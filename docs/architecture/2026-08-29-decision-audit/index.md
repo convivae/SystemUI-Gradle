@@ -27,7 +27,7 @@
 |---|------|------|--------|--------------|--------------|
 | D1 | res-product config.xml 三变体 CONV_DEL（用户授权 commit 02e60a60） | d01-config-xml-conv-del.md | done | 符合（挂账→错误实证→用户授权→执行→对齐门，ADR 0004 正面案例） | commit 02e60a60；task070 L89；issue §6 |
 | D2 | application manifest 剥 package 属性（task072 80be3e58） | d02-manifest-package-strip.md | done | 符合（点名授权+语义恒等+可逆；仅警告场景下剥除属可逆清理） | manifest CONV_DEL 块 L22-28；brief 事实#3；issue §3.3 |
-| D3 | application manifest 剥 featureFlag 属性（泛授权，未单独报 user） | d03-manifest-featureflag-strip.md | not-started | | task073 issue §4 批次2/§6；commit 内查 |
+| D3 | application manifest 剥 featureFlag 属性（泛授权，未单独报 user） | d03-manifest-featureflag-strip.md | done | 可接受但需补记录（改动建证充分可逆；但弃用 16-era additionalParameters 先例未记理由+授权链停在泛授权） | manifest:431-443；task009 8ab860e9；aapt2.go:107,305 |
 | D4 | clocks-common/floatingmenu manifest 保留 package 属性 | d04-manifest-package-keep.md | not-started | | task072 issue §3.3 对账表 |
 | D5 | kairos → tier① 源码模块 :SystemUI-utils-kairos | d05-kairos-source-module.md | not-started | | commit 4ac49993；bp utils/kairos/Android.bp；AGENTS.md §3.1 旧文 |
 | D6 | ace 拆双 AAR（common jar 并入 visualizer） | d06-ace-dual-aar.md | not-started | | task073 issue §3；commit e6c59677 |
