@@ -147,8 +147,10 @@ dependencies {
     // tools/package_viewcapture_motiontool_jars.py 合并 3 个 owning Soong
     // implementation 输出 javac 9 + kotlin 23 + view_capture_proto 24 = 56 类，
     // 仅 com/android/app/viewcapture/**，去除旧 FAT jar 的 androidx/kotlin/kotlinx/
-    // protobuf-lite 污染。AOSP static_libs runtime/program 输入，dex 进 APK，故 implementation；
-    // 顺序约束：必须先于 motion_tool_lib 就位（其闭包依赖 viewcapture + protobuf）
+    // protobuf-lite 污染。AOSP static_libs runtime/program 输入，dex 进 APK，故 implementation。
+    // 顺序约束：须先于 protobuf-javalite 就位（其闭包依赖 viewcapture）
+    // 17 注（Task 072）：AOSP-17 bp 已无 motiontoollib 依赖（C2 退役），
+    // motion_tool_lib.jar 不再产出，仅 viewcapture 闭包保留
     implementation(files("${rootProject.projectDir}/libs/view_capture.jar"))
     // protobuf-javalite（com.google.protobuf.GeneratedMessageLite 等 lite runtime，
     // tier③ 官方 Maven 坐标；AOSP libprotobuf-java-lite 的公网等价物，task 035 R8 Batch 3）
@@ -190,12 +192,6 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/settingslib-flags.jar"))
     // com.android.settingslib.media.flags.Flags (aconfig, removeUnnecessaryRouteScanning 等)
     implementation(files("${rootProject.projectDir}/libs/settingslib-media-flags.jar"))
-    // motion_tool_lib (com.android.app.motiontool.*，来自 AOSP frameworks/libs/systemui/motiontoollib)
-    // 干净 jar：tools/package_viewcapture_motiontool_jars.py 合并 2 个 owning Soong
-    // implementation 输出 kotlin 8 + motion_tool_proto 57 = 65 类，仅 com/android/app/motiontool/**。
-    // AOSP static_libs runtime/program 输入，dex 进 APK，故 implementation；
-    // 顺序约束：必须在 view_capture + protobuf-javalite 之后（其 static 闭包依赖二者）
-    implementation(files("${rootProject.projectDir}/libs/motion_tool_lib.jar"))
     // contextualeducationlib (com.android.systemui.contextualeducation.GestureType 等，
     // 来自 frameworks/libs/systemui/contextualeducationlib，tier② jar)
     implementation(files("${rootProject.projectDir}/libs/contextualeducationlib.jar"))
@@ -219,9 +215,23 @@ dependencies {
     // SettingsLib IllustrationPreference aconfig flags（com.android.settingslib.widget.flags.Flags；
     // SettingsLib 子模块 static_libs runtime/program 输入，故 implementation）
     implementation(files("${rootProject.projectDir}/libs/settingslib-widget-flags.jar"))
-    // SettingsLib SelectorWithWidgetPreference aconfig flags
-    // （com.android.settingslib.widget.selectorwithwidgetpreference.flags.Flags；同上）
-    implementation(files("${rootProject.projectDir}/libs/settingslib-selector-flags.jar"))
+    // SettingsLib SelectorWithWidgetPreference aconfig flags：17 上游已删除该 flags lib
+    //（其 Android.bp 无 flags static_lib、SystemUI-17 零 import；Task 071 退役产物），
+    // 依赖行随 C4 一并移除（Task 072）
+
+    // surfaceeffects 三库（Task 072，C4 接线；17 SystemUI-core bp static_libs
+    // SurfaceEffectsComposeLib；SystemUI-17 源码 import 全部三个 namespace
+    // com.android.systemui.surfaceeffects.{core,compose,view}.* —— AuthRippleView /
+    // AuthRippleScrim / WiredChargingRippleController / KeyboardDockingIndication 等）。
+    // frameworks/libs/systemui/surfaceeffects（规则 F tier② jar：bp 无 resource_dirs、
+    // 源树无 res）；tools/package_misc_jars.py 冻结指纹产出，dex 进 APK，故 implementation
+    implementation(files("${rootProject.projectDir}/libs/SurfaceEffectsCoreLib.jar"))
+    implementation(files("${rootProject.projectDir}/libs/SurfaceEffectsComposeLib.jar"))
+    implementation(files("${rootProject.projectDir}/libs/SurfaceEffectsViewLib.jar"))
+    // uilatencystats flags（Task 072；17 SystemUI-core bp static_libs
+    // uilatencystats_flags_core_java_lib；运行时包 com.android.server.ui_latency_stats；
+    // tools/package_aconfig_jars.py 产出）
+    implementation(files("${rootProject.projectDir}/libs/uilatencystats-flags.jar"))
 
     // 直接 AAR（Soong javac + 原始 res + R.txt，无 R.class）
     implementation(libs.systemui.settingslib)

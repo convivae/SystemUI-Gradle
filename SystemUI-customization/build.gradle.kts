@@ -56,6 +56,8 @@ dependencies {
     api(project(":SystemUI-plugin-core"))
     api(project(":SystemUI-plugin"))
     api(project(":SystemUI-unfold"))
+    // 17 bp 新增（Task 072）：SystemUIClocks-CommonLib（customization/Android.bp L36）
+    implementation(project(":SystemUI-clocks-common"))
 
     // tier② AOSP 特有产物 jar
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))

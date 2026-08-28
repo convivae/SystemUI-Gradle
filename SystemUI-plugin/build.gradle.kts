@@ -59,6 +59,11 @@ dependencies {
     api(project(":SystemUI-plugin-core"))
     api(project(":SystemUI-animation"))
     api(project(":SystemUI-common"))
+    // 17 bp 漂移修正（Task 072）：SystemUIPluginLib bp static_libs 含
+    // PlatformComposeSceneTransitionLayout；17 plugin 新增
+    // keyguard/ui/composable/elements/*（import com.android.compose.animation.scene.*），
+    // 16 遗留缺失，补 :SystemUI-compose（clocks-common 的 scene import 亦经此链传递）
+    api(project(":SystemUI-compose"))
 
     // AndroidX
     implementation(libs.androidx.annotation)

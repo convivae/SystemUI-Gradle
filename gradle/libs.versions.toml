@@ -147,36 +147,42 @@ lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "androidxLifecycle" }
+# jsr330（javax.inject；AOSP SystemUIClocks-CommonLib bp static_libs jsr330 的公网等价物，
+# tier③ 官方坐标，官方线止于 1.0；Task 072）
+jsr330 = { module = "javax.inject:javax.inject", version = "1" }
 
 # Local Maven AARs (libs/maven/)：由 tools/package_aosp_aar.py 生成到 libs/aars/，
 # 再由 tools/install_aar_to_maven.py 安装到 libs/maven/ 并生成 POM 骨架
 # Task 059（用户 2026-08-25 批准）：WifiTrackerLib / iconloader / setupcompat / LowLightDreamLib
 # 四个单 artifact、单 consumer 族已从本地 Maven 退役，改为直接消费 libs/aars/*.aar（见 AGENTS.md §3.2 例外）。
-systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "1.0.1" }
-systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "1.0.1" }
-systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "1.0.0" }
-systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "1.0.0" }
-systemui-settingslib-color = { group = "com.android.settingslib", name = "color", version = "1.0.0" }
-systemui-settingslib-theme = { group = "com.android.systemui", name = "SettingsLibSettingsTheme", version = "1.0.1" }
+# Task 071（C2，2026-08-27）：全部 23 族由脚本从 AOSP-17 再生，坐标统一升 2.0.0
+# （1.x 已退役，libs/maven/ 内仅存 2.0.0 版本目录；SettingsLib POM 的 17 条传递边同名同版）。
+# Task 072（C4，2026-08-28）：catalog 坐标随产物同步升 2.0.0。
+systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "2.0.0" }
+systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "2.0.0" }
+systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "2.0.0" }
+systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "2.0.0" }
+systemui-settingslib-color = { group = "com.android.settingslib", name = "color", version = "2.0.0" }
+systemui-settingslib-theme = { group = "com.android.systemui", name = "SettingsLibSettingsTheme", version = "2.0.0" }
 # Task 015（B2 可达性最小集，ADR 0005）：SettingsLib per-target res-only AAR，
 # 经 SettingsLib POM 传递依赖获得，未被 build 文件直接引用（仅作注册表登记）
-systemui-settingslib-selector-with-widget-preference = { group = "com.android.systemui", name = "SettingsLibSelectorWithWidgetPreference", version = "1.0.0" }
-systemui-settingslib-restricted-lock-utils = { group = "com.android.systemui", name = "SettingsLibRestrictedLockUtils", version = "1.0.0" }
-systemui-settingslib-action-buttons-preference = { group = "com.android.systemui", name = "SettingsLibActionButtonsPreference", version = "1.0.0" }
-systemui-settingslib-progress-bar = { group = "com.android.systemui", name = "SettingsLibProgressBar", version = "1.0.0" }
-systemui-settingslib-two-target-preference = { group = "com.android.systemui", name = "SettingsLibTwoTargetPreference", version = "1.0.0" }
-systemui-settingslib-layout-preference = { group = "com.android.systemui", name = "SettingsLibLayoutPreference", version = "1.0.0" }
-systemui-settingslib-adaptive-icon = { group = "com.android.systemui", name = "SettingsLibAdaptiveIcon", version = "1.0.0" }
+systemui-settingslib-selector-with-widget-preference = { group = "com.android.systemui", name = "SettingsLibSelectorWithWidgetPreference", version = "2.0.0" }
+systemui-settingslib-restricted-lock-utils = { group = "com.android.systemui", name = "SettingsLibRestrictedLockUtils", version = "2.0.0" }
+systemui-settingslib-action-buttons-preference = { group = "com.android.systemui", name = "SettingsLibActionButtonsPreference", version = "2.0.0" }
+systemui-settingslib-progress-bar = { group = "com.android.systemui", name = "SettingsLibProgressBar", version = "2.0.0" }
+systemui-settingslib-two-target-preference = { group = "com.android.systemui", name = "SettingsLibTwoTargetPreference", version = "2.0.0" }
+systemui-settingslib-layout-preference = { group = "com.android.systemui", name = "SettingsLibLayoutPreference", version = "2.0.0" }
+systemui-settingslib-adaptive-icon = { group = "com.android.systemui", name = "SettingsLibAdaptiveIcon", version = "2.0.0" }
 # Task 040（R8 Batch 4D）：10 个新增 SettingsLib per-target res-only AAR，
 # 经 SettingsLib POM 传递依赖获得，未被 build 文件直接引用（仅作注册表登记）
-systemui-settingslib-main-switch-preference = { group = "com.android.systemui", name = "SettingsLibMainSwitchPreference", version = "1.0.0" }
-systemui-settingslib-app-preference = { group = "com.android.systemui", name = "SettingsLibAppPreference", version = "1.0.0" }
-systemui-settingslib-banner-message-preference = { group = "com.android.systemui", name = "SettingsLibBannerMessagePreference", version = "1.0.0" }
-systemui-settingslib-bar-chart-preference = { group = "com.android.systemui", name = "SettingsLibBarChartPreference", version = "1.0.0" }
-systemui-settingslib-button-preference = { group = "com.android.systemui", name = "SettingsLibButtonPreference", version = "1.0.0" }
-systemui-settingslib-footer-preference = { group = "com.android.systemui", name = "SettingsLibFooterPreference", version = "1.0.0" }
-systemui-settingslib-illustration-preference = { group = "com.android.systemui", name = "SettingsLibIllustrationPreference", version = "1.0.0" }
-systemui-settingslib-slider-preference = { group = "com.android.systemui", name = "SettingsLibSliderPreference", version = "1.0.0" }
-systemui-settingslib-usage-progress-bar-preference = { group = "com.android.systemui", name = "SettingsLibUsageProgressBarPreference", version = "1.0.0" }
-systemui-settingslib-settings-spinner = { group = "com.android.systemui", name = "SettingsLibSettingsSpinner", version = "1.0.0" }
+systemui-settingslib-main-switch-preference = { group = "com.android.systemui", name = "SettingsLibMainSwitchPreference", version = "2.0.0" }
+systemui-settingslib-app-preference = { group = "com.android.systemui", name = "SettingsLibAppPreference", version = "2.0.0" }
+systemui-settingslib-banner-message-preference = { group = "com.android.systemui", name = "SettingsLibBannerMessagePreference", version = "2.0.0" }
+systemui-settingslib-bar-chart-preference = { group = "com.android.systemui", name = "SettingsLibBarChartPreference", version = "2.0.0" }
+systemui-settingslib-button-preference = { group = "com.android.systemui", name = "SettingsLibButtonPreference", version = "2.0.0" }
+systemui-settingslib-footer-preference = { group = "com.android.systemui", name = "SettingsLibFooterPreference", version = "2.0.0" }
+systemui-settingslib-illustration-preference = { group = "com.android.systemui", name = "SettingsLibIllustrationPreference", version = "2.0.0" }
+systemui-settingslib-slider-preference = { group = "com.android.systemui", name = "SettingsLibSliderPreference", version = "2.0.0" }
+systemui-settingslib-usage-progress-bar-preference = { group = "com.android.systemui", name = "SettingsLibUsageProgressBarPreference", version = "2.0.0" }
+systemui-settingslib-settings-spinner = { group = "com.android.systemui", name = "SettingsLibSettingsSpinner", version = "2.0.0" }
 
