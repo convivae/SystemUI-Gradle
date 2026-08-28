@@ -33,7 +33,7 @@
 | D6 | ace 拆双 AAR（common jar 并入 visualizer） | d06-ace-dual-aar.md | done | 符合（单 AAR 单 namespace + 简洁 settle 判据全部具 bp/字节证据；KSP/EmbeddedScrollEvent 未验证记开放） | e6c59677；SPEC L386-423；AAR manifest/res 实测 |
 | D7 | wmshell-shared AAR 并入 AIDL 闭包 19 类，2.0.0→2.0.1 | d07-wmshell-shared-aidls.md | done | 符合（bp static_libs 闭包语义原位保持；§3.2.4 升版义务履行；TraceurCommon 先例） | bp L33-51；AAR 双副本字节同一；SPEC L141-160 |
 | D8 | aapt2 编译期转发 --feature-flags + systemui-aconfig-flags.txt | d08-aapt2-feature-flags.md | not-started | | task073 issue §4 批次2；commit 6e66a0ea |
-| D9 | dynamiccolors 走 Task 059 直接 AAR 例外（清单 +1） | d09-dynamiccolors-direct-aar.md | not-started | | task072 issue §2/§3.4；commit 452c9f6c |
+| D9 | dynamiccolors 走 Task 059 直接 AAR 例外（清单 +1） | d09-dynamiccolors-direct-aar.md | done | 符合（E2 判据满足；例外清单未扩字面） | 452c9f6c；SPEC:373-385；build:50 |
 | D10 | mechanics×2 jar + SerialPortAccessDialog AAR | d10-mechanics-serial-artifacts.md | not-started | | task073 issue §3 |
 | D11 | core namespace com.android.systemui → com.android.systemui.core | d11-core-namespace-rename.md | not-started | | task072 issue §3.1；commit d1352d5d |
 | D12 | 生成器碰撞裁决（UnsupportedAppUsage turbine vs javac 字节）——当前挂起 | d12-sysuisdk-bridge-collision.md | not-started | | task073 issue §4 剩余阻塞 1 |
