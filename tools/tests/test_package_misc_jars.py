@@ -78,13 +78,24 @@ EXPECTED_ENTRIES = {
         "SurfaceEffectsViewLib",
         "libs/SurfaceEffectsViewLib.jar",
     ),
+    # Task 073 (C4b compile closure): mechanics Kotlin implementation jars
+    # (17 SystemUI-core bp static_libs mechanics-compose; sources import
+    # com.android.mechanics.{behavior,compose.modifier}.*).
+    "mechanics": (
+        "mechanics",
+        "libs/mechanics.jar",
+    ),
+    "mechanics-compose": (
+        "mechanics-compose",
+        "libs/mechanics-compose.jar",
+    ),
 }
 
 
 class TestFrozenMapping(unittest.TestCase):
     def test_mapping_covers_exactly_the_frozen_artifacts(self):
         self.assertEqual(set(module.CONFIGS), set(EXPECTED_ENTRIES))
-        self.assertEqual(len(module.CONFIGS), 15)
+        self.assertEqual(len(module.CONFIGS), 17)
 
     def test_entries_carry_module_and_destination(self):
         for name, (soong_module, destination) in EXPECTED_ENTRIES.items():
@@ -118,6 +129,22 @@ class TestFrozenMapping(unittest.TestCase):
             with self.subTest(entry=name):
                 parts = entry["relpath"].split("/")
                 self.assertIn("surfaceeffects", parts)
+                self.assertIn("kotlin", parts)
+                self.assertNotIn("kotlin_headers", parts)
+                self.assertIn("android_common", parts)
+                self.assertEqual(
+                    entry["source_sha256"], entry["baseline_sha256"]
+                )
+
+    def test_mechanics_jars_are_kotlin_implementation_outputs(self):
+        # Task 073: the two mechanics entries must point at the
+        # android_common/kotlin/ implementation jars, frozen with
+        # source == baseline (no hand copies).
+        for name in ("mechanics", "mechanics-compose"):
+            entry = module.CONFIGS[name]
+            with self.subTest(entry=name):
+                parts = entry["relpath"].split("/")
+                self.assertIn("mechanics", parts)
                 self.assertIn("kotlin", parts)
                 self.assertNotIn("kotlin_headers", parts)
                 self.assertIn("android_common", parts)

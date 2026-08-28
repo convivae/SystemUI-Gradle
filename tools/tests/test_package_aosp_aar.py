@@ -277,6 +277,62 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertEqual(cfg["output"], "libs/aars/dynamiccolors.aar")
         self.assertFalse(cfg.get("reject_sysui", False))
 
+    def test_ace_visualizer_config_paths(self):
+        """Task 073（C4b）：personalcontext_ace_visualizer（含 ace_common 类合并）。"""
+        cfg = paar.CONFIGS["personalcontext_ace_visualizer"]
+        self.assertEqual(len(cfg["code"]), 2,
+                         "visualizer AAR 应合并 visualizer + ace_common 两个 Kotlin jar")
+        self.assertIn("personalcontext_ace_visualizer/android_common/kotlin/",
+                      str(cfg["code"][0]))
+        self.assertIn("personalcontext_ace_common/android_common/kotlin/",
+                      str(cfg["code"][1]))
+        self.assertEqual(
+            cfg["res"],
+            [paar.AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/"
+             "personalcontext/ace/visualizer/res"],
+        )
+        self.assertTrue(str(cfg["manifest"]).endswith(
+            "personalcontext/ace/visualizer/AndroidManifest.xml"))
+        self.assertIn("personalcontext_ace_visualizer/android_common/R.txt",
+                      str(cfg["rtxt"]))
+        self.assertEqual(cfg["output"], "libs/aars/personalcontext_ace_visualizer.aar")
+        self.assertFalse(cfg.get("reject_sysui", False))
+
+    def test_ace_client_config_paths(self):
+        """Task 073（C4b）：personalcontext_ace_client（独立 R namespace）。"""
+        cfg = paar.CONFIGS["personalcontext_ace_client"]
+        self.assertEqual(len(cfg["code"]), 1)
+        self.assertIn("personalcontext_ace_client/android_common/kotlin/",
+                      str(cfg["code"][0]))
+        self.assertEqual(
+            cfg["res"],
+            [paar.AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/"
+             "personalcontext/ace/client/clientsdk/compat/res"],
+        )
+        self.assertTrue(str(cfg["manifest"]).endswith(
+            "personalcontext/ace/client/AndroidManifest.xml"))
+        self.assertIn("personalcontext_ace_client/android_common/R.txt",
+                      str(cfg["rtxt"]))
+        self.assertEqual(cfg["output"], "libs/aars/personalcontext_ace_client.aar")
+        self.assertFalse(cfg.get("reject_sysui", False))
+
+    def test_serial_port_access_dialog_config_paths(self):
+        """Task 073（C4b）：SerialPortAccessDialog（frameworks/base/libs/serial）。"""
+        cfg = paar.CONFIGS["SerialPortAccessDialog"]
+        self.assertEqual(len(cfg["code"]), 1)
+        self.assertIn("serial/accessdialog/SerialPortAccessDialog/android_common/kotlin/",
+                      str(cfg["code"][0]))
+        self.assertEqual(
+            cfg["res"],
+            [paar.AOSP_ROOT / "frameworks/base/libs/serial/accessdialog/res"],
+        )
+        self.assertTrue(str(cfg["manifest"]).endswith(
+            "serial/accessdialog/AndroidManifest.xml"))
+        self.assertIn("serial/accessdialog/SerialPortAccessDialog/android_common/R.txt",
+                      str(cfg["rtxt"]))
+        self.assertEqual(cfg["output"], "libs/aars/SerialPortAccessDialog.aar")
+        self.assertFalse(cfg.get("reject_sysui", False))
+
     def test_setupcompat_config_paths(self):
         cfg = paar.CONFIGS["setupcompat"]
         code = str(cfg["code"])
@@ -1208,9 +1264,10 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 30 个 artifact（Task 015 新增 7 个 SettingsLib per-target
+        # 确认 CONFIGS 含 33 个 artifact（Task 015 新增 7 个 SettingsLib per-target
         # res-only target；Task 038 新增 Traceur 双 AAR；Task 040 新增 10 个
-        # SettingsLib per-target res-only target；Task 072 新增 dynamiccolors）
+        # SettingsLib per-target res-only target；Task 072 新增 dynamiccolors；
+        # Task 073 新增 ace 双 AAR + SerialPortAccessDialog）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
@@ -1234,8 +1291,10 @@ class TestAllFlag(unittest.TestCase):
              "SettingsLibSliderPreference",
              "SettingsLibUsageProgressBarPreference",
              "SettingsLibSettingsSpinner",
-             "TraceurCommon", "Traceur-res", "dynamiccolors"})
-        self.assertEqual(len(paar.CONFIGS), 30)
+             "TraceurCommon", "Traceur-res", "dynamiccolors",
+             "personalcontext_ace_visualizer", "personalcontext_ace_client",
+             "SerialPortAccessDialog"})
+        self.assertEqual(len(paar.CONFIGS), 33)
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

@@ -376,6 +376,63 @@ def _build_configs() -> dict:
         "rtxt": SOONG_DIR / "frameworks/libs/systemui/dynamiccolors/dynamiccolors/android_common/R.txt",
         "output": "libs/aars/dynamiccolors.aar",
     },
+    # ↓↓↓ Task 073（C4b 编译闭环）：personalcontext_ace_visualizer（17 SystemUI-core bp
+    # static_libs；SystemUI-17 源码 import com.android.personalcontext.ace.visualizer.{compat,connector}.*
+    # 与 common.wrappers.wrap）。规则 F tier② AAR（frameworks/libs/systemui/ace，非 SystemUI 自有代码）。
+    # code = visualizer Kotlin jar + personalcontext_ace_common Kotlin jar 合并
+    #（bp static_libs 闭包，TraceurCommon 先例；两 jar 互不相交已验证，common 无 res/
+    # 无 R 引用，其 EmbeddedScrollEvent 同名覆盖 ace_common_embeddedscroll）。
+    # KSP 输出（ksp-classes.jar）为空，Kotlin jar 即完整类集。单 consumer（:SystemUI-core）
+    # → 直接 AAR（Task 059 例外），不入本地 maven、不进 catalog。
+    "personalcontext_ace_visualizer": {
+        "code": [
+            SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/visualizer/"
+            "personalcontext_ace_visualizer/android_common/kotlin/personalcontext_ace_visualizer.jar",
+            SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/common/"
+            "personalcontext_ace_common/android_common/kotlin/personalcontext_ace_common.jar",
+        ],
+        "res": [AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/visualizer/res"],
+        "manifest": AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/visualizer/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/visualizer/"
+        "personalcontext_ace_visualizer/android_common/R.txt",
+        "output": "libs/aars/personalcontext_ace_visualizer.aar",
+    },
+    # ↓↓↓ Task 073：personalcontext_ace_client（visualizer bp static_libs 闭包成员，
+    # 自有 R namespace com.android.personalcontext.ace.client——clientsdk/compat/res 的
+    # declare-styleable/id，AceEmbeddedSurfaceViewCompat 引用 client R），与 visualizer
+    # 拆两个 AAR 交付（单一 AAR 无法承载两个 R namespace；ADR 0001 同族多 namespace 先例）。
+    # 262 类（含 ClientActionInsight，visualizer 公有签名引用）。单 consumer（:SystemUI-core）
+    # → 直接 AAR。
+    "personalcontext_ace_client": {
+        "code": [
+            SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/client/"
+            "personalcontext_ace_client/android_common/kotlin/personalcontext_ace_client.jar",
+        ],
+        "res": [AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/client/clientsdk/compat/res"],
+        "manifest": AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/client/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/client/"
+        "personalcontext_ace_client/android_common/R.txt",
+        "output": "libs/aars/personalcontext_ace_client.aar",
+    },
+    # ↓↓↓ Task 073：SerialPortAccessDialog（17 SystemUI-core bp static_libs；
+    # frameworks/base/libs/serial/accessdialog，规则 F tier② AAR 含 res）。
+    # 4 kt（AccessDialogHelper/Activity、SerialAccessManager/Impl）+ 全 locale strings res，
+    # 自有 R namespace com.android.serial.accessdialog；manifest 携带 activity 声明 +
+    # MANAGE_SERIAL_PORTS 权限（必须 AAR 交付以并入 app manifest）。注意 manifest 的
+    # android:theme="@style/Theme.SystemUI.Dialog.Alert" 引用 SystemUI-res 资源
+    #（bp static_libs: SystemUI-res），Gradle 侧由 app 合并资源解析。单 consumer（:SystemUI-core）
+    # → 直接 AAR。
+    "SerialPortAccessDialog": {
+        "code": [
+            SOONG_DIR / "frameworks/base/libs/serial/accessdialog/SerialPortAccessDialog/"
+            "android_common/kotlin/SerialPortAccessDialog.jar",
+        ],
+        "res": [AOSP_ROOT / "frameworks/base/libs/serial/accessdialog/res"],
+        "manifest": AOSP_ROOT / "frameworks/base/libs/serial/accessdialog/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/base/libs/serial/accessdialog/SerialPortAccessDialog/"
+        "android_common/R.txt",
+        "output": "libs/aars/SerialPortAccessDialog.aar",
+    },
     }
 
 

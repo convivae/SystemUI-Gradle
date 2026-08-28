@@ -33,7 +33,28 @@ Release/R8 归 task074；runtime 归 C5。
 
 ## 3. P1 记录：新 tier② 产物
 
-（待补）
+| 产物 | 形态 | bp 依据 | Gradle 接线 |
+|---|---|---|---|
+| `libs/mechanics.jar`（190 类） | jar | `frameworks/libs/systemui/mechanics`（android_library，无 resource_dirs） | core `implementation(files(...))` |
+| `libs/mechanics-compose.jar`（23 类） | jar | `.../mechanics/compose`；17 core bp static_libs L559 | 同上 |
+| `libs/aars/personalcontext_ace_visualizer.aar` | AAR | `frameworks/libs/systemui/ace/src/.../visualizer`（含 res，7 drawable） | core 直接 AAR（Task 059 例外） |
+| `libs/aars/personalcontext_ace_client.aar` | AAR | 同目录 client（含 clientsdk/compat/res： declare-styleable/id） | 同上 |
+| `libs/aars/SerialPortAccessDialog.aar` | AAR | `frameworks/base/libs/serial/accessdialog`（含 res 全 locale strings） | 同上 |
+
+要点：
+- **ace 拆双 AAR**：visualizer（viz Kotlin jar + ace_common Kotlin jar 合并，bp static_libs 闭包，
+  TraceurCommon 先例；common 无 res 无 R 引用，且 common 的 `**/*.kt` 已含 embeddedscroll 同名类）
+  与 client（自有 R namespace `com.android.personalcontext.ace.client`，`AceEmbeddedSurfaceViewCompat`
+  引用 client R；visualizer 公有签名引用 client 的 `ClientActionInsight`）必须拆两个 AAR——
+  单 AAR 只能承载一个 manifest package/R namespace。三 Kotlin jar 互不相交已验证（comm 为空）；
+  visualizer KSP 输出（ksp-classes.jar）为空 → Kotlin jar 即完整类集。
+- **SerialPortAccessDialog**：manifest 携带 AccessDialogActivity 声明 + MANAGE_SERIAL_PORTS 权限
+  （必须 AAR 交付并入 app manifest）；`android:theme="@style/Theme.SystemUI.Dialog.Alert"` 引用
+  SystemUI-res 资源（bp static_libs SystemUI-res），Gradle 侧由 app 合并资源解析。
+- 冻结指纹：mechanics×2 源=基线（首生即冻结，同 surfaceeffects）；AAR 三件由
+  `tools/package_aosp_aar.py` 固定 ZIP metadata 重建，字节确定性已由既有 pytest 覆盖模式保证。
+- pytest：`test_package_aosp_aar.py`（CONFIGS 33）+ `test_package_misc_jars.py`（17 条目）
+  新增路径断言全绿。
 
 ## 4. 编译循环：错误数演变
 

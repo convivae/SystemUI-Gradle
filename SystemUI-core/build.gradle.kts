@@ -234,6 +234,24 @@ dependencies {
     // uilatencystats_flags_core_java_lib；运行时包 com.android.server.ui_latency_stats；
     // tools/package_aconfig_jars.py 产出）
     implementation(files("${rootProject.projectDir}/libs/uilatencystats-flags.jar"))
+    // mechanics 双库（Task 073，C4b；17 SystemUI-core bp static_libs L559
+    // "//frameworks/libs/systemui/mechanics/compose:mechanics-compose"；源码 import
+    // com.android.mechanics.{behavior,compose.modifier}.*）。规则 F tier② jar
+    //（bp 无 resource_dirs）；tools/package_misc_jars.py 冻结指纹产出，dex 进 APK
+    implementation(files("${rootProject.projectDir}/libs/mechanics.jar"))
+    implementation(files("${rootProject.projectDir}/libs/mechanics-compose.jar"))
+    // personalcontext_ace_visualizer + _client（Task 073，C4b；17 SystemUI-core bp
+    // static_libs；源码 import visualizer.{compat,connector}.* / common.wrappers.wrap）。
+    // 规则 F tier② AAR（frameworks/libs/systemui/ace，含 res）；两个 R namespace 拆双 AAR；
+    // visualizer AAR 合并 ace_common 类闭包（bp static_libs，TraceurCommon 先例）；
+    // 单 consumer 族 → 直接 AAR（Task 059 例外）；tools/package_aosp_aar.py 产出
+    implementation(files("${rootProject.projectDir}/libs/aars/personalcontext_ace_visualizer.aar"))
+    implementation(files("${rootProject.projectDir}/libs/aars/personalcontext_ace_client.aar"))
+    // SerialPortAccessDialog（Task 073，C4b；17 SystemUI-core bp static_libs；
+    // frameworks/base/libs/serial/accessdialog，tier② AAR 含 res；manifest 携带
+    // AccessDialogActivity 声明 + MANAGE_SERIAL_PORTS 权限，必须 AAR 交付；
+    // android:theme=@style/Theme.SystemUI.Dialog.Alert 由 app 合并资源解析（bp static_libs SystemUI-res）
+    implementation(files("${rootProject.projectDir}/libs/aars/SerialPortAccessDialog.aar"))
 
     // 直接 AAR（Soong javac + 原始 res + R.txt，无 R.class）
     implementation(libs.systemui.settingslib)

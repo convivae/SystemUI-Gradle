@@ -253,6 +253,35 @@ CONFIGS: dict[str, dict] = {
         "baseline_sha256":
             "dff01e0b86351ed5a88e85e56eb136c92da2b71c16a5ea4dcd7e0dd13a02e987",
     },
+    # ↓↓↓ Task 073 (C4b compile closure): mechanics 双库 Kotlin 实现产物。
+    # frameworks/libs/systemui/mechanics{,/compose}（规则 F tier② jar：android_library
+    # 但 bp 无 resource_dirs、源树无 res）。17 SystemUI-core bp static_libs 含
+    # "//frameworks/libs/systemui/mechanics/compose:mechanics-compose"（L559，依赖
+    # mechanics）；SystemUI-17 源码 import com.android.mechanics.{behavior,compose.modifier}.*
+    #（VerticalExpandContainerSpec / verticalTactileSurfaceReveal 等）。两 jar 各只含
+    # 自有 namespace 类（com.android.mechanics.* vs com.android.mechanics.compose.*，
+    # 互不相交已验证）；取 Kotlin 实现产物（非 kotlin_headers）。
+    "mechanics": {
+        "module": "mechanics",
+        "relpath": "frameworks/libs/systemui/mechanics/mechanics/"
+                   "android_common/kotlin/mechanics.jar",
+        "destination": "libs/mechanics.jar",
+        "source_sha256":
+            "5f75913442c7d571187823c42abef0250cf561f3ba0c96da7a07c47ad95bb210",
+        "baseline_sha256":
+            "5f75913442c7d571187823c42abef0250cf561f3ba0c96da7a07c47ad95bb210",
+    },
+    "mechanics-compose": {
+        "module": "mechanics-compose",
+        "relpath": "frameworks/libs/systemui/mechanics/compose/"
+                   "mechanics-compose/android_common/kotlin/"
+                   "mechanics-compose.jar",
+        "destination": "libs/mechanics-compose.jar",
+        "source_sha256":
+            "48d465c729d8eb7ee6e3093f732047cc3fe970b828e1f89667b44312ada97f16",
+        "baseline_sha256":
+            "48d465c729d8eb7ee6e3093f732047cc3fe970b828e1f89667b44312ada97f16",
+    },
 }
 
 
