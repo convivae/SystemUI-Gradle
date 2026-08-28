@@ -25,7 +25,7 @@
 
 | # | 决策 | 文档 | status | 一句话预结论 | 关键证据指针 |
 |---|------|------|--------|--------------|--------------|
-| D1 | res-product config.xml 三变体 CONV_DEL（用户授权 commit 02e60a60） | d01-config-xml-conv-del.md | not-started | | commit 02e60a60；task073 issue §6 |
+| D1 | res-product config.xml 三变体 CONV_DEL（用户授权 commit 02e60a60） | d01-config-xml-conv-del.md | done | 符合（挂账→错误实证→用户授权→执行→对齐门，ADR 0004 正面案例） | commit 02e60a60；task070 L89；issue §6 |
 | D2 | application manifest 剥 package 属性（task072 80be3e58） | d02-manifest-package-strip.md | not-started | | commit 80be3e58；task072 brief §3；task072 issue §3.3 |
 | D3 | application manifest 剥 featureFlag 属性（泛授权，未单独报 user） | d03-manifest-featureflag-strip.md | not-started | | task073 issue §4 批次2/§6；commit 内查 |
 | D4 | clocks-common/floatingmenu manifest 保留 package 属性 | d04-manifest-package-keep.md | not-started | | task072 issue §3.3 对账表 |
