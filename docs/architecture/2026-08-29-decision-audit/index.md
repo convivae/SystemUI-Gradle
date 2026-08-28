@@ -30,7 +30,7 @@
 | D3 | application manifest 剥 featureFlag 属性（泛授权，未单独报 user） | d03-manifest-featureflag-strip.md | done | 可接受但需补记录（改动建证充分可逆；但弃用 16-era additionalParameters 先例未记理由+授权链停在泛授权） | manifest:431-443；task009 8ab860e9；aapt2.go:107,305 |
 | D4 | clocks-common/floatingmenu manifest 保留 package 属性 | d04-manifest-package-keep.md | done | 符合（不扩授权、零字节差；仅警告代价；与 D2/D3 口径差异待全局裁定） | git log=bdf2dba5 only；两 build.kts 注释 |
 | D5 | kairos → tier① 源码模块 :SystemUI-utils-kairos | d05-kairos-source-module.md | done | 符合（17 bp:569 实证生产依赖；且 git 复核证16 vintage bp 已依赖—16-era 判 test-only 为事实性误判但当时无损；AGENTS §3.1 注释滞后） | 17 bp L476/569；16 bp b110a8e0:540；dec85d64 对比；4ac49993 |
-| D6 | ace 拆双 AAR（common jar 并入 visualizer） | d06-ace-dual-aar.md | not-started | | task073 issue §3；commit e6c59677 |
+| D6 | ace 拆双 AAR（common jar 并入 visualizer） | d06-ace-dual-aar.md | done | 符合（单 AAR 单 namespace + 简洁 settle 判据全部具 bp/字节证据；KSP/EmbeddedScrollEvent 未验证记开放） | e6c59677；SPEC L386-423；AAR manifest/res 实测 |
 | D7 | wmshell-shared AAR 并入 AIDL 闭包 19 类，2.0.0→2.0.1 | d07-wmshell-shared-aidls.md | done | 符合（bp static_libs 闭包语义原位保持；§3.2.4 升版义务履行；TraceurCommon 先例） | bp L33-51；AAR 双副本字节同一；SPEC L141-160 |
 | D8 | aapt2 编译期转发 --feature-flags + systemui-aconfig-flags.txt | d08-aapt2-feature-flags.md | not-started | | task073 issue §4 批次2；commit 6e66a0ea |
 | D9 | dynamiccolors 走 Task 059 直接 AAR 例外（清单 +1） | d09-dynamiccolors-direct-aar.md | not-started | | task072 issue §2/§3.4；commit 452c9f6c |
