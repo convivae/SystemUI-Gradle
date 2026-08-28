@@ -40,7 +40,7 @@
 | P1 | task072/073 brief 把 CONV 权限泛授权给 worker | p01-conv-blanket-authorization.md | not-started | | 两 brief File Map/Forbidden Paths；ADR 0004 |
 | P2 | chief 评审接受 worker 自判项未先报用户 | p02-chief-review-escalation.md | not-started | | review log eb135b98；规则 H |
 | P3 | worker brief 外扩范围（ace 双 AAR、wmshell 2.0.1） | p03-worker-scope-drift.md | not-started | | commit e6c59677 / 38cd4c4b vs brief |
-| E1 | Task 050：79 处 manifest FQCN 手工改写先例 | e01-task050-fqcn-rewrites.md | not-started | | docs/tasks/050 相关 issue；commit grep |
+| E1 | Task 050：79 处 manifest FQCN 手工改写先例 | e01-task050-fqcn-rewrites.md | done | 可接受但需补记录（授权链完整；缺 CONV 标记+merge commit 标题失真） | commits baf5c25d/2cb578be；brief 050 §A.5；orchestration log L236 |
 | E2 | Task 059：直接 AAR 例外清单原始授权范围 | e02-task059-direct-aar-exception.md | not-started | | AGENTS.md §3.2 例外段；task059 文档 |
 | E3 | Task 070：5806 处 strings.xml CONV 标记授权链 | e03-task070-strings-conv.md | not-started | | task070 相关 commit/issue |
 | E4 | 13-module → 16-module 拓扑演变 | e04-module-topology-evolution.md | not-started | | docs/architecture/2026-08-06-module-structure-audit.md；AGENTS.md §3.1 |
