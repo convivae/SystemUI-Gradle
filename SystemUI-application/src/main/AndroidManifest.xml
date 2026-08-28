@@ -16,8 +16,14 @@
  * limitations under the License.
  */
 -->
+<!-- CONV_DEL BEGIN: AGP 9 拒绝 library 源 manifest 的 package 属性（CHECK_IF_PACKAGE_IN
+     MAIN_MANIFEST：值 != namespace 时 RuntimeException）。namespace 改由
+     SystemUI-application/build.gradle.kts 承担（= com.android.systemui，与被删属性同值，
+     相对名展开行为不变）。被删字节保全于下行注释，撤回时恢复即可（ADR 0004 /
+     docs/issues/2026-08-28-c4-gradle-wiring.md §3.3；Task 072） -->
+<!--     package="com.android.systemui" -->
+<!-- CONV_DEL END -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.android.systemui"
     android:sharedUserId="android.uid.systemui"
     xmlns:tools="http://schemas.android.com/tools"
     coreApp="true">

@@ -149,12 +149,12 @@ androidComponents {
     }
 }
 
-// AOSP bp static_libs: ["SystemUI-core"]
-// Only direct dep on :SystemUI-core; transitive submodules (shared/animation/
-// customization/common/log/unfold/plugin/plugin-core) are pulled in by core's
-// own static_libs. Do NOT add them here — it would create duplicate classes.
+// AOSP bp static_libs: ["SystemUI-application"]
+// 17 拓扑（Task 072 / C4）：android_app 只依赖 android_library "SystemUI-application"
+//（Dagger 根组件 + 完整 1338 行 manifest 所在模块）；core 及全部子模块经 application 的
+// static_libs 传递。不要直接加 core —— 会绕开 application 的 KSP Dagger 图。
 dependencies {
-    implementation(project(":SystemUI-core"))
+    implementation(project(":SystemUI-application"))
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
     // tier③ bp public maven deps (subset needed at app level)
     implementation(libs.androidx.core)
