@@ -35,7 +35,7 @@
 | D8 | aapt2 编译期转发 --feature-flags + systemui-aconfig-flags.txt | d08-aapt2-feature-flags.md | not-started | | task073 issue §4 批次2；commit 6e66a0ea |
 | D9 | dynamiccolors 走 Task 059 直接 AAR 例外（清单 +1） | d09-dynamiccolors-direct-aar.md | done | 符合（E2 判据满足；例外清单未扩字面） | 452c9f6c；SPEC:373-385；build:50 |
 | D10 | mechanics×2 jar + SerialPortAccessDialog AAR | d10-mechanics-serial-artifacts.md | not-started | | task073 issue §3 |
-| D11 | core namespace com.android.systemui → com.android.systemui.core | d11-core-namespace-rename.md | not-started | | task072 issue §3.1；commit d1352d5d |
+| D11 | core namespace com.android.systemui → com.android.systemui.core | d11-core-namespace-rename.md | done | 符合（唯一保持 manifest 字节原值的解；merger 唯一机制证据源码级复核） | merger 32.3.1 XmlAttribute/ManifestMerger2；grep=0；d1352d5d |
 | D12 | 生成器碰撞裁决（UnsupportedAppUsage turbine vs javac 字节）——当前挂起 | d12-sysuisdk-bridge-collision.md | not-started | | task073 issue §4 剩余阻塞 1 |
 | P1 | task072/073 brief 把 CONV 权限泛授权给 worker | p01-conv-blanket-authorization.md | done | 与规则冲突建议重做（授权结构纠正：D3 补用户追认；今后点名授权） | ADR 0004 决策7；AGENTS §1.8；CHARTER P5.1；task073 issue §6 |
 | P2 | chief 评审接受 worker 自判项未先报用户 | p02-chief-review-escalation.md | done | 可接受但需补记录（自判项依据充分但缺用户知悉收尾；建议批量上报+AGENTS 判据制修订） | log L304；AGENTS §2.5/§3.2；build.kts:50/249-254 |
