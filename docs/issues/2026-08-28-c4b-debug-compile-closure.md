@@ -93,7 +93,12 @@ Release/R8 归 task074；runtime 归 C5。
 
 ## 5. 验证记录
 
-（待补）
+| 门 | 命令 | 结果 |
+|---|---|---|
+| 对齐 | `python3 tools/check_source_alignment.py --strict` | exit 0（MISSING/MISPLACED/EXTRA 全 0；MODIFIED 1 = 既有白名单，RES-MODIFIED 86 = task070 CONV 标记） |
+| pytest | `uv run pytest tools/tests -q` | 298 passed + 121 subtests（含 P0/P1 新增断言与 P2a 修正） |
+| 冻结指纹 | `uv run python tools/package_misc_jars.py --verify-only` | 17/17 MATCH（含 mechanics×2） |
+| 编译 | 见 §4 演变表；当前剩 2 类 chief 阻塞项 | — |
 
 ## 6. CONV 对账
 
