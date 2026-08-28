@@ -17,6 +17,10 @@
 <resources>
     <!-- Whether to enable large screen capture. Currently enabled for tablet and desktop types. -->
     <bool name="config_enableLargeScreenScreencapture" product="default">false</bool>
-    <bool name="config_enableLargeScreenScreencapture" product="tablet">false</bool>
-    <bool name="config_enableLargeScreenScreencapture" product="desktop">true</bool>
+    <!-- CONV_DEL BEGIN [task073] reason: product-variant unsupported by AGP; user-authorized 2026-08-28; keep default only -->
+    <!-- <bool name="config_enableLargeScreenScreencapture" product="tablet">false</bool> -->
+    <!-- CONV_DEL END -->
+    <!-- CONV_DEL BEGIN [task073] reason: product-variant unsupported by AGP; user-authorized 2026-08-28; keep default only -->
+    <!-- <bool name="config_enableLargeScreenScreencapture" product="desktop">true</bool> -->
+    <!-- CONV_DEL END -->
 </resources>
