@@ -32,7 +32,7 @@
 | D5 | kairos → tier① 源码模块 :SystemUI-utils-kairos | d05-kairos-source-module.md | done | 符合（17 bp:569 实证生产依赖；且 git 复核证16 vintage bp 已依赖—16-era 判 test-only 为事实性误判但当时无损；AGENTS §3.1 注释滞后） | 17 bp L476/569；16 bp b110a8e0:540；dec85d64 对比；4ac49993 |
 | D6 | ace 拆双 AAR（common jar 并入 visualizer） | d06-ace-dual-aar.md | done | 符合（单 AAR 单 namespace + 简洁 settle 判据全部具 bp/字节证据；KSP/EmbeddedScrollEvent 未验证记开放） | e6c59677；SPEC L386-423；AAR manifest/res 实测 |
 | D7 | wmshell-shared AAR 并入 AIDL 闭包 19 类，2.0.0→2.0.1 | d07-wmshell-shared-aidls.md | done | 符合（bp static_libs 闭包语义原位保持；§3.2.4 升版义务履行；TraceurCommon 先例） | bp L33-51；AAR 双副本字节同一；SPEC L141-160 |
-| D8 | aapt2 编译期转发 --feature-flags + systemui-aconfig-flags.txt | d08-aapt2-feature-flags.md | not-started | | task073 issue §4 批次2；commit 6e66a0ea |
+| D8 | aapt2 编译期转发 --feature-flags + systemui-aconfig-flags.txt | d08-aapt2-feature-flags.md | done | 符合（Soong parity+产物 hash 可验+fast fail；flags 单包覆盖为开放项） | 6e66a0ea；aapt2.go:107/305；sha256 一致 |
 | D9 | dynamiccolors 走 Task 059 直接 AAR 例外（清单 +1） | d09-dynamiccolors-direct-aar.md | done | 符合（E2 判据满足；例外清单未扩字面） | 452c9f6c；SPEC:373-385；build:50 |
 | D10 | mechanics×2 jar + SerialPortAccessDialog AAR | d10-mechanics-serialport.md | done | 符合（res 有无决定 jar/AAR；SerialPort manifest 合并必须 AAR） | e6c59677；jon bp L555/559；unzip 190/23 类 |
 | D11 | core namespace com.android.systemui → com.android.systemui.core | d11-core-namespace-rename.md | done | 符合（唯一保持 manifest 字节原值的解；merger 唯一机制证据源码级复核） | merger 32.3.1 XmlAttribute/ManifestMerger2；grep=0；d1352d5d |
