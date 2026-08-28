@@ -8,14 +8,21 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
-### 1. ~~独立验证 Release runtime~~ ✅ 已完成（2026-08-26，RELEASE_RUNTIME_PASS）
+### 1. Phase C：AOSP 固定 `android-17.0.0_r1` + 清空重生（ADR 0007）
 
-三轮修复闭环：R8 missing `AssumeFalseForR8`（精确 dontwarn，Task 044 同款）→ `-dontobfuscate`（对齐 Soong dex.go:545 语义，治愈 getSimpleName 撞名）→ 3 行 `-keep`（抗 R8 水平合并，DumpManager 类名注册撞键）。Release APK `14768581…` 在 emulator-5554 上门级验证通过。证据：`docs/issues/2026-08-26-release-runtime-closure.md`（四轮完整记录）。
+- [x] ~~C1：AOSP 升级 + 全量构建~~ ✅ 2026-08-27（原树切换 `android-17.0.0_r1`，manifest `5bc9a7ce`，frameworks/base `94b4c163b`；`m -j16` 2h35m；soong_build OOM 根因已修）
+- [x] ~~C3：源码 17 重对齐（task070）~~ ✅ 2026-08-27（`--strict` exit 0；删 847/移 34/拷 2566/覆 3067；CONV 重标 5806 处；MODIFIED 终态 1 src + 86 res 均白名单）
+- [x] ~~C2：libs/ 全删 + 脚本再生（task071）~~ ✅ 2026-08-28（104 删 → 7 脚本再生 102 文件，无手工产物；maven 全族 2.0.0；`motion_tool_lib.jar`/`settingslib-selector-flags.jar`/security-flags/quickaccesswallet-flags 族退役）
+- [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
+- [ ] **C4b：编译闭环（task073，进行中）**：恢复 `:app:assembleDebug` BUILD SUCCESSFUL；验收 = assembleDebug 绿 + 对齐门/pytest 绿 + 新产物可复现
+- [ ] task074：Release/R8 闭环恢复绿（`minifyReleaseWithR8` 零 missing refs + `assembleRelease`；含 view_capture proto keep 等 task073 移交项）
+- [ ] C5：17 镜像模拟器双 runtime 门：先从 AOSP-17 `out/` 重跑 `build_sysuisdk.py`（当前 live SDK 为 16 时代产物）；按 runbook 重拉模拟器；Debug + Release 部署、零 FATAL、窗口在屏（runbook：`docs/issues/2026-08-26-emulator-relaunch-runbook.md`）
+- [ ] C6：manifest 快照 + release tag + README 版本声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
-### 2. Release 阶段遗留尾账
+### 2. 尾账（Release 阶段处理）
 
 - **tracinglib-platform.jar 溯源**：查清 AOSP 出处，决定保留 jar 还是换官方坐标。
-- ~~AssumeTrueForR8 blocker~~ 已随 round-1 修复关闭（同族 AssumeFalseForR8 精确 dontwarn 落地，`app/proguard_gradle.flags`）。
+- AssumeTrueForR8 blocker 已随 16 时代 round-1 修复关闭（精确 dontwarn 落地，`app/proguard_gradle.flags`）；17 基线 Release 重放归 task074。
 
 ### 3. 维护性观察（定期，无 deadline）
 
@@ -38,4 +45,9 @@
 
 ## 已完成工作
 
-从 5296 个编译错误到 Debug APK、239/239 测试、Release R8 140→0、完整 optimized-resource Release APK + V2 签名，以及 **same-tree x86_64 模拟器 DEBUG_RUNTIME_PASS（Tasks 052c→059，2026-08-25）+ RELEASE_RUNTIME_PASS（Tasks 060→061，2026-08-26）** 的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 2026-08-24/25 五篇报告。
+从 5296 个编译错误到 16 时代（AOSP main 快照）的 Debug APK、双 runtime 门
+（**DEBUG_RUNTIME_PASS** 2026-08-25 + **RELEASE_RUNTIME_PASS** 2026-08-26，emulator-5554）
+的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 归档。
+Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1/C3/C2/C4a 已完成，报告见
+`docs/issues/2026-08-27-c3-source-realignment-execution.md`、
+`docs/issues/2026-08-27-c2-libs-regen-17.md`、`docs/issues/2026-08-28-c4-gradle-wiring.md`。

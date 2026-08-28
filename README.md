@@ -6,23 +6,24 @@
 移植为一个**独立、自包含的 Gradle 工程**——不依赖 AOSP 源码树即可编译**真实 SystemUI 源码**
 （非删减、非 stub），并保持与 AOSP 源码、资源 1:1 对齐，随时可以回流。
 
-> **已达成**：Debug 与优化 Release 两个 runtime 均已在 same-tree x86_64 模拟器上验证通过
->（见下表）。实时完整状态见 [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)。
+> **16 时代里程碑（历史基线）**：Debug 与优化 Release 两个 runtime 均曾在 same-tree x86_64 模拟器上
+> 验证通过（2026-08-25/26）。当前项目处于 **Phase C**（AOSP 基线固定到 `android-17.0.0_r1` 后
+> 全管线清空重生）：C1/C3/C2/C4a 已完成，**C4b（恢复 `assembleDebug` 编译闭环）进行中**。
+> 实时完整状态见 [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md)。
 
 ---
 
-## 当前状态速览（2026-08-26）
+## 当前状态速览（2026-08-28）
 
 | 维度 | 状态 |
 |---|---|
-| **Debug 运行时** | ✅ **DEBUG_RUNTIME_PASS（2026-08-25）**：`sdk_phone64_x86_64` 模拟器上运行 Gradle 构建的 Debug APK（sha256 `e8aad131…`，163,896,493 B），SystemUI PID 稳定 10×30s 采样、零 FATAL/NoClassDefFoundError，StatusBar/NotificationShade/Taskbar 在屏 |
-| **Release 运行时** | ✅ **RELEASE_RUNTIME_PASS（2026-08-26）**：优化 Release APK（R8 全程序优化 + 资源收缩 + `-dontobfuscate` 对齐 Soong + V2 签名；当前基线 sha256 `d3968fb2…`，34,688,965 B）同法部署，PID 稳定、零 FATAL、QS 展开收起正常 |
+| **Debug 构建** | ⏳ **C4b 进行中**：AOSP-17 重对齐后 `:app:assembleDebug` 尚未恢复绿（16 时代历史基线：DEBUG_RUNTIME_PASS 2026-08-25，APK `e8aad131…`） |
+| **Release 构建** | 未跑（归 task074；16 时代历史基线：RELEASE_RUNTIME_PASS 2026-08-26，APK `d3968fb2…`） |
 | 构建链 | Gradle 9.5.0 · AGP 9.3.1 · Kotlin 2.2.10（AGP `builtInKotlin`）· KSP 2.2.10-2.0.2 · Dagger 2.59.2 · Compose 1.11.4 · material3 1.5.0-alpha18 · JDK 21 · `compileSdkPreview = "SysUISdk"` |
-| 编译 | KSP 0 错误 · core Kotlin 0 错误 · core javac 0 错误；`:app:assembleDebug` 为每批改动的硬门禁 |
-| R8 | Release missing references **0**（轨迹 140 → 0，逐批精确归零） |
-| 工具链测试 | `uv run pytest tools/tests/ -q` → **276 passed**（+102 subtests） |
-| 源码/资源对齐 | 自动对齐校验 MISSING / MISPLACED / EXTRA = **0 / 0 / 0** |
-| 产物再生 | `libs/` 全部 104 个产物（jar/AAR/POM）提交入 git 且均可由 `tools/` 脚本确定性再生（见 Quickstart 第 4 步） |
+| 配置解析 | `./gradlew help` / `projects` **BUILD SUCCESSFUL**（16 模块全部识别；C4a 验收） |
+| 工具链测试 | `uv run pytest tools/tests/ -q` → **293 passed**（+111 subtests） |
+| 源码/资源对齐 | 自动对齐校验 `--strict` exit 0（MISSING / MISPLACED / EXTRA = 0 / 0 / 0；MODIFIED 1 src + 86 res 为白名单 CONV 标记） |
+| 产物再生 | `libs/` 全部 107 个产物（jar/AAR/POM）提交入 git 且均可由 `tools/` 脚本从 AOSP-17 确定性再生（见 Quickstart 第 4 步） |
 
 > 成功标准是 **AGP-native functional parity**：SysUISdk 生成的自定义 SDK 必须直接支撑既有
 > Debug 与优化 Release 构建并在设备上真实运行，而不是"看起来能编过"。
@@ -43,23 +44,29 @@ AOSP 库、资源）都以**真实产物的形式**收进仓库，`git clone` �
 
 ## 架构
 
-### 模块拓扑（13 个 Gradle 模块，语义对齐 AOSP `Android.bp`）
+### 模块拓扑（16 个 Gradle 模块，语义对齐 AOSP 17 `Android.bp`）
 
 | 模块 | 职责（对应 Soong target） |
 |---|---|
-| `:app` | `android_app "SystemUI"`：APK 入口（无独立源码；manifest、签名、打包） |
+| `:app` | `android_app "SystemUI"`：APK 入口（无独立源码；最小 manifest 合并壳、签名、打包） |
 | `:SystemUI-core` | `android_library "SystemUI-core"`：主模块，含 `SystemUIApplication` 等入口类、src + compose + pods |
+| `:SystemUI-application` | `android_library "SystemUI-application"`：Dagger 根组件 + 完整 1338 行 AOSP manifest（17 新增） |
 | `:SystemUI-res` | 独立资源 namespace（res / res-keyguard / res-product），生成 `com.android.systemui.res.R` |
 | `:SystemUI-common` | Common + Log + shared-utils 合并 |
-| `:SystemUI-animation` | PlatformAnimationLib + Shader(surfaceeffects) 合并（含 res） |
+| `:SystemUI-animation` | PlatformAnimationLib（含 res；17 起 surfaceeffects 改 jar 交付） |
 | `:SystemUI-plugin-core` | PluginCoreLib runtime API（JVM） |
 | `:SystemUI-plugin-processor` | PluginAnnotationProcessor（构建期，不进 APK） |
 | `:SystemUI-plugin` | SystemUIPluginLib runtime（含 bcsmartspace） |
 | `:SystemUI-unfold` | SystemUIUnfoldLib（KSP 跑 Dagger） |
 | `:SystemUI-customization` | SystemUICustomizationLib（含 res） |
+| `:SystemUI-clocks-common` | SystemUIClocks-CommonLib（含 res；17 新增，被 customization 消费） |
 | `:SystemUI-shared` | SystemUISharedLib + keyguard 合并（含 aidl + res） |
 | `:SystemUI-shared-biometrics` | biometrics（独立 R namespace，被 Settings 消费） |
 | `:SystemUI-compose` | Compose Core + Scene 合并 |
+| `:SystemUI-accessibility-floatingmenu-res` | AccessibilityFloatingMenu-res（res-only；17 新增，被 SystemUI-res 消费） |
+
+（C4b 进行中正按 17 bp 追加 `:SystemUI-utils-kairos` tier① 源码模块；完整拓扑 owner 见
+[AGENTS.md](AGENTS.md) §3.1。）
 
 `SystemUI-core/src/` 与 AOSP `frameworks/base/packages/SystemUI/src/` 逐路径对应；
 `SystemUI-res/res*` 与 AOSP 对应资源目录 1:1（详见 [AGENTS.md](AGENTS.md) §3.3）。
@@ -80,15 +87,16 @@ AGP 官方 SDK 会剥离 `@hide` API 和 aconfig 生成的类，SystemUI 大量�
 
 ## AOSP 版本基线
 
-当前全部验证（构建 + 双 runtime）基于 **AOSP `main` 分支**的快照：
+当前基线为 AOSP release tag **`android-17.0.0_r1`**（Phase C / C1，2026-08-27 原地切换并全量构建；
+frameworks/base `94b4c163b`，manifest `5bc9a7ce`，1084 projects）：
 
-- 快照文件：[`docs/aosp-pinning/aosp-manifest-2026-08-26-validated.xml`](docs/aosp-pinning/aosp-manifest-2026-08-26-validated.xml)
-  （1042 个 project，由 `repo manifest -r` 于 2026-08-26 从已验证树导出；说明见
-  [`docs/aosp-pinning/README.md`](docs/aosp-pinning/README.md)）
-- **正式版本固定尚未执行**：把基线升级/固定到某个 AOSP 正式版本（升级 AOSP → 重编译 →
-  全管线重跑 → 重新适配验证）是已规划的后续工程（Phase C，全管线从零复现；见
-  [docs/PLAN.md](docs/PLAN.md) 与
-  [docs/architecture/2026-08-26-regeneration-gap-closure.md](docs/architecture/2026-08-26-regeneration-gap-closure.md)）。
+- 源码/资源已按 17 树全量重对齐（C3，对齐门 `--strict` exit 0）；`libs/` 产物已全部从 17 树脚本再生（C2）。
+- 16 时代验证所用的 `main` 分支快照仍归档于
+  [`docs/aosp-pinning/aosp-manifest-2026-08-26-validated.xml`](docs/aosp-pinning/aosp-manifest-2026-08-26-validated.xml)
+  （1042 projects，说明见 [`docs/aosp-pinning/README.md`](docs/aosp-pinning/README.md)）。
+- **17 基线的编译/双 runtime 重验与 tag 收口仍在进行**（C4b/C5/C6，见 [docs/PLAN.md](docs/PLAN.md)
+  与 [docs/adr/0007-phase-c-clean-regen-release-tag.md](docs/adr/0007-phase-c-clean-regen-release-tag.md)）；
+  README 的正式版本声明将在 C6 统一更新。
 
 ## 从零复现（Quickstart）
 
@@ -112,14 +120,15 @@ Maven 镜像，国内网络环境开箱即用。
 
 ### 步骤
 
-**1. 下载 AOSP（repo init main + 快照 checkout）** — *快照本身由 2026-08-26 验证树导出；从零 checkout 后的全流程重验待 Phase C*
+**1. 下载 AOSP（repo init + tag checkout）** — *已按 `android-17.0.0_r1` 执行（C1）*
 
 ```bash
-repo init -u https://android.googlesource.com/platform/manifest -b main
-# 固定到已验证快照：用 docs/aosp-pinning/aosp-manifest-2026-08-26-validated.xml 作为 manifest 后 repo sync
+repo init -u https://android.googlesource.com/platform/manifest -b android-17.0.0_r1
+repo sync -d -c -j4
+# 16 时代验证快照归档：docs/aosp-pinning/aosp-manifest-2026-08-26-validated.xml
 ```
 
-**2. 编译 AOSP** — *已验证*（same-tree 模拟器与全部产物脚本均消费此构建的 `out/`）
+**2. 编译 AOSP** — *已验证（C1：17 树全量 `m` 构建成功，2h35m；产物脚本与模拟器镜像均消费此 `out/`）*
 
 ```bash
 cd <aosp-root> && . build/envsetup.sh
@@ -127,38 +136,38 @@ lunch sdk_phone64_x86_64-trunk_staging-userdebug
 m -j4        # 产物含 out/target/product/emu64x/ 模拟器镜像
 ```
 
-**3. 生成 SysUISdk** — *已验证*（Task 045：两次真实 AOSP 输入生成逐字节相等，11,382 文件）
+**3. 生成 SysUISdk** — *已验证（Task 045，16 时代基线；17 树重建排在 C5 前，八输入已验存）*
 
 ```bash
 uv run python tools/build_sysuisdk.py --aosp-root <aosp-root>
 # 输出 <sdk-root>/platforms/android-SysUISdk；详见 docs/architecture/2026-08-21-sysuisdk-single-entry-composition.md
 ```
 
-**4. 生成 libs/ 产物**（仅重新生成时需要）— *已验证*（Task 064/065：15 个 gap 产物全部纳入脚本，冻结 sha256 台账 + `--verify-only`）
+**4. 生成 libs/ 产物**（仅重新生成时需要）— *已验证（C2：104 删 → 7 脚本从 AOSP-17 再生 102 文件；C4a 新增 5 个产物，当前共 107 文件，全部脚本产出）*
 
 ```bash
-uv run python tools/package_aosp_aar.py --all          # 29 个 AAR → libs/aars/
-uv run python tools/install_aar_to_maven.py            # 安装为本地 Maven AAR → libs/maven/
-uv run python tools/package_aconfig_jars.py --all      # aconfig flags jar（含合并族）
-uv run python tools/package_misc_jars.py --all         # 12 个 misc jar（framework.jar 等）
+uv run python tools/package_aosp_aar.py --all          # 30 个 AAR → libs/aars/
+uv run python tools/install_aar_to_maven.py            # 安装为本地 Maven AAR（23 族，全部 2.0.0）→ libs/maven/
+uv run python tools/package_aconfig_jars.py --all      # aconfig flags jar（含 12 族合并）
+uv run python tools/package_misc_jars.py --all         # misc jar（framework.jar、surfaceeffects×3 等）
 uv run python tools/package_compilelib_jars.py         # compilelib debug/release jar
 uv run python tools/package_monet_jar.py               # monet jar
 uv run python tools/package_viewcapture_motiontool_jars.py
 ```
 
-**5. Gradle 构建** — *已验证*（assembleDebug 为每批硬门禁）
+**5. Gradle 构建** — *16 时代已验证；17 重对齐后 `:app:assembleDebug` 编译闭环（C4b）进行中，尚未恢复绿*
 
 ```bash
-./gradlew :app:assembleDebug      # Debug APK
-./gradlew :app:assembleRelease    # 优化 Release APK（R8 + 资源收缩 + V2 签名）
-uv run pytest tools/tests/ -q     # 工具链测试（276 passed）
+./gradlew :app:assembleDebug      # Debug APK（C4b 目标门）
+./gradlew :app:assembleRelease    # 优化 Release APK（归 task074）
+uv run pytest tools/tests/ -q     # 工具链测试（293 passed）
 ```
 
-**6. 启动模拟器** — *已验证*；完整命令与环境变量（`ANDROID_PRODUCT_OUT` / `ANDROID_BUILD_TOP`
+**6. 启动模拟器** — *16 时代已验证；17 镜像重拉归 C5*；完整命令与环境变量（`ANDROID_PRODUCT_OUT` / `ANDROID_BUILD_TOP`
 / `ANDROID_TMP`、日志文件预创建等坑）见 runbook：
 [docs/issues/2026-08-26-emulator-relaunch-runbook.md](docs/issues/2026-08-26-emulator-relaunch-runbook.md)
 
-**7. 部署验证** — *已验证*（Debug `e8aad131…` / Release `d3968fb2…` 双门通过）；staged 部署
+**7. 部署验证** — *16 时代已验证（Debug `e8aad131…` / Release `d3968fb2…` 双门通过）；17 基线重验归 C5*；staged 部署
 规程（root → disable-verity → 分阶段 push + 设备端 sha256 门禁 → 原子替换 → 清缓存 →
 reboot，及已知坑）见 [docs/PITFALLS.md](docs/PITFALLS.md) §14。
 
