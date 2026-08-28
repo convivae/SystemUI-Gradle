@@ -34,7 +34,7 @@
 | D7 | wmshell-shared AAR 并入 AIDL 闭包 19 类，2.0.0→2.0.1 | d07-wmshell-shared-aidls.md | done | 符合（bp static_libs 闭包语义原位保持；§3.2.4 升版义务履行；TraceurCommon 先例） | bp L33-51；AAR 双副本字节同一；SPEC L141-160 |
 | D8 | aapt2 编译期转发 --feature-flags + systemui-aconfig-flags.txt | d08-aapt2-feature-flags.md | done | 符合（Soong parity+产物 hash 可验+fast fail；flags 单包覆盖为开放项） | 6e66a0ea；aapt2.go:107/305；sha256 一致 |
 | D9 | dynamiccolors 走 Task 059 直接 AAR 例外（清单 +1） | d09-dynamiccolors-direct-aar.md | done | 符合（E2 判据满足；例外清单未扩字面） | 452c9f6c；SPEC:373-385；build:50 |
-| D10 | mechanics×2 jar + SerialPortAccessDialog AAR | d10-mechanics-serialport.md | done | 符合（res 有无决定 jar/AAR；SerialPort manifest 合并必须 AAR） | e6c59677；jon bp L555/559；unzip 190/23 类 |
+| D10 | mechanics×2 jar + SerialPortAccessDialog AAR | d10-mechanics-serialport.md | done | 符合（res 有无决定 jar/AAR；SerialPort manifest 合并必须 AAR） | e6c59677；core bp static_libs；unzip 190/23 类 |
 | D11 | core namespace com.android.systemui → com.android.systemui.core | d11-core-namespace-rename.md | done | 符合（唯一保持 manifest 字节原值的解；merger 唯一机制证据源码级复核） | merger 32.3.1 XmlAttribute/ManifestMerger2；grep=0；d1352d5d |
 | D12 | 生成器碰撞裁决（UnsupportedAppUsage turbine vs javac 字节）——当前挂起 | d12-sysuisdk-bridge-collision.md | done | 决策待定（审计推荐①桥接去重 39→37 条/8 输入→7 输入） | issue §4；生成器 L73-76/L353-359；本审计独立复核重叠=2 条 |
 | P1 | task072/073 brief 把 CONV 权限泛授权给 worker | p01-conv-blanket-authorization.md | done | 与规则冲突建议重做（授权结构纠正：D3 补用户追认；今后点名授权） | ADR 0004 决策7；AGENTS §1.8；CHARTER P5.1；task073 issue §6 |
@@ -55,7 +55,7 @@
 
 ## 完成验收笔记
 
-- [ ] 19 决策文档 + index + summary 齐全，status 全 done
+- [x] 19 决策文档 + index + summary 齐全，status 全 done
 - [ ] 抽查结论可回溯证据（文件:行号 / 命令输出 / commit hash）
 - [ ] 本目录外零代码改动；小步 commit 串
 </content>
