@@ -155,10 +155,10 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 - `android_library "SystemUI-core"` → `:SystemUI-core`（含 src + compose + 所有子模块 static_libs）
 - 多个内部 Soong target 可合入一个 Gradle module（如 Log+Common+utils → `:SystemUI-common`，
   Compose Core+Scene → `:SystemUI-compose`，全部 pods → `:SystemUI-core`）
-- 目标 13-module 清单见 `docs/architecture/2026-08-06-module-structure-audit.md`，实施计划见
-  `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`
+- 原目标 13-module 清单见 `docs/architecture/2026-08-06-module-structure-audit.md`，实施计划见
+  `docs/superpowers/plans/2026-08-06-13-module-source-topology.md`（17 后扩为 16-module，新增三模块见 §3.1）
 - `SystemUIApplication.java` / `SystemUIService.java` 位于 AOSP `SystemUI-core` 的 `src/**/*.java` glob 内，**必须保留在 `:SystemUI-core/src/com/android/systemui/`**；`:app` 按 bp 无独立源码
-- `:app/src/main/AndroidManifest.xml` 从 AOSP 完整复制（1158 行），不允许最小化
+- **17 起完整 manifest 归 `:SystemUI-application`**（bp `manifest: "AndroidManifest.xml"` = AOSP 顶层 1338 行完整 manifest，位于 `SystemUI-application/src/main/AndroidManifest.xml`，其 package 属性经 CONV_DEL 剥除、namespace 由 build 文件承担）；`:app` 留**最小合并壳**（仅根 manifest 标签，所有条目经 merger 从 library 并入）。16 时代 1158 行完整 app manifest 已随 C4（Task 072）退役
 
 ---
 
@@ -248,22 +248,25 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ### 3.1 模块结构
 
-按 AOSP `frameworks/base/packages/SystemUI/Android.bp` 的**语义**对齐（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1）。项目采用以下 13-module Gradle 拓扑（静态架构描述；实时构建/验证状态见 `docs/CURRENT_STATE.md`）：
+按 AOSP `frameworks/base/packages/SystemUI/Android.bp` 的**语义**对齐（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1）。项目采用以下 16-module Gradle 拓扑（静态架构描述；实时构建/验证状态见 `docs/CURRENT_STATE.md`；17 新增三模块见 Task 072 / C4）：
 
 ```
-:app                          # android_app "SystemUI"（无独立源码；负责 manifest、签名和最终 APK 打包）
+:app                          # android_app "SystemUI"（无独立源码；最小 manifest 合并壳、签名和最终 APK 打包）
 :SystemUI-core                # android_library "SystemUI-core"（主模块，含入口类、src + compose + pods）
+:SystemUI-application         # android_library "SystemUI-application"（Dagger 根组件 + 17 完整 manifest；KSP Dagger）
 :SystemUI-res                 # 独立资源 namespace（res/res-keyguard/res-product），生成 com.android.systemui.res.R
 :SystemUI-common              # Common + Log + shared-utils 合并（源码）
-:SystemUI-animation           # PlatformAnimationLib + Shader(surfaceeffects) 合并（源码，含 res）
+:SystemUI-animation           # PlatformAnimationLib（源码，含 res；17 起 surfaceeffects 源已迁回 frameworks/libs，改 jar 交付）
 :SystemUI-plugin-core         # PluginCoreLib runtime API（JVM 源码）
 :SystemUI-plugin-processor    # PluginAnnotationProcessor（build-time，不进 APK implementation）
 :SystemUI-plugin              # SystemUIPluginLib runtime（源码，含 bcsmartspace）
 :SystemUI-unfold              # SystemUIUnfoldLib（源码，KSP 跑 Dagger）
 :SystemUI-customization       # SystemUICustomizationLib（源码，含 res）
+:SystemUI-clocks-common       # SystemUIClocks-CommonLib（源码，含 res；被 customization 消费）
 :SystemUI-shared              # SystemUISharedLib + keyguard child 合并（源码，含 aidl+res）
 :SystemUI-shared-biometrics   # biometrics（独立 R namespace，被 Settings 消费）
 :SystemUI-compose            # Compose Core + Scene 合并（源码）
+:SystemUI-accessibility-floatingmenu-res  # AccessibilityFloatingMenu-res（res-only，被 SystemUI-res 消费）
 ```
 
 非 SystemUI 产物（不进源码 module）：`animationlib`（frameworks/libs/systemui）→ 直接 AAR；

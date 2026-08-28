@@ -148,10 +148,71 @@ dynamiccolors 走直接 AAR（Task 059 例外），不进 catalog。
 
 不适用（本任务不编译；唯一构建验证 = `./gradlew help` 配置解析）。
 
-## 5. 验证记录（P4 实测后回填）
+## 5. 验证记录（P4 实测）
 
-（待回填）
+| 门 | 命令 | 结果 |
+|---|---|---|
+| 配置解析 | `./gradlew help`（先 `pkill -f GradleDaemon`） | **BUILD SUCCESSFUL** in 41s（1 actionable task） |
+| 模块识别 | `./gradlew projects` | 16 个模块全部列出（含三个新模块），BUILD SUCCESSFUL |
+| 源码对齐 | `python3 tools/check_source_alignment.py --strict` | **exit 0**（MISSING/MISPLACED/EXTRA/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 = 既有 UncaughtExceptionPrehandlerManager.kt 白名单，86 RES-MODIFIED = 既有 CONV 标记） |
+| pytest | `uv run pytest tools/tests -q` | **293 passed**（+111 subtests） |
+| 冻结指纹 | `python3 tools/package_misc_jars.py --verify-only` | 15/15 MATCH（含三个新 surfaceeffects jar） |
+| 编译 | 未运行（任务范围明确排除；归 task073） | — |
 
-## 6. 移交 task073 清单
+### CONV 对账（ADR 0004，人工对账清单）
 
-（P5 回填：新 flags、core bp 17 static_libs 缺口、view_capture proto keep 规则、编译错误预期面）
+| 文件 | 标记 | 内容 |
+|---|---|---|
+| `SystemUI-application/src/main/AndroidManifest.xml` | `CONV_DEL BEGIN/END`（prolog 区，根元素之前） | 剥除根标签 `package="com.android.systemui"` 属性；被删字节以注释行保全；原因：AGP 9 拒绝 library 源 manifest 的 package 属性（值 ≠ namespace 时为 hard error；同值仅警告——仍按 brief §3 指示剥除）；namespace 由 build 文件承担且同值，相对名展开行为不变 |
+
+对齐工具的 APP_TOP_FILES 检查只验存在性，不比字节，故本次 manifest 改动不进 MODIFIED 清单，特此人工对账。
+`SystemUI-clocks-common/AndroidManifest.xml` 与 `SystemUI-accessibility-floatingmenu-res/AndroidManifest.xml` **零字节改动**（package 属性保留，namespace 与之相等 → 仅警告；未越出 brief 授权的例外范围）。
+
+### 提交序列
+
+1. `452c9f6c` P0 tools + 新产物（5 个文件入库）
+2. `d1352d5d` P1 settings + 三个 build.gradle.kts + core namespace
+3. `40d3a7c5` P2 catalog 2.0.0 + 依赖增删
+4. `80be3e58` P3 app 接线 + manifest 壳 + CONV 剥除
+5. （本次）P5 AGENTS.md §1.9/§3.1 + 文档收尾
+
+## 6. 移交 task073 清单（编译闭环）
+
+### 6.1 新 flags（SystemUI-17 新 import，本任务未接线，编译错误驱动补入）
+
+实测 import 文件数（`SystemUI-core/{src,compose,pods}`）：
+
+| 包 | 文件数 |
+|---|---|
+| `kairos`（com.android.systemui.kairos 等） | **60**（bp static_libs 有 kairos；16 时代被判 test-only 未进生产图，17 已是生产依赖，须重新决策引入方式：源码 module 或产物） |
+| `personalcontext_ace_visualizer` | 9（bp static_libs 有） |
+| `android.location.flags` | 8 |
+| `com.android.media.flags` | 7 |
+| `com.android.systemui.display.flags` | 6（displaylib 一族） |
+| `android.companion.virtualdevice.flags` | 4 |
+| `com.android.internal.camera.flags` | 3 |
+| `android.app.supervision.flags` / `android.view.flags` / `com.android.internal.telephony.flags` | 各 2 |
+| `com.android.media.projection.flags` / `com.android.server.power.feature.flags` | 各 1 |
+
+### 6.2 17 bp SystemUI-core static_libs 尚未接线的其他项
+
+`SerialPortAccessDialog`、`mechanics-compose`、`androidx.legacy_support-v4`、
+`androidx.legacy_legacy-preference-v14`、`androidx.arch.core_core-runtime`、
+`androidx.lifecycle_lifecycle-extensions`、`androidx.autofill_autofill`、
+`androidx.graphics_graphics-core`、`com_android_server_accessibility_flags_lib`、
+`aconfig_settings_flags_lib`。（16 时代未引入；是否需要由编译错误驱动判定。）
+
+### 6.3 已知风险点
+
+- **view_capture proto keep 规则**：16 时代 R8 靠 motion_tool_lib 闭包的 keep；17 拆掉
+  motiontoollib 后，view_capture.proto 生成类若被 R8 裁剪需在 app proguard 规则补 keep
+  （错误驱动）。
+- **dagger.explicitBindingConflictsWithInject=ERROR / strictMultibindingValidation=enabled**：
+  SystemUI-application 的 KSP flags 按 bp 接入，若 17 Dagger 图触发新告警/错误属预期面。
+- **app 最小壳 + library manifest 合并**：首次 assemble 时验证 merger 输出（1338 行并入、
+  sharedUserId/coreApp 带入、tools:replace 无冲突）。若出现合并器报错，参考
+  docs/issues/2026-08-22-direct-debug-apk-runtime-closure.md 的 16 时代经验。
+- **core manifest（396 行，16 遗留）**：17 bp 的 SystemUI-core 已无 manifest 声明；该文件是否
+  保留/由 C3 后续对账属 task073+ 决策（本任务未动）。
+- **minSdk 32 vs bp min_sdk_version "current"**（clocks-common）：编译期由 compileSdk 决定，
+  不影响本接线门；若 lint/运行期问题再对齐。
