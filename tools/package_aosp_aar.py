@@ -141,9 +141,16 @@ def _build_configs() -> dict:
     "WindowManager-Shell-shared": {
         # WM-Shell 的 static_libs 子模块(ShellTransitions/TransitionUtil/PhysicsAnimator 等)
         # javac JAR (Java classes) + kotlin JAR (Kotlin classes, Soong 命名是 kotlin/ 不是 kotlinc/) 合并
+        # Task 073（C4b）：17 bp 把 shared AIDL 接口拆入 WindowManager-Shell-shared-aidls
+        # static_libs（IShellTransitions / AnimatedSurface / IHomeTransitionListener /
+        # IFocusTransitionListener / IOverviewOverlayLeashInvalidationCallback），
+        # main jar 不含它们（animation 模块 ActivityTransitionAnimator import 报缺）；
+        # 并入 aidls javac jar 补齐闭包（bp static_libs 语义，TraceurCommon 先例）。
+        # 类集变化 → 本地 maven 坐标 2.0.0 → 2.0.1（install_aar_to_maven.py 同步升）。
         "code": [
             SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared/android_common/javac/WindowManager-Shell-shared.jar",
             SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared/android_common/kotlin/WindowManager-Shell-shared.jar",
+            SOONG_DIR / "frameworks/base/libs/WindowManager/Shell/shared/WindowManager-Shell-shared-aidls/android_common/javac/WindowManager-Shell-shared-aidls.jar",
         ],
         "res": [AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/shared/res"],
         "manifest": AOSP_ROOT / "frameworks/base/libs/WindowManager/Shell/shared/AndroidManifest.xml",

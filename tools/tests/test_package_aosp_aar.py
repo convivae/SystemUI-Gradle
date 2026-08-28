@@ -239,6 +239,16 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertTrue(str(cfg["manifest"]).endswith("WindowManager/Shell/AndroidManifest.xml"))
         self.assertIn("WindowManager-Shell/android_common/R.txt", str(cfg["rtxt"]))
 
+    def test_wmshell_shared_config_merges_aidls_closure(self):
+        """Task 073（C4b）：17 shared AIDL 接口拆入 WindowManager-Shell-shared-aidls
+        static_libs，AAR 必须并入其 javac jar（否则 IShellTransitions /
+        AnimatedSurface 缺失，animation 模块编译报错）。类集变化 → maven 2.0.1。"""
+        cfg = paar.CONFIGS["WindowManager-Shell-shared"]
+        self.assertEqual(len(cfg["code"]), 3,
+                         "shared AAR 应合并 javac + kotlin + aidls 三个 jar")
+        self.assertIn("WindowManager-Shell-shared-aidls/android_common/javac/"
+                      "WindowManager-Shell-shared-aidls.jar", str(cfg["code"][2]))
+
     def test_wmshell_config_rejects_sysui(self):
         """WM-Shell config 必须声明 reject_sysui=True。"""
         self.assertTrue(paar.CONFIGS["WindowManager-Shell"].get("reject_sysui", False))

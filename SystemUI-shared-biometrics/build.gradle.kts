@@ -36,5 +36,8 @@ android {
 
 dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
+    // 17 bp BiometricsSharedLib static_libs SystemUI-shared-utils（utils/src 折入 :SystemUI-common；
+    // Utils.kt import com.android.systemui.utils.windowmanager.WindowManagerUtils）
+    implementation(project(":SystemUI-common"))
     implementation(libs.kotlin.stdlib)
 }

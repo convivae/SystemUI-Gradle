@@ -148,7 +148,7 @@ class ArtifactRegistryTest(unittest.TestCase):
     def test_wmshell_shared_coordinate(self):
         self.assertEqual(
             iam.ARTIFACTS["WindowManager-Shell-shared"],
-            {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "2.0.0"},
+            {"group": "com.android.systemui", "name": "WindowManager-Shell-shared", "version": "2.0.1"},
         )
 
     def test_settingslib_main_coordinate(self):

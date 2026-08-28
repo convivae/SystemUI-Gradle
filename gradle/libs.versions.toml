@@ -163,7 +163,7 @@ jsr330 = { module = "javax.inject:javax.inject", version = "1" }
 # Task 072（C4，2026-08-28）：catalog 坐标随产物同步升 2.0.0。
 systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "2.0.0" }
 systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "2.0.0" }
-systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "2.0.0" }
+systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "2.0.1" }
 systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "2.0.0" }
 systemui-settingslib-color = { group = "com.android.settingslib", name = "color", version = "2.0.0" }
 systemui-settingslib-theme = { group = "com.android.systemui", name = "SettingsLibSettingsTheme", version = "2.0.0" }
