@@ -28,7 +28,7 @@
 | D1 | res-product config.xml 三变体 CONV_DEL（用户授权 commit 02e60a60） | d01-config-xml-conv-del.md | done | 符合（挂账→错误实证→用户授权→执行→对齐门，ADR 0004 正面案例） | commit 02e60a60；task070 L89；issue §6 |
 | D2 | application manifest 剥 package 属性（task072 80be3e58） | d02-manifest-package-strip.md | done | 符合（点名授权+语义恒等+可逆；仅警告场景下剥除属可逆清理） | manifest CONV_DEL 块 L22-28；brief 事实#3；issue §3.3 |
 | D3 | application manifest 剥 featureFlag 属性（泛授权，未单独报 user） | d03-manifest-featureflag-strip.md | done | 可接受但需补记录（改动建证充分可逆；但弃用 16-era additionalParameters 先例未记理由+授权链停在泛授权） | manifest:431-443；task009 8ab860e9；aapt2.go:107,305 |
-| D4 | clocks-common/floatingmenu manifest 保留 package 属性 | d04-manifest-package-keep.md | not-started | | task072 issue §3.3 对账表 |
+| D4 | clocks-common/floatingmenu manifest 保留 package 属性 | d04-manifest-package-keep.md | done | 符合（不扩授权、零字节差；仅警告代价；与 D2/D3 口径差异待全局裁定） | git log=bdf2dba5 only；两 build.kts 注释 |
 | D5 | kairos → tier① 源码模块 :SystemUI-utils-kairos | d05-kairos-source-module.md | not-started | | commit 4ac49993；bp utils/kairos/Android.bp；AGENTS.md §3.1 旧文 |
 | D6 | ace 拆双 AAR（common jar 并入 visualizer） | d06-ace-dual-aar.md | not-started | | task073 issue §3；commit e6c59677 |
 | D7 | wmshell-shared AAR 并入 AIDL 闭包 19 类，2.0.0→2.0.1 | d07-wmshell-shared-aidls.md | not-started | | task073 issue §4 批次1 |
@@ -37,12 +37,12 @@
 | D10 | mechanics×2 jar + SerialPortAccessDialog AAR | d10-mechanics-serial-artifacts.md | not-started | | task073 issue §3 |
 | D11 | core namespace com.android.systemui → com.android.systemui.core | d11-core-namespace-rename.md | not-started | | task072 issue §3.1；commit d1352d5d |
 | D12 | 生成器碰撞裁决（UnsupportedAppUsage turbine vs javac 字节）——当前挂起 | d12-sysuisdk-bridge-collision.md | not-started | | task073 issue §4 剩余阻塞 1 |
-| P1 | task072/073 brief 把 CONV 权限泛授权给 worker | p01-conv-blanket-authorization.md | not-started | | 两 brief File Map/Forbidden Paths；ADR 0004 |
+| P1 | task072/073 brief 把 CONV 权限泛授权给 worker | p01-conv-blanket-authorization.md | done | 与规则冲突建议重做（授权结构纠正：D3 补用户追认；今后点名授权） | ADR 0004 决策7；AGENTS §1.8；CHARTER P5.1；task073 issue §6 |
 | P2 | chief 评审接受 worker 自判项未先报用户 | p02-chief-review-escalation.md | done | 可接受但需补记录（自判项依据充分但缺用户知悉收尾；建议批量上报+AGENTS 判据制修订） | log L304；AGENTS §2.5/§3.2；build.kts:50/249-254 |
-| P3 | worker brief 外扩范围（ace 双 AAR、wmshell 2.0.1） | p03-worker-scope-drift.md | not-started | | commit e6c59677 / 38cd4c4b vs brief |
+| P3 | worker brief 外扩范围（ace 双 AAR、wmshell 2.0.1） | p03-worker-scope-drift.md | done | 可接受但需补记录（D6/D7 合理漂移；D8/D3 边界薄分别专审） | brief 073 P2 误差循环；e6c59677/74b88acb；AGENTS §3.2.4 |
 | E1 | Task 050：79 处 manifest FQCN 手工改写先例 | e01-task050-fqcn-rewrites.md | done | 可接受但需补记录（授权链完整；缺 CONV 标记+merge commit 标题失真） | commits baf5c25d/2cb578be；brief 050 §A.5；orchestration log L236 |
 | E2 | Task 059：直接 AAR 例外清单原始授权范围 | e02-task059-direct-aar-exception.md | done | 符合（用户明示裁定+字节中性 A/B 证明；判据与清单双写造成扩清单模糊） | AGENTS.md §3.2；issue 2026-08-25；log L256/259 |
-| E3 | Task 070：5806 处 strings.xml CONV 标记授权链 | e03-task070-strings-conv.md | not-started | | task070 相关 commit/issue |
+| E3 | Task 070：5806 处 strings.xml CONV 标记授权链 | e03-task070-strings-conv.md | done | 符合（三级授权链：ADR 0004 grilling→brief 已裁决#7→68df52a1 执行；device 变体遗漏已披露） | task070 issue；commit 68df52a1；log L286 |
 | E4 | 13-module → 16-module 拓扑演变 | e04-module-topology-evolution.md | done | 符合（每步预研+用户裁决+ADR 0003 seam 判据一致；§3.1 文档滞后于 settings 17 includes） | module-audit §一；panorama §5；task070 裁决#1/2/5；commits 828923fb/bdf2dba5/d1352d5d |
 
 ## 发现的额外问题（台账外）
