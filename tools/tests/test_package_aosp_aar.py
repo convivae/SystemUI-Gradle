@@ -256,6 +256,27 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertTrue(str(cfg["manifest"]).endswith("Color/AndroidManifest.xml"))
         self.assertIn("SettingsLibColor/android_common/R.txt", str(cfg["rtxt"]))
 
+    def test_dynamiccolors_config_paths(self):
+        """Task 072（C4 接线）：17 SystemUI-res bp static_libs 的 dynamiccolors（res-only）。"""
+        cfg = paar.CONFIGS["dynamiccolors"]
+        self.assertEqual(cfg["code"], [], "dynamiccolors 应为 res-only")
+        self.assertEqual(
+            cfg["res"],
+            [paar.AOSP_ROOT / "frameworks/libs/systemui/dynamiccolors/res"],
+        )
+        self.assertEqual(
+            cfg["manifest"],
+            paar.AOSP_ROOT / "frameworks/libs/systemui/dynamiccolors/AndroidManifest.xml",
+        )
+        self.assertEqual(
+            cfg["rtxt"],
+            paar.SOONG_DIR
+            / "frameworks/libs/systemui/dynamiccolors/dynamiccolors"
+            / "android_common/R.txt",
+        )
+        self.assertEqual(cfg["output"], "libs/aars/dynamiccolors.aar")
+        self.assertFalse(cfg.get("reject_sysui", False))
+
     def test_setupcompat_config_paths(self):
         cfg = paar.CONFIGS["setupcompat"]
         code = str(cfg["code"])
@@ -1187,9 +1208,9 @@ class TestAllFlag(unittest.TestCase):
     """--all 选项应能遍历 CONFIGS。"""
 
     def test_configs_covers_six_artifacts(self):
-        # 确认 CONFIGS 含 29 个 artifact（Task 015 新增 7 个 SettingsLib per-target
+        # 确认 CONFIGS 含 30 个 artifact（Task 015 新增 7 个 SettingsLib per-target
         # res-only target；Task 038 新增 Traceur 双 AAR；Task 040 新增 10 个
-        # SettingsLib per-target res-only target）
+        # SettingsLib per-target res-only target；Task 072 新增 dynamiccolors）
         self.assertEqual(
             set(paar.CONFIGS),
             {"animationlib", "WifiTrackerLib", "iconloader",
@@ -1213,8 +1234,8 @@ class TestAllFlag(unittest.TestCase):
              "SettingsLibSliderPreference",
              "SettingsLibUsageProgressBarPreference",
              "SettingsLibSettingsSpinner",
-             "TraceurCommon", "Traceur-res"})
-        self.assertEqual(len(paar.CONFIGS), 29)
+             "TraceurCommon", "Traceur-res", "dynamiccolors"})
+        self.assertEqual(len(paar.CONFIGS), 30)
 
     def test_all_flag_iterates_all_configs(self):
         # 验证 --all 会遍历全部 CONFIGS（用 monkeypatch 拦截 build_artifact）

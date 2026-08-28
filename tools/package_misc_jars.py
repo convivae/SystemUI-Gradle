@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Package the twelve hand-copied misc JARs from frozen AOSP Soong artifacts.
+"""Package the fifteen frozen misc JARs from AOSP Soong artifacts.
 
-Task 064 (regeneration gap closure): every remaining ``libs/`` JAR that was
+Task 064 (regeneration gap closure): every ``libs/`` JAR that was
 hand-copied in 2026-07 without a script is mapped here to its owning Soong
 intermediate, following the frozen-input discipline of ``build_sysuisdk.py``:
 exact relative paths, no globbing, no newest-file fallback. Extraction is a
@@ -27,9 +27,16 @@ themselves, so ``--verify-only`` reports MATCH across the board. See
   the frozen source is the turbine-combined closure (stub bodies, fine for
   the compileOnly wiring).
 
+Task 072 (C4 wiring, 2026-08-28): +3 surfaceeffects Kotlin JARs from
+frameworks/libs/systemui/surfaceeffects (17 SystemUI-core bp static_libs
+SurfaceEffectsComposeLib; SystemUI-17 sources import all three namespaces
+com.android.systemui.surfaceeffects.{core,compose,view}.*). Each jar carries
+only its own namespace's classes (verified disjoint); frozen at first
+generation, source == baseline.
+
 Usage::
 
-    python3 tools/package_misc_jars.py --all            # regenerate all 12
+    python3 tools/package_misc_jars.py --all            # regenerate all 15
     python3 tools/package_misc_jars.py framework        # regenerate one
     python3 tools/package_misc_jars.py --all --verify-only   # libs/ vs frozen baselines
     python3 tools/package_misc_jars.py --all --require-match  # exit 1 on any DIFF
@@ -65,6 +72,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # framework-statsd moved to the android_common_apex31 variant; SystemUI-tags
 # and keepanno-annotations are byte-identical across vintages; the rest
 # drifted in place (byte-level, same owning paths).
+#
+# Task 072 (C4 wiring, 2026-08-28): +3 surfaceeffects Kotlin jars. bp has
+# no resource_dirs and the source trees carry no res directories → tier②
+# JAR (rule F: frameworks/libs/systemui is not SystemUI-owned code).
 CONFIGS: dict[str, dict] = {
     "framework": {
         "module": "framework",
@@ -200,6 +211,47 @@ CONFIGS: dict[str, dict] = {
             "aa5077c38e9991970ca2230df7709e8d36fa8c36c79abc9b015668e8f72f6dcd",
         "baseline_sha256":
             "aa5077c38e9991970ca2230df7709e8d36fa8c36c79abc9b015668e8f72f6dcd",
+    },
+    # ↓↓↓ Task 072 (C4 wiring): surfaceeffects 三库 Kotlin 实现产物
+    # （SurfaceEffectsCoreLib / SurfaceEffectsComposeLib / SurfaceEffectsViewLib）。
+    # frameworks/libs/systemui/surfaceeffects/{core,compose,view}（规则 F tier② jar：
+    # bp 无 resource_dirs、源树无 res）；17 SystemUI-core bp static_libs 含
+    # SurfaceEffectsComposeLib，SystemUI-17 源码 import 三个 namespace
+    # com.android.systemui.surfaceeffects.{core,compose,view}.*（AuthRippleView /
+    # AuthRippleScrim / WiredChargingRippleController 等）。三 jar 各只含自有
+    # namespace 类（互不相交，已验证）；取 Kotlin 实现产物（非 kotlin_headers）。
+    "SurfaceEffectsCoreLib": {
+        "module": "SurfaceEffectsCoreLib",
+        "relpath": "frameworks/libs/systemui/surfaceeffects/core/"
+                   "SurfaceEffectsCoreLib/android_common/kotlin/"
+                   "SurfaceEffectsCoreLib.jar",
+        "destination": "libs/SurfaceEffectsCoreLib.jar",
+        "source_sha256":
+            "c1ba44f192688687255bacc7bd96c1ef9dcc61aa9667da37e8d5ae3fa8974c35",
+        "baseline_sha256":
+            "c1ba44f192688687255bacc7bd96c1ef9dcc61aa9667da37e8d5ae3fa8974c35",
+    },
+    "SurfaceEffectsComposeLib": {
+        "module": "SurfaceEffectsComposeLib",
+        "relpath": "frameworks/libs/systemui/surfaceeffects/compose/"
+                   "SurfaceEffectsComposeLib/android_common/kotlin/"
+                   "SurfaceEffectsComposeLib.jar",
+        "destination": "libs/SurfaceEffectsComposeLib.jar",
+        "source_sha256":
+            "8be1de742326d052b689250c008fd5f12de0d513a9f5c259eeb6cda109814658",
+        "baseline_sha256":
+            "8be1de742326d052b689250c008fd5f12de0d513a9f5c259eeb6cda109814658",
+    },
+    "SurfaceEffectsViewLib": {
+        "module": "SurfaceEffectsViewLib",
+        "relpath": "frameworks/libs/systemui/surfaceeffects/view/"
+                   "SurfaceEffectsViewLib/android_common/kotlin/"
+                   "SurfaceEffectsViewLib.jar",
+        "destination": "libs/SurfaceEffectsViewLib.jar",
+        "source_sha256":
+            "dff01e0b86351ed5a88e85e56eb136c92da2b71c16a5ea4dcd7e0dd13a02e987",
+        "baseline_sha256":
+            "dff01e0b86351ed5a88e85e56eb136c92da2b71c16a5ea4dcd7e0dd13a02e987",
     },
 }
 

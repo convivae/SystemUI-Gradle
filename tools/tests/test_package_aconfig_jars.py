@@ -155,6 +155,25 @@ class TestAconfigJarPackaging(unittest.TestCase):
         self.assertEqual(destination, Path("libs/wm-shell-flags.jar"))
         self.assertEqual(package, "com.android.wm.shell")
 
+    def test_uilatencystats_flags_config(self):
+        # Task 072 (C4 wiring): 17 SystemUI-core bp static_libs
+        # uilatencystats_flags_core_java_lib; runtime package uses
+        # underscores (com.android.server.ui_latency_stats), unlike the
+        # module's aconfig_declarations name (uilatencystats_flags).
+        source, destination, package = module.CONFIGS["uilatencystats-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base/uilatencystats_flags_core_java_lib"
+            / "android_common/javac"
+            / "uilatencystats_flags_core_java_lib.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertNotIn("uilatencystats-flags", module.FRAMEWORK_FAMILY)
+        self.assertNotIn("uilatencystats-flags", module.AGGREGATE_FAMILY)
+        self.assertEqual(destination, Path("libs/uilatencystats-flags.jar"))
+        self.assertEqual(package, "com.android.server.ui_latency_stats")
+
     def test_window_flags_config_uses_framework_owned_javac_runtime(self):
         source, destination, package = module.CONFIGS["window-flags"]
         self.assertEqual(

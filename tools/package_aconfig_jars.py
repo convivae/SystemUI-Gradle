@@ -311,6 +311,21 @@ CONFIGS = {
         Path("libs/device-state-flags.jar"),
         "com.android.server.policy.feature.flags",
     ),
+    # Task 072 (C4 wiring, 2026-08-28): uilatencystats flags. 17 SystemUI-core
+    # bp static_libs includes uilatencystats_flags_core_java_lib
+    # (frameworks/base/AconfigFlags.bp L218, aconfig_declarations
+    # "uilatencystats_flags" in services/core uilatencystats/Android.bp).
+    # SystemUI-17 keyguard sources import android.uilatencystats.
+    # UiLatencyStatsManager (framework class); the runtime Flags classes live
+    # under com.android.server.ui_latency_stats (five-class set verified).
+    "uilatencystats-flags": (
+        _soong(
+            "frameworks/base/uilatencystats_flags_core_java_lib/"
+            "android_common/javac/uilatencystats_flags_core_java_lib.jar"
+        ),
+        Path("libs/uilatencystats-flags.jar"),
+        "com.android.server.ui_latency_stats",
+    ),
 }
 
 

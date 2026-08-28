@@ -363,6 +363,19 @@ def _build_configs() -> dict:
         "rtxt": TRACEUR_SOONG / "Traceur-res/android_common/R.txt",
         "output": "libs/aars/Traceur-res.aar",
     },
+    # ↓↓↓ Task 072（C4 接线）：dynamiccolors（17 SystemUI-res bp static_libs L425）。
+    # frameworks/libs/systemui/dynamiccolors：res-only android_library（无 srcs），
+    # namespace com.android.systemui.dynamiccolors；提供 materialColor* 色板
+    # （SystemUI-res 17 的 styles.xml/colors.xml/drawable-night 直接引用）。
+    # 规则 F tier②（非 SystemUI 自有代码）；单 consumer（:SystemUI-res）→
+    # 直接 AAR（Task 059 例外，不入本地 maven、不进 catalog）。
+    "dynamiccolors": {
+        "code": [],
+        "res": [AOSP_ROOT / "frameworks/libs/systemui/dynamiccolors/res"],
+        "manifest": AOSP_ROOT / "frameworks/libs/systemui/dynamiccolors/AndroidManifest.xml",
+        "rtxt": SOONG_DIR / "frameworks/libs/systemui/dynamiccolors/dynamiccolors/android_common/R.txt",
+        "output": "libs/aars/dynamiccolors.aar",
+    },
     }
 
 

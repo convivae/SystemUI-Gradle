@@ -3,7 +3,8 @@
 """Unit tests for tools/package_misc_jars.py — task 064 frozen misc-JAR map.
 
 Covers:
-  1. frozen mapping completeness (12 entries, names, modules, destinations)
+  1. frozen mapping completeness (12 task-064 entries + 3 task-072
+     surfaceeffects entries, names, modules, destinations)
   2. relpath/destination shape discipline (never absolute, always libs/)
   3. sha256 field format
   4. resolve_source joins under soong intermediates
@@ -62,13 +63,28 @@ EXPECTED_ENTRIES = {
         "tracinglib-platform",
         "libs/prebuilts/tracinglib-platform.jar",
     ),
+    # Task 072 (C4 wiring): surfaceeffects Kotlin implementation jars
+    # (17 SystemUI-core bp static_libs SurfaceEffectsComposeLib; sources
+    # import all three com.android.systemui.surfaceeffects.* namespaces).
+    "SurfaceEffectsCoreLib": (
+        "SurfaceEffectsCoreLib",
+        "libs/SurfaceEffectsCoreLib.jar",
+    ),
+    "SurfaceEffectsComposeLib": (
+        "SurfaceEffectsComposeLib",
+        "libs/SurfaceEffectsComposeLib.jar",
+    ),
+    "SurfaceEffectsViewLib": (
+        "SurfaceEffectsViewLib",
+        "libs/SurfaceEffectsViewLib.jar",
+    ),
 }
 
 
 class TestFrozenMapping(unittest.TestCase):
-    def test_mapping_covers_exactly_the_twelve_gap_artifacts(self):
+    def test_mapping_covers_exactly_the_frozen_artifacts(self):
         self.assertEqual(set(module.CONFIGS), set(EXPECTED_ENTRIES))
-        self.assertEqual(len(module.CONFIGS), 12)
+        self.assertEqual(len(module.CONFIGS), 15)
 
     def test_entries_carry_module_and_destination(self):
         for name, (soong_module, destination) in EXPECTED_ENTRIES.items():
@@ -90,6 +106,23 @@ class TestFrozenMapping(unittest.TestCase):
                     any(part in entry["relpath"].split("/")
                         for part in ("javac", "kotlin", "turbine-combined",
                                      "combined"))
+                )
+
+    def test_surfaceeffects_jars_are_kotlin_implementation_outputs(self):
+        # Task 072: the three surfaceeffects entries must point at the
+        # android_common/kotlin/ implementation jars (not kotlin_headers),
+        # and each is frozen with source == baseline (no hand copies).
+        for name in ("SurfaceEffectsCoreLib", "SurfaceEffectsComposeLib",
+                     "SurfaceEffectsViewLib"):
+            entry = module.CONFIGS[name]
+            with self.subTest(entry=name):
+                parts = entry["relpath"].split("/")
+                self.assertIn("surfaceeffects", parts)
+                self.assertIn("kotlin", parts)
+                self.assertNotIn("kotlin_headers", parts)
+                self.assertIn("android_common", parts)
+                self.assertEqual(
+                    entry["source_sha256"], entry["baseline_sha256"]
                 )
 
     def test_destinations_live_under_libs(self):
