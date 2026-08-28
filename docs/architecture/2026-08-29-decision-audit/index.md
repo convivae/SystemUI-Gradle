@@ -43,7 +43,7 @@
 | E1 | Task 050：79 处 manifest FQCN 手工改写先例 | e01-task050-fqcn-rewrites.md | done | 可接受但需补记录（授权链完整；缺 CONV 标记+merge commit 标题失真） | commits baf5c25d/2cb578be；brief 050 §A.5；orchestration log L236 |
 | E2 | Task 059：直接 AAR 例外清单原始授权范围 | e02-task059-direct-aar-exception.md | done | 符合（用户明示裁定+字节中性 A/B 证明；判据与清单双写造成扩清单模糊） | AGENTS.md §3.2；issue 2026-08-25；log L256/259 |
 | E3 | Task 070：5806 处 strings.xml CONV 标记授权链 | e03-task070-strings-conv.md | not-started | | task070 相关 commit/issue |
-| E4 | 13-module → 16-module 拓扑演变 | e04-module-topology-evolution.md | not-started | | docs/architecture/2026-08-06-module-structure-audit.md；AGENTS.md §3.1 |
+| E4 | 13-module → 16-module 拓扑演变 | e04-module-topology-evolution.md | done | 符合（每步预研+用户裁决+ADR 0003 seam 判据一致；§3.1 文档滞后于 settings 17 includes） | module-audit §一；panorama §5；task070 裁决#1/2/5；commits 828923fb/bdf2dba5/d1352d5d |
 
 ## 发现的额外问题（台账外）
 
