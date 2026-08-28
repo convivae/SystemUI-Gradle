@@ -20,7 +20,17 @@ val frameworkJars = files(
 
 
 android {
-    namespace = "com.android.systemui"
+    // Task 072（C4 接线）：由 com.android.systemui 改为 com.android.systemui.core。
+    // 原因：:SystemUI-application（承接 AOSP 17 完整 manifest，组件名为相对名）的
+    // namespace 必须等于 AOSP manifest package = com.android.systemui（merger 按模块
+    // namespace 展开相对名）；而 AGP merger 的 unique-namespace 检查
+    // （ENFORCE_UNIQUE_PACKAGE_NAMES，默认开启）禁止闭包内两个模块同 namespace
+    // （16 时代 Task 050 已实证该报错）。core 的 namespace 是 Gradle-only 标签：
+    // core 无 res（R 归 :SystemUI-res）、全仓零处 import com.android.systemui.R、
+    // 无 BuildConfig 引用、manifest（396 行权限表）无相对组件名，17 bp 的
+    // SystemUI-core 本就无 manifest/package 声明，故改名不承载任何 AOSP 语义。
+    // 详见 docs/issues/2026-08-28-c4-gradle-wiring.md §3.1。
+    namespace = "com.android.systemui.core"
     compileSdkPreview = "SysUISdk"
 
     defaultConfig {
