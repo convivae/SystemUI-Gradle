@@ -303,3 +303,10 @@
 - chief 独立复验全过：`./gradlew help` BUILD SUCCESSFUL（4s）；16 模块全部识别；`check_source_alignment.py --strict` exit 0（MODIFIED 1+86 均为既有白名单）；pytest 293 passed +111 subtests；catalog 23 本地 maven 族全 2.0.0、`libs/maven/` 仅存 2.0.0 目录；四个新产物（surfaceeffects×3 jar、uilatencystats-flags jar、dynamiccolors aar）删除重跑字节一致（REGEN DETERMINISTIC ✓）；禁改面（src/res/对齐工具/build_sysuisdk/CHARTER）零 diff；git status 干净。
 - worker 自主判断 4 项均 review 接受：core namespace→`com.android.systemui.core`（unique-namespace 硬约束 + merger 相对名展开，issue §3.1 有 merger 源码依据）；dynamiccolors 直接 AAR（Task 059 例外形状：单 consumer、记录在案）；plugin 补 `:SystemUI-compose`（17 bp 漂移）；core 16 遗留 manifest 未动（移交 task073）。
 - 结论：**review-PASS**，已 push。task073（编译闭环）待派。
+
+## 2026-08-29 — audit01（task072/073 决策审计）评审收口
+
+- worker：audit01（joycode Kimi-K3-jcloud，pane w2:p2P）；26 commits `52e3c178..e1e36295`。
+- 产出：`docs/architecture/2026-08-29-decision-audit/`（21 文档：index + summary + 19 决策文档）。
+- chief 复核：判读 12 符合 / 4 可接受需补记录 / 1 过程级重做（P1 blanket 授权） / 1 待定（D12）；证据抽查全过（D7 bp 行号精确、D3 先例 commit 8ab860e9 真实、index resume 段可用）；目录外零越界；小步 commit 纪律全程未见 `git add -A`。
+- 结论：**review-PASS**。待用户裁决项见 summary.md 整改优先级清单（P1 过程整改、D3 追认/重做、D12 选项①、批次 review、AGENTS.md 同步）。
