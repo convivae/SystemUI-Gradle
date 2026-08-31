@@ -327,3 +327,9 @@
 - **C4c 闭合成果**：Release missing refs 31→0，6 根因组全部 bp 实证；新冻结产物 4（am-flags、settingstheme-flags、bubbles-user-model、displaylib-kapt 子集 6 类）；SettingsLib AAR 补 Kotlin 半边 1372→1431 类并升坐标 2.0.0→2.0.1；kotlin-parcelize-runtime 2.2.10 官方坐标。
 - **推送**：批次 commits `4652adfd..08eb5e15` + 文档同步，`origin/main` 更新。
 - **Phase C 当前**：C1/C2/C3/C4（a/b/c）全部闭合；剩 C5（17 镜像模拟器双 runtime 门）+ C6（manifest 快照 + tag + README）。
+
+## 2026-09-01 — C5 修复批次（B1+B3 并行）
+
+- task076（B1 Release proto keep fix）完成并 push（2eec7dbb）：反射字段 keep 复现 Soong 端态；条目级构建复现（三 clean 一致 2a5e372f）；AGP SDKP 随机块为上源非确定因，决策点 includeDependencyInfoInApks=false 待用户；构建稳定性协议固化（双杀补 kotlin-daemon 括号防自杀、R8 竞速两阶段协议）
+- task077（B3 super 余量）获准起 AOSP 构建（单行 BOARD_EMULATOR_DYNAMIC_PARTITIONS_SIZE 1800→2880MiB）；AOSP 树 commit c18f6a3f 本地待审
+- task075 commits 于 17:40 push（6abc6ee5）；B1+B3 合并后统一 runtime 门再判双 runtime PASS
