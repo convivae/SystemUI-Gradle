@@ -326,6 +326,37 @@ CONFIGS = {
         Path("libs/uilatencystats-flags.jar"),
         "com.android.server.ui_latency_stats",
     ),
+    # Task 074 (C4c release/R8 closure, 2026-09-01): am-flags. 17
+    # WindowManager-Shell-defaults static_libs L127 links am_flags_lib
+    # (aconfig_declarations "am_flags",
+    # services/core/java/com/android/server/am/Android.bp:15, package
+    # com.android.server.am); WM-Shell AAR bytecode references
+    # com.android.server.am.Flags (DesktopTaskChangeListener.addTask etc.),
+    # so the five-class runtime set is dexed into the APK closure.
+    "am-flags": (
+        _soong(
+            "frameworks/base/services/core/java/com/android/server/am/"
+            "am_flags_lib/android_common/javac/am_flags_lib.jar"
+        ),
+        Path("libs/am-flags.jar"),
+        "com.android.server.am",
+    ),
+    # Task 074 (C4c release/R8 closure, 2026-09-01): settingstheme-flags.
+    # SettingsLibSettingsTheme bp static_libs
+    # aconfig_settingstheme_exported_flags_java_lib (declaration
+    # SettingsTheme/aconfig/settingstheme.aconfig, package
+    # com.android.settingslib.widget.theme.flags, is_exported); the Theme
+    # AAR's Kotlin classes (SettingsThemeHelper.isExpressiveDesignEnabled)
+    # reference the Flags class at R8 time.
+    "settingstheme-flags": (
+        _soong(
+            "frameworks/base/aconfig_settingstheme_exported_flags_java_lib/"
+            "android_common/javac/"
+            "aconfig_settingstheme_exported_flags_java_lib.jar"
+        ),
+        Path("libs/settingstheme-flags.jar"),
+        "com.android.settingslib.widget.theme.flags",
+    ),
 }
 
 

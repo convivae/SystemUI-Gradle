@@ -174,6 +174,44 @@ class TestAconfigJarPackaging(unittest.TestCase):
         self.assertEqual(destination, Path("libs/uilatencystats-flags.jar"))
         self.assertEqual(package, "com.android.server.ui_latency_stats")
 
+    def test_am_flags_config(self):
+        # Task 074 (C4c release/R8 closure): am-flags backs the 17
+        # WindowManager-Shell-defaults static_libs L127 am_flags_lib edge
+        # (wmshell AAR bytecode references com.android.server.am.Flags).
+        source, destination, package = module.CONFIGS["am-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base/services/core/java/com/android/server/am"
+            / "am_flags_lib/android_common/javac/am_flags_lib.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertNotIn("am-flags", module.FRAMEWORK_FAMILY)
+        self.assertNotIn("am-flags", module.AGGREGATE_FAMILY)
+        self.assertNotIn("am-flags", module.TURBINE_BASELINE_CONFIGS)
+        self.assertEqual(destination, Path("libs/am-flags.jar"))
+        self.assertEqual(package, "com.android.server.am")
+
+    def test_settingstheme_flags_config(self):
+        # Task 074 (C4c release/R8 closure): settingstheme-flags backs the
+        # SettingsLibSettingsTheme bp static_libs edge
+        # aconfig_settingstheme_exported_flags_java_lib (Theme AAR Kotlin
+        # references com.android.settingslib.widget.theme.flags.Flags).
+        source, destination, package = module.CONFIGS["settingstheme-flags"]
+        self.assertEqual(
+            source,
+            module.AOSP_INTERMEDIATES
+            / "frameworks/base/aconfig_settingstheme_exported_flags_java_lib"
+            / "android_common/javac"
+            / "aconfig_settingstheme_exported_flags_java_lib.jar",
+        )
+        self.assertNotIn("turbine", str(source))
+        self.assertNotIn("settingstheme-flags", module.FRAMEWORK_FAMILY)
+        self.assertNotIn("settingstheme-flags", module.AGGREGATE_FAMILY)
+        self.assertNotIn("settingstheme-flags", module.TURBINE_BASELINE_CONFIGS)
+        self.assertEqual(destination, Path("libs/settingstheme-flags.jar"))
+        self.assertEqual(package, "com.android.settingslib.widget.theme.flags")
+
     def test_window_flags_config_uses_framework_owned_javac_runtime(self):
         source, destination, package = module.CONFIGS["window-flags"]
         self.assertEqual(
