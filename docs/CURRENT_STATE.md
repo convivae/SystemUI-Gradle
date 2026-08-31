@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-28（**Phase C 过半**：C1 AOSP 升级 `android-17.0.0_r1` + 全量构建、C3 源码 17 重对齐、C2 libs/ 脚本再生、C4a Gradle 接线均完成；**C4b（`:app:assembleDebug` 编译闭环，task073）进行中，17 重对齐后 Debug/Release 构建尚未恢复绿、双 runtime 未跑**。16 时代（AOSP main 快照）的 DEBUG/RELEASE_RUNTIME_PASS 为历史基线，APK sha 台账见下。）
+> **Last verified**: 2026-08-31（**Phase C：C1 AOSP 升级 `android-17.0.0_r1` + 全量构建、C3 源码 17 重对齐、C2 libs/ 脚本再生、C4a Gradle 接线、C4b Debug 编译闭合均完成**：`:app:assembleDebug` BUILD SUCCESSFUL（chief 亲手重跑证实）；**Release/R8 未跑（归 task074）、双 runtime 未跑（归 C5）**。16 时代（AOSP main 快照）的 DEBUG/RELEASE_RUNTIME_PASS 为历史基线，APK sha 台账见下。）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -11,14 +11,14 @@
 | 维度 | 状态 |
 |------|------|
 | AOSP 基线 | **`android-17.0.0_r1`**（manifest `5bc9a7ce`，frameworks/base `94b4c163b`，1084 projects）；C1 全量构建 `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swap） |
-| Debug APK | ⏳ **进行中（C4b，task073）**：17 重对齐后 `:app:assembleDebug` 尚未恢复绿；16 时代 APK `e8aad131…`（163,896,493 B）为历史台账 |
+| Debug APK | ✅ **C4b 闭合（task073，2026-08-31）**：`:app:assembleDebug` BUILD SUCCESSFUL，APK 199,845,582 B（16 时代 `e8aad131…`/163,896,493 B 为历史台账；APK sha 台账随 C5/C6 重算） |
 | Release APK | 未跑（归 task074）；16 时代 APK `d3968fb2…`（34,688,965 B）为历史台账 |
 | Gradle 配置解析 | ✅ `./gradlew help` + `projects` BUILD SUCCESSFUL（C4a 验收；16 模块全部识别，C4b 起追加 `:SystemUI-utils-kairos`） |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
-| Python 工具测试 | ✅ **293 passed**（+111 subtests，C4a task072 chief 复验；C4b 进行中可能继续增加） |
+| Python 工具测试 | ✅ **305 passed**（+141 subtests，C4b task073 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5），本地 Maven 23 族全部 2.0.0 |
 | 设备/模拟器 | 未跑（归 C5）；当前无 QEMU/emulator 进程在跑；C5 按 runbook 重拉 17 镜像模拟器 |
-| 当前唯一工程优先级 | **Phase C 收尾**：C4b 编译闭环（进行中）→ task074 Release/R8 闭环 → C5 17 镜像模拟器双 runtime 门 → C6 manifest 快照 + tag + README 版本声明（ADR 0007） |
+| 当前唯一工程优先级 | **Phase C 收尾**：task074 Release/R8 闭环 → C5 17 镜像模拟器双 runtime 门 → C6 manifest 快照 + tag + README 版本声明（ADR 0007） |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -57,9 +57,9 @@
 | AOSP 全量构建（17） | ✅ `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swapfile） | C1，2026-08-27（log.md） |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src + 86 res = 白名单 CONV） | task072 chief 复验（2026-08-28） |
 | Gradle 配置解析 | ✅ `./gradlew help` + `projects` BUILD SUCCESSFUL（16 模块识别） | task072（2026-08-28，先 `pkill -f GradleDaemon`） |
-| Python 工具测试 | ✅ 293 passed（+111 subtests） | task072 chief 复验（2026-08-28） |
-| 产物确定性 | ✅ 冻结指纹 `package_misc_jars.py --verify-only` 15/15 MATCH（含三个新 surfaceeffects jar）；dynamiccolors 等四个新产物删除重跑字节一致 | task072（2026-08-28） |
-| `:app:assembleDebug` | ⏳ **进行中（C4b，task073）**：17 重对齐后尚未恢复绿；预期错误面（kairos 60 文件 import、personalcontext、12 新 flags 包、bp 未接线项、view_capture proto、首次 1338 行 manifest 合并）见 task072 issue §6 移交清单 | task073（进行中；P0 kairos 模块已提交 `4ac49993`） |
+| Python 工具测试 | ✅ 305 passed（+141 subtests） | task073 chief 复验（2026-08-31） |
+| 产物确定性 | ✅ 冻结指纹 `package_misc_jars.py --verify-only` 22/22 MATCH（含 mechanics×2 等 5 个新冻结 jar；两个 AAR 内容修正后租户 17→22 族） | task073 chief 复验（2026-08-31） |
+| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（chief 2026-08-31 重跑证实；K 错误 R1 182 → R4 5 → R50 0；四层修复：aapt2 双阶段 feature-flags、SysUISdk 重建 D12 选项 ①、17 依赖图接线 R9-R31（compose 首次真编译 188→0）、Dagger api 化 R24-R50） | task073（5 commits `a65e2d9c..517ca6d6`） |
 | `:app:assembleRelease` / R8 | 未跑（归 task074；16 时代 Release closure 流程与规则基线保留为历史参考） | — |
 | 设备/模拟器 runtime | 未跑（归 C5）；当前无 QEMU/emulator 进程；C5 按 runbook `docs/issues/2026-08-26-emulator-relaunch-runbook.md` 重拉 17 镜像模拟器并跑双 runtime 门 | — |
 
@@ -94,7 +94,7 @@ builtInKotlin 三件套（PITFALLS §1.5）：`android.builtInKotlin=true`、`an
 :SystemUI-accessibility-floatingmenu-res
 ```
 
-C4b（task073，进行中）按 17 bp 追加 tier① 源码模块 `:SystemUI-utils-kairos`（kairos，`packages/SystemUI/utils/kairos/`，63 kt；16 时代 test-only 判定为误判，17 已是 SystemUI-core 生产依赖）——P0 已提交并注册，故当前 settings 实际 include 17 个模块。
+C4b（task073）按 17 bp 追加 tier① 源码模块 `:SystemUI-utils-kairos`（kairos，`packages/SystemUI/utils/kairos/`，63 kt；16 时代 test-only 判定为误判，17 已是 SystemUI-core 生产依赖），当前 settings include **17 个模块**。SysUISdk 于 2026-08-31 起已按 AOSP-17 重建（生成器按 D12 选项 ①：桥接切片 39→37 条、冻结映射 8→7 输入），不用再等 C5 前重建这段话；releases 面与 runtime 门不变。另 2026-08-29 起 `:SystemUI-plugin` namespace 对齐 AOSP 为 `com.android.systemui.plugins`（用户批准）。
 
 ## Dependency and artifact state
 
@@ -120,18 +120,14 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. ⏳ **C4b（task073，进行中）**：`./gradlew :app:assembleDebug` BUILD SUCCESSFUL。错误面按
-   task072 issue §6 清单编译错误驱动处理：kairos（已建 `:SystemUI-utils-kairos`）、
-   personalcontext_ace_visualizer AAR、SerialPortAccessDialog AAR、mechanics×2 jar、
-   12 个新 flags 包、legacy androidx 等 bp 未接线项、view_capture proto、dagger KSP flags、
-   首次 1338 行 library manifest 合并验收。
-2. **task074（C4b 后）**：Release/R8 闭环恢复绿（`minifyReleaseWithR8` + `assembleRelease`）。
-3. **C5**：17 镜像模拟器重拉（runbook `docs/issues/2026-08-26-emulator-relaunch-runbook.md`）+
-   Debug/Release 双 runtime 门（部署、零 FATAL、窗口在屏）；C5 前需先从 AOSP-17 `out/` 重跑
-   `build_sysuisdk.py` 重建 SysUISdk（当前 live SDK 为 16 时代产物，八输入已验存）。
+1. **task074（C4b 后，下一号工单）**：Release/R8 闭环恢复绿（`minifyReleaseWithR8` + `assembleRelease`）。
+   移交清单见 task073 issue §7（assume true-for-R8 adapter、pods 测试源不入生产图、view_capture proto 零引用已核实等）。
+2. **C5**：17 镜像模拟器重拉（runbook `docs/issues/2026-08-26-emulator-relaunch-runbook.md`）+
+   Debug/Release 双 runtime 门（部署、零 FATAL、窗口在屏）；SysUISdk 已按 AOSP-17 重建（2026-08-31，不需重建）。
+   尾账：SDK 目录老备份 `android-SysUISdk.bak-legacy-pre-aosp17` 与 `-staging/` 待用户确认后清理。
 4. **C6**：manifest 快照 + release tag + README 版本声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）。
 5. 尾账（Release 阶段处理）：tracinglib-platform.jar 溯源；维护性观察（Kotlin 2.3/AGP 9.5 解锁、
-   AOSP 树漂移回查、官方 Maven 等价物回查、pytest 偶发 `test_build_sysuisdk` 事务测试间歇失败观察）。
+   AOSP 树漂移回查、官方 Maven 等价物回查、pytest 偶发间歇失败观察）。
 
 ## Verification commands and evidence
 
