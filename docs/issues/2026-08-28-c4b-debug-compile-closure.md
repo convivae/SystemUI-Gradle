@@ -67,6 +67,45 @@ Release/R8 归 task074；runtime 归 C5。
 | R5 | `:app:assembleDebug --continue`（build5） | FAILED | 5 e: + patch 任务 exit 5 | res-product CONV_DEL 已落地（用户授权，commit `02e60a60`）后新暴露：`:app:patchDebugAndroidPrvMergedResources` 里独立 aapt2 compile 报 `Resource flag value undefined: 'com.android.systemui.dream_overlay_updated_ui'`（merged values.xml 的 `android:featureFlag` 样式） |
 | R6 | 同上（build6） | FAILED | 5 e: + link 错 | R5 修复（见下批次 2）后 compile 侧过；新暴露 link 侧：merged manifest `uses-permission` 的 `android:featureFlag`（aapt2 link 对 manifest 元素空 flag 表默认 fail_on_unrecognized_flags） |
 | R7/R8 | 同上（build7/build8） | FAILED | 5 e: + link 错 | R6 修复（manifest 属性 CONV_DEL，R7 首次注释含 `--` 非法改写一次）后 link 过 featureFlag 门；最终暴露 20 条 `resource android:color/… not found`（见剩余阻塞 2，与 5 e: 同根因） |
+| R9 | 同上（build9，SysUISdk 重建后首次全量） | FAILED | 188 e: | D12 重建成功后 5 e: + 20 link 色全清；首次真正编译 :SystemUI-compose（此前一直被上游 animation 失败跳过）暴露缺 systemui-flags / mechanics / window-core 依赖 |
+| R10-R23 | 逐模块补依赖迭代（build10-23） | FAILED | 188→5→…→0 e: | 依出错模块逐个接：compose（flags/mechanics/window-core/compilelib/namespace+scene res）、plugin（compose 插件+ui/foundation/monet）、shared（wmshell-aidls+wm-shell-flags+flag/src source roots）、clocks-common（foundation/constraintlayout/core-ktx）、customization（compose.ui+两个 flags jar）——详见批次 3 清单 |
+| R24/R25 | `:app:assembleDebug --continue`（build24/25） | FAILED | ksp 失败 | core KSP 首次运行（此前从未到达）：PerDisplayRepository → displaylib jar；再 Flag/FlagManager → shared 缺 `flag/src`+`flag/types/src` source roots |
+| R26-R30 | core compile（build26-30） | FAILED | 2771→188→12 e: | R27 一次暴露全部潜伏测试源：17 pods 结构为 src/{api,dagger,main}（sysui_* defaults），src/test / testFixtures / multivalentTests 不进生产模块 → 改为显式列举 60 个生产 src 根；R28-R30 补 clocks-common/window-core/usertypelib/settings-flags/autofill |
+| R31-R33 | core compile → assemble（build31-33） | FAILED | 12→0→javac 错 | core Kotlin 全绿；javac 暴露 wmshell-protolog 与 WifiTrackerLib R namespace（AAR manifest 用了 .nores 包名）|
+| R34-R50 | assemble（build34-50） | FAILED→**SUCCESS** | KSP 传递链→**0** | core 依赖按 Soong static_libs 扁平语义改 api（shared/animation/common/customization/clocks-common/plugin/compose/kairos/res + asynclayoutinflater/displaylib/iconloader/msdl/settingslib/ace-visualizer/LowLightDreamLib/constraintlayout/compose 系列/dynamicanimation/activity.compose）；ace visualizer AAR 补 dagger companion factories（javac jar）；application 补 wmshell×2 AAR；**R50（build50）`:app:assembleDebug` BUILD SUCCESSFUL（1m14s）** |
+
+### 批次 3 修复清单（R9→R50，SysUISdk 重建后的编译闭环）
+
+**A. 依赖接线（build.gradle.kts，均有 bp 依据）：**
+
+| 模块 | 新增 | bp 依据 |
+|---|---|---|
+| :SystemUI-compose | compileOnly systemui-flags.jar + mechanics×2 jar（core 统一 dex）；implementation window-core；debug/releaseImplementation compilelib 变体；**namespace 改 `com.android.compose.animation.scene` + res.srcDirs(scene/res)（1:1 拷自 AOSP）** | scene bp package + resource_dirs + com_android_systemui_flags_lib/mechanics/compilelib；core bp androidx.window_window-core |
+| :SystemUI-plugin | kotlin.compose 插件；implementation compose.ui/foundation；compileOnly monet.jar | plugin bp static_libs androidx.compose.ui_ui；源码引 BoxScope/ColorScheme；无插件则 backend Couldn't inline rememberCoroutineScope |
+| :SystemUI-shared | sourceSets 增 `flag/src`+`flag/types/src`（SystemUIFlagsLib/SystemUI-flag-types 17 新源）；compileOnly wmshell-aidls.jar + wm-shell-flags.jar | shared/Android.bp srcs flag/{types,}/src + static_libs WindowManager-Shell-aidls(17 新) + com_android_wm_shell_flags_lib |
+| :SystemUI-clocks-common | implementation compose.foundation + androidx.constraintlayout + core-ktx | 源码引 BoxScope/ConstraintSet/withSave；Soong 经传递链 |
+| :SystemUI-customization | implementation compose.ui；compileOnly systemui-flags + systemui-shared-flags | FlexClockViewGroupController 引 com.android.systemui.shared.Flags；bp 经 SystemUIPluginLib 静态链 |
+| :SystemUI-core | 60 个 pods 生产 src 根显式列举（src/{api,dagger,main}）；implementation clocks-common/window-core/usertypelib/settings-flags/wmshell-protolog/androidx-autofill；api 化传递链（见 R34-R50 行）；javac 需的全套 | SystemUI-core bp srcs + static_libs（pods 生产源语义 = sysui_main/api/dagger defaults） |
+| :SystemUI-application | implementation wmshell + wmshell-shared AAR | bp static_libs SystemUI-core 静态链传递；Gradle compileOnly 不传递 |
+
+**B. 新 tier② 冻结产物（tools/package_misc_jars.py，17→22 家族）：**
+
+| 家族 | 内容 | sha256 |
+|---|---|---|
+| wmshell-aidls | WindowManager-Shell-aidls javac（80 AIDL 生成类，17 shared bp 新依赖） | `c09cd4c6…78cce` |
+| displaylib | frameworks/libs/systemui/displaylib Kotlin（122 类含 dagger 生成，17 core bp L570） | `ceab8af3…7cdb` |
+| usertypelib | 同上（2 类，经 wmshell-shared 静态链） | `b4d6e73…bc4b4` |
+| settings-flags | aconfig_settings_flags_lib javac（5 类，17 core bp L571） | `dde946a…5722` |
+| wmshell-protolog | wm_shell_protolog-groups javac（2 类，经 wmshell 静态链；BubblesManager static-import） | `3ce6989…a7f6` |
+
+**C. AAR 内容修正（tools/package_aosp_aar.py）：**
+
+| AAR | 修正 |
+|---|---|
+| WifiTrackerLib | manifest 改用 WifiTrackerLibRes 的 GeneratedManifest（package `com.android.wifitrackerlib` = R namespace；原用代码模块 `.nores` 包名 → javac 找不到 `R$string`） |
+| personalcontext_ace_visualizer | code 增 visualizer javac jar（19 个 dagger companion @Provides factories，Kotlin jar 不含 → application Dagger 组件 import 失败） |
+
+### 剩余阻塞：无（全部解除）
 
 ### 批次 2 修复清单（R5→R8，本轮）
 
@@ -112,24 +151,59 @@ Release/R8 归 task074；runtime 归 C5。
    | 为什么停 | 修复需改 `tools/build_sysuisdk.py`（本 brief 禁改文件）：三选一 ①从 `_UNSUPPORTED_APP_USAGE_ENTRIES` 桥接条目移除该 2 条（framework.jar 副本本就会被合入）②桥接优先覆盖（改 collision 语义）③重准 bytes。均属生成器 owner 决策 |
    | 环境恢复 | SDK 目录已原名恢复（sha256 复验一致），构建环境可用；遗留 `platforms/android-SysUISdk-staging/`（旧流程产物）未动 |
 
+   **→ 已解除（D12 裁决，用户批准选项①，2026-08-29 授权 / 2026-08-31 执行）：** 生成器按选项①修改
+   （详见 §5 SysUISdk 重建记录），重建成功，5 e: + 20 link 色全部清除。
+
 ## 5. 验证记录
 
 | 门 | 命令 | 结果 |
 |---|---|---|
-| 对齐 | `python3 tools/check_source_alignment.py --strict` | exit 0（MISSING/MISPLACED/EXTRA 全 0；MODIFIED 1 = 既有白名单；RES-MODIFIED 87 = task070 5806 处 + task073 config.xml 1 处，均见 §6） |
-| pytest | `uv run pytest tools/tests -q` | 303 passed + 121 subtests（含 P0/P1/P2a 新增断言与批次 2 的 flags 转发/默认发现/来源门测试 20 项） |
-| 冻结指纹 | `uv run python tools/package_misc_jars.py --verify-only` | 17/17 MATCH（含 mechanics×2） |
-| 编译 | 见 §4 演变表；当前剩 1 类阻塞项（SysUISdk 重建，同时解锁 5 e: + 20 link 色） | — |
+| **编译验收** | `./gradlew :app:assembleDebug` | **BUILD SUCCESSFUL in 1m 14s**（build50.log；app-debug.apk ~200MB） |
+| 对齐 | `python3 tools/check_source_alignment.py --strict` | exit 0（MISSING/MISPLACED/EXTRA/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 = 既有白名单；RES-MODIFIED 87 = task070 5806 + task073 config.xml，见 §6） |
+| pytest | `uv run pytest tools/tests -q` | **305 passed** + 141 subtests（含 SysUISdk D12 回归、misc jars 22 家族、AAR 修正断言） |
+| 冻结指纹 | `uv run python tools/package_misc_jars.py --verify-only` | 22/22 MATCH（新增 wmshell-aidls/displaylib/usertypelib/settings-flags/wmshell-protolog） |
+
+### SysUISdk 重建记录（D12 裁决执行，2026-08-31）
+
+| 项 | 记录 |
+|---|---|
+| 生成器改动（用户批准选项①） | 删 `unsupportedappusage_jar` 输入与 `_UNSUPPORTED_APP_USAGE_ENTRIES` 切片；BRIDGE_ENTRIES 断言 39→37；`assert len(bridge) == 37`；`_validate_platform` 输入清单同步；TOOL_VERSION 045.1→045.2；docstring/ADR 0006/单入口架构文档 8→7 输入、39→37 同步；新增「UnsupportedAppUsage 不得再入桥」断言 |
+| 重建前 sha256 | android.jar `652fd3d4…157e8e`，framework.aidl `d0497fdc…4962e`（legacy，留于 `platforms/android-SysUISdk.bak-legacy-pre-aosp17`） |
+| **重建后 sha256** | **android.jar `d319632467441952e86134eedf4e5da982b3694a40e73efe5664098cc02cad72`，framework.aidl `881c9f35…a5ce4699`** |
+| 重建结果 | `SysUISdk composed: base android-37.0, AOSP inputs 7, bridge entries 37`（exit 0） |
+| API 复验（javap） | `RemoteTransition.setFilter(TransitionFilter)` ✓、`UserManager.USER_TYPE_PROFILE_SUPERVISING` ✓、`FingerprintSensorProperties.TYPE_STANDALONE` ✓、`UnsupportedAppUsage` 双类（framework turbine 副本）✓ |
+| 色板复验（aapt2 dump） | 20/20 全注入（system_surface_effect_{0..3}×{light,dark,fallback}、system_error_dim、system_on_{primary,secondary}_fixed{,_variant}） |
+| D12 regression test | 终态 android.jar 含 2 类 UnsupportedAppUsage（framework 字节）、core jar 不含；collision 防护非空断言保留（72 项全过） |
+
+### D3 裁决执行（2026-08-31）
+
+- manifest featureFlag CONV_DEL **已撤销**（字节级恢复 AOSP 原行）；
+- `app/build.gradle.kts` androidResources.additionalParameters 增两旗值：
+  `--feature-flags com.android.server.ui_latency_stats.ui_latency_stats_service=true`（裁决原文）与
+  `--feature-flags android.net.platform.flags.powered_off_finding_message_new_product_name:READ_WRITE=false`
+  （res/layout/shutdown_dialog_finder_active.xml 两个 TextView 的 featureFlag，Soong 值 READ_WRITE=false，
+  build 保留元素由平台运行时过滤）；
+- link 验证：无 manifest 标记过（build9 起 link 侧 featureFlag 错全部消除，零 manifest 改动）。
 
 ## 6. CONV 对账
 
 | 文件 | 标记 | 授权 | 记录 |
 |---|---|---|---|
 | SystemUI-res/res-product/values/config.xml | CONV_DEL ×2 块（tablet/desktop 两行 `config_enableLargeScreenScreencapture`，保留 default） | 用户 2026-08-28（chief 转达），Task 073，commit `02e60a60` | reason: product-variant unsupported by AGP；机制同 task070 strings.xml |
-| SystemUI-application/src/main/AndroidManifest.xml | CONV_DEL ×1 块（`REPORT_UI_LATENCY_STATS` 的 `android:featureFlag` 属性，元素保留） | File Map 授权区（`SystemUI-*/src`）；机制同 Task 072 package 属性先例 | reason: AGP 9.3.1 aapt2 link 无 feature-flags 通道（见 §4 批次 2）；字节保全可撤回 |
+
+（历史：SystemUI-application manifest 曾落 CONV_DEL ×1 块（featureFlag 属性），2026-08-29 D3 裁决 2
+用户选定备选路径 1（additionalParameters，零 manifest 改动）后**已撤销**，字节级恢复；
+方案演变见 §4 批次 2 与 D3 裁决执行记录）
 
 （另：task070 既有 5806 处 strings.xml 标记与 task072 manifest package 属性标记不属本任务，不重复对账）
 
 ## 7. 移交 task074 清单
 
-（待补）
+1. **release 侧未验证**：本任务只要求 debug（`:app:assembleDebug`）；release R8/dex、
+   `AssumeTrueForR8` -dontwarn adapter（ADR 0006 第 5 条）未动，待 release 验收任务。
+2. **pods 测试源未接**：`pods/**/src/test`、`src/testFixtures`、`multivalentTests`、
+   `pods/testFixtures`（sysui_testlib / fixture filegroup 语义）不在生产模块，未接入任何
+   sourceSet；后续如需跑测试按 Soong 测试目标单独建模。
+3. **legacy SDK 备份**：`platforms/android-SysUISdk.bak-legacy-pre-aosp17`（无 marker）与
+   `android-SysUISdk-staging/` 仍留于 SDK 目录，确认新 SDK 稳定后可清理。
+4. **未 push**：全部提交在本地 main（不 push，遵循 brief）。
