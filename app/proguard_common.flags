@@ -22,6 +22,17 @@
     *;
 }
 
+# Protobuf-lite (GeneratedMessageLite) message classes hand their field names to the
+# runtime schema (MessageSchema) via reflection on the field declarations themselves.
+# When R8 removes the unused accessors, the fields lose their last Java references and
+# get shrunk too, and the runtime then fails with NoSuchFieldException (task075:
+# 85x FATAL crash loop on WindowingEducationProto.hashCode via DataStore read).
+# Keep only the fields of surviving message classes; accessors stay removable, which
+# matches Soong stock end-state semantics (fields present, accessors removed).
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+
 # Prevent optimization or access modification of any referenced code that may
 # conflict with code in the bootclasspath.
 # TODO(b/222468116): Resolve such collisions in the build system.
