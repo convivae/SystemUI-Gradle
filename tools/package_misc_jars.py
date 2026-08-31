@@ -282,6 +282,85 @@ CONFIGS: dict[str, dict] = {
         "baseline_sha256":
             "48d465c729d8eb7ee6e3093f732047cc3fe970b828e1f89667b44312ada97f16",
     },
+    # ↓↓↓ Task 073 (C4b): WindowManager-Shell-aidls（17 新 bp 依赖）。AIDL-only
+    # java_library（frameworks/base/libs/WindowManager/Shell/Android.bp L36，srcs
+    # "src/**/*.aidl"），80 个生成类；SystemUISharedLib 17 bp static_libs 新增该模块
+    #（PipSurfaceTransactionHelper 引 com.android.wm.shell.common.pip.IPipAnimationListener、
+    # RecentsAnimationControllerCompat 引 IRecentsAnimationController 等）。无 res →
+    # 规则 F tier② jar。唯一消费方 :SystemUI-shared（compileOnly）。
+    "wmshell-aidls": {
+        "module": "WindowManager-Shell-aidls",
+        "relpath": "frameworks/base/libs/WindowManager/Shell/"
+                   "WindowManager-Shell-aidls/android_common/javac/"
+                   "WindowManager-Shell-aidls.jar",
+        "destination": "libs/wmshell-aidls.jar",
+        "source_sha256":
+            "c09cd4c633cea6ad52e85a036b80ba667c32ddc3a783a66028eff20ce8d78cce",
+        "baseline_sha256":
+            "c09cd4c633cea6ad52e85a036b80ba667c32ddc3a783a66028eff20ce8d78cce",
+    },
+    # ↓↓↓ Task 073 (C4b): displaylib（17 SystemUI bp static_libs，L570/781/823）。
+    # frameworks/libs/systemui/displaylib——纯 Kotlin java_library（无 res，规则 F
+    # tier② jar），Kotlin 实现产物含 dagger 生成类（DisplayLibComponent/Module，
+    # bp plugins: dagger2-compiler）。17 源码 59 文件 import
+    # com.android.app.displaylib.PerDisplayRepository 等。dex 进 APK → core
+    # implementation（唯一消费方）。
+    "displaylib": {
+        "module": "displaylib",
+        "relpath": "frameworks/libs/systemui/displaylib/displaylib/"
+                   "android_common/kotlin/displaylib.jar",
+        "destination": "libs/displaylib.jar",
+        "source_sha256":
+            "ceab8af3cb3fca921420cb76f2e3195e19c261d6b0b6d223a46d48acf69d7cdb",
+        "baseline_sha256":
+            "ceab8af3cb3fca921420cb76f2e3195e19c261d6b0b6d223a46d48acf69d7cdb",
+    },
+    # ↓↓↓ Task 073 (C4b): usertypelib（frameworks/libs/systemui/usertypelib，
+    # 纯 Kotlin android_library 无 res，kotlin-parcelize 产物 2 类）。
+    # Soong 经 WindowManager-Shell-shared bp static_libs L59 静态链进 SystemUI；
+    # wmshell-shared AAR 不打包静态依赖类 → 独立 tier② jar。dex 进 APK → core
+    # implementation（唯一消费方；ScreenCaptureIconRepository 等引 UserType）。
+    "usertypelib": {
+        "module": "usertypelib",
+        "relpath": "frameworks/libs/systemui/usertypelib/usertypelib/"
+                   "android_common/kotlin/usertypelib.jar",
+        "destination": "libs/usertypelib.jar",
+        "source_sha256":
+            "b4d6e73779fb54f58c7da3e5656aec04229fd99f30c12b1729a21993796bc4b4",
+        "baseline_sha256":
+            "b4d6e73779fb54f58c7da3e5656aec04229fd99f30c12b1729a21993796bc4b4",
+    },
+    # ↓↓↓ Task 073 (C4b): aconfig_settings_flags_lib（Settings aconfig 声明，
+    # packages/apps/Settings/aconfig；17 SystemUI-core bp static_libs L571）。
+    # com.android.settings.flags.Flags（biometricsOnboardingEducation 等），
+    # 5 类纯 javac → tier② jar；dex 进 APK → core implementation。
+    "settings-flags": {
+        "module": "aconfig_settings_flags_lib",
+        "relpath": "packages/apps/Settings/aconfig/"
+                   "aconfig_settings_flags_lib/android_common/"
+                   "repackaged-jarjar/javac/aconfig_settings_flags_lib.jar",
+        "destination": "libs/settings-flags.jar",
+        "source_sha256":
+            "dde946a01488a54bf122b60d4fbe3f81714ba2f1f637bf7a250baee30cde5722",
+        "baseline_sha256":
+            "dde946a01488a54bf122b60d4fbe3f81714ba2f1f637bf7a250baee30cde5722",
+    },
+    # ↓↓↓ Task 073 (C4b): wm_shell_protolog-groups（Shell/protolog/Android.bp
+    # java_library，2 类；Soong 经 WindowManager-Shell bp static_libs 静态链进
+    # SystemUI，wmshell AAR 不含静态依赖类 → 独立 tier② jar。BubblesManager
+    # static-import ShellProtoLogGroup.WM_SHELL_BUBBLES；dex 进 APK → core
+    # implementation）。
+    "wmshell-protolog": {
+        "module": "wm_shell_protolog-groups",
+        "relpath": "frameworks/base/libs/WindowManager/Shell/protolog/"
+                   "wm_shell_protolog-groups/android_common/"
+                   "repackaged-jarjar/javac/wm_shell_protolog-groups.jar",
+        "destination": "libs/wmshell-protolog.jar",
+        "source_sha256":
+            "3ce6989a1c96bdf49d2a45046c8f6932bfb2540851cade86f18234555405a7f6",
+        "baseline_sha256":
+            "3ce6989a1c96bdf49d2a45046c8f6932bfb2540851cade86f18234555405a7f6",
+    },
 }
 
 

@@ -205,8 +205,10 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertIn("WifiTrackerLib/android_common/javac/WifiTrackerLib.jar", str(cfg["code"]))
         self.assertIn("WifiTrackerLib/res", str(cfg["res"]))
         # AOSP-17: source-tree manifest deleted upstream; Soong GeneratedManifest
+        # Task 073: WifiTrackerLibRes's manifest (package com.android.wifitrackerlib
+        # = the R namespace HotspotTile references), NOT the code module's .nores
         self.assertTrue(str(cfg["manifest"]).endswith(
-            "WifiTrackerLib/android_common/GeneratedManifest.xml"))
+            "WifiTrackerLibRes/android_common/GeneratedManifest.xml"))
         self.assertIn("WifiTrackerLibRes/android_common/R.txt", str(cfg["rtxt"]))
 
     def test_iconloader_config_paths(self):
@@ -290,12 +292,15 @@ class TestArtifactConfigs(unittest.TestCase):
     def test_ace_visualizer_config_paths(self):
         """Task 073（C4b）：personalcontext_ace_visualizer（含 ace_common 类合并）。"""
         cfg = paar.CONFIGS["personalcontext_ace_visualizer"]
-        self.assertEqual(len(cfg["code"]), 2,
-                         "visualizer AAR 应合并 visualizer + ace_common 两个 Kotlin jar")
+        self.assertEqual(len(cfg["code"]), 3,
+                         "visualizer AAR 合并 visualizer Kotlin + javac（dagger "
+                         "companion factories）+ ace_common 两个 Kotlin jar")
         self.assertIn("personalcontext_ace_visualizer/android_common/kotlin/",
                       str(cfg["code"][0]))
-        self.assertIn("personalcontext_ace_common/android_common/kotlin/",
+        self.assertIn("personalcontext_ace_visualizer/android_common/javac/",
                       str(cfg["code"][1]))
+        self.assertIn("personalcontext_ace_common/android_common/kotlin/",
+                      str(cfg["code"][2]))
         self.assertEqual(
             cfg["res"],
             [paar.AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/"

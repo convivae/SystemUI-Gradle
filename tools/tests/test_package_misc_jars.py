@@ -89,13 +89,38 @@ EXPECTED_ENTRIES = {
         "mechanics-compose",
         "libs/mechanics-compose.jar",
     ),
+    # Task 073 (C4b): WindowManager-Shell-aidls (17-new SystemUISharedLib bp
+    # static_libs entry; PipSurfaceTransactionHelper imports
+    # com.android.wm.shell.common.pip.IPipAnimationListener, etc.).
+    "wmshell-aidls": (
+        "WindowManager-Shell-aidls",
+        "libs/wmshell-aidls.jar",
+    ),
+    # Task 073 (C4b): displaylib (17 SystemUI bp static_libs; sources import
+    # com.android.app.displaylib.PerDisplayRepository etc.).
+    "displaylib": (
+        "displaylib",
+        "libs/displaylib.jar",
+    ),
+    "usertypelib": (
+        "usertypelib",
+        "libs/usertypelib.jar",
+    ),
+    "settings-flags": (
+        "aconfig_settings_flags_lib",
+        "libs/settings-flags.jar",
+    ),
+    "wmshell-protolog": (
+        "wm_shell_protolog-groups",
+        "libs/wmshell-protolog.jar",
+    ),
 }
 
 
 class TestFrozenMapping(unittest.TestCase):
     def test_mapping_covers_exactly_the_frozen_artifacts(self):
         self.assertEqual(set(module.CONFIGS), set(EXPECTED_ENTRIES))
-        self.assertEqual(len(module.CONFIGS), 17)
+        self.assertEqual(len(module.CONFIGS), 22)
 
     def test_entries_carry_module_and_destination(self):
         for name, (soong_module, destination) in EXPECTED_ENTRIES.items():

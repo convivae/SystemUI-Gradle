@@ -77,9 +77,11 @@ def _build_configs() -> dict:
         "code": [SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLib/android_common/javac/WifiTrackerLib.jar"],
         "res": [AOSP_ROOT / "frameworks/opt/net/wifi/libs/WifiTrackerLib/res"],
         # AOSP-17: source-tree AndroidManifest.xml was deleted upstream (bp has no
-        # manifest line); use Soong's generated manifest instead (package
-        # com.android.wifitrackerlib.nores).
-        "manifest": SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLib/android_common/GeneratedManifest.xml",
+        # manifest line); use Soong's generated manifest instead. Task 073 fix:
+        # use WifiTrackerLibRes's manifest (package com.android.wifitrackerlib =
+        # the R namespace HotspotTile etc. reference), NOT the code module's
+        # .nores package (AGP generates the AAR's R class from this package).
+        "manifest": SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLibRes/android_common/GeneratedManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/opt/net/wifi/libs/WifiTrackerLib/WifiTrackerLibRes/android_common/R.txt",
         "output": "libs/aars/WifiTrackerLib.aar",
     },
@@ -395,6 +397,12 @@ def _build_configs() -> dict:
         "code": [
             SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/visualizer/"
             "personalcontext_ace_visualizer/android_common/kotlin/personalcontext_ace_visualizer.jar",
+            # Task 073 fix: javac jar carries the dagger-generated companion
+            # @Provides factories (PersonalContextModuleVisualizer_Companion_*
+            # 19 classes) — the Kotlin jar alone misses them and the
+            # application Dagger component cannot resolve its imports.
+            SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/visualizer/"
+            "personalcontext_ace_visualizer/android_common/javac/personalcontext_ace_visualizer.jar",
             SOONG_DIR / "frameworks/libs/systemui/ace/src/com/android/personalcontext/ace/common/"
             "personalcontext_ace_common/android_common/kotlin/personalcontext_ace_common.jar",
         ],
