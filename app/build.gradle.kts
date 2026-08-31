@@ -80,10 +80,24 @@ android {
     // AOSP bp: use_resource_processor: true → automatic with AGP aapt2
     // WM-Shell AAR manifest uses android:featureFlag (AOSP original); supply the
     // flag to aapt2 link. See docs/architecture/2026-08-13-aapt-feature-flags-options.md
+    // ui_latency_stats_service: SystemUI-application manifest (AOSP 17) guards
+    // REPORT_UI_LATENCY_STATS with this featureFlag; Soong value is READ_WRITE
+    // (services/core uilatencystats_flags). Zero manifest changes (D3, user ruling
+    // 2026-08-29: task073's CONV_DEL replaced by additionalParameters, task009
+    // approach extended).
+    // powered_off_finding_message_new_product_name: res/layout/
+    // shutdown_dialog_finder_active.xml guards two TextViews with this
+    // android.net.platform flag; Soong value is READ_WRITE=false
+    // (frameworks/base/android.net.platform.flags-aconfig aconfig-flags.txt),
+    // i.e. build keeps both elements for runtime platform filtering.
     androidResources {
         additionalParameters(
             "--feature-flags",
-            "com.android.wm.shell.enable_retrievable_bubbles=true"
+            "com.android.wm.shell.enable_retrievable_bubbles=true",
+            "--feature-flags",
+            "com.android.server.ui_latency_stats.ui_latency_stats_service=true",
+            "--feature-flags",
+            "android.net.platform.flags.powered_off_finding_message_new_product_name:READ_WRITE=false"
         )
     }
 }
