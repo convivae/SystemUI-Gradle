@@ -330,6 +330,52 @@ CONFIGS: dict[str, dict] = {
         "baseline_sha256":
             "b4d6e73779fb54f58c7da3e5656aec04229fd99f30c12b1729a21993796bc4b4",
     },
+    # ↓↓↓ Task 074 (C4c, 2026-09-01): bubbles-user-model（17 bp
+    # WindowManager-Shell-defaults static_libs L114，
+    # frameworks/base/libs/WindowManager/Shell/bubbles-user-model——纯 Kotlin
+    # android_library 无 res，Rule F tier② jar，1 类
+    # com.android.wm.shell.bubbles.user.model.BubbleUserInfo）。R2 G4：
+    # wmshell AAR bytecode 引该类（BubbleViewInfoTask.populateCommonInfo），
+    # R8 runtime 闭包需要 dex。首冻结 source == baseline。usertypelib 同款先例。
+    "bubbles-user-model": {
+        "module": "bubbles-user-model",
+        "relpath": "frameworks/base/libs/WindowManager/Shell/"
+                   "bubbles-user-model/bubbles-user-model/"
+                   "android_common/kotlin/bubbles-user-model.jar",
+        "destination": "libs/bubbles-user-model.jar",
+        "source_sha256":
+            "ed6800e413b8a9b530afaf8deec911d46e29f90603ad0a980d1006f982a9352a",
+        "baseline_sha256":
+            "ed6800e413b8a9b530afaf8deec911d46e29f90603ad0a980d1006f982a9352a",
+    },
+    # ↓↓↓ Task 074 (C4c, 2026-09-01): displaylib kapt 半边（bp plugins:
+    # dagger2-compiler → kapt 生成类落在 android_common/javac/：
+    # DaggerDisplayLibComponent{,$Factory,$DisplayLibComponentImpl} + 5 个
+    # *_Factory dagger 生成类，共 8 类，与 kotlin jar 122 类零重叠实测）。
+    # R4/R5 实证：KSP 仅重新生成 PerDisplayInstanceRepositoryImpl_Factory
+    # （我方组件安装的 displaylib @Provides 模块）；其余 5 类 *_Factory/
+    # *_Factory_Impl 与组件实现只在 displaylib 自体组件被引用——
+    # DaggerDisplayLibComponentImpl.initialize 引 DisplayRepositoryImpl_Factory、
+    # DisplaysWithDecorationsRepositoryCompat_Factory、
+    # DisplaysWithDecorationsRepositoryImpl_Factory（R5 missing refs），
+    # 而 PerDisplayInstanceRepositoryImpl_Factory{,_Impl} 前者与 KSP 重复
+    #（R4 duplicate-class）、后者无引用。故提取 6 类：3 组件 + 3 工厂。
+    "displaylib-kapt": {
+        "module": "displaylib",
+        "relpath": "frameworks/libs/systemui/displaylib/displaylib/"
+                   "android_common/javac/displaylib.jar",
+        "destination": "libs/displaylib-kapt.jar",
+        "include_prefixes": [
+            "com/android/app/displaylib/DaggerDisplayLibComponent",
+            "com/android/app/displaylib/DisplayRepositoryImpl_Factory",
+            "com/android/app/displaylib/DisplaysWithDecorationsRepositoryCompat_Factory",
+            "com/android/app/displaylib/DisplaysWithDecorationsRepositoryImpl_Factory",
+        ],
+        "source_sha256":
+            "c0aa5955ca75b8f7cf7b275add0cfce223352deae1aedd196c93bb68cd87b791",
+        "baseline_sha256":
+            "c1252d57c199615316bdfed9ded0ec1cf122596b50405513c9d9f0d48e305372",
+    },
     # ↓↓↓ Task 073 (C4b): aconfig_settings_flags_lib（Settings aconfig 声明，
     # packages/apps/Settings/aconfig；17 SystemUI-core bp static_libs L571）。
     # com.android.settings.flags.Flags（biometricsOnboardingEducation 等），
@@ -372,6 +418,46 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+#: Deterministic entry timestamp for extracted-subset jars (fixed zip time,
+#: same discipline as package_aosp_aar / package_aconfig_jars).
+_FIXED_ZIP_TIME = (2026, 9, 1, 0, 0, 0)
+
+
+def _extract_subset(source: Path, destination: Path, include_prefixes: list) -> None:
+    """Deterministically copy the class entries matching include_prefixes.
+
+    Directory entries are dropped; META-INF/MANIFEST.MF is kept (first wins);
+    every non-matching class entry is skipped. Extraction mirrors the task071
+    aconfig aggregate-shard discipline: frozen input, byte-identical member
+    payloads, fixed wrapper timestamps, deterministic order (archive order).
+    """
+    import zipfile
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    with zipfile.ZipFile(source) as src, zipfile.ZipFile(
+        temporary, "w", zipfile.ZIP_DEFLATED
+    ) as out:
+        wrote_manifest = False
+        for info in src.infolist():
+            name = info.filename
+            if name.endswith("/"):
+                continue
+            if name == "META-INF/MANIFEST.MF":
+                if wrote_manifest:
+                    continue
+                wrote_manifest = True
+            elif not any(
+                name.startswith(prefix) for prefix in include_prefixes
+            ):
+                continue
+            out_info = zipfile.ZipInfo(name, _FIXED_ZIP_TIME)
+            out_info.compress_type = zipfile.ZIP_DEFLATED
+            out_info.external_attr = info.external_attr
+            out.writestr(out_info, src.read(info))
+    temporary.replace(destination)
+
+
 def resolve_source(name: str, intermediates: Path) -> Path:
     """Resolve the frozen Soong artifact for ``name`` or fail loudly."""
     return intermediates / CONFIGS[name]["relpath"]
@@ -397,9 +483,13 @@ def generate(name: str, intermediates: Path, output_root: Path) -> str:
     destination = output_root / CONFIGS[name]["destination"]
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".tmp")
-    shutil.copyfile(source, temporary)
-    temporary.replace(destination)
-    verdict = "MATCH" if actual_source_sha == CONFIGS[name]["baseline_sha256"] else "DIFF"
+    include_prefixes = CONFIGS[name].get("include_prefixes")
+    if include_prefixes:
+        _extract_subset(source, destination, include_prefixes)
+    else:
+        shutil.copyfile(source, temporary)
+        temporary.replace(destination)
+    verdict = "MATCH" if _sha256(destination) == CONFIGS[name]["baseline_sha256"] else "DIFF"
     print(f"{name}: {source} -> {destination} [{verdict}]")
     return verdict
 
