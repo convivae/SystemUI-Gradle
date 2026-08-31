@@ -97,3 +97,19 @@
 ## 模型
 
 joycode GLM-5.3。
+
+## Worker Report (task075, 2026-08-31)
+
+**Status: HALTED — undocumented blocker (17-image scratch capacity).** Gates 1–6 all PASS
+(pytest 310+151; duplicate classes green; alignment strict exit 0; manifest-dex closure
+PASS 24 dex / 94,893 classes / missing=0; clean assembleDebug bit-reproducible twice
+`a8bab0f6…` 193,890,789 B; emulator relaunch from prebuilt 17 images healthy, pre-deploy
+snapshot green). Gate 7 Debug deploy BLOCKED: `/mnt/scratch` (dm-5, backed by super) is
+only 87,116 KB total / 40,828 KB avail — `cp: short write: No space left on device`
+(truncated to 41,750,528 B, sha gate caught, PITFALLS 14.2 reproduced). force-stop+kill
+per Incident 1 procedure did NOT change df (fresh overlay, no held inodes) — this is a
+**structural** capacity shortfall: 17 emu64x super.img is nearly fully allocated
+(CreateDynamicScratch sizing per fs_mgr source). Release (45,030,130 B) also exceeds
+40,807,872 B avail. Device restored to healthy stock state; no partition workarounds
+attempted. Full evidence + route options A–D in `docs/issues/2026-09-01-c5-dual-runtime-gate.md`
+(actual path: `docs/issues/2026-09-01-c5-dual-runtime-gate.md`). Awaiting chief decision.

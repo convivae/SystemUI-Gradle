@@ -332,6 +332,7 @@ The ARM64 QEMU PID 1727011 remains active by design; it is runtime state, not a 
 
 ## Last Updated
 
+2026-08-31 — Task 075 (C5 dual-runtime gate) **HALTED, awaiting chief decision** (reported): build-side gates 1–5 all green on 17 tree (pytest 310+151; duplicate classes; alignment strict exit 0; manifest-dex closure PASS 24 dex/94,893 classes/missing=0; clean assembleDebug bit-reproducible `a8bab0f6…` 193,890,789 B ×2; clean assembleRelease reproducible `7fadce6d…` 45,030,130 B; both v2-signed same platform cert). Emulator rebuilt from prebuilt 17 images per runbook (w2:t2M), gate 6 pre-deploy snapshot green. Gate 7 BLOCKED by **structural ENOSPC**: 17 emu64x super.img nearly fully allocated → adb-remount scratch (dm-5, super-backed f2fs) only 87,116 KB total / 40,828 KB avail; staged cp of 193.9 MB Debug APK fails `short write: No space left on device` (truncated 41,750,528 B, sha gate caught); Release 45,030,130 B also exceeds avail. Incident-1 force-stop+kill procedure executed, ineffective (no held inodes — fresh overlay). Device restored to healthy stock state; no partition workarounds attempted; route options A–D in the issue doc. Full evidence: docs/issues/2026-09-01-c5-dual-runtime-gate.md. Commits local, not pushed.
 2026-08-27 — Task 071 (C2: libs/ 全删 + AOSP-17 适配 + 脚本再生) complete (reported): all 7 packaging
 scripts adapted to the 17 tree and libs/ fully regenerated via scripts only (ADR 0007 Phase C
 proposition). 104 pre-delete files → 102 regenerated; every file traced to a producer script.
