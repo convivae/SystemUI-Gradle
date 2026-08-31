@@ -30,7 +30,7 @@ there is no glob-based or newest-file fallback.
 | framework aggregate headers | `out/soong/.intermediates/frameworks/base/framework/android_common/turbine-combined/framework.jar` | generated `android.jar` | framework class bytes win over stock SDK duplicates; this Soong aggregate includes `framework-minus-apex` plus `framework-updatable-stubs-module_libs_api` through `framework` static libs |
 | framework private resources | `out/soong/.intermediates/frameworks/base/core/res/framework-res/android_common/framework-res.apk` | generated `android.jar` | replace all `resources.arsc` and `res/**` entries with byte-exact APK entries; do not copy manifest/assets/signing metadata |
 | libcore/platform bridge source | `out/soong/.intermediates/libcore/core-libart/android_common_apex31/javac/core-libart.jar` | both generated JARs | exact allowlisted 4 dalvik + 10 libcore/DDMS entries |
-| unsupported-app-usage source | `out/soong/.intermediates/tools/platform-compat/java/android/compat/annotation/unsupportedappusage/linux_glibc_common/javac/unsupportedappusage.jar` | both generated JARs | exact allowlisted 2 entries |
+| ~~unsupported-app-usage source~~ (removed, D12 2026-08-29) | ~~`out/soong/.intermediates/tools/platform-compat/java/android/compat/annotation/unsupportedappusage/linux_glibc_common/javac/unsupportedappusage.jar`~~ | — | removed with its 2-entry bridge slice; the 17 framework aggregate turbine JAR embeds `UnsupportedAppUsage{,$Container}` and the framework copy is master (see `docs/architecture/2026-08-29-decision-audit/d12-sysuisdk-bridge-collision.md`) |
 | aconfig annotation source | `out/soong/.intermediates/frameworks/libs/modules-utils/java/aconfig-annotations-lib/linux_glibc_common/javac/aconfig-annotations-lib.jar` | both generated JARs | exact `AconfigFlagAccessor` only; `AssumeTrueForR8` remains excluded |
 | keepanno source | `out/soong/.intermediates/prebuilts/r8/keepanno-annotations/android_common/combined/keepanno-annotations.jar` | both generated JARs | exact frozen Task 041 22-entry allowlist |
 | hidden interface declaration source | `frameworks/base/core/java/android/os/IRemoteCallback.aidl` | generated `framework.aidl` | derive and append the fully-qualified interface declaration only if absent |
@@ -60,16 +60,18 @@ The base platform defaults to `android-37.0`. The default output is
    shadowed by the public SDK definition.
 3. Replace the complete framework resource set with the frozen `framework-res.apk`
    resource entries.
-4. Inject the frozen 39-entry bridge: Task 041's unchanged 35 entries plus the existing
-   4 dalvik optimization annotations.
+4. Inject the frozen 37-entry bridge: Task 041's unchanged 35 entries plus the existing
+   4 dalvik optimization annotations (D12 2026-08-29: minus the 2 UnsupportedAppUsage
+   classes, which arrive with the framework aggregate overlay in step 2).
 5. For bridge collisions, equal source bytes are idempotent; unequal bytes are fatal.
 6. Reject duplicate names within any input ZIP and write deterministic entry ordering,
    timestamps, attributes, and compression using Python standard library only.
 
 ### 3.2 `core-for-system-modules.jar`
 
-Start from the stock base JAR and inject the same frozen 39 bridge entries under the
-same collision rule. This remains a library-class/system-module bridge, not an APK
+Start from the stock base JAR and inject the same frozen 37 bridge entries under the
+same collision rule. (The framework-borne UnsupportedAppUsage pair is NOT injected
+here; it lives only in `android.jar` via the framework aggregate.) This remains a library-class/system-module bridge, not an APK
 program dependency.
 
 ### 3.3 `framework.aidl`
@@ -99,7 +101,7 @@ A successful command must validate before publication:
 
 - all exact inputs exist under their declared roots;
 - ZIPs contain unique names and all frozen allowlist entries;
-- the generated jars are readable and contain the complete 39-entry bridge;
+- the generated jars are readable and contain the complete 37-entry bridge;
 - `android.jar` resource names and bytes equal the AOSP `framework-res.apk` resource
   subset;
 - the two hidden AIDL declarations are present and source-derived;
@@ -109,7 +111,7 @@ A successful command must validate before publication:
 
 The external acceptance gate additionally compiles existing Debug and optimized
 Release variants against a private SDK root containing this generated platform,
-checks APK ZIP integrity and V2 signing, and proves all 39 bridge classes are absent
+checks APK ZIP integrity and V2 signing, and proves all 37 bridge classes are absent
 from packaged DEX.
 
 ## 6. Deliberately retained and retired artifacts

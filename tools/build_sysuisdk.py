@@ -14,13 +14,18 @@ Design (docs/architecture/2026-08-21-sysuisdk-single-entry-composition.md):
   directory, validate, then publish by rename. Failure cleans staging only.
 * No Soong invocation, no in-place patching of an installed platform, no
   S0–S5/``--apply``/restore interface, no permanent backups.
-* The frozen artifact map (§2 of the architecture spec) is exact: eight
+* The frozen artifact map (§2 of the architecture spec) is exact: seven
   AOSP-relative inputs, no globbing, no newest-file fallback.
 * The aggregate framework turbine JAR is master over duplicate stock SDK class
   entries; framework resources come byte-exactly from ``framework-res.apk``.
-* The bridge is exactly the unchanged Task 041 35-entry allowlist plus the four
-  dalvik optimization annotations, injected into both target JARs;
-  ``AssumeTrueForR8`` stays out.
+* The bridge is exactly the unchanged Task 041 35-entry allowlist plus the
+  four dalvik optimization annotations, injected into both target JARs;
+  ``AssumeTrueForR8`` stays out. The two
+  ``android/compat/annotation/UnsupportedAppUsage{,$Container}`` classes are
+  NOT bridged: the 17 framework aggregate turbine JAR already embeds them
+  (turbine bytes), and the framework aggregate is master (D12, decision audit
+  2026-08-29: ``docs/architecture/2026-08-29-decision-audit/
+  d12-sysuisdk-bridge-collision.md``, option 1).
 * Deterministic output: stable entry ordering, fixed timestamps/attributes/
   compression, and a generator marker recording input/output provenance.
 """
@@ -41,7 +46,7 @@ from pathlib import Path
 
 # --- Constants --------------------------------------------------------------
 
-TOOL_VERSION = "045.1"
+TOOL_VERSION = "045.2"
 DEFAULT_BASE_PLATFORM_NAME = "android-37.0"
 OUTPUT_PLATFORM_NAME = "android-SysUISdk"
 OUTPUT_PKG_PATH = f"platforms;{OUTPUT_PLATFORM_NAME}"
@@ -57,8 +62,10 @@ class BuildError(Exception):
 
 
 # --- Frozen AOSP artifact map (architecture spec §2) --------------------------
-# Eight exact AOSP-relative inputs. Missing files are fatal; there is no
-# glob-based or newest-file fallback.
+# Seven exact AOSP-relative inputs. Missing files are fatal; there is no
+# glob-based or newest-file fallback. (D12 2026-08-29: the former
+# ``unsupportedappusage_jar`` input was removed with its bridge slice; the two
+# UnsupportedAppUsage classes now come from the framework aggregate JAR.)
 
 AOSP_INPUT_RELPATHS: dict[str, str] = {
     "framework_jar":
@@ -70,10 +77,6 @@ AOSP_INPUT_RELPATHS: dict[str, str] = {
     "core_libart_jar":
         "out/soong/.intermediates/libcore/core-libart/"
         "android_common_apex31/javac/core-libart.jar",
-    "unsupportedappusage_jar":
-        "out/soong/.intermediates/tools/platform-compat/java/android/"
-        "compat/annotation/unsupportedappusage/linux_glibc_common/javac/"
-        "unsupportedappusage.jar",
     "aconfig_annotations_jar":
         "out/soong/.intermediates/frameworks/libs/modules-utils/java/"
         "aconfig-annotations-lib/linux_glibc_common/javac/"
@@ -262,10 +265,6 @@ _DDMC_ENTRIES = (
     "org/apache/harmony/dalvik/ddmc/DdmServer.class",
     "org/apache/harmony/dalvik/ddmc/DdmVmInternal.class",
 )
-_UNSUPPORTED_APP_USAGE_ENTRIES = (
-    "android/compat/annotation/UnsupportedAppUsage.class",
-    "android/compat/annotation/UnsupportedAppUsage$Container.class",
-)
 _ACONFIG_FLAG_ACCESSOR_ENTRIES = (
     "com/android/aconfig/annotations/AconfigFlagAccessor.class",
 )
@@ -286,15 +285,18 @@ _BRIDGE_SLICES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("core_libart_jar", _IO_UTILS_ENTRIES),
     ("core_libart_jar", _NATIVE_ALLOCATION_REGISTRY_ENTRIES),
     ("core_libart_jar", _DDMC_ENTRIES),
-    ("unsupportedappusage_jar", _UNSUPPORTED_APP_USAGE_ENTRIES),
     ("aconfig_annotations_jar", _ACONFIG_FLAG_ACCESSOR_ENTRIES),
     ("keepanno_jar", _KEEPANNO_ANNOTATION_ENTRIES),
 )
 
 BRIDGE_ENTRIES: tuple[str, ...] = tuple(sorted(
     entry for _, entries in _BRIDGE_SLICES for entry in entries))
-assert len(BRIDGE_ENTRIES) == 39, len(BRIDGE_ENTRIES)
+assert len(BRIDGE_ENTRIES) == 37, len(BRIDGE_ENTRIES)
 assert "com/android/aconfig/annotations/AssumeTrueForR8.class" \
+    not in BRIDGE_ENTRIES
+# D12 (2026-08-29): the two UnsupportedAppUsage classes must NOT be bridged;
+# they arrive via the framework aggregate JAR (master over duplicates).
+assert "android/compat/annotation/UnsupportedAppUsage.class" \
     not in BRIDGE_ENTRIES
 
 
@@ -320,7 +322,7 @@ def load_bridge(inputs: dict[str, Path]) -> dict[str, bytes]:
                         f"{entry}")
                 owners[entry] = source_key
                 bridge[entry] = zf.read(entry)
-    assert len(bridge) == 39
+    assert len(bridge) == 37
     return bridge
 
 
@@ -487,8 +489,7 @@ def _validate_platform(staging: Path, inputs: dict[str, Path],
     staging = Path(staging)
     # 1. input ZIPs contain unique names.
     for key in ("framework_jar", "framework_res_apk", "core_libart_jar",
-                "unsupportedappusage_jar", "aconfig_annotations_jar",
-                "keepanno_jar"):
+                "aconfig_annotations_jar", "keepanno_jar"):
         with zipfile.ZipFile(inputs[key], "r") as zf:
             names = [i.filename for i in zf.infolist() if not i.is_dir()]
         if len(names) != len(set(names)):

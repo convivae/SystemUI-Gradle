@@ -30,8 +30,8 @@ library definitions：
 
 ## 决策（现行机制，2026-08-21 修订为单入口）
 
-1. SysUISdk 由单入口生成器重建：`python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp`。一次调用消费冻结的八输入 AOSP 映射（framework 聚合 JAR、framework-res.apk、core-libart、unsupportedappusage、aconfig-annotations、keepanno、两个隐藏 AIDL 源），把真实 AOSP class entries 注入 `android.jar` 与 `core-for-system-modules.jar`，使 AGP 将其作为 library classes 提供给 javac/Kotlin/R8，而不是作为 APK program classes。
-2. 精确 39 个 bridge entries（Task 041 冻结的 35 个 library-class entries + 4 个 dalvik 优化 annotation entries）同时进入两个 SDK target JAR；源字节校验、冲突拒绝、确定性输出与幂等测试内置于生成器。不得用 package-prefix 推测或整包隐式注入。
+1. SysUISdk 由单入口生成器重建：`python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp`。一次调用消费冻结的七输入 AOSP 映射（framework 聚合 JAR、framework-res.apk、core-libart、aconfig-annotations、keepanno、两个隐藏 AIDL 源），把真实 AOSP class entries 注入 `android.jar` 与 `core-for-system-modules.jar`，使 AGP 将其作为 library classes 提供给 javac/Kotlin/R8，而不是作为 APK program classes。（D12 2026-08-29：原第八输入 unsupportedappusage.jar 随其 bridge slice 一并移除——17 framework 聚合 turbine JAR 已内嵌同名两类，framework 副本即最终字节。）
+2. 精确 37 个 bridge entries（Task 041 冻结的 35 个 library-class entries + 4 个 dalvik 优化 annotation entries − 2 个改由 framework 聚合提供的 UnsupportedAppUsage 类，见 D12）同时进入两个 SDK target JAR；源字节校验、冲突拒绝、确定性输出与幂等测试内置于生成器。不得用 package-prefix 推测或整包隐式注入。
 3. 官方 base platform（默认 `android-37.0`）保持只读；生成在 sibling staging 目录进行，全部验证通过后以 rename 原子发布；输出目录由生成器拥有并以 marker 证明（marker 只记录 provenance，不是备份）。
 4. `--replace` 只接受带有效 generator marker 的生成器自有输出；绝不替换官方 base platform。
 5. `AssumeTrueForR8` 保持在 SysUISdk 之外，由 release build type 的唯一一条 exact `-dontwarn` adapter 处理（Task 044 用户批准）；必须保留真实 R8 flag-assumption 语义，不得通过 runtime packaging 或把该 annotation 打进 SDK 解决。

@@ -48,7 +48,10 @@ _BASE_PKG_XML = """\
 </repo>
 """
 
-# --- Task 041 + dalvik frozen bridge (39 entries) ---------------------------
+# --- Task 041 + dalvik frozen bridge (37 entries; D12 2026-08-29) ------------
+# The two UnsupportedAppUsage classes are NOT bridged (D12 option 1): the
+# 17 framework aggregate turbine JAR embeds them, and the framework aggregate
+# is master over duplicates. Fake trees therefore place them in framework.jar.
 
 _DALVIK_OPT = (
     "dalvik/annotation/optimization/DeadReferenceSafe.class",
@@ -72,10 +75,6 @@ _DDMC = (
     "org/apache/harmony/dalvik/ddmc/DdmServer.class",
     "org/apache/harmony/dalvik/ddmc/DdmVmInternal.class",
 )
-_UNSUPPORTED = (
-    "android/compat/annotation/UnsupportedAppUsage.class",
-    "android/compat/annotation/UnsupportedAppUsage$Container.class",
-)
 _ACONFIG = ("com/android/aconfig/annotations/AconfigFlagAccessor.class",)
 _KEEPANNO = tuple(
     f"com/android/tools/r8/keepanno/annotations/{n}.class" for n in (
@@ -86,9 +85,20 @@ _KEEPANNO = tuple(
         "MemberAccessFlags", "MethodAccessFlags", "StringPattern",
         "TypePattern", "UsedByNative", "UsedByReflection", "UsesReflection"))
 
-BRIDGE_39 = sorted(_DALVIK_OPT + _IO_UTILS + _NATIVE_ALLOC + _DDMC
-                   + _UNSUPPORTED + _ACONFIG + _KEEPANNO)
-assert len(BRIDGE_39) == 39
+BRIDGE_37 = sorted(_DALVIK_OPT + _IO_UTILS + _NATIVE_ALLOC + _DDMC
+                   + _ACONFIG + _KEEPANNO)
+assert len(BRIDGE_37) == 37
+
+# D12 regression set: the two classes that used to be bridged from
+# unsupportedappusage.jar; they must now arrive via framework.jar.
+FRAMEWORK_UNSUPPORTED = (
+    "android/compat/annotation/UnsupportedAppUsage.class",
+    "android/compat/annotation/UnsupportedAppUsage$Container.class",
+)
+
+
+def _fw_unsupported_payload(entry: str) -> bytes:
+    return _fake_class("fw-turbine:" + entry)
 
 IREMOTE_CALLBACK_AIDL = """\
 // copyright header
@@ -114,18 +124,22 @@ def _bridge_payload(entry: str) -> bytes:
 
 
 def _make_fake_aosp(root: Path) -> Path:
-    """A fake AOSP tree with all eight frozen inputs at their exact paths."""
+    """A fake AOSP tree with all seven frozen inputs at their exact paths."""
     soong = root / "out/soong/.intermediates"
     # framework aggregate turbine jar: duplicate-of-stock entry with DIFFERENT
-    # bytes (framework must win), a framework-only entry, res/ entries.
+    # bytes (framework must win), a framework-only entry, res/ entries, and
+    # (D12) the two UnsupportedAppUsage classes as turbine-embedded copies.
+    fw_entries = {
+        "android/app/Activity.class": _fake_class("fw-Activity"),
+        "android/telephony/HiddenApi.class": _fake_class("fw-only"),
+        "res/android.mime.types": b"fw-mime",
+        "META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\nCreated-By: soong\n\n",
+    }
+    for entry in FRAMEWORK_UNSUPPORTED:
+        fw_entries[entry] = _fw_unsupported_payload(entry)
     _make_zip(
         soong / "frameworks/base/framework/android_common/turbine-combined/framework.jar",
-        {
-            "android/app/Activity.class": _fake_class("fw-Activity"),
-            "android/telephony/HiddenApi.class": _fake_class("fw-only"),
-            "res/android.mime.types": b"fw-mime",
-            "META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\nCreated-By: soong\n\n",
-        })
+        fw_entries)
     # framework-res.apk: resource entries + excluded non-resource entries.
     _make_zip(
         soong / "frameworks/base/core/res/framework-res/android_common/framework-res.apk",
@@ -146,10 +160,8 @@ def _make_fake_aosp(root: Path) -> Path:
         _fake_class("core-criticalnative")  # already in stock; not injected
     _make_zip(soong / "libcore/core-libart/android_common_apex31/javac/"
               "core-libart.jar", core_entries)
-    _make_zip(
-        soong / "tools/platform-compat/java/android/compat/annotation/"
-        "unsupportedappusage/linux_glibc_common/javac/unsupportedappusage.jar",
-        {e: _bridge_payload(e) for e in _UNSUPPORTED})
+    # (D12) no unsupportedappusage.jar input anymore — the two classes come
+    # from framework.jar above.
     _make_zip(
         soong / "frameworks/libs/modules-utils/java/aconfig-annotations-lib/"
         "linux_glibc_common/javac/aconfig-annotations-lib.jar",
@@ -332,16 +344,20 @@ class BasePlatformResolutionTest(unittest.TestCase):
 # --- Step 4: exact AOSP input resolution ------------------------------------
 
 class ExactInputResolutionTest(unittest.TestCase):
-    """The frozen artifact map: eight exact AOSP-relative paths, no globbing."""
+    """The frozen artifact map: seven exact AOSP-relative paths, no globbing."""
 
-    def test_all_eight_inputs_resolve_under_aosp_root(self):
+    def test_all_seven_inputs_resolve_under_aosp_root(self):
         with tempfile.TemporaryDirectory() as td:
             aosp = _make_fake_aosp(Path(td) / "aosp")
             inputs = b.resolve_inputs(aosp)
-            self.assertEqual(len(inputs), 8)
+            self.assertEqual(len(inputs), 7)
             for key, rel in b.AOSP_INPUT_RELPATHS.items():
                 self.assertEqual(inputs[key], aosp / rel,
                                  f"input {key} resolved to a wrong path")
+
+    def test_d12_removed_unsupportedappusage_input(self):
+        # D12 (2026-08-29): the former eighth input is gone from the frozen map.
+        self.assertNotIn("unsupportedappusage_jar", b.AOSP_INPUT_RELPATHS)
 
     def test_missing_input_fails_with_exact_path(self):
         with tempfile.TemporaryDirectory() as td:
@@ -372,10 +388,6 @@ class ExactInputResolutionTest(unittest.TestCase):
             "core_libart_jar":
                 "out/soong/.intermediates/libcore/core-libart/"
                 "android_common_apex31/javac/core-libart.jar",
-            "unsupportedappusage_jar":
-                "out/soong/.intermediates/tools/platform-compat/java/android/"
-                "compat/annotation/unsupportedappusage/linux_glibc_common/"
-                "javac/unsupportedappusage.jar",
             "aconfig_annotations_jar":
                 "out/soong/.intermediates/frameworks/libs/modules-utils/"
                 "java/aconfig-annotations-lib/linux_glibc_common/javac/"
@@ -593,14 +605,20 @@ class CoreModulesJarCompositionTest(unittest.TestCase):
             self.assertEqual(first, second)
 
 
-# --- Step 8: frozen 39-entry bridge ------------------------------------------
+# --- Step 8: frozen 37-entry bridge (D12) ------------------------------------
 
 class BridgeAllowlistTest(unittest.TestCase):
-    """The bridge is exactly Task 041's 35 + the 4 dalvik entries."""
+    """The bridge is exactly Task 041's 35 + the 4 dalvik entries (D12: minus
+    the 2 UnsupportedAppUsage classes now provided by the framework JAR)."""
 
-    def test_allowlist_is_exactly_39_frozen_entries(self):
-        self.assertEqual(sorted(b.BRIDGE_ENTRIES), BRIDGE_39)
-        self.assertEqual(len(b.BRIDGE_ENTRIES), 39)
+    def test_allowlist_is_exactly_37_frozen_entries(self):
+        self.assertEqual(sorted(b.BRIDGE_ENTRIES), BRIDGE_37)
+        self.assertEqual(len(b.BRIDGE_ENTRIES), 37)
+
+    def test_unsupported_app_usage_is_not_bridged(self):
+        # D12 regression: the two classes must not be bridge entries.
+        for entry in FRAMEWORK_UNSUPPORTED:
+            self.assertNotIn(entry, b.BRIDGE_ENTRIES)
 
     def test_assume_true_for_r8_is_excluded(self):
         self.assertNotIn(
@@ -615,10 +633,8 @@ class BridgeLoadTest(unittest.TestCase):
             aosp = _make_fake_aosp(Path(td) / "aosp")
             inputs = b.resolve_inputs(aosp)
             bridge = b.load_bridge(inputs)
-            self.assertEqual(sorted(bridge), BRIDGE_39)
+            self.assertEqual(sorted(bridge), BRIDGE_37)
             for entry in _DALVIK_OPT + _IO_UTILS + _NATIVE_ALLOC + _DDMC:
-                self.assertEqual(bridge[entry], _bridge_payload(entry))
-            for entry in _UNSUPPORTED:
                 self.assertEqual(bridge[entry], _bridge_payload(entry))
             self.assertEqual(
                 bridge["com/android/aconfig/annotations/AconfigFlagAccessor.class"],
@@ -651,10 +667,21 @@ class BridgeLoadTest(unittest.TestCase):
                 base / "core-for-system-modules.jar", bridge))
             for jar_name, entries in (("android.jar", android),
                                       ("core-for-system-modules.jar", core)):
-                for entry in BRIDGE_39:
+                for entry in BRIDGE_37:
                     self.assertEqual(entries[entry], _bridge_payload(entry),
                                      f"{jar_name} missing/wrong bridge entry "
                                      f"{entry}")
+            # D12 regression: the two UnsupportedAppUsage classes live in the
+            # final android.jar with the framework aggregate (turbine) bytes.
+            for entry in FRAMEWORK_UNSUPPORTED:
+                self.assertEqual(
+                    android[entry], _fw_unsupported_payload(entry),
+                    f"android.jar missing framework-borne entry {entry}")
+            # and they are NOT injected into core-for-system-modules.jar
+            for entry in FRAMEWORK_UNSUPPORTED:
+                self.assertNotIn(
+                    entry, core,
+                    f"core jar must not carry framework-borne entry {entry}")
 
     def test_unlisted_siblings_are_absent(self):
         with tempfile.TemporaryDirectory() as td:
