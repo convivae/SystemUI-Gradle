@@ -248,7 +248,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 
 ### 3.1 模块结构
 
-按 AOSP `frameworks/base/packages/SystemUI/Android.bp` 的**语义**对齐（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1）。项目采用以下 16-module Gradle 拓扑（静态架构描述；实时构建/验证状态见 `docs/CURRENT_STATE.md`；17 新增三模块见 Task 072 / C4）：
+按 AOSP `frameworks/base/packages/SystemUI/Android.bp` 的**语义**对齐（详见 `docs/adr/0003-app-module-aligns-aosp-bp.md` 决策 1）。项目采用以下 17-module Gradle 拓扑（静态架构描述；实时构建/验证状态见 `docs/CURRENT_STATE.md`；17 新增三模块见 Task 072 / C4；kairos 入源码模块见 Task 073 / C4b）：
 
 ```
 :app                          # android_app "SystemUI"（无独立源码；最小 manifest 合并壳、签名和最终 APK 打包）
@@ -267,10 +267,13 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 :SystemUI-shared-biometrics   # biometrics（独立 R namespace，被 Settings 消费）
 :SystemUI-compose            # Compose Core + Scene 合并（源码）
 :SystemUI-accessibility-floatingmenu-res  # AccessibilityFloatingMenu-res（res-only，被 SystemUI-res 消费）
+:SystemUI-utils-kairos        # kairos（JVM 源码；17 core bp 生产依赖，Task 073 裁定 tier① 源码模块）
 ```
 
 非 SystemUI 产物（不进源码 module）：`animationlib`（frameworks/libs/systemui）→ 直接 AAR；
-`compilelib` → debug/release JAR；`kairos` → test-only，不进本 APK 生产图。
+`compilelib` → debug/release JAR。18 时代的“kairos → test-only”为误判（16 时代 core bp 即列 kairos 于 static_libs，当时无消费者故无后果；17 core 有 60 文件 import，已源码化）。
+
+**namespace 三档规则（Task 073 / 决策审计响应）**：A 档承重锁死两格（`com.android.systemui` = :SystemUI-application manifest 展开；`com.android.systemui.res` = 全量 1162+ 文件 R import）；B 档镜像 AOSP manifest package（含 res 且 AOSP 有对应 manifest package）；C 档 Gradle-only 占位（改任何名不影响 runtime）。详见 `docs/architecture/2026-08-29-namespace-design.md`。
 
 > **历史**：2026-07-29 源码化里程碑将 tier① 自有代码由 jar 改为源码依赖（规则 S）；
 > unfold 引入 KSP 跑 Dagger。详见 `docs/architecture/2026-07-29-dependency-audit.md` §6。
@@ -284,10 +287,13 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
    `Android.bp static_libs` 的 per-target 依赖边），在 `libs.versions.toml` 声明 catalog alias
    （如 `libs.systemui.settingslib`）统一引用；build.gradle.kts 中不得直接 `files("libs/aars/xxx.aar")`。
    **例外（用户 2026-08-25 批准，Task 059，关闭 Task 043 八个 packet 中的四个）**：单 artifact、单 consumer
-   （仅 `:SystemUI-core`）、骨架 POM 且 Maven 副本与 `libs/aars/` 字节相同的族，可直接经
+   （单模块消费，多为 `:SystemUI-core`），骨架 POM 且 Maven 副本与 `libs/aars/` 字节相同的族，可直接经
    `files("libs/aars/xxx.aar")` 消费而不走本地 Maven；当前直接消费集为 WifiTrackerLib、iconloader、
-   setupcompat、LowLightDreamLib 四族。本地 Maven 路径保留给多 consumer 族（如 animationlib、
-   SettingsLib 族、WindowManager-Shell）及任何已证实资源/依赖冲突的族。
+   setupcompat、LowLightDreamLib 四族（另 TraceurCommon/Traceur-res 同判例在 16 时代即走直接 AAR）。
+   Task 072/073 新增三族经同判据审定：dynamiccolors（Task 072，consumer 为 :SystemUI-res）、
+   personalcontext_ace_visualizer + personalcontext_ace_client（同一源的双 R namespace 兄弟族，Task 073）、
+   SerialPortAccessDialog（Task 073）——均用户 2026-08-29 批次批准。本地 Maven 路径保留给多 consumer 族
+   （如 animationlib、SettingsLib 族、WindowManager-Shell）及任何已证实资源/依赖冲突的族。
 3. **本地 Maven 仓（`libs/maven/`）只交付 AAR**；JAR（framework.jar、android.car.jar、aconfig flags jar 等）
    位于 `libs/` 根目录直接引用。
 4. **内容变化必须升坐标**：本地 Maven AAR 的类集/资源变化时必须升 version 并退役旧版

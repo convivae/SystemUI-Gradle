@@ -12,7 +12,7 @@ plugins {
 }
 
 android {
-    namespace = "com.android.systemui.plugin"
+    namespace = "com.android.systemui.plugins"
     compileSdkPreview = "SysUISdk"
 
     defaultConfig {
