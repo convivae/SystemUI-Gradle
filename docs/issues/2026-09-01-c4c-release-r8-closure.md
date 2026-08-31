@@ -25,7 +25,13 @@
 | 轮 | 命令 | 结果 | 根因 | 处置 |
 |---|---|---|---|---|
 | R1 | `./gradlew :app:assembleRelease --max-workers=4` | FAILED — daemon disappeared during `:app:minifyReleaseWithR8`（kern.log: `Out of memory: Killed process 1891402 (java) anon-rss:16266848kB`） | 11:52 构建遗留的 Kotlin compile daemon（RSS ~10G）与 Gradle daemon `-Xmx16g` 叠加超 30G 物理内存，R8 深度优化阶段 OOM | kill 遗留 Kotlin daemon（pid 1831865，进程态非文件改动），free 恢复 25G；R2 重跑 |
-| R2 | `./gradlew :app:assembleRelease --max-workers=4`（杀双 daemon 后） | FAILED — `:app:minifyReleaseWithR8`：R8 missing classes 31 条（missing_rules.txt），BUILD FAILED in 1m 37s | R8 闭包 17 基线漂移（brief 预期内的首破冰点），逐类归属见 §R2 | 逐类诊断处理中 |
+| R2 | `./gradlew :app:assembleRelease --max-workers=4`（杀双 daemon 后） | FAILED — `:app:minifyReleaseWithR8`：R8 missing classes 31 条（missing_rules.txt），BUILD FAILED in 1m 37s | R8 闭包 17 基线漂移（brief 预期内的首破冰点），逐类归属见 §R2 | 6 根因组 F1–F7，见 §R2 处置表 |
+| R3 | 同上（F1 wmshell-aidls + F7 parcelize 接线后） | FAILED — missing classes 31→**8**（21 条 wmshell AIDL 引用 + parcelize 全闭） | F1/F7 为纯接线即可闭合；余 8 条归工件侧（F2–F6） | commit `4652adfd`；继续工件侧 |
+| R4 | 同上（+ displaylib-kapt 全量 8 类初版 jar） | FAILED — R8 **duplicate class**：`PerDisplayInstanceRepositoryImpl_Factory` 在 application KSP 产物（`runtime_library_classes_jar/.../classes.jar`）与 `displaylib-kapt.jar` 双定义 | **根因**：bp `plugins: dagger2-compiler` 在 Soong 侧由 displaylib 自体 kapt 生成 8 类；Gradle 侧我方 `:SystemUI-application` KSP Dagger 对我方组件图重新生成其中 1 类（`PerDisplayInstanceRepositoryImpl_Factory`——由我方组件安装的 displaylib `@Provides` 模块触发），与 kapt jar 重叠；其余 7 类不被 KSP 生成（组件实现与工厂只被 displaylib 自体组件引用） | 收缩 displaylib-kapt 为子集提取：剔 KSP 重复类，保留 `DaggerDisplayLibComponent` 3 类（新增 `include_prefixes` 机制 + pytest） |
+| R5 | 同上（displaylib-kapt 缩至 3 组件类 + F2/F3/F4 jar 到位） | FAILED — missing classes 8→**6**：3 条 `DaggerDisplayLibComponentImpl.initialize` 引用的 `DisplayRepositoryImpl_Factory`、`DisplaysWithDecorationsRepository{Compat,Impl}_Factory`（+ 3 条 SettingsLib Banner Kotlin——本批 F6 已准备） | **根因**：KSP 只为我方组件图触达的 @Provides 生成工厂；displaylib 自体组件 `DaggerDisplayLibComponentImpl.initialize` 内部引用的 3 个工厂不在触达面内，必须由 kapt 真实字节提供（KSP 无法从 jar 内已编译接口/实现生成）；`PerDisplayInstanceRepositoryImpl_Factory{,_Impl}` 前者与 KSP 重复、后者无引用，均不取 | `include_prefixes` 扩至 6 类（3 组件 + 3 组件内工厂）；SettingsLib per-target Kotlin 半边重产 AAR（F6） |
+| R6 | `./gradlew :app:assembleRelease --max-workers=4`（F2–F6 工件 + F1–F7 全接线后） | **BUILD SUCCESSFUL in 5m 23s**（含 `:app:minifyReleaseWithR8`；missing classes 0） | R2–R5 全部根因组闭合 | 验收四门 + 复现验证，见 §R6 验收 |
+| R7 | `./gradlew :app:minifyReleaseWithR8 --rerun-tasks --max-workers=4` + `:app:assembleRelease` | **BUILD SUCCESSFUL** ×2；APK sha256 复现一致 `c74d13fb…` | 可复现性验证 | — |
+| — | `./gradlew :app:assembleDebug --max-workers=4` | **BUILD SUCCESSFUL in 1m 37s**（APK 211,710,774 B） | 硬门不回归（charter Part 4：每批须保持 assembleDebug 绿） | — |
 
 ## R2 missing_classes 逐类归属（31 条，6 根因组）
 
@@ -42,18 +48,63 @@
 
 ## R2 missing_classes 处置进度
 
-| Fix | 内容 | 状态 |
-|---|---|---|
-| F1 | core +implementation(wmshell-aidls.jar) | 待实施 |
-| F2 | am-flags 冻结 jar + core wiring | 待实施 |
-| F3 | settingstheme-flags 冻结 jar + core wiring | 待实施 |
-| F4 | bubbles-user-model 冻结 jar + core wiring | 待实施 |
-| F5 | displaylib 合并 kapt javac（8 类 Dagger/*_Factory，`android_common/javac/displaylib.jar`，与 kotlin jar 122 类零重叠实测） | 待实施 |
-| F6 | SettingsLib AAR per-target Kotlin 半边（+59 类，1431 总量）+ 升坐标 2.0.1 | 待实施 |
-| F7 | kotlin-parcelize-runtime 2.2.10 官方坐标 + core wiring | 待实施 |
+| Fix | 内容 | 状态 | commit |
+|---|---|---|---|
+| F1 | core +implementation(wmshell-aidls.jar)（R3 实证闭合 21 条 AIDL 引用） | ✅ | `4652adfd` |
+| F2 | am-flags 冻结 jar + core wiring | ✅ | `d6c19afd` / `174828f3` |
+| F3 | settingstheme-flags 冻结 jar + core wiring | ✅ | `d6c19afd` / `174828f3` |
+| F4 | bubbles-user-model 冻结 jar + core wiring | ✅ | `e54bb1da` / `174828f3` |
+| F5 | displaylib kapt 子集 jar（6 类：3 组件 + 3 组件内工厂；R4/R5 收缩）+ core wiring | ✅ | `e54bb1da` / `174828f3` |
+| F6 | SettingsLib AAR per-target Kotlin 半边（+59 类，1431 总量）+ 升坐标 2.0.1 | ✅ | `4b728f24` |
+| F7 | kotlin-parcelize-runtime 2.2.10 官方坐标 + core wiring | ✅ | `4652adfd` |
 
-（注：displaylib Kotlin jar 的 `DisplayLibComponentKt.createDisplayLibComponent` 直接 invokestatic `DaggerDisplayLibComponent.factory()` —— javap 实测；Soong bp `plugins: dagger2-compiler` kapt 产物在 `android_common/javac/`，即 F5。）
+（注：displaylib Kotlin jar 的 `DisplayLibComponentKt.createDisplayLibComponent` 直接 invokestatic `DaggerDisplayLibComponent.factory()` —— javap 实证；Soong bp `plugins: dagger2-compiler` kapt 产物在 `android_common/javac/`，即 F5。）
+
+**R4/R5 关键机理（displaylib dagger 双生成问题的定性）**：Soong 单体编译时 kapt 为 displaylib 生成全 8 类；Gradle 图里 dagger 图分两层——我方 `:SystemUI-application` KSP 只为我方组件触达面生成 `PerDisplayInstanceRepositoryImpl_Factory`（KSP 输出目录实测唯一 displaylib 类，且 R4 duplicate 报错实证重叠），其余 7 类不被生成；其中 3 类组件实现/工厂在 displaylib 自体组件内部引用（R5 missing refs 实证）。故 `displaylib-kapt.jar` = Soong javac jar 的确定性子集（6 类），既补组件实现与内部工厂，又剔 KSP 重复类。子集提取带 `include_prefixes` + 固定时间戳 + pytest（确定性/精确集/排除 KSP 重复类均断言）。
+
+## R6 验收（2026-09-01）
+
+| 门 | 命令 | 实际结果 |
+|---|---|---|
+| Release 构建 | `./gradlew :app:assembleRelease --max-workers=4` | **BUILD SUCCESSFUL in 5m 23s**（`> Task :app:minifyReleaseWithR8` 执行并成功） |
+| 可复现 | `:app:minifyReleaseWithR8 --rerun-tasks` 后重 assemble | BUILD SUCCESSFUL；APK sha256 前后一致 |
+| 对齐 | `python3 tools/check_source_alignment.py --strict` | exit 0 |
+| pytest | `uv run pytest tools/tests -q` | **310 passed**, 151 subtests passed |
+| 冻结指纹 | `uv run python tools/package_misc_jars.py --verify-only` | **24/24 MATCH**，0 DIFF/MISSING |
+| compilelib 字节守恒 | sha256 快照 | debug `9d12cbdd…`、release `ad605e3f…` 与 R0 快照一致；git 未动（`--verify-only` 子命令不存在，brief 为条件式，以此法代） |
+| Debug 硬门 | `./gradlew :app:assembleDebug --max-workers=4` | **BUILD SUCCESSFUL in 1m 37s**（APK 211,710,774 B） |
+
+**Release APK 初值（供 C5/C6 对照）**：
+
+- 路径：`app/build/outputs/apk/release/app-release.apk`
+- 大小：**45,030,130 B**（Debug 199,845,582 B → 16 时代 release 亦在数十 MB 量级；R8 shrink + resource shrink 生效）
+- sha256：`c74d13fba6cfc36b05c891ea90366083019d65755458a990df5d8830f0e6ff9c`
+- mapping：`app/build/outputs/mapping/release/mapping.txt` 存在（另有 seeds/usage/resources/configuration.txt 全套）
+- 签名：platform keystore（signingConfig release，与 debug 同）
+
+## 移交 C5 清单（runtime 侧）
+
+1. **双 dagger 生成层的 runtime 验证点**：`displaylib-kapt.jar` 的 6 类与 application KSP 生成的 `PerDisplayInstanceRepositoryImpl_Factory` 并存于 dex（AOSP 语义：Soong 也同时有两者——单体 kapt 生成全套，我方只剔了与 KSP 重复的 1 类）。C5 需验证 `createDisplayLibComponent` 路径在设备上可走通。
+2. **kotlin-parcelize-runtime**：首个 runtime 注解 provider 官方坐标；ace client `@Parcelize` 反序列化路径需设备验证。
+3. **`AssumeTrueForR8`/`AssumeFalseForR8` -dontwarn adapter**（`app/proguard_gradle.flags`，ADR 0006 §5）：17 基线本轮 R8 未再报该类 missing（构建成功即说明 adapter 生效面未变），但 flag folding 语义未在设备上验证过。
+4. **R8 keep 规则迁移评估**：`app/proguard_common.flags` 的 `-keep class com.android.wm.shell.* { void <init>(); }` 等规则在 17 基线未触发新 missing，本轮未动；若 C5 出现 ClassCastException 反射类缺失，优先核对该文件与 AOSP 17 `proguard.flags` 的差异。
+5. **`-dontobfuscate` + 4 条 CoreStartable keep 规则**（task 060/061 教训）本轮未触发，但 C5 的 DumpManager 注册路径是已知敏感点。
+6. **APK 差异观察点**：17 release 45 MB vs 16 时代 release（数 MB 量级？——供 C5/C6 对照；16 的数字在 CURRENT_STATE 历史）。R8 `usage.txt`/`seeds.txt` 已产出，可作删除面分析输入。
+
+## 提交记录
+
+- `4652adfd` task074 R3: wire wmshell-aidls jar + kotlin-parcelize-runtime into core runtime closure
+- `d6c19afd` task074 F2/F3: freeze am-flags + settingstheme-flags aconfig runtime jars
+- `e54bb1da` task074 F4/F5: freeze bubbles-user-model jar + displaylib-kapt subset jar
+- `4b728f24` task074 F6: SettingsLib AAR gains per-target Kotlin halves, 2.0.0 -> 2.0.1
+- `174828f3` task074 F1-F7 wiring: core runtime closure + SettingsLib 2.0.1 catalog bump
+- （另：本文档 + STATE.md 单行，随末次 commit）
+
+## 环境纪律（本轮实证）
+
+- **Release/R8 前杀双 daemon**：`pkill -9 -f 'Gradle[D]aemon'` + `pkill -9 -f 'KotlinCompile[D]aemon'`（R1 OOM 根因：残留 Kotlin daemon 10G + Gradle daemon 16G）。
+- `--max-workers=4`（30G RAM）；本轮 R8 峰值未再触发 OOM（双杀后内存余量 25G+）。
 
 ## 待解决问题
 
-（随轮次记录。）
+- 无阻塞项。R2 全部 31 条 missing classes 已逐类归因并闭合；无 stub、无 runtime 打包平台类、无 dontwarn 掩盖（proguard_gradle.flags 的既有 aconfig adapter 是 task 044/060 用户批准的存量，本轮未新增）。
