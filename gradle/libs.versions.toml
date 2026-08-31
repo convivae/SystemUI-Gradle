@@ -5,6 +5,10 @@ agp = "9.3.1"
 # Kotlin 由 AGP builtInKotlin=true 提供（版本随 AGP 9.3.1 = Kotlin 2.2.10）
 # kotlin-compose 插件版本须与 AGP 内置 Kotlin 版本一致
 kotlin = "2.2.10"
+# Task 074 (C4c)：kotlinx.parcelize runtime（@Parcelize 等 CLASS-retention 注解）。
+# ace client AAR bytecode 引用（AOSP bp static_libs kotlin-parcelize-runtime）；
+# 版本对齐项目 Kotlin 2.2.10（官方坐标，tier③）。
+parcelizeRuntime = "2.2.10"
 compose = "1.11.4"
 composeMaterialIcons = "1.7.8"
 androidxCore = "1.19.0"
@@ -110,6 +114,9 @@ androidx-viewpager2 = { module = "androidx.viewpager2:viewpager2", version.ref =
 # Kotlin
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+# Task 074 (C4c)：ace client AAR 引用的 @Parcelize CLASS-retention 注解运行时
+# （AOSP bp static_libs kotlin-parcelize-runtime；tier③ 官方坐标，版本对齐项目 Kotlin）
+kotlin-parcelize-runtime = { module = "org.jetbrains.kotlin:kotlin-parcelize-runtime", version.ref = "parcelizeRuntime" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 
 # Dagger

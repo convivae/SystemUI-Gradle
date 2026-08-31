@@ -402,6 +402,10 @@ dependencies {
     // api（Task 073）：SystemUIModule 签名引用 visualizer 类，application KSP 需传递可见
     api(files("${rootProject.projectDir}/libs/aars/personalcontext_ace_visualizer.aar"))
     implementation(files("${rootProject.projectDir}/libs/aars/personalcontext_ace_client.aar"))
+    // kotlin-parcelize-runtime（Task 074 / C4c，R2 G6）：ace client bp static_libs L34
+    // 引 kotlin-parcelize-runtime（@Parcelize CLASS-retention 注解）；AAR bytecode 引用 →
+    // R8 闭包需要运行时 provider。官方坐标（tier③）2.2.10，对齐项目 Kotlin 版本。
+    implementation(libs.kotlin.parcelize.runtime)
     // SerialPortAccessDialog（Task 073，C4b；17 SystemUI-core bp static_libs；
     // frameworks/base/libs/serial/accessdialog，tier② AAR 含 res；manifest 携带
     // AccessDialogActivity 声明 + MANAGE_SERIAL_PORTS 权限，必须 AAR 交付；
@@ -420,6 +424,12 @@ dependencies {
     // api（Task 073）：Dagger 模块签名引用 IconProvider，application KSP 需传递可见
     api(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
     implementation(libs.systemui.wmshell)
+    // WindowManager-Shell-aidls（Task 074 / C4c，R2 G1）：17 bp WindowManager-Shell-defaults
+    // static_libs L127 将 WindowManager-Shell-aidls（src/**/*.aidl，80 类 Stub/Proxy/Listener）
+    // 静态链 dex 进 APK；wmshell AAR 不含静态依赖类 → 独立冻结 jar（task073 已冻结）
+    // 补 R8 runtime 闭包。与 wmshell AAR / shared AAR 类集交集实测 0（无重复类）。
+    // :SystemUI-shared 侧 compileOnly 保留（编译期可见，不进 runtime classpath）。
+    implementation(files("${rootProject.projectDir}/libs/wmshell-aidls.jar"))
     // WindowManager-Shell-shared：WM-Shell 的 static_libs 子模块（ShellTransitions/TransitionUtil 等），
     // Soong javac JAR 不含 static_libs 代码，需单独引入。纯代码无 R 类。
     // WM-Shell-shared 合并 javac+kotlin JAR（含 PhysicsAnimator），改为直接 AAR
