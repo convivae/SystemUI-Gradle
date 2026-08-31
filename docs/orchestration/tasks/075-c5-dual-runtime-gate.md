@@ -113,3 +113,30 @@ per Incident 1 procedure did NOT change df (fresh overlay, no held inodes) — t
 40,807,872 B avail. Device restored to healthy stock state; no partition workarounds
 attempted. Full evidence + route options A–D in `docs/issues/2026-09-01-c5-dual-runtime-gate.md`
 (actual path: `docs/issues/2026-09-01-c5-dual-runtime-gate.md`). Awaiting chief decision.
+
+## Worker Report — Route B addendum (2026-08-31 17:35)
+
+**Route B outcome (user-approved /data-scratch diagnosis + fix): reported, awaiting chief decision.**
+
+- **Three root causes pinned (source + empirical)**: ① gsid (disabled+oneshot+lazy) never
+  auto-starts → runtime disable-verity's CreateScratchOnData fails at binder gsiservice;
+  ② emu64x userdata is a bare vdisk (vdc, no PARTNAME → no /dev/block/by-name link, ever)
+  → lp_metadata device name unresolvable by PartitionOpener; ③ first-stage init uses
+  passthrough libfiemap and /dev tmpfs links vanish on reboot → data scratch unmappable
+  at boot; AOSP boot cleanup then DELETES the orphaned image (verified empirically).
+- **Runtime fix PROVEN**: start gsid + manual by-name symlinks + disable-verity →
+  **1.85GB /data-backed scratch**; full staged Debug deploy (193,890,789 B, sha gates
+  PASS, no ENOSPC) + runtime verdict **ALL GREEN** (PID stable 10×30s, crash 0,
+  FATAL/NCDFE 0, windows live, dumpsys ok).
+- **Release crash-loop discovered (independent build-side defect)**: 85×FATAL, single
+  signature NoSuchFieldException educationViewedTimestampMillis_ (wmshell
+  WindowingEducationProto, protobuf-lite reflection). Dex forensics: Soong stock keeps
+  the field, our Release shrank it (accessors dead-code-eliminated in both). C4c
+  handover item #4 precisely predicted. Fix = proguard keep (build side, needs dispatch).
+- **Reboot persistence NOT achievable** on this image by device-level reversible
+  AOSP-native means (documented three blockers + raw system_ext 100% full).
+- **16-era answer (user-named question)**: 16 also used the super fallback path — 261MB
+  was 16 super's remaining free space (data-path size would be ~1.9GB); 17 super is full
+  → 87MB. Same mechanism, different slack.
+- Device restored to stock baseline; no AOSP image bytes written (qemu qcow2 overlays
+  only). Full evidence + options B1–B4: docs/issues/2026-09-01-c5-dual-runtime-gate.md.

@@ -210,3 +210,257 @@ BUILD SUCCESSFUL in 3m 58s（290 tasks: 289 executed）→ APK **193,890,789 B**
 2. 增量 vs clean APK 字节不等价（观察项，供台账口径裁决）。
 3. task074 移交的三个 runtime 初验点（displaylib 双 dagger 路径、parcelize、aconfig
    R8 语义）均因部署被阻未能在设备上验证，随阻断解除后一并补。
+
+---
+
+## Route B（用户批准，2026-08-31 chief 下达）：/data scratch 诊断修复 + 16 时代溯源
+
+**授权边界**：设备级诊断与修复、全部操作可逆、走 AOSP 原生机制（gsid ImageManager
+/data-backed scratch）、不重建镜像、**不对 AOSP 镜像写任何字节**。每步操作前先存原始
+状态；每步发现立即写入本节；超 90 分钟未解决则停工写证据汇总上报。
+
+chief 已核实的证据基础（采信）：
+- fs_mgr 路径：`fs_mgr_overlayfs_create_scratch` 先 `CreateScratchOnData`（ImageManager，
+  `FilesystemHasReliablePinning` 对 ext4 一律支持；libfiemap utility.cpp L151-160 只对 F2FS
+  做额外检查），失败才回退 super `CreateDynamicScratch`。我们落到回退路径 →
+  **CreateScratchOnData 失败了**。
+- 理想 /data scratch 尺寸 = min(super 物理大小, /data 空闲×0.85)（GetIdealDataScratchSize），
+  本机可达 GB 级。
+- 本机 gsid 存在且 run-startup-tasks 成功（dmesg 证据）、/metadata 存在（ext4, vdd1）。
+
+### B-Step 1：CreateScratchOnData 失败原因定位
+
+（诊断中）
+
+### B-Step 1 结论：CreateScratchOnData 失败根因 = **gsid 从未运行（gsiservice 不可达）**
+
+证据链（全部实测/源码实证）：
+
+1. **运行期证据**：kernel.log boot-1 期 119.864s（= 我 16:04 `adb disable-verity` 的
+   overlayfs setup，caller pid 2607 uid=0 sid=u:r:su:s0 = adb-root adbd）：
+   `servicemanager: ... Since 'gsiservice' could not be found trying to start it as a
+   lazy AIDL service`。
+2. **gsid 定义**（设备 `/system/etc/init/gsid.rc` + AOSP 源码）：`service gsid` 是
+   **`oneshot` + `disabled`**——boot 只跑 `exec_background gsid run-startup-tasks`
+   （无 DSU 时立即退出），主 daemon（无参数 → `GsiService::Register("gsiservice")`
+   + joinThreadPool 驻留，daemon.cpp L49-74）**没有任何 boot trigger 自启**。
+   当前 `ps -A | grep gsid` 空、`getprop init.svc.gsid` 空——从未启动。
+3. **运行期调用链**（源码）：`adb disable-verity` → remount 工具 main（fs_mgr_remount.cpp
+   L440-452）→ `SetupOrTeardownOverlayfs(true)` → `fs_mgr_overlayfs_setup` →
+   `fs_mgr_overlayfs_setup_scratch` → `fs_mgr_overlayfs_create_scratch` →
+   **`CreateScratchOnData`**：
+   - `FilesystemHasReliablePinning("/data")`：/data 是 **ext4** → 无条件 `supported=true`
+     （utility.cpp FilesystemHasReliablePinning：非 F2FS 直接 true）——**不是失败点**。
+   - `IImageManager::Open("remount", 10s)`：remount 工具链接的是 **binder 版
+     libfiemap**（Android.bp：libfiemap_binder_defaults 默认；passthrough 仅限无 binder
+     环境）→ `GetGsiService()` → `waitForService("gsiservice")`（libgsid.cpp）→
+     **gsid 未运行 → 等待失败 → Open 返回 null → CreateScratchOnData false** →
+     `LOG(WARNING) "Failed to allocate scratch on /data, fallback to use free space on
+     super"` → `CreateDynamicScratch` → 87MB super scratch。
+4. **boot 期必然失败**：first-stage init（selinux.cpp SetupOverlays → exec
+   overlay_remounter；scratch 在 kernel 1.34s 创建，早于 gsid.rc 解析 36.8s）连
+   servicemanager 都没有 → /data 路径无解 → super。
+5. **/metadata/gsi 残留**：`/metadata/gsi/remount/` 存在但**空**（无 lp_metadata）——
+   无历史残留干扰（可排除 chief 假设之一）。
+6. `fs_mgr.overlayfs.data_scratch_size_mb`（kDataScratchSizeMbProp）语义：
+   **CreateScratchOnData 里自定义尺寸**（GetUintProperty×1MiB；未设则
+   `GetIdealDataScratchSize()` = min(super 物理大小 1.9GB, /data 空闲×0.85)，再退 2GiB）。
+   它只是尺寸旋钮，**不解决 gsid 可达性问题**。
+7. **本机 gsid 健康**：gsid 二进制在位，`run-startup-tasks` 成功（boot 日志 42.1s
+   "no DSU" 正常退出）——手动 `start gsid` 应可拉起。
+
+### B-Step 2：16 时代溯源（用户点名）——16 也是 super 路径，261MB 来自 16 super 剩余空间
+
+- 16 时代文档证据：task 058（2026-08-25）"261 MB f2fs scratch overlay"；
+  task 055 "system_ext overlay 261M 总量，替换前仅剩 6.4M"。
+- **路径判定（硬推理）**：/data 路径 scratch 尺寸 = min(super 物理大小, /data 空闲×0.85)
+  ≈ min(1.9GB, ~9.4GB×0.85) ≈ **1.9GB**，不可能是 261MB。261MB 只能来自
+  `CreateDynamicScratch` 的 super 分配（"half of free space, minimum 512MB"：
+  free<512MB 且初始 size=0 时 = 全部 free ≤512MB）。**16 时代同样走 super 回退路径**，
+  16 的 emu64x super.img 当时剩 ~261MB 未分配。
+- **为什么 16 放得下、17 放不下**：16 super 剩 261MB ≥ 16 Debug APK 164MB（余量 97MB，
+  但满态时有 Incident 1 的 inode-ENOSPC 坑）；17 镜像 8-27 重建后 system 系分区涨满
+  super（dm-0..4 合计 ≈ vda2 总量）→ 动态 scratch 只分到 87MB（f2fs 保留后 avail 40MB）
+  < 17 Debug APK 193.9MB / Release 45MB。**同一机制、同一路径，差在 super 剩余空间。**
+- 16 时代未留 mount/dm 记录（issue 文档无 /mnt/scratch mount 行），上述判定基于尺寸
+  数学 + 当前 17 源码同构行为（16/17 fs_mgr 逻辑一致）。
+
+### B-Step 3：最小可逆修复计划（AOSP 原生机制，不写 AOSP 镜像字节）
+
+宿主镜像安全前提（已核实）：emulator `-read-only` 为所有磁盘建了 **qcow2 写前覆盖层**
+（`out/.../emu64x/*.img.qcow2`，8-31 16:01 生成，~196KB 薄层）——设备侧 super 元数据/
+userdata 的全部写入落在 qcow2，**AOSP 8-27 原始镜像零字节改动**（system-qemu.img mtime
+仍 Aug 27 13:05）。设备侧 super 元数据编辑（增删 scratch 逻辑分区、overlays-active
+flag）与已被授权的 disable-verity 属同一机制类。
+
+执行序列（每步前存档状态）：
+
+1. `adb enable-verity`（AOSP 原生 teardown 入口：fs_mgr_overlayfs_teardown → 卸
+   overlay + DestroyLogicalPartition("scratch") + SetOverlaysActiveFlag(false) +
+   SetVerityState(true)）→ reboot → 验证：verity enabled、无 overlay、super scratch
+   消失。当前设备处于 stock 态，此步无损。
+2. boot 后 `adb root` + `su 0 start gsid`（手动拉起被 disabled 的 oneshot 服务）→
+   验证 `service list` 含 gsiservice。
+3. `adb disable-verity`（此时 gsid 活着）：SetVerityState(false) →
+   SetupOrTeardownOverlayfs(true) → CreateScratchOnData 走 binder→gsid →
+   **在 /data 上建 ~1.9GB scratch image**（`/data/gsi/remount/scratch.img` +
+   `/metadata/gsi/remount/lp_metadata`）→ reboot。
+4. boot 后验证 first-stage 映射：`MapScratchPartitionIfNeeded` → `ScratchIsOnData()`
+   （lp_metadata 在）→ passthrough ImageManager `MapAllImages`（block-level dm-linear，
+   无需 /data 挂载）→ /mnt/scratch ≈ 1.9GB、overlay 在屏。
+   - **已知风险点**：fiemap extents 记录的是 /data fs 的块设备 dm-6（vdc 的 dm 包装，
+     latemount 后才存在）；若 first-stage 映射失败 → overlay 不在 boot 挂载 → 退路为
+     运行期 `start gsid` + `adb remount`（运行期映射），reboot 持久性如实记录并上报。
+5. overlay 容量 ≥ APK 尺寸后 → 回到 Gate 7 标准部署规程（staging + sha 门禁）。
+
+### B-Step 3 执行记录（含两个新根因）
+
+**根因 #2（gsid 可达后暴露）：emu64x userdata 裸盘无 by-name 符号链接。**
+
+16:47 实验（gsid 已拉起）：disable-verity 仍回退 super，gsid 日志给出确切失败点：
+```
+E gsid: [libfs_mgr] realpath: /dev/block/by-name/vdc: No such file or directory
+E gsid: Unable to complete device-mapper table, unknown block device
+E gsid: Error creating device-mapper node for image scratch
+```
+源码链：`GetBlockDeviceForFile`（fiemap_writer.cpp L171）把文件 st_dev 穿透 dm 栈
+（DeviceMapperStackPop：dm-6"userdata"→slave **vdc**）→ `GetDevicePathForFile`
+（utility.cpp L79）的 kUserdataDevice 特判（`/dev/block/by-name/userdata`）在本机
+stat 失败（链接不存在）→ lp_metadata 记 basename **"vdc"** → 映射时
+`PartitionOpener::GetPartitionAbsolutePath`（partition_opener.cpp L44）只认
+`/dev/block/by-name/<name>`，**仅 mmcblk\* 有 /dev/block 回退** → ENOENT。
+emu64x 的 userdata 是 qemu 裸 virtio 盘（vdc，无 GPT → 无 PARTNAME → ueventd 不建
+by-name 链接；fstab 直接硬编码 /dev/block/vdc）。现有 by-name 链接仅
+metadata/super/vbmeta/vda/vdd（全部来自 GPT 命名分区）。**16 时代同样没有此链接，
+但从未走到 /data 路径（根因 #1 挡在前面），故从未暴露。**
+
+**根因 #3（gsid 生命周期）**：gsid 用 LazyServiceRegistrar 注册（无客户端数秒后
+自退 "Unregistering gsiservice"），且 `service gsid` 为 disabled+oneshot、无 boot
+自启 trigger——**每次 reboot 后 gsid 必然不在**，只能运行期手动 `start gsid`。
+
+**运行期修复实证（2026-08-31 16:57，全链走通）**：干净 boot（enable-verity 拆净
+overlay）→ `adb root` → `su 0 start gsid`（等注册）→ `su 0 ln -s /dev/block/vdc
+/dev/block/by-name/userdata`（+vdc，/dev tmpfs 可逆，重启即失）→ `adb
+disable-verity`：
+```
+/data/gsi/remount/scratch.img + scratch.img.0000（1,895,825,408 B fiemap image）
+/metadata/gsi/remount/lp_metadata（4,772 B）+ scratch.status（dm:scratch）
+/mnt/scratch = dm-7（slave=vdc），1,849,344 KB 总 / 1,748,884 KB 可用  ← 1.85GB！
+```
+lp_metadata 记录设备名 "userdata"/"vdc"（依赖运行期手工链接）。
+
+**持久性缺口（代码链已证实，reboot 实验见下）——/data scratch 无法跨 boot 存活：**
+
+1. first-stage init 链接的是 **libfs_mgr（passthrough libfiemap）**（fs_mgr
+   Android.bp L192-208 明注：libfs_mgr 用于 recovery/first-stage-init，
+   libfs_mgr_binder 用于运行期）；`MapScratchPartitionIfNeeded` →
+   `MapAllImages` → `MapWithDmLinear` → PartitionOpener("userdata") →
+   `/dev/block/by-name/userdata` —— **/dev 是 tmpfs，重启后手工链接消失，且
+   emu64x 无任何持久机制生成它**（无 PARTNAME、无 ueventd symlink 规则、
+   ueventd.rc/system 全 RO）。
+2. 失败后 boot 回退到 super scratch（87MB，super 元数据里的旧分区仍在）→
+   overlay 挂在 87MB 上 → 部署在 /data scratch 的 APK 不可见。
+3. 就算运行期重启后再 `start gsid`+建链接+remount：`CreateScratchOnData` 对
+   "已存在但未映射"的 image 走 `MapImageDevice`（partition_exists=false）→
+   `fs_mgr_overlayfs_setup_scratch` 调 **`MakeScratchFilesystem` 重新格式化** →
+   **部署产物被抹掉**（fs_mgr_overlayfs_control.cpp L527-580 + L615-655 实证）。
+4. raw 直写 system_ext 不可行：**原始 system_ext ext4 分区 100% 满**
+   （235,804 KB 总 / 728 KB 可用，AOSP right-sized）；扩分区=改 super 元数据
+   分区大小=禁区。
+5. 运行期 `adb remount`（全分区）在 verity-on boot 会被 /system 的 dm-verity +
+   stale `ro.boot.veritymode` 短路（early return，不挂 overlay）；带分区参数
+   `remount system_ext` 可绕过（/system_ext 本 boot 无 verity wrapper）——见下节
+   运行期部署实验。
+
+### B-Step 4：运行期部署实验（/data scratch 上，含 Debug 与 Release）
+
+**运行期 overlay 挂载**：remount 工具在本 boot 被两个模拟器 quirk 卡死
+（①stale `ro.boot.veritymode` 使 SetVerityState 恒 want_reboot → 全分区 remount
+early-return；②fstab 双条目 erofs/ext4 使 `remount system_ext` 的
+IsRemountable 类型不匹配 → "Invalid partition"）。改用与 fs_mgr boot 日志**完全
+相同的 overlay 挂载参数**手动挂 `/system_ext`（lowerdir=/system_ext，
+upperdir=/mnt/scratch/overlay/system_ext/upper —— upper/work 目录由 disable-verity
+的 AOSP 流程创建，挂载后 `overlay on /system_ext (rw,...)` 与 boot 期形态一致，
+umount 即可逆）。
+
+**Debug APK（`a8bab0f6…`，193,890,789 B）运行期部署 + 验证 —— 全绿**：
+
+- 标准规程：push（sha MATCH）→ staged cp（**无 ENOSPC**，scratch 用量 6%→16%）
+  → sha 门禁 MATCH → 原子 mv → root:root 0644 u:object_r:system_file:s0 →
+  清 oat → force-stop 重启 SystemUI。
+- `am force-stop` 后 SystemUI 以新 APK 重启（PID 857）；**PID 857 稳定
+  10×30s**（17:08:27–17:12:57，>5min）。
+- `logcat -b crash -d`：**0 行**；全 logcat FATAL/NCDFE：**0**（grep 命中仅为
+  自身命令回显）。
+- `dumpsys window windows`：**StatusBar、NotificationShade、Taskbar、
+  ImageWallpaper、ScreenDecorOverlay** 全在屏。
+- `dumpsys statusbar`（小写）响应。
+- **结论：C4b 闭合产出的 17 Debug APK 在 17 镜像上运行时完全健康（runtime-only
+  部署形态）。**
+
+**Release APK（`7fadce6d…`，45,030,130 B）运行期部署 —— crash-loop，FAIL**：
+
+- 同规程部署（sha 门禁全过，on-device `7fadce6d…`，权限正确）。
+- kill 重启后 SystemUI **crash-loop 后死亡**（10×30s `pidof` 全空）。
+- `logcat -b crash -d`：**85 个 FATAL，全部同一签名**（17:21:55 起，wmshell.main
+  线程）：
+  ```
+  java.lang.RuntimeException: Field educationViewedTimestampMillis_ for
+    com.android.wm.shell.desktopmode.education.data.WindowingEducationProto not found.
+    Known fields are [DEFAULT_INSTANCE, PARSER, bitField0_, educationDataCase_, educationData_]
+  Caused by: java.lang.NoSuchFieldException: No field educationViewedTimestampMillis_
+    in class Lcom/android/wm/shell/desktopmode/education/data/WindowingEducationProto;
+    (declaration ... appears in .../SystemUI.apk!classes2.dex)
+    at com.google.protobuf.MessageSchema.reflectField → newSchema → Protobuf.schemaFor
+    at com.google.protobuf.GeneratedMessageLite.hashCode
+    at androidx.datastore.core.DataStoreImpl$readDataOrHandleCorruption$2$1...
+  ```
+- **dex 对照取证（决定性）**：
+  | 产物 | proto 字段声明 | accessor 方法（get/set/has/clear） |
+  |---|---|---|
+  | Soong stock 17（minified、设备上健康）classes3.dex | **有**（field table：`name : 'educationViewedTimestampMillis_'`） | 无（同样被删） |
+  | 我方 Debug（unminified）classes21.dex | 有 | 有（全套） |
+  | 我方 Release（minified）classes2.dex | **无**（仅剩 const-string 字面量） | 无 |
+- **机制**：protobuf-lite 生成代码以 `buildMessageInfo`/字符串常量把字段名交给
+  运行时 `MessageSchema.reflectField` 反射；accessor 方法被 R8 死代码消除后，
+  字段失去唯一 Java 引用 → 我方 R8（AGP 9.3.1 / R8 9.3.16）把字段本体 shrink 掉
+  → 运行时 `NoSuchFieldException`。Soong 的 R8 同样删了 accessor 却保留字段
+  （版本/行为差异），故 stock 健康。**与 C4c 移交风险点 #4 的预测精确吻合**
+  （"若 C5 出现反射类缺失，优先核对 proguard flags 与 AOSP 17 差异"）。
+- **修复方向（build 侧，超出 task075 权限，留 chief 派发）**：为
+  GeneratedMessageLite 子类加字段 keep，例如
+  `-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite { <fields>; }`
+  （protobuf-lite + R8 的业界标准规则；需核对 AOSP 17 侧是否有等价配置以对齐
+  语义，避免过度 keep）。
+- 注：观测栈里 SnackbarHostKt/ResultKt 等错位帧是 R8 横向合并的栈映射假象
+  （16 时代 Round 3 同类），非因果。
+
+### B-Step 5：reboot 持久性实证（两轮）
+
+1. **Debug 部署后 reboot**：`sys.boot_completed=1`，但
+   `/system_ext/.../SystemUI.apk` sha 回 **stock `d0e36b33…`**（部署不可见），
+   SystemUI 跑 stock；**/mnt/scratch 未挂**；且 **AOSP boot 清理把孤儿 data
+   scratch 整个删除**（`/data/gsi/remount/`、`/metadata/gsi/remount/` 全空
+   ——clean_scratch_files/overlayfs teardown 路径的预期行为）。
+2. Release 实验 reboot 同前（设备已复原 stock 基线：sha d0e36b33、PID 850、
+   crash 0、无 overlay、无 scratch、目录清空）。
+
+### Route B 总结论
+
+- **运行期 /data scratch 修复成功且完整实证**（1.85GB；Debug 全绿；Release 暴露
+  真实 R8 crash——这本身是 C5 的核心产出之一）。
+- **reboot 持久部署在 17 镜像上经设备级可逆手段不可达**（三层卡点：by-name 无
+  持久来源 / first-stage passthrough 需 by-name / 运行期重建会 MakeScratchFilesystem
+  抹数据；外加 AOSP boot 清理删孤儿 image）。
+- **raw 直写不可行**（system_ext 100% 满）；**扩 super scratch = 禁区**。
+- **Release 反射 crash 是独立于部署机制的构建侧缺陷**，需 proguard keep 修复
+  （chief 派发，参照 C4c 移交 #4）。
+
+### 供 chief 裁决的后续选项
+
+| 选项 | 内容 | 代价/性质 |
+|---|---|---|
+| B1（build 修复优先） | 派发 proguard keep 修复（GeneratedMessageLite 字段）→ 重跑 C5 runtime 检验 | 小；不解决部署持久性 |
+| B2（镜像侧修复） | emu64x 产品侧给 userdata 持久 by-name（ueventd symlink 规则或 GPT userdata），使 AOSP 原生 /data remount 路径跨 boot 生效 | 需改 AOSP 镜像构建；一劳永逸 |
+| B3（super 余量） | AOSP 构建参数留 ≥260MB super 余量（复刻 16 时代形态） | 需改 AOSP 构建；容量仍紧 |
+| B4（gate 语义） | 与用户讨论 runtime-only 部署（stop/start 语义）是否可作 17 时代 runtime 门 | 偏离 16 时代门定义 |
