@@ -271,7 +271,7 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 ```
 
 非 SystemUI 产物（不进源码 module）：`animationlib`（frameworks/libs/systemui）→ 直接 AAR；
-`compilelib` → debug/release JAR。18 时代的“kairos → test-only”为误判（16 时代 core bp 即列 kairos 于 static_libs，当时无消费者故无后果；17 core 有 60 文件 import，已源码化）。
+`compilelib` → debug/release JAR。16 时代的“kairos → test-only”为误判（16 时代 core bp 即列 kairos 于 static_libs，当时无消费者故无后果；17 core 有 60 文件 import，已源码化）。
 
 **namespace 三档规则（Task 073 / 决策审计响应）**：A 档承重锁死两格（`com.android.systemui` = :SystemUI-application manifest 展开；`com.android.systemui.res` = 全量 1162+ 文件 R import）；B 档镜像 AOSP manifest package（含 res 且 AOSP 有对应 manifest package）；C 档 Gradle-only 占位（改任何名不影响 runtime）。详见 `docs/architecture/2026-08-29-namespace-design.md`。
 
