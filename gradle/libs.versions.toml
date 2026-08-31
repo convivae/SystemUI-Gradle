@@ -170,7 +170,9 @@ jsr330 = { module = "javax.inject:javax.inject", version = "1" }
 # Task 071（C2，2026-08-27）：全部 23 族由脚本从 AOSP-17 再生，坐标统一升 2.0.0
 # （1.x 已退役，libs/maven/ 内仅存 2.0.0 版本目录；SettingsLib POM 的 17 条传递边同名同版）。
 # Task 072（C4，2026-08-28）：catalog 坐标随产物同步升 2.0.0。
-systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "2.0.0" }
+# Task 074 (C4c)：SettingsLib 2.0.0→2.0.1（per-target Kotlin 半边 59 类，
+# R8 闭包 BannerAnimationHelper/ResolutionAnimator 等；res-only 子族未变）
+systemui-settingslib = { group = "com.android.systemui", name = "SettingsLib", version = "2.0.1" }
 systemui-wmshell = { group = "com.android.systemui", name = "WindowManager-Shell", version = "2.0.0" }
 systemui-wmshell-shared = { group = "com.android.systemui", name = "WindowManager-Shell-shared", version = "2.0.1" }
 systemui-animationlib = { group = "com.android.systemui", name = "animationlib", version = "2.0.0" }

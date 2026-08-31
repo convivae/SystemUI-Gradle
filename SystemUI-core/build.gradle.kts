@@ -385,12 +385,32 @@ dependencies {
     // api（Task 073）：GlobalRootComponent 签名引用 PerDisplayRepository，
     // application KSP 需传递可见（Soong static_libs 扁平语义）
     api(files("${rootProject.projectDir}/libs/displaylib.jar"))
+    // displaylib kapt 半边（Task 074 / C4c，R2 G5 + R4 实证）：bp plugins:
+    // dagger2-compiler 的 kapt 生成类；其中 5 个 *_Factory 已由我方
+    // :SystemUI-application KSP Dagger 重新生成（R8 duplicate-class 实证），
+    // 仅剩 3 个 DaggerDisplayLibComponent 类需真实字节（KSP 无法从 jar 内
+    // 已编译接口生成组件实现；DisplayLibComponentKt.createDisplayLibComponent
+    // invokestatic DaggerDisplayLibComponent.factory()）。
+    implementation(files("${rootProject.projectDir}/libs/displaylib-kapt.jar"))
     // usertypelib（Task 073，C4b；Soong 经 WindowManager-Shell-shared 静态链
     // L59 进 SystemUI；AAR 不含静态依赖类 → 独立 jar）
     implementation(files("${rootProject.projectDir}/libs/usertypelib.jar"))
+    // bubbles-user-model（Task 074 / C4c，R2 G4）：17 bp WindowManager-Shell-defaults
+    // static_libs L114；wmshell AAR bytecode 引 BubbleUserInfo
+    // （BubbleViewInfoTask.populateCommonInfo）。纯 Kotlin 无 res → tier② jar（1 类）。
+    implementation(files("${rootProject.projectDir}/libs/bubbles-user-model.jar"))
     // aconfig_settings_flags_lib（Task 073，C4b；17 core bp static_libs L571；
     // com.android.settings.flags.Flags.biometricsOnboardingEducation 等）
     implementation(files("${rootProject.projectDir}/libs/settings-flags.jar"))
+    // am-flags（Task 074 / C4c，R2 G2）：17 bp WindowManager-Shell-defaults
+    // static_libs L127 am_flags_lib；wmshell AAR bytecode 引
+    // com.android.server.am.Flags（DesktopTaskChangeListener.addTask 等）。
+    implementation(files("${rootProject.projectDir}/libs/am-flags.jar"))
+    // settingstheme-flags（Task 074 / C4c，R2 G3）：SettingsLibSettingsTheme bp
+    // static_libs aconfig_settingstheme_exported_flags_java_lib；Theme AAR 的
+    // SettingsThemeHelper.isExpressiveDesignEnabled 引
+    // com.android.settingslib.widget.theme.flags.Flags。
+    implementation(files("${rootProject.projectDir}/libs/settingstheme-flags.jar"))
     // wm_shell_protolog-groups（Task 073，C4b；Soong 经 WindowManager-Shell
     // 静态链进 SystemUI；BubblesManager static-import ShellProtoLogGroup）
     implementation(files("${rootProject.projectDir}/libs/wmshell-protolog.jar"))
