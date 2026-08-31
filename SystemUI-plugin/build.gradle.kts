@@ -4,6 +4,11 @@
 //    PluginProtector 暂不生成，下游 Unresolved reference 作为保留错误（见 Task 9 记录）
 plugins {
     alias(libs.plugins.android.library)
+    // plugin 源码含 @Composable/inline composable 调用（LockscreenScope.kt
+    // rememberCoroutineScope、TileDetailsViewModel @Composable）；bp static_libs
+    // androidx.compose.runtime/ui → 与 :SystemUI-core 同样需 Compose compiler 插件，
+    // 否则 backend 报 Couldn't inline method call
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -74,4 +79,14 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     // Compose runtime：TileDetailsViewModel.kt 用 @Composable（对齐 AOSP plugin/Android.bp）
     implementation(libs.compose.runtime)
+    // AOSP plugin bp static_libs androidx.compose.ui_ui
+    // （keyguard/ui/composable/elements/* 引 Modifier/BoxScope，VRect 引 geometry.Rect）
+    implementation(libs.compose.ui)
+    // LockscreenScope.kt 引 androidx.compose.foundation.layout.BoxScope
+    // （Soong 经 androidx prebuilts 传递解析；Gradle 显式声明）
+    implementation(libs.compose.foundation)
+    // AOSP plugin bp static_libs monet（ClockFaceEvents.kt 引
+    // com.android.systemui.monet.ColorScheme；tier② jar，运行时由 core 的
+    // implementation 统一 dex）
+    compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
 }

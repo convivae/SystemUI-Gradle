@@ -14,8 +14,8 @@ android {
     // 对齐 AOSP SystemUISharedLib：src 下同时含 java/kotlin/aidl；keyguard child 合入
     sourceSets {
         getByName("main") {
-            java.srcDirs("src", "keyguard/src")
-            kotlin.srcDirs("src", "keyguard/src")
+            java.srcDirs("src", "keyguard/src", "flag/src", "flag/types/src")
+            kotlin.srcDirs("src", "keyguard/src", "flag/src", "flag/types/src")
             aidl.srcDirs("src", "keyguard/src")
             res.srcDirs("res")
             manifest.srcFile("AndroidManifest.xml")
@@ -62,6 +62,13 @@ dependencies {
     // tier② AOSP 特有产物 jar（含资源/内部类，非源码模块）
     compileOnly(libs.systemui.wmshell)
     compileOnly(libs.systemui.wmshell.shared)
+    // WindowManager-Shell-aidls（17 新 bp static_libs；AIDL-only java_library，
+    // 80 生成类：IPipAnimationListener / IRecentsAnimationController 等；
+    // 唯一消费方本模块，javac+Kotlin 均需）
+    compileOnly(files("${rootProject.projectDir}/libs/wmshell-aidls.jar"))
+    // com_android_wm_shell_flags_lib（aconfig 生成，PipSurfaceTransactionHelper 引
+    // com.android.wm.shell.Flags；运行时由 core 的 implementation 统一 dex）
+    compileOnly(files("${rootProject.projectDir}/libs/wm-shell-flags.jar"))
     // com_android_systemui_shared_flags_lib（aconfig 生成，含 com.android.systemui.shared.Flags）
     compileOnly(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // tracinglib（frameworks/libs/systemui，tier② prebuilt jar）

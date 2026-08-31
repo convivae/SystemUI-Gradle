@@ -61,6 +61,13 @@ dependencies {
 
     // tier② AOSP 特有产物 jar
     compileOnly(files("${rootProject.projectDir}/libs/monet.jar"))
+    // com.android.systemui.Flags（enableAiClocks；Soong 经 SystemUIPluginLib bp
+    // static_libs com_android_systemui_flags_lib 传递；运行时由 core 的
+    // implementation 统一 dex）
+    compileOnly(files("${rootProject.projectDir}/libs/systemui-flags.jar"))
+    // com.android.systemui.shared.Flags（enableAiClocks；Soong 经 SystemUIPluginLib
+    // 静态链传递；运行时由 core 的 implementation 统一 dex）
+    compileOnly(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // animationlib 直接 AAR（含 res）
     api(libs.systemui.animationlib)
 
@@ -70,6 +77,9 @@ dependencies {
     implementation(libs.androidx.concurrent.futures)
     implementation(libs.androidx.dynamicanimation)
     implementation(libs.androidx.recyclerview)
+    // FlexClockFaceController.kt 引 androidx.compose.ui.Modifier /
+    // layout.onGloballyPositioned（Soong 经 SystemUIPluginLib 静态链传递）
+    implementation(libs.compose.ui)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.dagger)

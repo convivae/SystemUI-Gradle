@@ -88,4 +88,12 @@ dependencies {
     compileOnly(files("${rootProject.projectDir}/libs/framework.jar"))
     // bp SystemUI-srcs-defaults libs: ["keepanno-annotations"]
     compileOnly(files("${rootProject.projectDir}/libs/keepanno-annotations.jar"))
+    // WindowManager-Shell AAR（Task 073：AOSP SystemUI-application bp static_libs
+    // SystemUI-core 静态链传递 WindowManager-Shell；Gradle compileOnly 不传递 →
+    // 此处补 implementation，KSP 根组件（WMComponent/ShellInterface）与 dex 闭包
+    // 都需要；AOSP SystemUI.apk 含 wmshell 类，语义一致）
+    implementation(libs.systemui.wmshell)
+    // WindowManager-Shell-shared AAR（同上静态链：WMShell Dagger 图引
+    // com.android.wm.shell.shared.ShellTransitions 等）
+    implementation(libs.systemui.wmshell.shared)
 }

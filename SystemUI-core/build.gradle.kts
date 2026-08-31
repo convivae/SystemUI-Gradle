@@ -48,17 +48,141 @@ android {
     sourceSets {
         getByName("main") {
             // AOSP SystemUI-core 源码根：src + compose/features + compose/facade/enabled + pods
+            // 17 bp：pods 生产源按 per-module defaults 并入（ADR 0003 全 pods →
+            // :SystemUI-core）。Soong pods/build/Android.bp 的 sysui_api/sysui_main/
+            // sysui_dagger defaults 只收 src/{api,main,dagger}/**；src/test
+            //（sysui_testlib）、src/testFixtures（sysui_fixtureFiles）、src/preview
+            //（sysui_preview）与 multivalentTests/testFixtures 顶层目录均不进
+            // 任何生产模块。显式列举生产 src 根 = Soong 语义 1:1。
             java.srcDirs(
                 "src",
                 "compose/features/src",
                 "compose/facade/enabled/src",
-                "pods",
+                "pods/brightness/src/api",
+                "pods/brightness/src/dagger",
+                "pods/brightness/src/main",
+                "pods/bundle/phone/src/dagger",
+                "pods/common/shared/colors/src/api",
+                "pods/common/shared/model/src/api",
+                "pods/common/ui/compose/src/api",
+                "pods/common/ui/compose/windowinsets/src/api",
+                "pods/common/ui/icons/src/api",
+                "pods/dump/src/api",
+                "pods/dump/src/dagger",
+                "pods/dump/src/main",
+                "pods/flags/src/api",
+                "pods/graphics/src/api",
+                "pods/graphics/src/dagger",
+                "pods/graphics/src/main",
+                "pods/headline/ui/src/api",
+                "pods/headline/ui/src/dagger",
+                "pods/headline/ui/src/main",
+                "pods/lifecycle/src/api",
+                "pods/log/src/api",
+                "pods/log/table/src/api",
+                "pods/notifications/content/icon/src/api",
+                "pods/notifications/content/src/api",
+                "pods/notifications/content/ui/src/api",
+                "pods/notifications/content/ui/src/dagger",
+                "pods/notifications/content/ui/src/main",
+                "pods/notifications/intelligence/rules/src/api",
+                "pods/notifications/intelligence/rules/src/dagger",
+                "pods/notifications/intelligence/rules/src/main",
+                "pods/notifications/intelligence/rules/ui/src/api",
+                "pods/notifications/intelligence/rules/ui/src/dagger",
+                "pods/notifications/intelligence/rules/ui/src/main",
+                "pods/qs/panels/ui/src/api",
+                "pods/qs/panels/ui/src/dagger",
+                "pods/qs/panels/ui/src/main",
+                "pods/retail/data/src/api",
+                "pods/retail/data/src/main",
+                "pods/retail/domain/src/api",
+                "pods/retail/domain/src/main",
+                "pods/retail/src/main",
+                "pods/scene/src/api",
+                "pods/scene/ui/src/api",
+                "pods/shade/src/api",
+                "pods/src/api",
+                "pods/statusbar/chips/ui/src/api",
+                "pods/statusbar/pipeline/airplane/data/src/api",
+                "pods/statusbar/pipeline/airplane/data/src/main",
+                "pods/statusbar/pipeline/airplane/shared/src/api",
+                "pods/statusbar/pipeline/airplane/shared/src/main",
+                "pods/user/data/src/api",
+                "pods/util/kotlin/src/api",
+                "pods/util/policy/src/api",
+                "pods/util/policy/src/main",
+                "pods/util/settings/src/api",
+                "pods/util/settings/src/dagger",
+                "pods/util/settings/src/main",
+                "pods/util/time/src/api",
+                "pods/util/time/src/dagger",
+                "pods/util/time/src/main",
             )
             kotlin.srcDirs(
                 "src",
                 "compose/features/src",
                 "compose/facade/enabled/src",
-                "pods",
+                "pods/brightness/src/api",
+                "pods/brightness/src/dagger",
+                "pods/brightness/src/main",
+                "pods/bundle/phone/src/dagger",
+                "pods/common/shared/colors/src/api",
+                "pods/common/shared/model/src/api",
+                "pods/common/ui/compose/src/api",
+                "pods/common/ui/compose/windowinsets/src/api",
+                "pods/common/ui/icons/src/api",
+                "pods/dump/src/api",
+                "pods/dump/src/dagger",
+                "pods/dump/src/main",
+                "pods/flags/src/api",
+                "pods/graphics/src/api",
+                "pods/graphics/src/dagger",
+                "pods/graphics/src/main",
+                "pods/headline/ui/src/api",
+                "pods/headline/ui/src/dagger",
+                "pods/headline/ui/src/main",
+                "pods/lifecycle/src/api",
+                "pods/log/src/api",
+                "pods/log/table/src/api",
+                "pods/notifications/content/icon/src/api",
+                "pods/notifications/content/src/api",
+                "pods/notifications/content/ui/src/api",
+                "pods/notifications/content/ui/src/dagger",
+                "pods/notifications/content/ui/src/main",
+                "pods/notifications/intelligence/rules/src/api",
+                "pods/notifications/intelligence/rules/src/dagger",
+                "pods/notifications/intelligence/rules/src/main",
+                "pods/notifications/intelligence/rules/ui/src/api",
+                "pods/notifications/intelligence/rules/ui/src/dagger",
+                "pods/notifications/intelligence/rules/ui/src/main",
+                "pods/qs/panels/ui/src/api",
+                "pods/qs/panels/ui/src/dagger",
+                "pods/qs/panels/ui/src/main",
+                "pods/retail/data/src/api",
+                "pods/retail/data/src/main",
+                "pods/retail/domain/src/api",
+                "pods/retail/domain/src/main",
+                "pods/retail/src/main",
+                "pods/scene/src/api",
+                "pods/scene/ui/src/api",
+                "pods/shade/src/api",
+                "pods/src/api",
+                "pods/statusbar/chips/ui/src/api",
+                "pods/statusbar/pipeline/airplane/data/src/api",
+                "pods/statusbar/pipeline/airplane/data/src/main",
+                "pods/statusbar/pipeline/airplane/shared/src/api",
+                "pods/statusbar/pipeline/airplane/shared/src/main",
+                "pods/user/data/src/api",
+                "pods/util/kotlin/src/api",
+                "pods/util/policy/src/api",
+                "pods/util/policy/src/main",
+                "pods/util/settings/src/api",
+                "pods/util/settings/src/dagger",
+                "pods/util/settings/src/main",
+                "pods/util/time/src/api",
+                "pods/util/time/src/dagger",
+                "pods/util/time/src/main",
             )
             // AOSP 源码里的 .aidl 参与源码编译（规则 S：AIDL 是 SystemUI 自有代码，不用 jar）
             // framework 隐藏接口（android.os.IRemoteCallback）由 SysUISdk 的 framework.aidl 补齐，
@@ -128,15 +252,23 @@ kotlin {
 
 dependencies {
     // 项目模块（对齐 AOSP SystemUI-core static_libs）
-    implementation(project(":SystemUI-res"))
-    implementation(project(":SystemUI-animation"))
-    implementation(project(":SystemUI-common"))
-    implementation(project(":SystemUI-customization"))
-    implementation(project(":SystemUI-plugin"))
-    implementation(project(":SystemUI-shared"))
-    implementation(project(":SystemUI-compose"))
+    api(project(":SystemUI-res"))
+    api(project(":SystemUI-animation"))
+    api(project(":SystemUI-common"))
+    api(project(":SystemUI-customization"))
+    // 17 bp：SystemUI-core static_libs SystemUICustomizationLib 静态链传递
+    // SystemUIClocks-CommonLib（clocks res R + ClockLogger.getVisText 等；
+    // core 源码 import com.android.systemui.customization.clocks.R as clocksR）
+    api(project(":SystemUI-clocks-common"))
+    api(project(":SystemUI-plugin"))
+    // api（Task 073）：AOSP static_libs 扁平传递——SystemUI-application 的 Dagger
+    // 根组件直接引用 shared 的 SysUISingleton / dagger.qualifiers.*；Gradle
+    // implementation 不传递 → 改 api 对齐 Soong 语义
+    api(project(":SystemUI-shared"))
+    api(project(":SystemUI-compose"))
     // kairos（packages/SystemUI/utils/kairos，tier① 规则 S；17 bp SystemUI-core static_libs）
-    implementation(project(":SystemUI-utils-kairos"))
+    // api（Task 073）：Dagger 模块签名引用 KairosNetwork，application KSP 需传递可见
+    api(project(":SystemUI-utils-kairos"))
 
     // compilelib 变体（非 SystemUI 代码，tier② jar；debug/release 仅 IS_DEBUG 常量不同）
     debugImplementation(files("${rootProject.projectDir}/libs/compilelib-debug.jar"))
@@ -144,7 +276,8 @@ dependencies {
 
     // msdl（frameworks/libs/systemui/msdllib，tier② prebuilt jar；AOSP static_libs runtime/program
     // 输入——SystemUISharedLib static_libs ":msdl"，dex 进 APK，故 implementation）
-    implementation(files("${rootProject.projectDir}/libs/msdl.jar"))
+    // api（Task 073）：Dagger 模块签名引用 MSDLPlayer，application KSP 需传递可见
+    api(files("${rootProject.projectDir}/libs/msdl.jar"))
     // view_capture（frameworks/libs/systemui/viewcapturelib，tier② 干净 jar：
     // tools/package_viewcapture_motiontool_jars.py 合并 3 个 owning Soong
     // implementation 输出 javac 9 + kotlin 23 + view_capture_proto 24 = 56 类，
@@ -175,6 +308,12 @@ dependencies {
     // SystemUIUnfoldLib 通过 :SystemUI-shared / :SystemUI-customization 透传
     // androidx.window：FoldingFeature / WindowLayoutInfo 等
     implementation(libs.androidx.window)
+    // androidx.window.window-core（compose/features 源码引
+    // androidx.window.core.layout.WindowSizeClass；bp 经 androidx prebuilts 链）
+    implementation(libs.androidx.window.core)
+    // bp static_libs androidx.autofill_autofill（AutofillRendererService 引
+    // androidx.autofill.inline.UiVersions / InlineSuggestionUi）
+    implementation(libs.androidx.autofill)
     // Lottie 动画（com.airbnb.lottie.* / lottie.compose.*）→ tier③ 标准第三方，用 maven 版本依赖
     // （lottie 见下方 implementation(libs.lottie)；lottie-compose 补 maven）
     implementation(libs.lottie.compose)
@@ -240,12 +379,28 @@ dependencies {
     //（bp 无 resource_dirs）；tools/package_misc_jars.py 冻结指纹产出，dex 进 APK
     implementation(files("${rootProject.projectDir}/libs/mechanics.jar"))
     implementation(files("${rootProject.projectDir}/libs/mechanics-compose.jar"))
+    // displaylib（Task 073，C4b；17 SystemUI bp static_libs L570/781/823。
+    // frameworks/libs/systemui/displaylib——纯 Kotlin + dagger 生成类，
+    // tier② jar；59 个 17 源文件 import com.android.app.displaylib.*）
+    // api（Task 073）：GlobalRootComponent 签名引用 PerDisplayRepository，
+    // application KSP 需传递可见（Soong static_libs 扁平语义）
+    api(files("${rootProject.projectDir}/libs/displaylib.jar"))
+    // usertypelib（Task 073，C4b；Soong 经 WindowManager-Shell-shared 静态链
+    // L59 进 SystemUI；AAR 不含静态依赖类 → 独立 jar）
+    implementation(files("${rootProject.projectDir}/libs/usertypelib.jar"))
+    // aconfig_settings_flags_lib（Task 073，C4b；17 core bp static_libs L571；
+    // com.android.settings.flags.Flags.biometricsOnboardingEducation 等）
+    implementation(files("${rootProject.projectDir}/libs/settings-flags.jar"))
+    // wm_shell_protolog-groups（Task 073，C4b；Soong 经 WindowManager-Shell
+    // 静态链进 SystemUI；BubblesManager static-import ShellProtoLogGroup）
+    implementation(files("${rootProject.projectDir}/libs/wmshell-protolog.jar"))
     // personalcontext_ace_visualizer + _client（Task 073，C4b；17 SystemUI-core bp
     // static_libs；源码 import visualizer.{compat,connector}.* / common.wrappers.wrap）。
     // 规则 F tier② AAR（frameworks/libs/systemui/ace，含 res）；两个 R namespace 拆双 AAR；
     // visualizer AAR 合并 ace_common 类闭包（bp static_libs，TraceurCommon 先例）；
     // 单 consumer 族 → 直接 AAR（Task 059 例外）；tools/package_aosp_aar.py 产出
-    implementation(files("${rootProject.projectDir}/libs/aars/personalcontext_ace_visualizer.aar"))
+    // api（Task 073）：SystemUIModule 签名引用 visualizer 类，application KSP 需传递可见
+    api(files("${rootProject.projectDir}/libs/aars/personalcontext_ace_visualizer.aar"))
     implementation(files("${rootProject.projectDir}/libs/aars/personalcontext_ace_client.aar"))
     // SerialPortAccessDialog（Task 073，C4b；17 SystemUI-core bp static_libs；
     // frameworks/base/libs/serial/accessdialog，tier② AAR 含 res；manifest 携带
@@ -254,13 +409,16 @@ dependencies {
     implementation(files("${rootProject.projectDir}/libs/aars/SerialPortAccessDialog.aar"))
 
     // 直接 AAR（Soong javac + 原始 res + R.txt，无 R.class）
-    implementation(libs.systemui.settingslib)
+    // api（Task 073）：Dagger 模块签名引用 LocalBluetoothManager 等，
+    // application KSP 需传递可见（Soong static_libs 扁平语义）
+    api(libs.systemui.settingslib)
     // setupcompat：AOSP SettingsLib 经 setupdesign→setupcompat 传递获得 compile classpath
     // （com.google.android.setupcompat.util.WizardManagerHelper.SETTINGS_SECURE_USER_SETUP_COMPLETE 等）；
     // external/setupcompat android_library（含 res），tier② 直接 AAR（libs/aars/，单 consumer 族，task 059）。
     implementation(files("${rootProject.projectDir}/libs/aars/setupcompat.aar"))
     // iconloader：直接 AAR（libs/aars/，单 consumer 族，task 059）
-    implementation(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
+    // api（Task 073）：Dagger 模块签名引用 IconProvider，application KSP 需传递可见
+    api(files("${rootProject.projectDir}/libs/aars/iconloader.aar"))
     implementation(libs.systemui.wmshell)
     // WindowManager-Shell-shared：WM-Shell 的 static_libs 子模块（ShellTransitions/TransitionUtil 等），
     // Soong javac JAR 不含 static_libs 代码，需单独引入。纯代码无 R 类。
@@ -268,7 +426,9 @@ dependencies {
     implementation(libs.systemui.wmshell.shared)
     // LowLightDreamLib: com.android.dream.lowlight.util.TruncatedInterpolator 等
     // (frameworks/base/libs/dream/lowlight，AOSP core static_libs)；直接 AAR（libs/aars/，单 consumer 族，task 059）
-    implementation(files("${rootProject.projectDir}/libs/aars/LowLightDreamLib.aar"))
+    // api（Task 073）：Dagger 模块签名引用 LowLightDreamComponent.Factory，
+    // application KSP 需传递可见
+    api(files("${rootProject.projectDir}/libs/aars/LowLightDreamLib.aar"))
     // com.android.systemui.shared.Flags（KeyboardTouchpadTutorialCoreStartable 等使用）
     implementation(files("${rootProject.projectDir}/libs/systemui-shared-flags.jar"))
     // zxing-core: SettingsLib 的 Soong static_libs（com.google.zxing.WriterException 等），
@@ -309,16 +469,21 @@ dependencies {
     implementation(libs.jsr305)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.cardview)
-    implementation(libs.androidx.asynclayoutinflater)
+    // api（Task 073）：application 根组件 GlobalRootComponent 签名引用
+    // AsyncLayoutInflater，KSP 需传递可见
+    api(libs.androidx.asynclayoutinflater)
     implementation(libs.androidx.concurrent.futures)
     // androidx.core.animation.Animator/ValueAnimator/AnimatorSet/ObjectAnimator/Interpolator
     // AOSP PlatformAnimationLib bp 有 androidx.core_core-animation；core 通过 static_libs 传递获得。
     // Gradle implementation 不传递,需显式声明(同 Phase A Task 4 给 compose 的处理)。
     implementation(libs.androidx.core.animation)
-    implementation(libs.androidx.constraintlayout)
+    // api（Task 073）：Dagger 模块签名引用 MotionLayout，application KSP 需传递可见
+    api(libs.androidx.constraintlayout)
     implementation(libs.androidx.constraintlayout.core)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.dynamicanimation)
+    // api（Task 073）：application 生成的 Dagger 代码经 wmshell-shared
+    // PhysicsAnimator 引 FrameCallbackScheduler，需传递可见
+    api(libs.androidx.dynamicanimation)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.leanback)
@@ -355,9 +520,11 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.session)
     // Compose 1.11.4（公网最高保留 ExperimentalAnimatableApi 的版本）
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.compose.runtime)
-    implementation(libs.compose.animation)
+    api(libs.androidx.activity.compose)  // api（Task 073）：Dagger 签名引 ComponentActivity
+    // api（Task 073）：core 内 Dagger 组件（ScreenCaptureUiComponent 等签名引
+    // compose 类型），application KSP 需传递可见
+    api(libs.compose.runtime)
+    api(libs.compose.animation)
     // animation-graphics: AnimatedImageVector / animatedVectorResource（CommonTile 等）
     implementation(libs.compose.animation.graphics)
     implementation(libs.compose.material3)
@@ -367,7 +534,7 @@ dependencies {
     // 1.13.0-alpha08：trackIconActiveColor/trackIconActiveEnd 需此版本（AOSP material-design-x
     //   prebuilt 与 Maven 版字节完全一致 1985863 bytes；规则③优先官方 Maven 坐标）
     implementation(libs.google.material)
-    implementation(libs.compose.foundation)
+    api(libs.compose.foundation)  // api（Task 073）：Dagger 签名引 InteractionSource
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.ui.graphics)
