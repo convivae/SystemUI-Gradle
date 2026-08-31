@@ -152,9 +152,13 @@ class ArtifactRegistryTest(unittest.TestCase):
         )
 
     def test_settingslib_main_coordinate(self):
-        self.assertEqual(iam.ARTIFACTS["SettingsLib"]["version"], "2.0.0")
+        # Task 074 (C4c): 1372→1431 类集变化 → 2.0.1（per-target res-only 子族
+        # 内容未变，仍 2.0.0）
+        self.assertEqual(iam.ARTIFACTS["SettingsLib"]["version"], "2.0.1")
         self.assertEqual(iam.ARTIFACTS["SettingsLib"]["group"], "com.android.systemui")
         self.assertEqual(iam.ARTIFACTS["SettingsLib"]["name"], "SettingsLib")
+        dep_versions = {d["version"] for d in iam._settingslib_closure_dep_entries()}
+        self.assertEqual(dep_versions, {"2.0.0"})
 
     def test_settingslib_settings_theme_coordinate(self):
         self.assertEqual(
@@ -220,9 +224,12 @@ class ArtifactRegistryTest(unittest.TestCase):
 
     def test_all_families_at_vintage_17_major(self):
         """AOSP-17 (Task 071，AGENTS §3.2.4)：坐标表全族 2.0.0 基线，无 1.x 残留。
-        例外：Task 073 将 WindowManager-Shell-shared 升 2.0.1（类集 +aidls 闭包）。"""
+        例外：Task 073 将 WindowManager-Shell-shared 升 2.0.1（类集 +aidls 闭包）；
+        Task 074 将 SettingsLib 主族升 2.0.1（per-target Kotlin 半边 59 类）"""
         for name, coord in iam.ARTIFACTS.items():
-            expected = "2.0.1" if name == "WindowManager-Shell-shared" else "2.0.0"
+            expected = "2.0.1" if name in (
+                "WindowManager-Shell-shared", "SettingsLib"
+            ) else "2.0.0"
             self.assertEqual(coord["version"], expected, f"{name} 版本异常")
 
     def test_settingslib_closure_seven_targets_coordinates(self):

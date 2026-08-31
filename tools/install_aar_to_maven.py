@@ -65,7 +65,10 @@ def _settingslib_closure_dep_entries():
 ARTIFACTS = {
     "SettingsLib": {
         # AOSP-17 (Task 071): vintage 16→17 全族升 2.0.0
-        "group": "com.android.systemui", "name": "SettingsLib", "version": "2.0.0",
+        # Task 074 (C4c, 2026-09-01): 主 AAR 类集 1372→1431（per-target
+        # Kotlin 半边 59 类），内容变化 → 升 2.0.1 并退役 2.0.0
+        # （AGENTS §3.2.4）；POM 17 边指向的 res-only 子族未变，维持 2.0.0
+        "group": "com.android.systemui", "name": "SettingsLib", "version": "2.0.1",
         "deps": _settingslib_closure_dep_entries(),
     },
     # AOSP-17 (Task 071): WifiTrackerLib / iconloader / setupcompat /

@@ -39,11 +39,16 @@ TRACEUR_SOONG = SOONG_DIR / "packages/apps/Traceur"
 DEFAULT_OUTPUT = Path("libs/aars/animationlib.aar")
 
 def _discover_settingslib_code_jars() -> list:
-    """自动发现 SettingsLib 主 target + 全部 static_libs 子模块的 javac JAR。
+    """自动发现 SettingsLib 主 target + 全部 static_libs 子模块的 javac JAR，
+    以及同一模块的 Kotlin 半边（Task 074 / C4c：AOSP-17 混合 Kotlin/Java 模块
+    的 Kotlin 类在 android_common/kotlin/，16 时代 discovery 只并 javac，
+    漏掉 BannerAnimationHelper/ResolutionAnimator 等 59 类，R8 闭包报缺）。
 
-    Soong 的 android_library static_libs 是独立编译单元，javac JAR 只含主 target
-    的类。static_libs 子模块的类在 dex 阶段合并进最终 APK。为模拟此语义，
-    需把主 target 与所有 static_libs 子模块的 javac JAR 合并到 classes.jar。
+    Soong 的 android_library static_libs 是独立编译单元，javac JAR 只含
+    Java 源产物、kotlin JAR 只含 Kotlin 源产物，dex 阶段合并进最终 APK。
+    为模拟此语义，需把每个模块的 javac + kotlin JAR 都合并到 classes.jar。
+    kotlin-only 模块（SettingsTheme/Spa/Metadata 等，无 javac 目录）
+    天然不入 discovery —— Theme Kotlin 归 SettingsLibSettingsTheme AAR（既有纪律）。
     """
     base = SOONG_DIR / "frameworks/base/packages/SettingsLib"
     jars = []
@@ -52,6 +57,10 @@ def _discover_settingslib_code_jars() -> list:
         if "turbine" in s or "aconfig" in s or "flags_lib" in s:
             continue
         jars.append(jar)
+        # 同模块 Kotlin 半边（零重叠实测：7 个混合模块 javac∩kotlin = 0）
+        kotlin_jar = jar.parent.parent / "kotlin" / jar.name
+        if kotlin_jar.is_file():
+            jars.append(kotlin_jar)
     return jars
 
 
@@ -104,14 +113,15 @@ def _build_configs() -> dict:
         "output": "libs/aars/iconloader.aar",
     },
     "SettingsLib": {
-        # 主 target + 全部 static_libs 子模块 javac JAR（AOSP-17: 34 JAR, 884 类）
-        # + 主 SettingsLib Kotlin（488 类，含 RestrictedPreferenceHelperProvider 等）
-        # = 1372 类。AOSP-17：DeviceStateRotationLock 已 Kotlin→Java 重写，其 13 类
-        # （含 PosturesHelper）由上方 discovery 的 javac JAR 交付，不再有独立 Kotlin 输入。
-        # Theme 的 Kotlin 代码归 SettingsLibSettingsTheme AAR，不得并入。
-        "code": _discover_settingslib_code_jars() + [
-            SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar",
-        ],
+        # 主 target + 全部 static_libs 子模块的 javac + Kotlin JAR
+        # （AOSP-17: 34 javac JAR 884 类 + 7 个混合模块 Kotlin 半边 59 类
+        # + 主 SettingsLib Kotlin 488 类 = 1431 类。Task 074 / C4c：
+        # per-target Kotlin 半边为 R8 闭包新增——BannerAnimationHelper/
+        # ResolutionAnimator 等。AOSP-17：DeviceStateRotationLock 已 Kotlin→Java
+        # 重写，其 13 类（含 PosturesHelper）由 discovery 的 javac JAR 交付。
+        # Theme 的 Kotlin 代码归 SettingsLibSettingsTheme AAR，不得并入
+        # （kotlin-only 模块无 javac 目录，discovery 天然排除）。
+        "code": _discover_settingslib_code_jars(),
         "res": [AOSP_ROOT / "frameworks/base/packages/SettingsLib/res"],
         "manifest": AOSP_ROOT / "frameworks/base/packages/SettingsLib/AndroidManifest.xml",
         "rtxt": SOONG_DIR / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/R.txt",

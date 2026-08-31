@@ -361,22 +361,34 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertFalse(cfg.get("reject_sysui", False))
 
     def test_settingslib_program_code_inputs(self):
-        """AOSP-17: main code = javac discovery + 主 Kotlin（DeviceStateRotationLock
-        已 Kotlin→Java 重写，其类由 discovery 交付）；
-        Theme code = 其 owning Kotlin JAR（不得并入 main）。"""
+        """AOSP-17: main code = javac discovery + 各混合模块 Kotlin 半边
+        （DeviceStateRotationLock 已 Kotlin→Java 重写，其类由 discovery 交付）；
+        Theme code = 其 owning Kotlin JAR（不得并入 main；kotlin-only 模块
+        无 javac 目录，discovery 天然排除）。"""
         cfg = paar.CONFIGS["SettingsLib"]
         discovered = paar._discover_settingslib_code_jars()
+        self.assertEqual(cfg["code"], discovered)
+        # Task 074 (C4c): discovery 现在含主 Kotlin 与 7 个混合模块的
+        # Kotlin 半边；主 Kotlin 不再单独追加（防重复 entry）。
         main_kotlin = (
             paar.SOONG_DIR
             / "frameworks/base/packages/SettingsLib/SettingsLib/android_common/kotlin/SettingsLib.jar"
         )
-        self.assertEqual(cfg["code"], discovered + [main_kotlin])
-
+        self.assertIn(main_kotlin, discovered)
+        banner_kotlin = (
+            paar.SOONG_DIR
+            / "frameworks/base/packages/SettingsLib/BannerMessagePreference/"
+              "SettingsLibBannerMessagePreference/android_common/kotlin/"
+              "SettingsLibBannerMessagePreference.jar"
+        )
+        self.assertIn(banner_kotlin, discovered)
+        # kotlin-only 模块（Theme）不在 discovery。
         theme_kotlin = (
             paar.SOONG_DIR
             / "frameworks/base/packages/SettingsLib/SettingsTheme/"
               "SettingsLibSettingsTheme/android_common/kotlin/SettingsLibSettingsTheme.jar"
         )
+        self.assertNotIn(theme_kotlin, discovered)
         self.assertEqual(paar.CONFIGS["SettingsLibSettingsTheme"]["code"], [theme_kotlin])
 
     def test_settingslib_settings_theme_config_paths(self):
@@ -480,15 +492,16 @@ class TestSettingsLibProgramClosure(unittest.TestCase):
             contributions.append(classes)
         return contributions
 
-    def test_input_class_sets_pairwise_disjoint_union_1372(self):
+    def test_input_class_sets_pairwise_disjoint_union_1431(self):
         contributions = self._input_union()
-        self.assertEqual(len(contributions), 35)  # 34 javac + 1 Kotlin (AOSP-17)
+        # 34 javac + 7 per-target Kotlin halves + 1 主 Kotlin（Task 074 / C4c）
+        self.assertEqual(len(contributions), 42)
         union = {}
         for c in contributions:
             self.assertEqual(set(c) & set(union), set(),
                              "输入 class 集存在重叠")
             union.update(c)
-        self.assertEqual(len(union), 1372, len(union))
+        self.assertEqual(len(union), 1431, len(union))
 
     def test_main_classes_jar_exact_union(self):
         contributions = self._input_union()
@@ -505,7 +518,7 @@ class TestSettingsLibProgramClosure(unittest.TestCase):
                          "输出 class 集不是配置输入的精确并集")
         for name, data in expected.items():
             self.assertEqual(actual[name], data, f"{name} 字节与 Soong 输入不一致")
-        self.assertEqual(len(actual), 1372)
+        self.assertEqual(len(actual), 1431)
 
     def test_main_owner_classes_present(self):
         with tempfile.TemporaryDirectory() as d:
