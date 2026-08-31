@@ -310,3 +310,11 @@
 - 产出：`docs/architecture/2026-08-29-decision-audit/`（21 文档：index + summary + 19 决策文档）。
 - chief 复核：判读 12 符合 / 4 可接受需补记录 / 1 过程级重做（P1 blanket 授权） / 1 待定（D12）；证据抽查全过（D7 bp 行号精确、D3 先例 commit 8ab860e9 真实、index resume 段可用）；目录外零越界；小步 commit 纪律全程未见 `git add -A`。
 - 结论：**review-PASS**。待用户裁决项见 summary.md 整改优先级清单（P1 过程整改、D3 追认/重做、D12 选项①、批次 review、AGENTS.md 同步）。
+
+## 2026-08-31 — task073（C4b 编译闭环）独立评审与裁决批次执行
+
+- worker：task073（GLM-5.3）；5 commits `a65e2d9c..517ca6d6`。
+- 用户裁决批次（2026-08-29/31）：D12 选项①（生成器删 unsupportedappusage 桥接切片，39→37、8→7 输入）；D3 改 additionalParameters（manifest featureFlag CONV 撤消）；D8 批准；其余批次批准；plugin namespace → com.android.systemui.plugins 批准；namespace 三档规则进 AGENTS.md 批准。
+- chief 独立复验全过：`:app:assembleDebug` 亲手重跑 BUILD SUCCESSFUL（apk 199,845,582 B）；新 SysUISdk javap 3/3 17 新 API、resources.arsc 20/20 色板在位；对齐 --strict exit 0；pytest 305+141；冻结指纹 22/22 MATCH；manifest featureFlag 原行复原；生成器编辑严格限于授权面（build_sysuisdk.py + 其 pytest + ADR 0006/架构文档同步）。
+- 备注：D3 旁支发现 shutdown-dialog 布局第二面 aconfig flag，同机制 additionalParameters 按 Soong READ_WRITE=false 值传达（已在 build 文件注释对账）；plugin 重命名经 `:SystemUI-plugin:compileDebugKotlin` 编译验证。
+- 结论：**review-PASS**。C4b 编译闭环完成。
