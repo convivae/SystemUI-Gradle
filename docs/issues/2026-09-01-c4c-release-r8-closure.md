@@ -108,3 +108,9 @@
 ## 待解决问题
 
 - 无阻塞项。R2 全部 31 条 missing classes 已逐类归因并闭合；无 stub、无 runtime 打包平台类、无 dontwarn 掩盖（proguard_gradle.flags 的既有 aconfig adapter 是 task 044/060 用户批准的存量，本轮未新增）。
+
+## Chief 复核补注（2026-08-31）
+
+- review-PASS：对齐 `--strict` exit 0；pytest 310 passed + 151 subtests；指纹 24 MATCH；`:app:assembleRelease` chief 亲手重跑 BUILD SUCCESSFUL。
+- **APK 字节确定性定性**：三次独立 full build 的 APK sha 互异（`c74d13fb`/`bfc11de1`/`965f1318`），解包比对全部 entry（dex/resources.arsc/清单）逐字节一致——差异仅在 APK zip 容器时间戳/中央目录元数据。结论：**APK 内容确定性成立，容器字节不承诺确定**；sha 台账为“每次构建的操作性台账”，非确定性门禁（与 16 时代惯例一致）。
+

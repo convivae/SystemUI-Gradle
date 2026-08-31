@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-08-31（**Phase C：C1 AOSP 升级 `android-17.0.0_r1` + 全量构建、C3 源码 17 重对齐、C2 libs/ 脚本再生、C4a Gradle 接线、C4b Debug 编译闭合均完成**：`:app:assembleDebug` BUILD SUCCESSFUL（chief 亲手重跑证实）；**Release/R8 未跑（归 task074）、双 runtime 未跑（归 C5）**。16 时代（AOSP main 快照）的 DEBUG/RELEASE_RUNTIME_PASS 为历史基线，APK sha 台账见下。）
+> **Last verified**: 2026-08-31（**Phase C：C1/C2/C3/C4 全部完成**——AOSP 升级 `android-17.0.0_r1` + 全量构建、libs/ 脚本再生、源码重对齐、C4a 接线 + C4b Debug 编译闭合 + C4c Release/R8 编译闭合：`:app:assembleDebug` 与 `:app:assembleRelease` 均 BUILD SUCCESSFUL（minifyReleaseWithR8 含，missing refs 31→0 按 6 根因组闭合）。**剩 C5 双 runtime 门 + C6 收口**。16 时代的 DEBUG/RELEASE_RUNTIME_PASS 为历史基线，APK sha 台账见下。）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -12,13 +12,13 @@
 |------|------|
 | AOSP 基线 | **`android-17.0.0_r1`**（manifest `5bc9a7ce`，frameworks/base `94b4c163b`，1084 projects）；C1 全量构建 `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swap） |
 | Debug APK | ✅ **C4b 闭合（task073，2026-08-31）**：`:app:assembleDebug` BUILD SUCCESSFUL，APK 199,845,582 B（16 时代 `e8aad131…`/163,896,493 B 为历史台账；APK sha 台账随 C5/C6 重算） |
-| Release APK | 未跑（归 task074）；16 时代 APK `d3968fb2…`（34,688,965 B）为历史台账 |
+| Release APK | ✅ **C4c 编译闭合（task074，2026-08-31）**：`:app:assembleRelease` BUILD SUCCESSFUL，APK 45,030,130 B（runtime 门 = C5；16 时代 `d3968fb2…` 为历史台账；APK 内容确定性成立、容器 zip 字节不承诺确定——见 task074 issue chief 补注） |
 | Gradle 配置解析 | ✅ `./gradlew help` + `projects` BUILD SUCCESSFUL（C4a 验收；16 模块全部识别，C4b 起追加 `:SystemUI-utils-kairos`） |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
-| Python 工具测试 | ✅ **305 passed**（+141 subtests，C4b task073 chief 复验，2026-08-31） |
+| Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5），本地 Maven 23 族全部 2.0.0 |
 | 设备/模拟器 | 未跑（归 C5）；当前无 QEMU/emulator 进程在跑；C5 按 runbook 重拉 17 镜像模拟器 |
-| 当前唯一工程优先级 | **Phase C 收尾**：task074 Release/R8 闭环 → C5 17 镜像模拟器双 runtime 门 → C6 manifest 快照 + tag + README 版本声明（ADR 0007） |
+| 当前唯一工程优先级 | **Phase C 收尾**：C5 17 镜像模拟器双 runtime 门 → C6 manifest 快照 + tag + README 版本声明（ADR 0007） |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 

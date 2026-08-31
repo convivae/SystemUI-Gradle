@@ -318,3 +318,12 @@
 - chief 独立复验全过：`:app:assembleDebug` 亲手重跑 BUILD SUCCESSFUL（apk 199,845,582 B）；新 SysUISdk javap 3/3 17 新 API、resources.arsc 20/20 色板在位；对齐 --strict exit 0；pytest 305+141；冻结指纹 22/22 MATCH；manifest featureFlag 原行复原；生成器编辑严格限于授权面（build_sysuisdk.py + 其 pytest + ADR 0006/架构文档同步）。
 - 备注：D3 旁支发现 shutdown-dialog 布局第二面 aconfig flag，同机制 additionalParameters 按 Soong READ_WRITE=false 值传达（已在 build 文件注释对账）；plugin 重命名经 `:SystemUI-plugin:compileDebugKotlin` 编译验证。
 - 结论：**review-PASS**。C4b 编译闭环完成。
+
+### 2026-08-31 — task074 review-PASS + C4c 闭合
+
+- **独立复验**：git diff 已提交集（src/res 禁改面零 diff；`build_sysuisdk.py`/`check_source_alignment.py`/CHARTER 零 diff）；对齐 `--strict` exit 0；pytest 310 passed + 151 subtests；冻结指纹 24/24 MATCH；chief 亲手重跑 `:app:assembleRelease` BUILD SUCCESSFUL（7m09s --rerun-tasks 亦绿）。
+- **APK 确定性定性**：三次 full build APK sha 互异，解包比对全部 entry 逐字节一致——差异仅在 zip 容器元数据；结论=内容确定、容器字节不承诺（记入 task074 issue chief 补注）。
+- **事故/纠偏**：R1 K daemon 残留 OOM（worker 自定位自处理，记为环境 SOP：Release/R8 前双杀 Gradle+Kotlin daemon）；chief 漏提交 AGENTS.md 笔误修复被 worker 工作区捕获——chief 自行单独 commit 并通知 worker 勿含其 commit（遵守五分类明确目的）。
+- **C4c 闭合成果**：Release missing refs 31→0，6 根因组全部 bp 实证；新冻结产物 4（am-flags、settingstheme-flags、bubbles-user-model、displaylib-kapt 子集 6 类）；SettingsLib AAR 补 Kotlin 半边 1372→1431 类并升坐标 2.0.0→2.0.1；kotlin-parcelize-runtime 2.2.10 官方坐标。
+- **推送**：批次 commits `4652adfd..08eb5e15` + 文档同步，`origin/main` 更新。
+- **Phase C 当前**：C1/C2/C3/C4（a/b/c）全部闭合；剩 C5（17 镜像模拟器双 runtime 门）+ C6（manifest 快照 + tag + README）。
