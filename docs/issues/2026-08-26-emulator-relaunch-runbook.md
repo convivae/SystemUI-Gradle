@@ -96,3 +96,6 @@ adb -s emulator-5554 shell 'su 0 mount -o remount,rw /system_ext'
 | bash 工具后台启动后进程消失 | 工具 shell 退出带走子进程 | 用 herdr tab 前台跑 |
 | 重启后部署的 APK 没了 | `/tmp` 实例蒸发 + verity 回 enabled | 按"恢复部署"重走 |
 | 画面查看 | headless 无窗口 | `scrcpy -s emulator-5554` |
+| disable-verity 报 `Device size does not match (got X, expected Y)` | mk_combined_img.py 增量捷径：输出已存在且 2 分区时只 dd 镜像不重建 GPT（改 super 尺寸后必踩） | `rm system-qemu.img` 及所有 `*.qcow2` 后 `m systemimage` 重建（2026-09-01 task077 实证，详见 docs/issues/2026-09-01-c5-emulator-super-slack.md P2.6.1） |
+| stock SystemUI 启动即崩溃循环：`SecurityException: … BLUETOOTH_CONNECT … getSupportedProfiles` 后连环 `requires READ_CONTACTS` | pristine /data 无运行时授予（蓝牙 ON + 未授权触发） | `pm grant com.android.systemui android.permission.BLUETOOTH_CONNECT` + `… android.permission.READ_CONTACTS`；换回 pristine /data 后需重打（2026-09-01 task077 实证，同上 P2.6.2 Blocker A） |
+| 崩溃循环期后满屏 `Application Not Responding` 僵尸对话框 | AMS 为每次崩溃/无响应都弹对话框并堆积 | 修复崩溃根因后 reboot 即清（2026-09-01 实证：55 个对话框 reboot 后 crash buffer 0 行） |
