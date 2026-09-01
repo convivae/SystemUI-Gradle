@@ -39,12 +39,18 @@ com.android.window.flags.Flags
 
 ## Steps
 
-- [ ] 先确认当前 Release APK 的四个旧名字确实仍被引用，并记录 APK SHA-256。
-- [ ] 只读扫描当前已有的 module `build/**` class/JAR 输出和当前依赖 JAR/AAR，定位每个旧名字的引用来源。
-- [ ] 对每个命中记录：文件路径、SHA-256、所属 Gradle module/依赖、project-local 或 external、命中的 class 名。
-- [ ] 证明四个 APK 级引用都有来源；无法证明则写 `BLOCKED`，不得填默认值或猜测。
-- [ ] 给出最小结论：后续转换需要覆盖哪些已证明的输入类别。不要写实现代码。
-- [ ] 显式 stage 两个 Allowed Paths，英文 commit；不得 push。
+- [x] 先确认当前 Release APK 的四个旧名字确实仍被引用，并记录 APK SHA-256。
+  证据：`sha256sum app/build/outputs/apk/release/app-release.apk` → `f389bd459df24b1cead6e440da2b60fa6885e16d67a8abfbd5d6bb64ea2975ef`；对 `classes*.dex` 的四个 descriptor 逐项只读核对均命中。
+- [x] 只读扫描当前已有的 module `build/**` class/JAR 输出和当前依赖 JAR/AAR，定位每个旧名字的引用来源。
+  证据：`uv run /tmp/task080-c5-reference-origins/scan_flags_refs.py` → `/tmp/task080-c5-reference-origins/hits.jsonl` 550 行；扫描器按 `CONSTANT_Class` 判引用、`this_class` 判定义。
+- [x] 对每个命中记录：文件路径、SHA-256、所属 Gradle module/依赖、project-local 或 external、命中的 class 名。
+  证据：issue 的 artifact 表与逐目标明细；完整机器记录位于 `/tmp/task080-c5-reference-origins/hits.jsonl`。
+- [x] 证明四个 APK 级引用都有来源；无法证明则写 `BLOCKED`，不得填默认值或猜测。
+  结果：四类共 166 个去重 target/reference-class 对，`ORIGINS_PROVEN=4/4`、`UNKNOWN=0`。
+- [x] 给出最小结论：后续转换需要覆盖哪些已证明的输入类别。不要写实现代码。
+  结果：project-local 编译类、直接 runtime JAR、本地 Maven AAR `classes.jar`、直接 AAR `classes.jar` 四类；compileOnly `framework.jar` 明确隔离。
+- [x] 显式 stage 两个 Allowed Paths，英文 commit；不得 push。
+  实际命令：`git add docs/issues/2026-09-01-c5-focused-reference-origins.md docs/orchestration/tasks/080-c5-find-reference-origins.md`；英文 commit；未 push。
 
 ## Acceptance
 
