@@ -9,15 +9,18 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 079 | none (serialized E1 replacement pending) | shared `main` (`488b7996` checkpoint) | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | rejected fourth-worker draft removed; driver restored to fail-closed checkpoint; no E1–E4 evidence exists | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
+| 080 | none (brief approval pending) | shared `main` | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | planned; not dispatched | read-only origin trace for the four runtime-critical old class references; no Gradle, no rewrite, no device |
+| 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
 
-1. Task 079 is dispatched under the user-approved exact brief, but no worker is currently active. Commit `488b7996` is pushed and provides green analysis primitives/tests only (`45 passed`); its `run` command intentionally exits 2 and no E1–E4 artifact may be inferred from it. The next serialized worker is limited first to E1: complete 464-token/17-module inventories and frozen local-output hashes under the approved scratch root, with zero unknowns or a truthful `E1=FAIL`.
-2. After an independently verified E1 checkpoint, continue the same approved contract serially through scratch-only E2/E3 and standalone bundled-R8 E4. Only after complete Task 079 evidence and a separate user architecture ruling may the narrow build-time reference rewrite be implemented without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
-3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
+1. Await user confirmation of the exact small Task 080 brief. Then one closely monitored Kimi worker only traces the four concrete old class references back to current project/dependency class outputs; no build and no fix.
+2. After Chief independently verifies Task 080, prepare and separately approve one small implementation brief that adds the proven pre-D8/R8 reference conversion without modifying AOSP source or packaging platform classes.
+3. Serialize Debug build, Release build, static APK checks, then persistent Debug and Release emulator reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — User confirmed the goal-facing plan: preserve AOSP source, add the Android-17 reference conversion between class compilation and D8/R8, then rebuild and run both APKs. User required workers to stay narrowly scoped and continuously supervised so they cannot take shortcuts. Chief paused the broad 464-input Task 079 replay and drafted Task 080 as a single read-only question: identify the exact current project/dependency outputs responsible for the four crashing old class references. Dispatch awaits exact-brief confirmation.
 
 - 2026-09-01 — User rejected the fourth E1 worker's uncommitted classification draft after Chief explained that replacing Gradle module names with Soong owner names was directionally motivated but semantically insufficient: E1 requires an explicit Soong-owner → Gradle-counterpart/category evidence map, not identity assignment. Chief discarded both modified files, deleted the invalid scratch inventory/summary, closed the worker tab, and restored the pushed fail-closed checkpoint. The user further restricted every future worker/reviewer to `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud`, required active Chief guidance at key milestones, and capped each monitoring sleep/poll at 60 seconds.
 
