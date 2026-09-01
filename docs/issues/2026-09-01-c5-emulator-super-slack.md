@@ -180,13 +180,13 @@ cd "$(dirname "out/host/linux-x86/bin/soong_build")" && BUILDER="$PWD/$(basename
 2. 降 -j —— 无效，soong_build 是**单进程**内存瓶颈，与并发无关（exit 137 均发生在 bootstrap 阶段，还没到 -j 并行编译）
 3. 释放 swap —— 无 sudo，swapoff 不可用；占 swap 的是桌面进程（java/python/gnome-shell 等，合计 ~2.6G swap 化），不能杀
 
-**解除记录（历史，已发生）**：用户执行 `sudo swapon /swapfile`（32G swapfile 已在磁盘，reboot 后未挂）→ Chief resume（用户授权 -j16 覆盖 -j8）→ `m -j16` 实际通过。注：事前“峰值 ~28G < 26G RAM + 32G swap 必过”的预测措辞事后修正为：实际峰值 25.8GB 是靠 40G swap 兑底、伴随 700ms/s 级 memory stall 才存活，并非稳定裕量。
+**解除记录（历史，已发生）**：用户执行 `sudo swapon /swapfile`（32G swapfile 已在磁盘，reboot 后未挂）→ Chief resume（用户授权 -j16 覆盖 -j8）→ `m -j16` 实际通过。注：事前基于峰值与 swap 容量的确定性预测过强；实际峰值 25.8GB 是靠 40G swap 兑底、伴随 700ms/s 级 memory stall 才存活，并非稳定裕量。
 
 **长期建议（供 Chief/用户参考）**：将 `/swapfile` 写入 /etc/fstab，避免下次 reboot 后重蹈。
 
 **合规声明**：AOSP 树内唯一改动仍是 commit `c18f6a3f`（单行，未 push）；未触碰其他任何 AOSP 文件（Chief 指令 e 遵守）。
 
-### P2.2 待办链（已全部执行完，结果见 P2.6）
+### P2.2 执行链（已完成，结果见 P2.6）
 
 1. 门禁通过 → `m -j16` 完成（exit 0）
 2. 构建后先存 `super.img` sha256 + lpdump 快照再启模拟器（Chief 要求）
@@ -281,7 +281,7 @@ java.lang.NoClassDefFoundError: Failed resolution of: Landroid/view/accessibilit
 - 两个 pm grant（BLUETOOTH_CONNECT、READ_CONTACTS）持久化在 /data——后续重拉实例
   若换回 pristine /data 需重打（runbook 已记）
 
-#### P2.6.4 Runbook 更新（stale GPT 坑 + pm grant 坑）
+#### P2.6.4 Runbook 更新（stale GPT 坑 + pm grant 坑 + ANR 僵尸对话框坑）
 
 已追加到 `docs/issues/2026-08-26-emulator-relaunch-runbook.md` 排障表：
 1. **改 super/system 镜像尺寸后增量构建**：必须先 `rm system-qemu.img`（及所有
