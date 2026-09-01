@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | chief review failed; precision/design revision requested | Same five Allowed Paths only; correct the `Scope.ALL`/Soong semantic gap, existing SysUISdk R8 library facts, Debug semantics, and 725-rule wording; still no Gradle/Soong/emulator/ADB or rewrite implementation |
+| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | second chief review failed; final narrow revision requested | Same five Allowed Paths only; fix ineffective `:app`/`Scope.PROJECT` seam, gate hidden-definition invariant, source-definition semantics, and exact future brief/tests; still no Gradle/Soong/emulator/ADB or rewrite implementation |
 
 ## Queue
 
@@ -18,6 +18,8 @@
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 078 correction `b4e021e8` resolved the six initial findings and added valuable stock-R8-input/AAR-variant evidence, but second chief review still failed on the executable design contract. AGP's API is `artifacts.forScope(...)`, not `useScope(...)`; registering `Scope.PROJECT` only in source-empty `:app` cannot transform the 16 library modules; the future gate would pass an APK that defines hidden platform classes; §3.1 again generalizes source absence to all 725 rules despite the documented legal definition exception; and the implementation fixture asks raw JarJar to preserve a definition in the same transformed input, which JarJar cannot do. The worker is receiving one final narrow documentation/gate correction before independent dual-axis review.
 
 - 2026-09-01 — Task 078 initial chief review failed after acceptance commands independently reproduced 19 tests PASS, Release gate exit 1/FAIL, stock gate exit 0/PASS, clean formatting, and exact five-path scope. The design report nevertheless contains blocking architecture contradictions: a one-shot `Scope.ALL` JarJar pass rewrites dependency definitions unlike Soong's per-module thin-output pass and cannot yet justify blanket hidden-definition deletion; both live SysUISdk `android.jar` and `libs/framework.jar` already contain the critical hidden classes despite the report claiming an R8 library gap; a forbidden `dontwarn` path was left open; Debug post-transform semantics and 725-vs-726 wording are inconsistent. The original GLM-5.3 worker retains context and is being returned a bounded docs/tool precision revision; no rewrite is authorized.
 
