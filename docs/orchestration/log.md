@@ -350,3 +350,9 @@
 ## 2026-09-01 — task078 dispatched
 
 - User approved the exact Task 078 brief. Worker `task078` started in `w2:t2R` / `w2:p2X` with explicit `joycode/GLM-5.3`; session modelId and full CONTRACT verified. Scope is limited to the static descriptor checker/tests, read-only AOSP/Soong pipeline reconstruction, three-seam comparison, and a draft implementation brief. No Gradle, Soong, emulator, ADB, AOSP/out mutation, or rewrite implementation is authorized. Completed Task 077 worker tab `w2:t2P` was closed.
+
+## 2026-09-01 — task078 initial chief review FAIL
+
+- Chief independently reproduced all mechanical acceptance: 19 focused tests passed; current Release gate exited 1 with `RESULT=FAIL` and 4 source-present/4 target-absent; stock gate exited 0 with `RESULT=PASS` and the inverse; `git diff --check` and exact five-path scope passed.
+- Architecture acceptance failed. The report treats one `ScopedArtifacts.Scope.ALL` JarJar pass as equivalent to Soong, although Soong rewrites each module's local compiler outputs before combining untouched transitive static-library jars; the proposed blanket hidden-definition deletion can therefore erase or redirect legal app-owned aconfig definitions, contradicting the documented stock `FeatureFlagsImpl` exception. The report also falsely says SysUISdk/framework lack hidden names even though both live jars contain them and ADR 0006 supplies SysUISdk classes to R8, leaves forbidden `dontwarn` as a live option, misstates post-transform Debug/original-definition behavior, and retains stale 726-rule wording.
+- Original worker `task078` remains in `w2:t2R` / `w2:p2X` and will receive a bounded correction request. No Gradle/Soong/device action or rewrite implementation is authorized.

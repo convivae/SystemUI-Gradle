@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | static gate implementation + read-only Soong research | Only the five brief Allowed Paths; no Gradle/Soong/emulator/ADB, no AOSP or `out/` writes, and no rewrite implementation |
+| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | chief review failed; precision/design revision requested | Same five Allowed Paths only; correct the `Scope.ALL`/Soong semantic gap, existing SysUISdk R8 library facts, Debug semantics, and 725-rule wording; still no Gradle/Soong/emulator/ADB or rewrite implementation |
 
 ## Queue
 
@@ -18,6 +18,8 @@
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 078 initial chief review failed after acceptance commands independently reproduced 19 tests PASS, Release gate exit 1/FAIL, stock gate exit 0/PASS, clean formatting, and exact five-path scope. The design report nevertheless contains blocking architecture contradictions: a one-shot `Scope.ALL` JarJar pass rewrites dependency definitions unlike Soong's per-module thin-output pass and cannot yet justify blanket hidden-definition deletion; both live SysUISdk `android.jar` and `libs/framework.jar` already contain the critical hidden classes despite the report claiming an R8 library gap; a forbidden `dontwarn` path was left open; Debug post-transform semantics and 725-vs-726 wording are inconsistent. The original GLM-5.3 worker retains context and is being returned a bounded docs/tool precision revision; no rewrite is authorized.
 
 - 2026-09-01 — User approved Task 078. Worker `task078` started in `w2:t2R` / `w2:p2X` with explicit `joycode/GLM-5.3`; session `modelId` and the complete CONTRACT were independently verified. Scope remains static tool/tests, read-only AOSP/Soong reconstruction, three-option comparison, and a draft implementation brief only. Gradle, Soong, emulator, ADB, AOSP/`out/` mutation, and rewrite implementation are forbidden. The completed Task 077 worker tab was closed.
 
