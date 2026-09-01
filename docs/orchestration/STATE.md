@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 079 | `w2:t2S` / `w2:p2Y` | shared `main` | `joycode/GLM-5.3` | dispatched; resuming after frozen-count correction | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
+| 079 | replacement pending | shared `main` | `joycode/GLM-5.3` low | replacing stalled first session; allowed-path red-test checkpoint retained | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
 
 ## Queue
 
@@ -18,6 +18,8 @@
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 079's first GLM-5.3 high-thinking session was stopped after repeatedly spending its context on speculative evidence synthesis instead of implementing the approved experiment driver. Its two allowed-path uncommitted outputs are retained: the issue now records resumed base `eb9bd9c8` and the read-only direct-`python3` process deviation, and a focused red test file exists; no E1–E4 experiment, Gradle/Soong/device operation, scratch write, or commit occurred. Per the established Task 043 recovery pattern, Chief is replacing it with a fresh explicit GLM-5.3 low-thinking worker on the same serialized checkout.
 
 - 2026-09-01 — User approved dispatch of the exact Task 079 brief. Worker `task079` started in `w2:t2S` / `w2:p2Y` with explicit `joycode/GLM-5.3`; model identity and CONTRACT were verified. Initial preflight correctly reported `BLOCKED` before E1–E4 because the brief expected 463 shell tokens while the frozen RSP contains 464 unique tokens: 463 `.jar` plus `SystemUI-flag-types.srcjar`. Chief independently reproduced that composition and the unchanged 725-rule SHA/count, identified the brief's 463 as the JAR-only count inherited from Task 078, and corrected the frozen contract to 464 without expanding the approved all-input/no-sampling scope. No repository or scratch changes, Gradle, Soong, ADB, emulator, or E1–E4 run occurred before the correction.
 
