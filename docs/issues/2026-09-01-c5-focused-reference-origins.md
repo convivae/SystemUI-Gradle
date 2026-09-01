@@ -1,7 +1,7 @@
 # C5：定位四个错误平台类引用的来源
 
 **日期**：2026-09-01  
-**状态**：Task 080 调查完成，待 Chief 独立复核
+**状态**：Task 080 调查与双轴复核完成（Standards PASS / Spec PASS）
 
 ## 背景与范围
 
@@ -189,6 +189,15 @@ RESULT=PASS
 - 未修改源码、Gradle、工具、SDK、`libs/**`、AOSP 或 `out/**`。
 - Release 静态 gate 仍为预期的 `RESULT=FAIL`，因为 Task 080 仅定位来源、没有修复行为。
 
+## Review closure
+
+固定范围 `af849c52...8c49181a` 已完成合规的 Kimi K3 双轴只读复核：
+
+- Standards：PASS，零 hard finding；报告中的 SHA、两文件 scope、scanner 的 `CONSTANT_Class` 语义和计数算术均得到独立核对。
+- Spec：PASS，零 finding；两文件范围、四个 APK descriptor、验收结果块与未修复 APK 的事实均符合 Task 080。
+- Chief 独立核对：`git diff --check` 通过；550 行机器证据得到 50/7/5/104（合计 166）去重计数；compileOnly `framework.jar` 与 program/runtime inputs 分离正确；现有 Release checker 仍按预期退出 1 并报告 `RESULT=FAIL`。
+- 首轮 reviewer 因在最终报告前创建了未授权的 `/tmp/apkcheck`、`/tmp/task080-review`，未用于正式闭环；Chief 删除后重新派发 `Kimi-K3-jcloud` 只读 reviewer。复核轮先完成 startup CONTRACT，再开始审查，期间无文件创建、无仓库修改、无构建或设备操作。
+
 ## 后续
 
-由 Chief 独立复核本报告后，另行制定一个小型实现任务，在 class compilation 与 D8/R8 之间只处理本报告证明的 program inputs；实现、重编与双 APK runtime gate 不属于 Task 080。
+Task 080 到此关闭。下一步另行制定一个小型实现任务，在 class compilation 与 D8/R8 之间只处理本报告证明的 program inputs；实现、重编与双 APK runtime gate 不属于 Task 080。

@@ -9,17 +9,17 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 080 Standards review | `w2:t20` / `w2:p35` | shared `main`; fixed range `af849c52...8c49181a` | `joycode/Kimi-K3-jcloud` (must verify session metadata before CONTRACT acceptance) | tab allocated; reviewer dispatch next | read-only Standards axis; no edits/build/device/JarJar |
-| 080 Spec review | `w2:t31` / `w2:p36` | shared `main`; fixed range `af849c52...8c49181a` | `joycode/Kimi-K3-jcloud` (must verify session metadata before CONTRACT acceptance) | tab allocated; reviewer dispatch next | read-only Spec axis; no edits/build/device/JarJar |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
 
-1. Task 080 report commit `8c49181a` proves the existing source of all four runtime-critical old references (`UNKNOWN=0`). Standards and Spec reviews are allocated in separate Kimi-only tabs against fixed range `af849c52...8c49181a`; current Release checker independently remains `RESULT=FAIL` by design.
-2. After both Task 080 axes pass and Chief closes/pushes it, prepare and separately approve one small implementation brief that adds the proven pre-D8/R8 reference conversion without modifying AOSP source or packaging platform classes.
+1. Task 080 is closed: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed. Push its local commits before the next implementation dispatch.
+2. Prepare and separately approve one small implementation brief that adds the proven pre-D8/R8 reference conversion without modifying AOSP source or packaging platform classes.
 3. Serialize Debug build, Release build, static APK checks, then persistent Debug and Release emulator reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 080 fixed range `af849c52...8c49181a` passed clean Kimi-K3-jcloud Standards and Spec reruns with zero findings. Chief accepted the report after independently checking the two-file scope, hashes, 550 machine records, 50/7/5/104 counts, compileOnly separation, and the unchanged expected Release checker `RESULT=FAIL`. The first reviewer outputs were excluded because they created unauthorized `/tmp/apkcheck` and `/tmp/task080-review`; Chief deleted both directories before rerunning review. The accepted reviewers created no files and made no repository/build/device changes.
 
 - 2026-09-01 — Task 080 investigation is committed locally as `8c49181a` on fixed base `af849c52`. Chief independently verified exact two-file scope, clean `git diff --check`, APK SHA `f389bd45…`, deduplicated reference counts 50/7/5/104, compileOnly separation, and the unchanged expected Release checker exit 1 / `RESULT=FAIL`. The three worker tabs are closed. Separate read-only Standards and Spec reviewer tabs `w2:t20` / `w2:p35` and `w2:t31` / `w2:p36` are allocated with explicit Kimi-K3-jcloud and no build/edit/device authority; model/CONTRACT verification is next.
 
@@ -351,6 +351,8 @@
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-09-02 00:35 — Task 080 closed: four old-reference origins proven; Chief acceptance complete; clean Kimi-K3-jcloud Standards/Spec rerun PASS with zero findings. Release APK remains intentionally unfixed (`RESULT=FAIL`) pending a separately approved pre-D8/R8 rewrite task.
 
 2026-09-01 19:40 — B1+B3 并行收口进行中：task076（B1 Release proto keep）已完成并 push（2eec7dbb）——`-keepclassmembers class * extends GeneratedMessageLite {<fields>;}` 复现 Soong 端态（Release dex 对 debug 零差异）、三轮 clean 构建条目级 sha 一致（2a5e372f；整文件 sha 波动根因=AGP SDKP 随机 ECIES 加密块，上游行为；决策点 android.includeDependencyInfoInApks=false 待用户）；构建稳定性协议已固化（双杀补 kotlin-daemon-[e]mbeddable 括号防自杀、R8 阶段内存竞速用两阶段协议）。task077（B3 super 1800→2880MiB）获 Chief 批准起 AOSP 构建中（单行 BOARD_EMULATOR_DYNAMIC_PARTITIONS_SIZE diff，commit c18f6a3f 本地待审），后续统一 runtime 门（fir 可数）；上次 task075 提交的"commits local, not pushed"已由 chief 于 2026-09-01 17:40 push（6abc6ee5）。
 
