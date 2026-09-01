@@ -154,7 +154,7 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 - **E1（本任务已部分完成）**：逐产物变体表——扩展到 rsp 全部 463 项中所有含 aconfig 引用的产物，与我们 `libs/` 清单逐一对照，得出“哪些产物需换成 repackaged 变体”的完整清单；同时追溯 Soong 侧变体选择的精确判定规则。
 - **E2**：对受影响 AAR 做 repackaged 变体的干跑替换（scratch 副本，不动 `libs/`），常量池复扫验证引用全部变 hidden、无原名 critical 引用残留。
 - **E3**：对 project 模块现有编译中间产物的副本跑 Soong `jarjar.jar` + 冻结规则，验证引用覆盖完整、且 project 产物不含 725 个 source 的任何定义（若有定义则候选算法需再评估）；同时实测耗时（自动规则路径在 Soong 为单 shard，无分片开销数据可引用）。
-- **E4**：验证 SysUISdk android.jar 在实际 R8 运行中对 hidden 名的解析。
+- **E4（实际 R8 解析）**：直接**独立调用** AGP 9.3.1 自带 R8（`java -cp <gradle-cache>/builder-9.3.1.jar com.android.tools.r8.R8 …`，已实测自报 `R8 9.3.16 (build 65eb2ed…)`；**不是 Gradle task**），验证 SysUISdk android.jar 作 `--lib` 时四个 critical hidden target 的解析：scratch 合成 program artifact 引用全部四个 hidden target descriptor、不定义它们；保留 probe class；按需关闭 shrinking/minification/desugaring。gate：R8 exit 0 且无 missing-class 诊断、输出仍引用全部四个 hidden target 且不定义；可行则用官方 base SDK（`android-37.0`）android.jar 作 `--lib` 跑阴性对照（预期出现 missing-class 诊断，证明探针能捕获未解析类），不可行则说明为何不需要。
 - **Debug 口径**：变换后 Debug 将保留 app 自带 jar 的原名定义（定义出现在 type_ids，source-absent 判据同样适用），是否接受该状态（stock debug 构建同形态）需用户裁决。
 
 **评价**：支持性中-高（AGP 公开 API 常规，但需集中配置到每个参与模块，非单点；AAR 重打包常规）；正确性**未证明**（候选算法与 stock 同构的论证依赖 E1–E4）；可再生性好（§2.6）；规则合规（AAR 换 repackaged 变体仍是 AOSP 原始产物交付，不违反规则 R/②；project 侧改写只改构建产物，不碰 src/res）。
@@ -196,19 +196,19 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 **Allowed Paths**（实验任务）：
 - `docs/issues/<date>-c5-jarjar-e1-e4.md`（新，实验记录）
 - `docs/architecture/<date>-c5-jarjar-e1-e4.md`（新，变体表与实验报告）
-- `tools/` 下新增只读分析脚本与 scratch 产物（Python，`uv run`；不得修改 gate 语义）
+- `tools/` 下新增只读分析脚本（Python，`uv run`；不得修改 gate 语义；脚本入库）；scratch 产物（E2/E3/E4 干跑输入输出、合成 probe artifact 等）不入库，仅存 scratch 目录
 - 实验任务自身的 task brief
 
 **Forbidden Paths**（实验任务）：
 - 一切 `*.gradle*`、`libs/**`、`SystemUI-*/src/**`、res、manifest、`AGENTS.md`、`docs/adr/**`、`docs/orchestration/CHARTER.md`
 - `/home/conv/myspace/aosp/**` 写入（干跑只能写 scratch 副本）
-- Soong/Gradle/ADB/emulator 命令：E3 用现有 Gradle 编译中间产物副本 + host `jarjar.jar`；E4 若需实际 R8 运行则超范围，降级为 library classpath 静态解析检查并明示
+- Gradle/Soong/ADB/emulator 命令。E3 用现有 Gradle 编译中间产物副本 + host `jarjar.jar`（历史产物，不新跑构建）；E4 的实际 R8 运行**不属于本条禁令**：它是直接 `java -cp builder-9.3.1.jar com.android.tools.r8.R8` 的独立调用，不是 Gradle task、不触发构建——这是终审修正消除的契约矛盾（原 §5.1 把一切实际 R8 路径判为超范围并把 E4 降级为静态类存在性检查，而静态存在性已被证实、无信息量，与 §4.1/§4.5 “候选正确性依赖 E4 实际 R8 验证”直接矛盾）。E4 全部合成 artifact 与输出仅存 scratch 目录，不入库
 
 **实验内容与 gate**：
 - **E1（变体表）**：rsp 全 463 项 × 我们 `libs/` 与 project 模块清单逐一对照（不抽样）→ 完整“需换 repackaged 变体”清单 + Soong 变体选择判定规则追溯 + participating-module/JVM 模块处理清单。gate：清单覆盖全部 463 项。
 - **E2（AAR 干跑）**：受影响 AAR 的 repackaged 变体 scratch 打包 + 常量池复扫。gate：critical 原名引用归零、hidden 引用出现、**无新增 hidden 定义**（target-defined 为零）。
 - **E3（project 产物干跑）**：对各参与模块现有编译中间产物副本跑 `jarjar.jar` + 冻结规则。**前置断言**：每个被变换 artifact 中 725 个 source 的 matching 定义数为零（若有定义，候选算法需再评估并按规则 H 上报）；**后置断言**：725 个 target 的定义为零（hidden 平台定义不得被引入——注意 jarjar 同时改名引用与定义，无法“变换含原名定义的 artifact 又保留该定义”，前置断言正是为此存在）。同时实测耗时。
-- **E4（SysUISdk R8 解析）**：验证 hidden 名在 SysUISdk android.jar 作 library classpath 下的解析（静态类存在性检查；实际 R8 运行留待实现任务或用户授权）。
+- **E4（SysUISdk R8 解析，实际运行）**：独立调用 AGP 9.3.1 bundled R8（`builder-9.3.1.jar`，自报 `R8 9.3.16`；非 Gradle task），以 SysUISdk android.jar 作 `--lib`：scratch 合成 program artifact（保留 probe class，关闭 shrinking/minification/desugaring）引用全部四个 critical hidden target descriptor 且不定义它们。gate：R8 exit 0、无 missing-class 诊断、输出仍引用全部四个 hidden target 且不定义；阴性对照用官方 base SDK `android-37.0` android.jar 作 `--lib`（预期 missing-class 诊断；若不可行需说明为何不需要）。
 - **整体 gate**：`uv run pytest tools/tests/test_check_aconfig_jarjar_references.py -q` 全绿；Release gate 仍 exit 1 `RESULT=FAIL`、stock 仍 exit 0 `RESULT=PASS`（实验零行为变更）；`git diff --check` 干净；只触及 Allowed Paths。
 
 ### 5.2 实现任务（deferred，待 E1 输出后另立 brief）
@@ -228,7 +228,8 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 
 - 初审（commit `1f5e93e8`）：`uv run pytest …`（19 passed）、两次 gate 验收（Release exit 1 / stock exit 0）、AOSP 只读检索（grep/sed/unzip/python zipfile）。**未运行任何 Gradle/Soong/ADB/emulator 命令**（任务约束）。
 - 一轮修正（commit `b4e021e8`）：同 pytest 套件（23 passed）、两次 gate 复跑确认冻结输出不变、`libs/` 97 产物常量池扫描、`SystemUI.jar.rsp` 变体分析、SysUISdk android.jar / framework.jar 双形态验证。
-- 二轮修正（本 commit，chief FAIL 复审后）：gate 硬化（任一 target defined 即 FAIL）+ 3 个新单测（26 passed）；AGP API 更正为 `forScope(Scope.PROJECT)`（一手源码验证 `Artifacts.kt:136`、`variant/ScopedArtifacts.kt:31-38`）；`:app` 无源码、单点 registration 不可行的限制写入 §4.1；§3.1 收窄为仅四 critical source 强制缺席；§5 重构为“实验任务 brief + 实现 defer”。两次 gate 复跑：Release 仍 exit 1 FAIL、stock 仍 exit 0 PASS（36 target referenced / 0 defined）。三轮均未运行任何 Gradle/Soong/ADB/emulator 命令。
+- 二轮修正（commit `cb1223f4`，chief FAIL 复审后）：gate 硬化（任一 target defined 即 FAIL）+ 3 个新单测（26 passed）；AGP API 更正为 `forScope(Scope.PROJECT)`（一手源码验证 `Artifacts.kt:136`、`variant/ScopedArtifacts.kt:31-38`）；`:app` 无源码、单点 registration 不可行的限制写入 §4.1；§3.1 收窄为仅四 critical source 强制缺席；§5 重构为“实验任务 brief + 实现 defer”。两次 gate 复跑：Release 仍 exit 1 FAIL、stock 仍 exit 0 PASS（36 target referenced / 0 defined）。
+- 终审修正（本 commit，docs-only，代码/测试零改动）：消除 E4 契约矛盾——§4.1/§4.5 要求候选正确性依赖 E4 的实际 R8 验证，但原 §5.1 禁止一切实际 R8 路径并把 E4 降级为静态类存在性检查（该事实已被 §4.1 “R8 library 论断更正”证实，无信息量）。E4 重新定义为直接独立调用 AGP 9.3.1 bundled R8（`builder-9.3.1.jar`，已实测自报 `R8 9.3.16 (build 65eb2ed…)`；非 Gradle task）的实验，含 scratch 合成 program artifact、SysUISdk `--lib`、shrink/minify/desugar 关闭、阴性对照；§4/§5/issue/brief 同步。**E1–E4 仍未在 Task 078 中运行**（本轮仅更正定义；唯一新增运行是只读的 `R8 --version` 版本核实）。
 - 所有 AOSP 引用文件均为只读；AOSP checkout 无任何写入。
 
 ## 7. 证据索引
@@ -250,4 +251,5 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 | flags keep 规则仅有 keepnames(window.Flags) | `frameworks/base/packages/SystemUI/proguard_common.flags` |
 | AGP 9.3.1 ScopedArtifact.CLASSES Transformable | `gradle-api-9.3.1-sources.jar` 内 `ScopedArtifact.kt` |
 | AGP API 为 `Artifacts.forScope(scope): ScopedArtifacts`，PROJECT 不含 imported/external | 同 jar 内 `com/android/build/api/artifact/Artifacts.kt:136`、`com/android/build/api/variant/ScopedArtifacts.kt:31-38` |
+| AGP 9.3.1 bundled R8 入口与版本：`builder-9.3.1.jar` 自报 `R8 9.3.16 (build 65eb2ed…)` | `java -cp ~/.gradle/caches/modules-2/files-2.1/com.android.tools.build/builder/9.3.1/9cd910fdf4b695abce90ed6a07b6dd348541fc7a/builder-9.3.1.jar com.android.tools.r8.R8 --version`（Task 078 终审修正时只读核实） |
 | Gradle 定义来源 | `libs/systemui-aconfig-flags.jar` 条目清单（`unzip -l`） |

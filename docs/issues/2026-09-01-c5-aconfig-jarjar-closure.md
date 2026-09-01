@@ -71,7 +71,11 @@ Phase C 的 C1–C4 已完成。task075 在 AOSP 17 emu64x 上证明 Debug 可�
 - 初审的“R8 missing-class 需附加 turbine jar 或窄域 dontwarn”论断**已撤销**（ fabrication）：SysUISdk android.jar 与 `libs/framework.jar` 均已同时含四 critical 类原名与 hidden 名两份；下一任务只需验证现有 SysUISdk 解析，`-dontwarn` 被 brief 禁止，不作为选项。
 - 下一张可执行 brief 只覆盖 E1–E4 实验（含 Allowed/Forbidden Paths 与 gate，报告 §5.1）；实现任务范围显式 defer，待 E1 输出完整清单后另立（报告 §5.2）。
 
-### 二轮复审修正记录（chief 二审 FAIL 后，本 commit）
+### 终审修正记录（docs-only，双审 PASS 后 chief 终审发现 MEDIUM 契约矛盾）
+
+矛盾：报告 §4.1/§4.5 称候选算法正确性依赖 E4 验证 SysUISdk hidden 名在实际 R8 运行中的解析，但 §5.1 的 Forbidden Paths 禁止一切实际 R8 路径并把 E4 降级为静态类存在性检查——而静态存在性已被 §4.1 “R8 library 论断更正”证实（SysUISdk android.jar 与 framework.jar 双形态），无信息量。修正：E4 重新定义为**直接独立调用** AGP 9.3.1 bundled R8（`java -cp builder-9.3.1.jar com.android.tools.r8.R8 …`，已实测自报 `R8 9.3.16 (build 65eb2ed…)`；非 Gradle task）：scratch 合成 program artifact（保留 probe class、关闭 shrinking/minification/desugaring）引用全部四个 critical hidden target descriptor 且不定义它们，SysUISdk android.jar 作 `--lib`；gate：exit 0、无 missing-class 诊断、输出仍引用四个 hidden target 且不定义；阴性对照用官方 base SDK `android-37.0` android.jar（预期 missing-class 诊断；不可行则说明原因）。合成产物仅存 scratch，不入库。§4/§5/报告与 brief 同步；代码与测试零改动；**E1–E4 仍未在 Task 078 中运行**（本轮唯一新增运行是只读 `R8 --version` 核实）。
+
+### 二轮复审修正记录（chief 二审 FAIL 后，commit `cb1223f4`）
 
 五项修正：(1) AGP API 更正为 `Artifacts.forScope(Scope.PROJECT)`（一手源码：`gradle-api-9.3.1` 内 `Artifacts.kt:136`、`variant/ScopedArtifacts.kt:31-38`，`useScope` 不存在）；写入“`:app` 无源码、单点 registration 不可行”的关键限制，候选改为集中配置到每个参与 Android 源码模块 + JVM 模块显式盘点，否则 unresolved；逐模块机制从 C 的否决理由中移除，C 收窄为“消费 Soong prebuilt SystemUI 产物”（源码优先红线）。(2) gate 硬化：全规则任一 target 被 define 即 FAIL（新增 3 个单测：非 critical target 定义、critical target 定义、app 自带原名定义不误杀；共 26 个全绿；stock 预期结果不变）。（3）§3.1 收窄：仅四 critical source 强制完全缺席，不得推广到全规则 source（app 自带定义合法出现在 type_ids），全规则 source 统计降为诊断。(4) 变换 fixture 更正：jarjar 同时改名引用与定义，fixture 必须是分离输入（PROJECT artifact 零 source 定义被变换 + external 定义 jar 不变换），前置断言零 source 定义、后置断言零 hidden target 定义。(5) §5 重构：下一张可执行 brief 只定义 E1–E4 实验任务的 Allowed/Forbidden Paths 与 gate，实现任务的路径/坐标清单显式 defer 到 E1 输出之后；顺带修正 CRLF 单测注释（fixture 保留末尾换行）。
 
@@ -95,6 +99,6 @@ Phase C 的 C1–C4 已完成。task075 在 AOSP 17 emu64x 上证明 Debug 可�
 - [已答] Gradle seam 对比：保留 pre-R8 变换族为首选，**算法待 E1–E4 实验与用户裁决**（实验任务 brief 见报告 §5.1，实现范围 defer 至 §5.2）。
 - [已答] 只改引用不打平台类：候选算法不含任何定义删除步骤——project 产物引用改写 + AAR repackaged 变体对齐，app 自带 aconfig 定义交 R8 liveness，与 stock 同构。
 - [部分答] Debug/Release 一致性：今日未变换 Debug 为观察推断；未来变换后 Debug 将保留 app 自带 jar 的原名定义（出现在 type_ids，source-absent 判据同样适用），Debug gate 口径需用户裁决。
-- [新] E1–E4 有界实验（变体表、AAR 干跑、project 产物干跑、SysUISdk R8 解析）——进入实现任务前必须完成；实验任务 brief（Allowed/Forbidden Paths 与 gate）见报告 §5.1。
+- [新] E1–E4 有界实验（变体表、AAR 干跑、project 产物干跑、SysUISdk hidden 名的**实际 R8 运行**解析——独立调用 `builder-9.3.1.jar`，见报告 §5.1 E4）——进入实现任务前必须完成；实验任务 brief（Allowed/Forbidden Paths 与 gate）见报告 §5.1。
 - [新] 我们 AAR 从非 repackaged 产物打包的修正（`tools/package_aosp_aar.py` 输入选择；完整受影响清单依赖 E1）。
 - [新] stock `FeatureFlagsImpl` 的 R8 存活链未完全追溯（不影响 gate 与方案，已标 unknown）。
