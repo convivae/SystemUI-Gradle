@@ -342,7 +342,11 @@
 - Task077 review required two docs-only revisions (`b68bda80`, `95cb24c2`) to satisfy the ≥50MiB acceptance and correct stale wording. Chief independently rechecked repository scope, AOSP one-line diff, image SHA/size, and live device state; **review-PASS**.
 - C5 runtime remains open for a separate blocker: Gradle Release retains original platform aconfig `Flags` descriptors while AOSP 17 device framework exposes the 726-rule `com.android.internal.hidden_from_bootclasspath.*` jarjar names. No platform-class packaging, stub, source-import rewrite, or `dontwarn` workaround is authorized; task078 design/research is next.
 
-## 2026-09-01 — task078 diagnosis/research planning
+## 2026-09-01 — task078 E4 correction and final dual-axis re-review
+
+- Worker docs-only correction `60191e89` resolves the final-acceptance contradiction: future E4 is now a direct standalone invocation of the exact AGP 9.3.1 bundled R8 9.3.16, not a Gradle task. Its scratch program references all four critical hidden targets and defines none; SysUISdk is the library input; success requires no missing-class diagnostic, retained hidden references, and zero hidden definitions, with the official base SDK as negative control. E1–E4 were not run and rewrite implementation remains forbidden.
+- Fresh isolated Standards and Spec reviewers were dispatched for fixed range `28015906...60191e89` in `w10:p1` and `w21:p1`, both explicitly using `joycode/Kimi-K3-jcloud`. They are read-only and may run only cheap Python/static APK checks, never Gradle/Soong/emulator/ADB.
+
 
 - Chief froze the current descriptor evidence: four runtime-critical source names are present only in Gradle Release and their relocated targets only in stock; an all-726-rule scan additionally found Gradle 30 source/0 target versus stock 1 source/36 target. Because stock itself defines one original `FeatureFlagsImpl`, the proposed gate is intentionally critical-pair based rather than a false blanket-zero assertion.
 - Prepared issue `docs/issues/2026-09-01-c5-aconfig-jarjar-closure.md` and brief `docs/orchestration/tasks/078-c5-aconfig-jarjar-closure-research.md`. Scope is diagnostic tool/tests, Soong stage reconstruction, and comparison of pre-R8 class rewrite/post-R8 DEX rewrite/Soong-artifact reuse. Dispatch awaits user approval; no Gradle, Soong, ADB, or rewrite implementation is authorized in task078.

@@ -9,7 +9,9 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | dual-axis reviewers PASS, but chief found E4 contract contradiction; narrow docs correction requested | Same five Allowed Paths only; align E4 with actual AGP 9.3.1 R8 validation without Gradle/Soong/device or rewrite implementation |
+| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | E4 docs correction `60191e89` landed; final dual-axis re-review running | Same five Allowed Paths only; no rewrite implementation |
+| 078-standards-final | `w10:t1` / `w10:p1` | `review/task078-final-standards` / isolated worktree | `joycode/Kimi-K3-jcloud` | independent Standards review | Read-only fixed range `28015906...60191e89`; no Gradle/Soong/device |
+| 078-spec-final | `w21:t1` / `w21:p1` | `review/task078-final-spec` / isolated worktree | `joycode/Kimi-K3-jcloud` | independent Spec review | Read-only fixed range `28015906...60191e89`; no Gradle/Soong/device |
 
 ## Queue
 
@@ -18,6 +20,8 @@
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 078 worker landed docs-only E4 contract correction `60191e89`: future E4 now directly invokes the AGP 9.3.1 bundled R8 9.3.16 outside Gradle with a scratch four-hidden-target reference probe, SysUISdk as library input, explicit success/output/no-definition gates, and an official-base-SDK negative control. E1–E4 remain unexecuted and no rewrite is authorized. Fresh independent Standards and Spec reviewers are running on fixed range `28015906...60191e89` in isolated worktrees with `joycode/Kimi-K3-jcloud`.
 
 - 2026-09-01 — Independent Kimi-K3 Standards and Spec reviewers both returned PASS for `28015906...cb1223f4`; 26 tests and both real-APK gates were independently reproduced. Chief acceptance nevertheless remains FAIL on one internal contradiction the reviewers missed: report §4.1/§4.5 says candidate correctness depends on E4 validating hidden names in an actual R8 run before implementation, while §5.1 forbids every R8-capable path and downgrades E4 to the already-known static class-existence check, postponing the promised evidence until implementation. The same worker will make a docs-only correction defining a direct AGP 9.3.1 bundled-R8 probe (no Gradle task, no behavior change) and make all E4 statements consistent.
 
