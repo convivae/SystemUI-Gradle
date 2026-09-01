@@ -144,6 +144,41 @@ class TestRuleParsing(unittest.TestCase):
             cj.parse_rules("\n# only a comment\n")
 
 
+class TestRulesFileHandling(unittest.TestCase):
+    def _run_with_bytes(self, rules_bytes: bytes, dexes=None) -> tuple[int, str]:
+        dex = build_dex(CRITICAL_TARGET_DESCS)
+        with tempfile.TemporaryDirectory() as tmp:
+            apk = Path(tmp) / "test.apk"
+            rules = Path(tmp) / "rules.txt"
+            with zipfile.ZipFile(apk, "w") as zf:
+                zf.writestr("classes.dex", dex)
+            rules.write_bytes(rules_bytes)
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = cj.run_gate(apk, rules, out=buf)
+        return rc, buf.getvalue()
+
+    def test_hash_is_over_raw_file_bytes(self):
+        # CRLF line endings and no trailing newline: the printed sha256 must
+        # equal the hash of the file's raw bytes, not of any normalized
+        # re-encoding of the parsed text.
+        raw = critical_rules_text().replace("\n", "\r\n").encode()
+        import hashlib
+
+        expected = hashlib.sha256(raw).hexdigest()
+        rc, out = self._run_with_bytes(raw)
+        self.assertEqual(rc, 0)
+        self.assertIn(expected, out)
+
+    def test_invalid_utf8_rules_file_is_clean_exit_2(self):
+        raw = b"rule a.b.C x.y.C\nrule \xff\xfe broken\n"
+        rc, out = self._run_with_bytes(raw)
+        self.assertEqual(rc, 2)
+        self.assertIn("ERROR", out)
+        self.assertIn("not valid UTF-8", out)
+        self.assertNotIn("Traceback", out)
+
+
 class TestDexParsing(unittest.TestCase):
     def test_valid_dex_roundtrip(self):
         dex = build_dex(["La/b/C;", "Lx/y/D;"], defined_descriptors=["La/b/C;"])
@@ -169,6 +204,17 @@ class TestDexParsing(unittest.TestCase):
         struct.pack_into("<I", dex, 32, 4)
         with self.assertRaises(cj.DexError):
             cj.parse_dex(bytes(dex), "classes.dex")
+
+    def test_uleb128_longer_than_five_bytes_raises(self):
+        # Six continuation bytes: uleb128 encodes at most 32 bits (5 bytes).
+        with self.assertRaises(cj.DexError):
+            cj._read_uleb128(b"\x80\x80\x80\x80\x80\x80\x00", 0)
+
+    def test_uleb128_maximal_five_bytes_is_accepted(self):
+        # 0xFFFFFFFF encodes as exactly five bytes and must still parse.
+        value, offset = cj._read_uleb128(b"\xff\xff\xff\xff\x0f", 0)
+        self.assertEqual(value, 0xFFFFFFFF)
+        self.assertEqual(offset, 5)
 
     def test_non_dex_zip_member_is_skipped_and_empty_zip_errors(self):
         with tempfile.TemporaryDirectory() as tmp:

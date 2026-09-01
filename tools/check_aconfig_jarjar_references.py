@@ -22,7 +22,7 @@ Gate semantics (frozen, Task 078): the four runtime-critical sources must be
 absent (not referenced at all) and their relocated targets must be present
 (referenced). The full rule file is additionally scanned and reported as
 stable totals, but only the four critical pairs decide PASS/FAIL. The
-"all 726 sources must be absent" assertion is intentionally NOT encoded:
+"all 725 rule sources must be absent" assertion is intentionally NOT encoded:
 stock AOSP legitimately defines e.g. ``android.app.admin.flags.FeatureFlagsImpl``
 as an app-owned class.
 
@@ -133,8 +133,9 @@ def _read_uleb128(data: bytes, offset: int) -> tuple[int, int]:
         if not byte & 0x80:
             return result, offset
         shift += 7
-        if shift > 35:
-            raise DexError("uleb128 too long")
+        if shift >= 35:
+            # A uleb128 encodes at most 32 bits => at most 5 bytes.
+            raise DexError("uleb128 exceeds 5 bytes")
 
 
 def _decode_mutf8(raw: bytes) -> str:
@@ -317,9 +318,14 @@ def run_gate(apk: Path, rules_path: Path, out=None) -> int:
     if out is None:
         out = sys.stdout
     try:
-        rules_text = rules_path.read_text(encoding="utf-8")
+        rules_raw = rules_path.read_bytes()
     except OSError as exc:
         print(f"ERROR: cannot read rules file {rules_path}: {exc}", file=out)
+        return 2
+    try:
+        rules_text = rules_raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        print(f"ERROR: {rules_path}: rules file is not valid UTF-8: {exc}", file=out)
         return 2
     try:
         rules = parse_rules(rules_text)
@@ -337,7 +343,9 @@ def run_gate(apk: Path, rules_path: Path, out=None) -> int:
         print(f"ERROR: {exc}", file=out)
         return 2
 
-    rules_sha = hashlib.sha256(rules_text.encode("utf-8")).hexdigest()
+    # Hash the raw file bytes exactly as frozen in the task evidence, not a
+    # newline-normalized re-encoding of the parsed text.
+    rules_sha = hashlib.sha256(rules_raw).hexdigest()
     print(f"apk: {apk}", file=out)
     print(f"rules: {rules_path} ({len(rules)} rule entries, sha256 {rules_sha})", file=out)
     print(f"dex entries: {', '.join(d.entry for d in dexes)}", file=out)

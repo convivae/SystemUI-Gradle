@@ -1,7 +1,7 @@
 # Task 078 — C5 platform aconfig jarjar closure research and static gate
 
 **Phase**: C5 blocker diagnosis/design
-**Status**: proposed; implementation of the selected rewrite is explicitly out of scope
+**Status**: proposed → completed in `1f5e93e8`; chief review returned FAIL (fabricated R8-library claim, ownership-unsafe algorithm, sharding misattribution, 726-rule wording, gate robustness); corrective commit on top applies the six required fixes. Implementation of the selected rewrite remains out of scope pending user adjudication.
 **Authority**: `self-commit` (worker may commit the allowed diagnostic/report files, must never push)
 **Reports To**: Chief architect in the current herdr workspace
 
@@ -13,10 +13,10 @@ Turn the AOSP-17 platform-aconfig package mismatch into a seconds-scale static R
 
 - Current Gradle Release APK: `app/build/outputs/apk/release/app-release.apk`.
 - Stock AOSP APK: `/home/conv/myspace/aosp/out/target/product/emu64x/system_ext/priv-app/SystemUI/SystemUI.apk`.
-- Authoritative rule file: `/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/framework/android_common/repackaged-jarjar/repackaging.txt` (726 rules; SHA-256 `f79a08d481147a5e6a532ec254e6f075ccb661d844b9ac19db764cd085a6de97`).
+- Authoritative rule file: `/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/framework/android_common/repackaged-jarjar/repackaging.txt` (725 rules / 726 physical lines including trailing blank; SHA-256 `f79a08d481147a5e6a532ec254e6f075ccb661d844b9ac19db764cd085a6de97`).
 - AOSP host JarJar: `/home/conv/myspace/aosp/out/host/linux-x86/framework/jarjar.jar`.
 - Four runtime-critical source descriptors currently present in Gradle Release and absent from stock: `android.app.Flags`, `android.os.Flags`, `android.view.accessibility.Flags`, and `com.android.window.flags.Flags`. Their required targets are under `com.android.internal.hidden_from_bootclasspath.`.
-- A preliminary all-rule scan found Gradle Release has 30 original/0 relocated matching type descriptors; stock has 1 original/36 relocated. The stock original is a defined `android.app.admin.flags.FeatureFlagsImpl`, so a naive “all 726 sources must be absent” gate is invalid and must not be encoded.
+- A preliminary all-rule scan found Gradle Release has 30 original/0 relocated matching type descriptors; stock has 1 original/36 relocated. The stock original is a defined `android.app.admin.flags.FeatureFlagsImpl`, so a naive “all 725 rule sources must be absent” gate is invalid and must not be encoded.
 
 ## Global constraints
 
@@ -51,11 +51,11 @@ Turn the AOSP-17 platform-aconfig package mismatch into a seconds-scale static R
 - [x] Parse exact `rule <source> <target>` entries from the authoritative `repackaging.txt`; reject unsupported wildcard syntax rather than silently misinterpreting it.
 - [x] Implement a critical-pair gate for the four frozen runtime classes. Output source/target type presence and definition presence per pair, plus stable totals and `RESULT=PASS|FAIL`.
 - [x] Add unit tests using synthetic minimal DEX/ZIP/rule fixtures. Cover malformed DEX, duplicate descriptors across multidex, an unsupported rule, source-present failure, target-present pass, and source+target ambiguity.
-- [x] Run the gate against both current Gradle Release and stock AOSP SystemUI. Record exact output. Do not weaken the critical set because the current APK fails. (Release exit 1 FAIL; stock exit 0 PASS; 19 tests pass)
+- [x] Run the gate against both current Gradle Release and stock AOSP SystemUI. Record exact output. Do not weaken the critical set because the current APK fails. (Release exit 1 FAIL; stock exit 0 PASS; 19 tests at first pass; 23 after review fixes)
 
 ### P2 — Primary-source Soong reconstruction
 
-- [x] Trace where `framework-minus-apex` declares `jarjar_prefix`/`jarjar_shards` and where Soong generates and propagates the 726-rule mapping into `SystemUI-core`, `SystemUI-application`, and final SystemUI processing. (rule count is actually 725: 726 lines incl. trailing blank; see report §1.1)
+- [x] Trace where `framework-minus-apex` declares `jarjar_prefix`/`jarjar_shards` and where Soong generates and propagates the rule mapping into `SystemUI-core`, `SystemUI-application`, and final SystemUI processing. (725 rules: 726 lines incl. trailing blank; see report §1.1. `jarjar_shards` applies only to the explicit-rules path, not the automatic per-module rewrite: report §2.4)
 - [x] Establish the stage ordering relative to javac/kotlinc, static-library combination, R8/optimization, D8, and APK packaging. If a stage cannot be proven, label it unknown. (per-module post-compile rewrite proven; stock FeatureFlagsImpl R8-liveness chain labeled unknown)
 - [x] Compare source/target **type references and class definitions** in current Release versus stock APK. Explain the 30/0 versus 1/36 observation and why the stock `FeatureFlagsImpl` exception rules out a blanket all-rule absence assertion.
 - [x] Record exact reproducibility inputs: which rule file/tool are generated by AOSP, whether they can be regenerated from a clean AOSP tree, and what must or must not be committed to this repository. (report §2.6)
@@ -69,7 +69,7 @@ Evaluate, at minimum:
 3. **Reuse/reprocess Soong JarJar artifacts**: source-first compliance, reproducibility from AOSP, classpath/program-input boundaries, and whether this would substitute prebuilt SystemUI code for Gradle-compiled source.
 
 - [x] Give each option a supportability, correctness, reproducibility, and rule-compliance verdict.
-- [x] Recommend exactly one seam, or state that evidence is insufficient and identify the missing experiment. (Option A: AGP ScopedArtifact.CLASSES pre-R8 transform reusing Soong jarjar.jar + frozen rules; user adjudication pending)
+- [x] Recommend exactly one seam, or state that evidence is insufficient and identify the missing experiment. (Review-corrected: pre-R8 transform family retained as preferred, but the concrete algorithm's evidence is insufficient — bounded experiments E1–E4 named in report §4.1/§4.5; user adjudication pending)
 - [x] Draft a separate implementation brief with exact allowed paths, red lines, tests, and rollback criteria. Do not execute it. (report §5)
 
 ### P4 — Documentation and commit
