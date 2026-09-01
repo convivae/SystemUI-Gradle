@@ -417,3 +417,9 @@
 
 - User approved the exact small brief. Chief created dedicated tab `w2:t2X` / pane `w2:p32` and started `task080` with explicit `joycode/Kimi-K3`; the session JSON independently confirms `provider=joycode`, `modelId=Kimi-K3`.
 - Scope is only the four-class read-only origin trace against existing outputs. No Gradle, JarJar, implementation, AOSP/out write, or device work is permitted. When the worker initially requested AGENTS and CHARTER in one tool turn, Chief immediately required a sequential CHARTER re-read followed by the brief and literal CONTRACT before investigation.
+
+## 2026-09-01 — task080 evidence committed; dual-axis review allocated
+
+- Task 080 report commit `8c49181a` replaces the pre-dispatch plan with durable class-constant-pool evidence. It attributes all four runtime-critical old aconfig references with deduplicated class counts 50/7/5/104 and `UNKNOWN=0`; project-local modules, direct JARs, local-Maven AARs, direct AARs, AAR inner hashes, and compileOnly `framework.jar` are separated.
+- Chief independently verified fixed range `af849c52...8c49181a`, exact two-file scope, `git diff --check`, full canonical artifact hashes, the 166 deduplicated target/reference-class pairs, and current Release checker exit 1 / `RESULT=FAIL` as expected because Task 080 changes no behavior. `/tmp/tce.class` was removed; only the approved `/tmp/task080-c5-reference-origins/` scratch evidence remains.
+- Three stalled Task 080 worker tabs are closed. Read-only Standards and Spec reviews are allocated in separate tabs `w2:t20` / `w2:p35` and `w2:t31` / `w2:p36`, against fixed range `af849c52...8c49181a`. Both must use explicit `joycode/Kimi-K3-jcloud`, verify model metadata and CONTRACT, and may not edit, build, run JarJar, or operate a device.

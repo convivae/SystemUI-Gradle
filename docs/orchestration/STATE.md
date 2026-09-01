@@ -9,16 +9,19 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 080 | `w2:t2X` / `w2:p32` | shared `main` (`61786387`) | `joycode/Kimi-K3` (session metadata verified) | dispatched; required reading/CONTRACT in progress under Chief supervision | read-only origin trace for the four runtime-critical old class references; no Gradle, no rewrite, no device |
+| 080 Standards review | `w2:t20` / `w2:p35` | shared `main`; fixed range `af849c52...8c49181a` | `joycode/Kimi-K3-jcloud` (must verify session metadata before CONTRACT acceptance) | tab allocated; reviewer dispatch next | read-only Standards axis; no edits/build/device/JarJar |
+| 080 Spec review | `w2:t31` / `w2:p36` | shared `main`; fixed range `af849c52...8c49181a` | `joycode/Kimi-K3-jcloud` (must verify session metadata before CONTRACT acceptance) | tab allocated; reviewer dispatch next | read-only Spec axis; no edits/build/device/JarJar |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
 
-1. Task 080 is actively running under close Chief supervision. It may only trace the four concrete old class references to existing project/dependency outputs; no build and no fix.
-2. After Chief independently verifies Task 080, prepare and separately approve one small implementation brief that adds the proven pre-D8/R8 reference conversion without modifying AOSP source or packaging platform classes.
+1. Task 080 report commit `8c49181a` proves the existing source of all four runtime-critical old references (`UNKNOWN=0`). Standards and Spec reviews are allocated in separate Kimi-only tabs against fixed range `af849c52...8c49181a`; current Release checker independently remains `RESULT=FAIL` by design.
+2. After both Task 080 axes pass and Chief closes/pushes it, prepare and separately approve one small implementation brief that adds the proven pre-D8/R8 reference conversion without modifying AOSP source or packaging platform classes.
 3. Serialize Debug build, Release build, static APK checks, then persistent Debug and Release emulator reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 080 investigation is committed locally as `8c49181a` on fixed base `af849c52`. Chief independently verified exact two-file scope, clean `git diff --check`, APK SHA `f389bd45…`, deduplicated reference counts 50/7/5/104, compileOnly separation, and the unchanged expected Release checker exit 1 / `RESULT=FAIL`. The three worker tabs are closed. Separate read-only Standards and Spec reviewer tabs `w2:t20` / `w2:p35` and `w2:t31` / `w2:p36` are allocated with explicit Kimi-K3-jcloud and no build/edit/device authority; model/CONTRACT verification is next.
 
 - 2026-09-01 — User approved the exact Task 080 brief. Chief started one serial worker in `w2:t2X` / `w2:p32` with explicit `joycode/Kimi-K3`; session metadata confirmed `provider=joycode`, `modelId=Kimi-K3`. The worker is limited to the four-class read-only origin trace. Chief immediately corrected the startup sequence when the worker requested AGENTS and CHARTER in the same turn: it must re-read CHARTER after AGENTS, then the brief, print `CONTRACT:`, and only then investigate.
 
