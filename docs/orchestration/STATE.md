@@ -13,11 +13,13 @@
 
 ## Queue
 
-1. Task 080 is closed: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed. Push its local commits before the next implementation dispatch.
-2. Prepare and separately approve one small implementation brief that adds the proven pre-D8/R8 reference conversion without modifying AOSP source or packaging platform classes.
-3. Serialize Debug build, Release build, static APK checks, then persistent Debug and Release emulator reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
+1. Task 080 is closed and pushed at `36b4a3cd`: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed.
+2. Task 081 design and exact redline-gated brief are drafted. Await explicit user approval for the `buildSrc` + app-level AGP instrumentation seam, frozen four-rule/166-class inputs, and ADR 0008 before any dispatch or implementation.
+3. After Task 081 review-PASS, serialize Debug build, Release build/static APK checks, then persistent Debug and Release emulator reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Chief drafted Task 081 as a redline-gated build-logic-only task. The proposed seam is one `:app` AGP 9.3.1 `InstrumentationScope.ALL` registration constrained by Task 080's frozen 166-class allowlist and four exact runtime-critical mappings. It must preserve `this_class`, produce zero hidden target definitions, leave `settings.gradle.kts`/source/`libs/**` untouched, and run only focused buildSrc tests. Task 079 remains paused. No worker, implementation, app build, R8, or device action is authorized until the user explicitly approves the exact brief and ADR 0008.
 
 - 2026-09-02 — Task 080 fixed range `af849c52...8c49181a` passed clean Kimi-K3-jcloud Standards and Spec reruns with zero findings. Chief accepted the report after independently checking the two-file scope, hashes, 550 machine records, 50/7/5/104 counts, compileOnly separation, and the unchanged expected Release checker `RESULT=FAIL`. The first reviewer outputs were excluded because they created unauthorized `/tmp/apkcheck` and `/tmp/task080-review`; Chief deleted both directories before rerunning review. The accepted reviewers created no files and made no repository/build/device changes.
 

@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的秒级 DEX gate 与 Soong/JarJar 研究已 review-PASS：规则为 725 条 exact / 726 物理行，当前 Release 稳定 FAIL、stock 稳定 PASS；首选 pre-R8 方案族仍须先经用户批准完成 E1–E4 有界实验，之后才能裁决/实施 rewrite、重跑双冷启动门并进入 C6。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的 725-rule 秒级 DEX gate 已 review-PASS；task080 又将四个 critical 旧名归属到 166 个唯一 program reference classes，`UNKNOWN=0`，并隔离 compileOnly `framework.jar`。Task 079 broad replay 已暂停；Task 081 最小 pre-D8/R8 reference-only AGP instrumentation 方案与 exact brief 已起草，等待用户批准后才可实现。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：task078 研究/gate 已完成；先向用户申请 E1–E4 实验批准（仅清单、scratch JarJar/AAR 干跑及 standalone R8 resolution probe，零行为变更），实验通过并再次裁决后才实施 C5 JarJar 引用改写。不得打包 platform Flags、不得 stub/dontwarn/源码 import 批量改写；随后在 task077 durable overlay 上重跑 Debug/Release 整机重启门，最后做 C6。
+5. **当前唯一工程优先级**：向用户请求批准 Task 081 exact brief。候选实现只在 `:app` 建一个 AGP 9.3.1 pre-D8/R8 seam，以 Task 080 冻结的 166-class allowlist 将实际 visitor 范围限制到已证明 program classes，并只改四条 critical exact references；必须保持 `this_class`、hidden target definitions=0。Task 079 不恢复。获批、实现并 review-PASS 后，再把 Debug build、Release build/static gate 和双 runtime reboot gate 拆成串行小任务。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -30,7 +30,9 @@
 | C4b（task073） | 17-module Debug 编译闭环（含 kairos 与 AOSP-17 SysUISdk 重建）✅ | `docs/issues/2026-08-28-c4b-debug-compile-closure.md` |
 | C4c（task074） | Release/R8 missing refs 31→0，`:app:assembleRelease` ✅ | `docs/issues/2026-09-01-c4c-release-r8-closure.md` |
 | C5 task075–077 | Debug 热运行 ✅；Release proto keep ✅；goldfish 2880MiB super / 582MiB scratch / 64MiB probe 跨重启 ✅；Release jarjar runtime blocker 待修 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
-| C5 task078 | DEX 静态 gate + 725-rule Soong/JarJar 机制研究 review-PASS；Release FAIL / stock PASS；E1–E4 与 rewrite 均未执行 | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
+| C5 task078 | DEX 静态 gate + 725-rule Soong/JarJar 机制研究 review-PASS；Release FAIL / stock PASS | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
+| C5 task080 | 四个 critical old references 的 166-class program-input 来源闭环；50/7/5/104、`UNKNOWN=0`，compileOnly 隔离 | `docs/issues/2026-09-01-c5-focused-reference-origins.md` |
+| C5 task081 | 最小 pre-D8/R8 reference-only build logic 方案/brief 已起草，等待用户批准；尚未实现或构建 | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -43,7 +45,7 @@
 | 059 | 4 个单 consumer AAR 族改为 `files("libs/aars/…")` 直接消费（用户逐族授权，字节中性已证） | `docs/issues/2026-08-25-aar-direct-consumption-migration.md` |
 | 058 | DEBUG_RUNTIME_PASS gate suite 六门全绿（在 GLM-5.3 worker 上运行） | `docs/issues/2026-08-25-debug-runtime-pass-gate-suite.md` |
 
-关键新纪律（均来自 08-25 实战，仍有效）：同工树=串行（两 Gradle 构建并发曾致 kernel OOM）；worker 只用 joycode GLM-5.3/5.2 模型；部署后必须设备端 sha256 二次校验（toybox cp 静默截断）；verity 保持 disabled（enable-verity 拆 overlay，见 PITFALLS §14）。
+关键新纪律（均来自 08-25 起的实战，仍有效）：同工树=串行（两 Gradle 构建并发曾致 kernel OOM）；worker/reviewer 只允许显式 `joycode/Kimi-K3` 或 `joycode/Kimi-K3-jcloud`；部署后必须设备端 sha256 二次校验（toybox cp 静默截断）；verity 保持 disabled（enable-verity 拆 overlay，见 PITFALLS §14）。
 
 16 时代 Release 闭环（2026-08-26，task 060→061）：AssumeFalseForR8 精确 dontwarn →
 `-dontobfuscate`（对齐 Soong dex.go:545）→ 3 行 `-keep`（抗 R8 水平合并），
@@ -79,4 +81,4 @@ DEX 对 AOSP 17 platform aconfig Flags 的原名引用与设备 jarjar 后类名
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：请求用户裁决并执行 E1–E4 有界实验 → 基于实验结果另立并裁决 JarJar rewrite 实现 brief → C5 双冷启动门 → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：请用户裁决 Task 081 exact brief → build logic TDD 与双轴复核 → 串行 Debug/Release build + 静态 gate → 分别执行双 runtime reboot gate → C6 收口。
