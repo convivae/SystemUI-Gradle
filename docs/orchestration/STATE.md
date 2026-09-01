@@ -13,11 +13,13 @@
 
 ## Queue
 
-1. Task078 research/design: build a fast Release-DEX descriptor gate, inventory the authoritative 726 AOSP auto-propagated jarjar rules, and compare AGP bytecode instrumentation versus a scoped JarJar transform. No implementation until the user adjudicates the architecture seam.
-2. After approval, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
+1. Await user approval for `docs/orchestration/tasks/078-c5-aconfig-jarjar-closure-research.md`: add the static Release/stock descriptor gate, reconstruct Soong's 726-rule pipeline, and compare three solution families. No rewrite implementation is authorized.
+2. After the research report and a separate user architecture ruling, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 078 diagnostic/research brief prepared at `docs/orchestration/tasks/078-c5-aconfig-jarjar-closure-research.md`; dispatch is blocked on the mandatory user approval gate. Scope is static checker + primary-source pipeline reconstruction + three-option comparison only, with no Gradle rewrite implementation or build/device mutation.
 
 - 2026-09-01 — Task 077 review-PASS after two precision revisions. AOSP goldfish local commit `c18f6a3f` is the authorized single-line 1800→2880MiB change; formal `m -j16` succeeded with 40GiB swap. Chief independently verified `super.img` SHA/size, 582MiB scratch, five overlays, orange boot state, stock SystemUI health, and the worker's 64MiB probe durability/cleanup record. B3 infrastructure is complete. C5 remains open only because Release exposes the separate AOSP-17 platform aconfig jarjar reference mismatch; no stub/platform-class packaging/dontwarn workaround was accepted.
 
