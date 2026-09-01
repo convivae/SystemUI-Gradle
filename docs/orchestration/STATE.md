@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 079 | none (serialized E1 replacement pending) | shared `main` at `488b7996` | `joycode/GLM-5.2/5.3` low only | analysis-primitives checkpoint pushed; full `run` still fail-closed and no E1–E4 evidence exists | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
+| 079 | none (serialized E1 replacement pending) | shared `main` (`488b7996` checkpoint) | `joycode/GLM-5.2/5.3` low only | analysis-primitives checkpoint pushed; full `run` still fail-closed and no E1–E4 evidence exists | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
 
 ## Queue
 
