@@ -108,7 +108,7 @@ if ((partition_size > kMinimumSize) || !partition->size()) {
 
 ## P2 重建 + 验收
 
-### P2.1 构建过程记录（进行中）
+### P2.1 构建过程记录（已完成，结果见 P2.5）
 
 | 时间 | 事件 |
 |---|---|
@@ -125,11 +125,13 @@ if ((partition_size > kMinimumSize) || !partition->size()) {
 | 19:56 | RETRY2：同因 OOM（exit 137） |
 | 19:59 | RETRY3（Chief 决策 c：`export GOGC=40 GOMEMLIMIT=22GiB` 后 m）：仍 OOM，journal 实据 anon-rss **27.9GB**。**决定性证据**：ninja 规则原文 `cd ... && env -i "$BUILDER" --top ...` —— `env -i` 直接作用于 soong_build 本体，把调用 shell 导出的 GOGC/GOMEMLIMIT 清空（源码佐证：build/soong/ui/build/soong.go 的 invocationEnv 只透传 GODEBUG/delve，无 GOGC 通道）。Chief 假设“env -i 只作用 ninja 规则子进程”不成立——soong_build 本身就是那条 ninja 规则的子进程 |
 
-### P2.3 停工呈报（2026-09-01 20:05，按 Chief 决策 d）
+### P2.3 停工呈报（2026-09-01 20:05，按 Chief 决策 d；状态：历史，已解除）
+
+> 解除记录见 P2.5：用户 swapon /swapfile 后 Chief resume，构建已完成。
 
 **根因链**：改产品 mk 触发 soong 全量重分析 → soong_build Go 进程峰值 anon-rss 27.9GB（逐次观测 20.2→26.7→27.9GB，环境越干净峰值越高，说明分析本身就需要 ~28GB）→ 宿主机 30G RAM 中 ~25-26G 实际可用 + swap 仅余 2.6G（8G swap 已被桌面/vscode 进程占 5.4G）→ 内核 global OOM-kill。
 
-### P2.4 halt 状态（Chief 指令，2026-09-01 20:10）
+### P2.4 halt 状态（Chief 指令，2026-09-01 20:10；状态：历史，已解除）
 
 **Chief 根因确认 + 新事实**：
 1. soong 分析由 `env -i soong_build` 拉起——`env -i` 抹掉 GOGC/GOMEMLIMIT，Go 级 cap 无法注入（本 issue P2.1 表 RETRY3 行 + /tmp/aosp_build_077.log FAILED 块的 `env -i "$BUILDER"` 行为铁证）
@@ -158,7 +160,7 @@ lpdump 要点（/tmp/super_new.lpdump 全文 + 本节双重留档）：
   → fs_mgr CreateDynamicScratch: max(min(512MB, 1191MB), 595MB) = ~595MB ≥ 512MB ✓
 ```
 
-**3 次 OOM 事件汇总**（均为 soong bootstrap 阶段，exit=137 signal:killed）:
+**4 次 OOM 事件汇总**（均为 soong bootstrap 阶段，exit=137 signal:killed；其中 18:21 为与 task076 撞车期事件，19:53/19:56/19:59 为 Chief 授权后的 RETRY1/2/3）:
 
 | 事件 | 时间 | soong_build anon-rss | journal 实据 |
 |---|---|---|---|
@@ -166,8 +168,6 @@ lpdump 要点（/tmp/super_new.lpdump 全文 + 本节双重留档）：
 | OOM-2（RETRY1，授权后） | 19:53 | 26.7GB | `Out of memory: Killed process 2191632 (soong_build) total-vm:30520536kB, anon-rss:26761580kB` |
 | OOM-3（RETRY2） | 19:56 | （未单独抓 journal，同因） | exit=137，56s 失败 |
 | OOM-4（RETRY3，GOGC=40 GOMEMLIMIT=22GiB） | 19:59 | 27.9GB | `Out of memory: Killed process 2197576 (soong_build) total-vm:30972304kB, anon-rss:27955344kB`；RSS 不降反升 → GC cap 未生效，与 env -i 铁证互证 |
-
-（注：实为 4 次 kill，Chief 口径“3 次 OOM 事件”对应授权后的 RETRY1/2/3；18:21 那次属撞车期，一并留档）
 
 **env -i 铁证**（ninja 规则原文，/tmp/aosp_build_077.log）：
 ```
@@ -180,7 +180,7 @@ cd "$(dirname "out/host/linux-x86/bin/soong_build")" && BUILDER="$PWD/$(basename
 2. 降 -j —— 无效，soong_build 是**单进程**内存瓶颈，与并发无关（exit 137 均发生在 bootstrap 阶段，还没到 -j 并行编译）
 3. 释放 swap —— 无 sudo，swapoff 不可用；占 swap 的是桌面进程（java/python/gnome-shell 等，合计 ~2.6G swap 化），不能杀
 
-**解除条件**：用户执行 `sudo swapon /swapfile`（32G swapfile 已在磁盘，reboot 后未挂）→ Chief 放行 → 重跑 `m -j8`（峰值 ~28G < 26G RAM + 32G swap，必过）。
+**解除记录（历史，已发生）**：用户执行 `sudo swapon /swapfile`（32G swapfile 已在磁盘，reboot 后未挂）→ Chief resume（用户授权 -j16 覆盖 -j8）→ `m -j16` 实际通过。注：事前“峰值 ~28G < 26G RAM + 32G swap 必过”的预测措辞事后修正为：实际峰值 25.8GB 是靠 40G swap 兑底、伴随 700ms/s 级 memory stall 才存活，并非稳定裕量。
 
 **长期建议（供 Chief/用户参考）**：将 `/swapfile` 写入 /etc/fstab，避免下次 reboot 后重蹈。
 
@@ -193,9 +193,10 @@ cd "$(dirname "out/host/linux-x86/bin/soong_build")" && BUILDER="$PWD/$(basename
 3. 验证新 misc_info.txt / lpdump：group 2880MiB、free ≈ 1164.5MiB
 4. 模拟器 relaunch（按 runbook：重建实例目录、环境变量、prebuilt emulator）
 5. 验收链：boot → disable-verity → reboot → `/mnt/scratch` ≥ 512MB →
-   ≥50MB overlay 部署 → reboot → sha 持久 ≠ stock → verifiedbootstate=orange、无新增 FATAL
+   ≥50MB overlay 部署（64MiB probe，P2.6.5）→ reboot → sha 持久 →
+   verifiedbootstate=orange；runtime 门结果见 P2.6.2
 
-### P2.6 验收全链结果（2026-09-01 10:54–13:15）
+### P2.6 验收全链结果（2026-09-01 10:54–13:44，含 P2.6.5 probe 修订）
 
 #### 验收结果总表
 
@@ -205,8 +206,8 @@ cd "$(dirname "out/host/linux-x86/bin/soong_build")" && BUILDER="$PWD/$(basename
 | 2 | 设备侧 super 尺寸 | ✅ | `blockdev --getsize64 /dev/block/by-name/super` = 3028287488（经 P2.6.1 修复后） |
 | 3 | disable-verity → reboot → scratch ≥ 512MB | ✅ | `/mnt/scratch` = 148,874 blocks × 4096 = **582 MiB**（= free/2 公式：1164.6/2），f2fs，dm-5 |
 | 4 | overlay 全分区挂载 | ✅ | system/vendor/product/system_dlkm/system_ext 五分区 overlay，upperdir 均在 /mnt/scratch/overlay |
-| 5 | ≥50MB overlay 部署 | ✅ | Release APK 45,046,514 B（task076 clean 产物，sha `f389bd45…`）push + sha 门禁 MATCH + staged cp + 设备端 sha 门禁 MATCH |
-| 6 | 跨重启 sha 持久 | ✅ | reboot 后 `/system_ext/priv-app/SystemUI/SystemUI.apk` sha = `f389bd45…` ≠ stock `d0e36b33…`；scratch 582M 保持 |
+| 5 | ≥50MB overlay 部署 | ✅ | 64MiB 无副作用 probe（67,108,864 B = 64 MiB ≥ 50MB），`/system_ext/probe/` 非包扫描路径；host/staged/device SHA `3b6a07d0…` 三点一致（见 P2.6.5） |
+| 6 | 跨重启 sha 持久 | ✅ | reboot 后 probe SHA 仍 = `3b6a07d0…`、位于 overlay upperdir（P2.6.5）；另 Release APK（45,046,514 B ≈ 42.96 MiB，不满足 ≥50MB 下限故只作 runtime 门证据）部署/跨重启持久/回滚亦全程实证（P2.6.2–P2.6.3） |
 | 7 | verifiedbootstate | ✅ | `ro.boot.verifiedbootstate=orange`（全链保持） |
 | 8 | 无新增 FATAL（runtime 门） | ❌ | **见 P2.6.2（双 blocker）** |
 
@@ -250,7 +251,7 @@ java.lang.NoClassDefFoundError: Failed resolution of: Landroid/view/accessibilit
   at com.android.wm.shell.dagger.WMShellBaseModule_ProvideShellInitFactory
      .provideStartingWindowController(r8-map-id-…:218)
   at com.android.systemui.dagger.DaggerReferenceGlobalRootComponent$WMComponentImpl…
-n```
+```
 **根因链（全链实证）**：
 1. 设备 framework dex 里**全部 ~160 个 aconfig Flags 类**都被改名到
    `com.android.internal.hidden_from_bootclasspath.*`（`frameworks/base/Android.bp:580`
@@ -263,7 +264,7 @@ n```
    含改名副本）→ R8 保留原名引用
 4. Release APK 实测：**零个**改名后引用；`Landroid/view/accessibility/Flags;`、
    `Lcom/android/window/flags/Flags;`、`Landroid/app/Flags;`、`Landroid/os/Flags;` 在两个
-dex 中均有引用 → 任何触及这些类的代码路径运行时 CNFE → 崩溃循环
+   dex 中均有引用 → 任何触及这些类的代码路径运行时 CNFE → 崩溃循环
 
 **含义**：在引入等价 jarjar 重写（把 Gradle 产物中对这些 Flags 类的引用改为改名后包名）
 之前，**任何本项目构建的 SystemUI APK 都无法通过 runtime 门**（会在 WMShell init 即崩）。
@@ -274,7 +275,8 @@ dex 中均有引用 → 任何触及这些类的代码路径运行时 CNFE → �
 
 - stock APK 已恢复（sha `d0e36b33…`，in-tree 原品）且验证健康：PID 851 稳定、
   crash buffer 0 行、无 ANR 对话框、焦点 Launcher
-- 部署实验产物已清理（/data/local/tmp 副本仍在，可重验）
+- 部署实验产物已清理（probe 的 host/staged 副本已删，见 P2.6.5；/data/local/tmp 的
+  SystemUI.apk / stock_SystemUI.apk 留存可重验）
 - scratch 582MiB、overlay 五分区、verity disabled 状态保持（下次部署可直接走）
 - 两个 pm grant（BLUETOOTH_CONNECT、READ_CONTACTS）持久化在 /data——后续重拉实例
   若换回 pristine /data 需重打（runbook 已记）
@@ -287,10 +289,32 @@ dex 中均有引用 → 任何触及这些类的代码路径运行时 CNFE → �
    停在旧值（症状：`Device size does not match`）
 2. **pristine /data 的 SystemUI 运行时权限**：首启后 stock SystemUI 可能因
    BLUETOOTH_CONNECT / READ_CONTACTS 未授予而崩溃循环；两个 pm grant 即愈
+3. **崩溃循环期后堆积的 ANR 僵尸对话框**：AMS 每次无响应弹一个，崩溃循环后可堆积
+   数十个（本次实测 55 个）；修复根因后 reboot 即清
+
+#### P2.6.5 64MiB probe 跨重启部署证据（review 修订补充，2026-09-01 13:40–13:44）
+
+背景：Brief 验收项为“任意 ≥50MB overlay 内容跨重启持久”；此前以 Release APK
+（45,046,514 B ≈ 42.96 MiB）作部署载体未达数值下限，review-fail 后补做确定性 probe：
+
+- **产物**：`dd if=/dev/zero bs=1M count=64` = 67,108,864 B（64 MiB ≥ 50MB），全零
+  内容、任意机器可复现；非 APK、非资源文件
+- **部署路径**：`/system_ext/probe/`——不在 `app` / `priv-app` / `overlay` 等
+  PackageManager 扫描目录内，不参与包扫描与启动，无副作用
+- **SHA 三点一致**（均为 `3b6a07d0d404fab4e23b6d34bc6696a6a312dd92821332385e5af7c01c421351`）：
+  - host：`/tmp/task077_probe_64m.bin`（push 前）
+  - staged：`/data/local/tmp/task077_probe_64m.bin`（adb push 后）
+  - device：`/system_ext/probe/task077_probe_64m.bin`（staged cp + sync 后）
+- **跨 reboot 复验**：reboot → `sys.boot_completed=1` → device SHA 仍 = `3b6a07d0…`；
+  文件物理位于 overlay upperdir（`/mnt/scratch/overlay/system_ext/upper/probe/`）；
+  scratch 582M、五分区 overlay、`verifiedbootstate=orange` 均保持
+- **删除与终态**：`rm` probe + `rmdir /system_ext/probe` + sync → 再 reboot
+  （uptime 1 min 证实确实重启）→ `/system_ext/probe` 不存在（whiteout 持久）；
+  终态：scratch 582M / 111M used、五 overlay、orange、stock SystemUI PID 稳定、
+  crash buffer 0 行、stock APK sha `d0e36b33…`、焦点 Launcher
+- **清理**：host `/tmp` 与 staged `/data/local/tmp` 副本均已删除
 
 ### P2.7 监控纪律记录
 
 Chief 更正（2026-09-01）：单次 sleep ≤ 90s；实际执行中曾出现 sleep 120/180 两轮
 （10:46–10:49，soong bootstrap 高压期），后续全部 ≤ 60s。已记入 PITFALLS 候选。
-
-
