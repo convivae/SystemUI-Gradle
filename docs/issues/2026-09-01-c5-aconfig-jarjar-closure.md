@@ -46,8 +46,9 @@ Phase C 的 C1–C4 已完成。task075 在 AOSP 17 emu64x 上证明 Debug 可�
 
 ### P1 gate（已落地）
 
-- 工具 `tools/check_aconfig_jarjar_references.py`（纯 stdlib DEX type-table/class-defs 读取器，exact 规则校验，critical 四类硬编码）+ 23 个单测全绿（复审后；初审 19 个）：
-  `uv run pytest tools/tests/test_check_aconfig_jarjar_references.py -q` → `23 passed`。
+- 工具 `tools/check_aconfig_jarjar_references.py`（纯 stdlib DEX type-table/class-defs 读取器，exact 规则校验，critical 四类硬编码）+ 26 个单测全绿（二轮复审后；初审 19 + 一轮 4 + 二轮 3）：
+  `uv run pytest tools/tests/test_check_aconfig_jarjar_references.py -q` → `26 passed`。
+- gate 判定（二轮硬化）：(i) 四 critical source 必须完全不被引用；(ii) 四 critical target 必须被引用；(iii) **全规则集合任一 target 被 define 即 FAIL**（改名后的平台类不得进 APK；stock 全规则 36 target referenced / 0 defined，故预期结果不变）。
 - Gradle Release：exit 1、`RESULT=FAIL`（4 source present / 4 target absent；全规则 30 source / 0 target；defined 原名仅 3：`android.os.Flags`、`android.os.FeatureFlagsImpl`、`com.android.window.flags.Flags`）。
 - stock APK：exit 0、`RESULT=PASS`（4 source absent / 4 target present；全规则 1 source / 36 target）。
 - 直接死因确认：`android.app.Flags` 被引用但 program input 无定义（`libs/systemui-aconfig-flags.jar` 只含 `android/os/Flags.class`、`com/android/window/flags/Flags.class` 等），设备 bootclasspath 又只有 hidden 名 → `NoClassDefFoundError`。
@@ -64,13 +65,17 @@ Phase C 的 C1–C4 已完成。task075 在 AOSP 17 emu64x 上证明 Debug 可�
 
 ### P3 推荐（待用户裁决；复审修正后）
 
-- 对比三族：A pre-R8 变换族（变体对齐 + project 范围改写）；B post-R8 DEX 改写；C 复用/再处理 Soong 产物（prebuilt 形态违反规则 S/ADR 0003）。B/C 否决。
+- 对比三族：A pre-R8 变换族（变体对齐 + 逐参与模块 PROJECT 改写）；B post-R8 DEX 改写；C 消费 Soong 预编译 SystemUI 产物（prebuilt 替换源码模块，违反规则 S/ADR 0003，红线）。B/C 否决；逐模块 Gradle 复刻属于 A 族的执行机制，不属于 C。
 - **保留 A 族为首选，但具体算法证据不足，实施前必须完成四个有界实验（E1–E4）**：E1 逐产物变体表（stock R8 输入 rsp 与我们 `libs/` 清单对照）；E2 受影响 AAR 的 repackaged 变体干跑；E3 project 产物 jarjar 干跑 + 耗时实测；E4 SysUISdk android.jar 对 hidden 名的实际 R8 解析验证。
-- 初审的“Scope.ALL 一次性 jarjar + 删除 hidden 定义”算法**已废弃**（所有权不安全：会误删/重定向 app 自带 aconfig 实现，与 stock `FeatureFlagsImpl` 证据矛盾）。候选算法：受影响 AAR 改从 AOSP `repackaged-jarjar/` 中间产物重打包 + 仅 project 编译产物做 jarjar 引用改写 + **不做任何定义删除**（交给 R8 liveness）。
+- 初审的“Scope.ALL 一次性 jarjar + 删除 hidden 定义”算法**已废弃**（所有权不安全：会误删/重定向 app 自带 aconfig 实现，与 stock `FeatureFlagsImpl` 证据矛盾）。候选算法：受影响 AAR 改从 AOSP `repackaged-jarjar/` 中间产物重打包 + 逐参与模块 project 编译产物做 jarjar 引用改写（`:app` 无源码，不存在单点 registration；AGP API 为 `Artifacts.forScope(Scope.PROJECT)`，`useScope` 不存在）+ **不做任何定义删除**（交给 R8 liveness）。
 - 初审的“R8 missing-class 需附加 turbine jar 或窄域 dontwarn”论断**已撤销**（ fabrication）：SysUISdk android.jar 与 `libs/framework.jar` 均已同时含四 critical 类原名与 hidden 名两份；下一任务只需验证现有 SysUISdk 解析，`-dontwarn` 被 brief 禁止，不作为选项。
-- 实现 brief 草稿见报告 §5（未执行，前置 E1–E4）。
+- 下一张可执行 brief 只覆盖 E1–E4 实验（含 Allowed/Forbidden Paths 与 gate，报告 §5.1）；实现任务范围显式 defer，待 E1 输出完整清单后另立（报告 §5.2）。
 
-### 复审修正记录（初审 FAIL 后，本 commit）
+### 二轮复审修正记录（chief 二审 FAIL 后，本 commit）
+
+五项修正：(1) AGP API 更正为 `Artifacts.forScope(Scope.PROJECT)`（一手源码：`gradle-api-9.3.1` 内 `Artifacts.kt:136`、`variant/ScopedArtifacts.kt:31-38`，`useScope` 不存在）；写入“`:app` 无源码、单点 registration 不可行”的关键限制，候选改为集中配置到每个参与 Android 源码模块 + JVM 模块显式盘点，否则 unresolved；逐模块机制从 C 的否决理由中移除，C 收窄为“消费 Soong prebuilt SystemUI 产物”（源码优先红线）。(2) gate 硬化：全规则任一 target 被 define 即 FAIL（新增 3 个单测：非 critical target 定义、critical target 定义、app 自带原名定义不误杀；共 26 个全绿；stock 预期结果不变）。（3）§3.1 收窄：仅四 critical source 强制完全缺席，不得推广到全规则 source（app 自带定义合法出现在 type_ids），全规则 source 统计降为诊断。(4) 变换 fixture 更正：jarjar 同时改名引用与定义，fixture 必须是分离输入（PROJECT artifact 零 source 定义被变换 + external 定义 jar 不变换），前置断言零 source 定义、后置断言零 hidden target 定义。(5) §5 重构：下一张可执行 brief 只定义 E1–E4 实验任务的 Allowed/Forbidden Paths 与 gate，实现任务的路径/坐标清单显式 defer 到 E1 输出之后；顺带修正 CRLF 单测注释（fixture 保留末尾换行）。
+
+### 复审修正记录（初审 FAIL 后）
 
 六项修正：(1) 方案 A 降级为“族级首选 + 算法待实验”，删除“无需补充实验”声明，改写候选算法与 E1–E4；(2) 撤销 fabricated 的 R8 missing-class 裁决项，改为“验证现有 SysUISdk 解析”；(3) Debug 语义更正——定义也出现在 type_ids，source-absent 判据对残留定义同样适用，今日未变换 Debug 观察与未来变换预测已明确分离；(4) “726 rules” 全部更正为“725 条规则 / 726 物理行”；(5) 分片证据更正——自动规则路径单 shard（`TransformJarJar` 硬编码 1，`builder.go:1156-1158`），`jarjar_shards: 10` 只作用于显式 rules 路径；(6) gate 工具加固——sha256 改为原始字节哈希、非法 UTF-8 规则文件干净 exit 2、uleb128 拒绝第 6 字节（`shift >= 35`），新增 4 个单测（共 23 个，全绿）。
 
@@ -87,9 +92,9 @@ Phase C 的 C1–C4 已完成。task075 在 AOSP 17 emu64x 上证明 Debug 可�
 ## 待解决问题
 
 - [已答] 725 条规则生成/传播/执行机制：见架构报告 §2（生成→prefix 填充→provider 传播→各模块编译产物 jarjar，全部一手源码定位；含 §2.7 stock R8 输入逐产物变体选择）。
-- [已答] Gradle seam 对比：保留 pre-R8 变换族为首选，**算法待 E1–E4 实验与用户裁决**（brief 草稿见报告 §5）。
+- [已答] Gradle seam 对比：保留 pre-R8 变换族为首选，**算法待 E1–E4 实验与用户裁决**（实验任务 brief 见报告 §5.1，实现范围 defer 至 §5.2）。
 - [已答] 只改引用不打平台类：候选算法不含任何定义删除步骤——project 产物引用改写 + AAR repackaged 变体对齐，app 自带 aconfig 定义交 R8 liveness，与 stock 同构。
 - [部分答] Debug/Release 一致性：今日未变换 Debug 为观察推断；未来变换后 Debug 将保留 app 自带 jar 的原名定义（出现在 type_ids，source-absent 判据同样适用），Debug gate 口径需用户裁决。
-- [新] E1–E4 有界实验（变体表、AAR 干跑、project 产物干跑、SysUISdk R8 解析）——进入实现任务前必须完成。
+- [新] E1–E4 有界实验（变体表、AAR 干跑、project 产物干跑、SysUISdk R8 解析）——进入实现任务前必须完成；实验任务 brief（Allowed/Forbidden Paths 与 gate）见报告 §5.1。
 - [新] 我们 AAR 从非 repackaged 产物打包的修正（`tools/package_aosp_aar.py` 输入选择；完整受影响清单依赖 E1）。
 - [新] stock `FeatureFlagsImpl` 的 R8 存活链未完全追溯（不影响 gate 与方案，已标 unknown）。

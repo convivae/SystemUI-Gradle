@@ -20,11 +20,16 @@ and checks them against the authoritative Soong ``repackaging.txt``:
 
 Gate semantics (frozen, Task 078): the four runtime-critical sources must be
 absent (not referenced at all) and their relocated targets must be present
-(referenced). The full rule file is additionally scanned and reported as
-stable totals, but only the four critical pairs decide PASS/FAIL. The
-"all 725 rule sources must be absent" assertion is intentionally NOT encoded:
-stock AOSP legitimately defines e.g. ``android.app.admin.flags.FeatureFlagsImpl``
-as an app-owned class.
+(referenced). Additionally, no target descriptor of the full rule set may be
+defined inside the APK: a defined relocated target means a platform class
+(the device framework's own) is shipped as program code, so the gate cannot
+be satisfied by packaging the hidden definitions (critical targets are a
+subset of this full-set check). The full rule file is additionally scanned
+and reported as stable totals, but the source-side full-rule numbers are
+diagnostics only -- the "all 725 rule sources must be absent" assertion is
+intentionally NOT encoded: stock AOSP legitimately defines app-owned
+originals (e.g. ``android.app.admin.flags.FeatureFlagsImpl``), and such
+definitions also appear in type_ids.
 
 Exit codes: 0 = PASS, 1 = RESULT=FAIL, 2 = usage/parse/DEX error.
 
@@ -386,15 +391,28 @@ def run_gate(apk: Path, rules_path: Path, out=None) -> int:
     for r in sorted(src_present, key=lambda r: r["source"]):
         defined = " (defined)" if r["src_def"] else ""
         print(f"    source-present: {r['source']}{defined}", file=out)
+    for r in sorted(tgt_defined, key=lambda r: r["target"]):
+        print(f"    target-defined: {r['target']}", file=out)
     print("", file=out)
 
     failed_sources = [p for p in result["critical"] if p["src_ref"]]
     missing_targets = [p for p in result["critical"] if not p["tgt_ref"]]
-    if failed_sources or missing_targets:
+    # Hardened rule (second review): a relocated target defined inside the
+    # APK means a platform class is shipped as program code. Any target of
+    # the full rule set (critical targets are a subset) fails the gate, so
+    # packaging the hidden definitions can never produce a PASS.
+    defined_targets = tgt_defined
+    if failed_sources or missing_targets or defined_targets:
         for p in failed_sources:
             print(f"FAIL: critical source is still referenced in the APK: {p['source']}", file=out)
         for p in missing_targets:
             print(f"FAIL: relocated target is not referenced in the APK: {p['target']}", file=out)
+        for r in defined_targets:
+            print(
+                f"FAIL: relocated target is defined inside the APK (platform class shipped): "
+                f"{r['target']}",
+                file=out,
+            )
         print("RESULT=FAIL", file=out)
         return 1
     print("RESULT=PASS", file=out)

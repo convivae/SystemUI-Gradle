@@ -159,9 +159,9 @@ class TestRulesFileHandling(unittest.TestCase):
         return rc, buf.getvalue()
 
     def test_hash_is_over_raw_file_bytes(self):
-        # CRLF line endings and no trailing newline: the printed sha256 must
-        # equal the hash of the file's raw bytes, not of any normalized
-        # re-encoding of the parsed text.
+        # CRLF line endings (trailing newline retained as CRLF): the printed
+        # sha256 must equal the hash of the file's raw bytes, not of any
+        # newline-normalized re-encoding of the parsed text.
         raw = critical_rules_text().replace("\n", "\r\n").encode()
         import hashlib
 
@@ -287,6 +287,62 @@ class TestGate(unittest.TestCase):
         rc, out = self._run([("classes.dex", dex)], rules_text=rules_text)
         self.assertEqual(rc, 2)
         self.assertIn("ERROR", out)
+
+    def test_non_critical_target_defined_fails(self):
+        # Hardened rule: a NON-critical relocated target defined inside the
+        # APK (platform class shipped as program code) must FAIL the gate
+        # even though all four critical pairs look healthy.
+        rules_text = (
+            critical_rules_text()
+            + "rule some.other.Critical com.example.HiddenTarget\n"
+        )
+        hidden_target = cj.fqcn_to_descriptor("com.example.HiddenTarget")
+        dex = build_dex(
+            CRITICAL_TARGET_DESCS + [hidden_target],
+            defined_descriptors=[hidden_target],
+        )
+        rc, out = self._run([("classes.dex", dex)], rules_text=rules_text)
+        self.assertEqual(rc, 1)
+        self.assertIn("RESULT=FAIL", out)
+        self.assertIn(
+            "FAIL: relocated target is defined inside the APK (platform class shipped): "
+            "com.example.HiddenTarget",
+            out,
+        )
+
+    def test_critical_target_defined_fails(self):
+        # The critical targets are a subset of the full-set check: a defined
+        # critical target must also FAIL (cannot PASS by shipping the hidden
+        # platform definition to satisfy the target-present requirement).
+        tgt = CRITICAL_TARGET_DESCS[0]
+        dex = build_dex(CRITICAL_TARGET_DESCS, defined_descriptors=[tgt])
+        rc, out = self._run([("classes.dex", dex)])
+        self.assertEqual(rc, 1)
+        self.assertIn("RESULT=FAIL", out)
+        self.assertIn("is defined inside the APK", out)
+        # The FAIL line names the critical target's FQCN (the hidden name of
+        # CRITICAL_SOURCES[0]).
+        expected_target = "com.android.internal.hidden_from_bootclasspath." + cj.CRITICAL_SOURCES[0]
+        self.assertIn(
+            f"FAIL: relocated target is defined inside the APK (platform class shipped): "
+            f"{expected_target}",
+            out,
+        )
+
+    def test_app_owned_source_definition_alone_still_passes(self):
+        # The defined-target rule must not leak into the source side: an
+        # app-owned original-name definition (stock FeatureFlagsImpl shape)
+        # remains legal as long as it is not one of the four critical sources.
+        rules_text = (
+            critical_rules_text()
+            + "rule android.app.admin.flags.FeatureFlagsImpl com.example.AdminHidden\n"
+        )
+        app_owned = cj.fqcn_to_descriptor("android.app.admin.flags.FeatureFlagsImpl")
+        dex = build_dex(CRITICAL_TARGET_DESCS + [app_owned], defined_descriptors=[app_owned])
+        rc, out = self._run([("classes.dex", dex)], rules_text=rules_text)
+        self.assertEqual(rc, 0)
+        self.assertIn("RESULT=PASS", out)
+        self.assertIn("source-present: android.app.admin.flags.FeatureFlagsImpl (defined)", out)
 
     def test_main_entrypoint(self):
         dex = build_dex(CRITICAL_TARGET_DESCS)

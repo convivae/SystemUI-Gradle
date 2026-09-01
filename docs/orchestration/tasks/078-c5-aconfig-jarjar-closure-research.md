@@ -1,7 +1,7 @@
 # Task 078 — C5 platform aconfig jarjar closure research and static gate
 
 **Phase**: C5 blocker diagnosis/design
-**Status**: proposed → completed in `1f5e93e8`; chief review returned FAIL (fabricated R8-library claim, ownership-unsafe algorithm, sharding misattribution, 726-rule wording, gate robustness); corrective commit on top applies the six required fixes. Implementation of the selected rewrite remains out of scope pending user adjudication.
+**Status**: proposed → completed in `1f5e93e8`; chief review returned FAIL (fabricated R8-library claim, ownership-unsafe algorithm, sharding misattribution, 726-rule wording, gate robustness); corrective commit `b4e021e8` applied the six required fixes; second chief review returned FAIL again (wrong AGP API name, per-module scope misconception, gate could PASS by shipping hidden definitions, over-generalized source-absence criterion, broken transform fixture, brief pretended known implementation paths); second corrective commit applies the five required fixes. Implementation of the selected rewrite remains out of scope pending E1–E4 experiments and user adjudication.
 **Authority**: `self-commit` (worker may commit the allowed diagnostic/report files, must never push)
 **Reports To**: Chief architect in the current herdr workspace
 
@@ -51,7 +51,7 @@ Turn the AOSP-17 platform-aconfig package mismatch into a seconds-scale static R
 - [x] Parse exact `rule <source> <target>` entries from the authoritative `repackaging.txt`; reject unsupported wildcard syntax rather than silently misinterpreting it.
 - [x] Implement a critical-pair gate for the four frozen runtime classes. Output source/target type presence and definition presence per pair, plus stable totals and `RESULT=PASS|FAIL`.
 - [x] Add unit tests using synthetic minimal DEX/ZIP/rule fixtures. Cover malformed DEX, duplicate descriptors across multidex, an unsupported rule, source-present failure, target-present pass, and source+target ambiguity.
-- [x] Run the gate against both current Gradle Release and stock AOSP SystemUI. Record exact output. Do not weaken the critical set because the current APK fails. (Release exit 1 FAIL; stock exit 0 PASS; 19 tests at first pass; 23 after review fixes)
+- [x] Run the gate against both current Gradle Release and stock AOSP SystemUI. Record exact output. Do not weaken the critical set because the current APK fails. (Release exit 1 FAIL; stock exit 0 PASS; 19 tests at first pass; 23 after first review fixes; 26 after second review added the target-defined failure rule: any rule target defined in the APK fails, critical targets being a subset — stock outcome unchanged at 36 targets referenced / 0 defined)
 
 ### P2 — Primary-source Soong reconstruction
 
@@ -69,8 +69,8 @@ Evaluate, at minimum:
 3. **Reuse/reprocess Soong JarJar artifacts**: source-first compliance, reproducibility from AOSP, classpath/program-input boundaries, and whether this would substitute prebuilt SystemUI code for Gradle-compiled source.
 
 - [x] Give each option a supportability, correctness, reproducibility, and rule-compliance verdict.
-- [x] Recommend exactly one seam, or state that evidence is insufficient and identify the missing experiment. (Review-corrected: pre-R8 transform family retained as preferred, but the concrete algorithm's evidence is insufficient — bounded experiments E1–E4 named in report §4.1/§4.5; user adjudication pending)
-- [x] Draft a separate implementation brief with exact allowed paths, red lines, tests, and rollback criteria. Do not execute it. (report §5)
+- [x] Recommend exactly one seam, or state that evidence is insufficient and identify the missing experiment. (Review-corrected: pre-R8 transform family retained as preferred, but the concrete algorithm's evidence is insufficient — bounded experiments E1–E4 named in report §4.1/§4.5; user adjudication pending. Second review corrected the API to `Artifacts.forScope(Scope.PROJECT)` — `useScope` does not exist — and recorded that a single `:app` registration transforms nothing: the candidate is a centrally configured registration on every participating Android source module plus explicit JVM-module handling, else the family is unresolved)
+- [x] Draft a separate implementation brief with exact allowed paths, red lines, tests, and rollback criteria. Do not execute it. (Second review: the next executable brief now covers only the E1–E4 experiment task with its own Allowed/Forbidden Paths and gates — report §5.1; implementation Allowed Paths and the affected-artifact coordinate list are explicitly deferred until E1 outputs the complete inventory — report §5.2)
 
 ### P4 — Documentation and commit
 

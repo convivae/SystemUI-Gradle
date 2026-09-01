@@ -12,7 +12,7 @@
 - AOSP 17 对 framework-owned aconfig flag 类实施自动传播 JarJar 重命名：725 条 exact `rule <source> <target>`（冻结文件 726 行，含末尾空行，SHA-256 `f79a08d481147a5e6a532ec254e6f075ccb661d844b9ac19db764cd085a6de97`）把 `android.app.Flags` 等原名改写为 `com.android.internal.hidden_from_bootclasspath.*`。
 - 重写发生在**每个 java 模块自己的 javac/kotlinc/turbine 输出上**（编译后、静态库合并/R8/D8/打包前），不是最终 APK 阶段。
 - 秒级静态 gate（P1）已落地：Gradle Release `RESULT=FAIL`（4 critical source present / 4 target absent，exit 1），stock APK `RESULT=PASS`（exit 0）。Release 的直接死因：`android.app.Flags` 被引用但整个 program input 无定义、设备 bootclasspath 亦无原名 → `NoClassDefFoundError`。
-- 三方案对比后**保留方案 A 族（pre-R8 程序输入变换）为首选，但具体算法证据不足**。初审提出的“Scope.ALL 一次性 jarjar + 删除 hidden 定义”算法已被否决：它会改名并删除依赖 jar 里合法的 app 自带 aconfig 实现，与 stock `FeatureFlagsImpl` 证据矛盾。修正后的候选算法是“按 stock R8 输入清单对齐产物变体（受影响 AAR 改从 repackaged 中间产物打包）+ 仅 project 编译产物做引用改写 + 不做任何定义删除”，其成立性依赖四个有界实验（E1–E4），**实施前必须完成并经用户裁决**。
+- 三方案对比后**保留方案 A 族(pre-R8 程序输入变换)为首选,但具体算法证据不足**。初审提出的"Scope.ALL 一次性 jarjar + 删除 hidden 定义"算法已被否决:它会改名并删除依赖 jar 里合法的 app 自带 aconfig 实现,与 stock `FeatureFlagsImpl` 证据矛盾。修正后的候选算法是“按 stock R8 输入清单对齐产物变体（受影响 AAR 改从 repackaged 中间产物打包）+ 逐参与模块 project 编译产物做引用改写（`:app` 无源码，不存在单点 registration；见 §4.1）+ 不做任何定义删除”，其成立性依赖四个有界实验（E1–E4），**实施前必须完成并经用户裁决**；下一张可执行 brief 只覆盖 E1–E4 实验，实现任务范围待 E1 输出后另立（§5）。
 
 ---
 
@@ -27,10 +27,10 @@
 
 ### 1.2 gate 工具与验收输出
 
-工具 `tools/check_aconfig_jarjar_references.py`：纯 stdlib DEX string_ids/type_ids/class_defs 读取器，区分 **referenced（type table）** 与 **defined（class defs）**，扫描 APK 内全部 `classes*.dex`；只接受 exact 规则，遇到通配符/`zap`/`keep` 显式拒绝（exit 2）。critical 集（硬编码，与冻结证据一致）：`android.app.Flags`、`android.os.Flags`、`android.view.accessibility.Flags`、`com.android.window.flags.Flags`。
+工具 `tools/check_aconfig_jarjar_references.py`：纯 stdlib DEX string_ids/type_ids/class_defs 读取器，区分 **referenced（type table）** 与 **defined（class defs）**，扫描 APK 内全部 `classes*.dex`；只接受 exact 规则，遇到通配符/`zap`/`keep` 显式拒绝（exit 2）。gate 判定（二轮复审硬化）：(i) 四个 critical source 必须完全不被引用；(ii) 四个 critical target 必须被引用；(iii) **全规则集合（725 条）中任一 target descriptor 被 define 即 FAIL**——改名后的平台类是设备 framework 的类，打进 APK 永远不合法，gate 因此无法靠打包 hidden 定义“满足”（critical target 是该全集检查的子集）。critical 集（硬编码，与冻结证据一致）：`android.app.Flags`、`android.os.Flags`、`android.view.accessibility.Flags`、`com.android.window.flags.Flags`。
 
 ```bash
-uv run pytest tools/tests/test_check_aconfig_jarjar_references.py -q   # 23 passed（含复审新增 4 项）
+uv run pytest tools/tests/test_check_aconfig_jarjar_references.py -q   # 26 passed（初审 19 + 一轮 4 + 二轮 3：非 critical target 定义 FAIL、critical target 定义 FAIL、app 自带原名定义不误杀）
 ```
 
 **Gradle Release（exit 1，`RESULT=FAIL`）**：4 critical source 全部 referenced、4 target 全部 absent；全规则统计 30 source-present / 0 target；defined 原名类仅 3 个：`android.os.Flags`、`android.os.FeatureFlagsImpl`、`com.android.window.flags.Flags`（即 `android.app.Flags`、`android.view.accessibility.Flags` 被引用但**未定义**）。
@@ -101,7 +101,7 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 
 - **Gradle Release 30/0**：我们的管线不存在 §2.4 的第 3 阶段；编译期对原名的引用（30 个 source descriptor 被 type table 引用）原样进入 R8。R8 shrinking 后 3 个 jar 里实际存在定义的原名类被保留，`android.app.Flags` 等 2 个 jar 里没有的定义成为悬空引用。
 - **stock 1/36**：所有自有源码的引用已被 jarjar 改写为 hidden 名（36 个 target 被 reference、0 个被 define——定义在设备 framework 里）；唯一 source-present 是 **app 自带的 aconfig 静态库**：SettingsLib 静态链接 `device_policy_aconfig_flags_lib`（`SettingsLib/Android.bp:82`），该 jar 以**原名**进入 R8 输入（rsp 直接证据：`device_policy_aconfig_flags_java_export` 走普通 `javac/` 变体；变体选择机制见 §2.7），因此 APK 合法携带 `android.app.admin.flags.FeatureFlagsImpl` 的原名定义，其兄弟类（Flags/FeatureFlags/FakeFeatureFlagsImpl/CustomFeatureFlags）被 R8 视为未引用而移除。settingslib 自身对该包的引用（`RestrictedLockUtilsInternal`、`RestrictedPreferenceHelper`）已被其模块级 repackaging.txt 改写为 hidden `Flags`（对 repackaged jar 的 class 常量池逐类扫描验证：重写后仅含 hidden `Flags` 字符串）。
-- **由此推断的 gate 设计约束**（已体现在工具里）：不能断言"725 条 source 全部 absent"——app 自带 aconfig 库是合法原名定义来源。gate 只对四个 frozen runtime-critical source 判 FAIL，并输出全规则统计作为诊断。
+- **由此推断的 gate 设计约束**（已体现在工具里）：不能断言“725 条 source 全部 absent”——app 自带 aconfig 库是合法原名定义来源，且这些定义同样出现在 type_ids。gate 只对四个 frozen runtime-critical source 判 FAIL，并输出全规则统计作为诊断；target 侧则硬化为全规则任一 target 被 define 即 FAIL（改名后的平台类不得进 APK）。
 - **未追溯到（标注 unknown）**：stock 中 `new FeatureFlagsImpl()` 的精确存活链。已证明：R8 program 输入（`withres/SystemUI.jar`，171MB 全量组合）中含全部 5 个原名 admin 类，但**没有任何 class 常量池引用** `android/app/admin/flags/FeatureFlagsImpl`；`proguard.flags`/`proguard_common.flags`/`proguard_kotlin.flags` 及 jar 内嵌 `META-INF/proguard/*` 均无针对 admin flags 的 keep 规则（唯一的 flags keep 是 `proguard_common.flags` 的 `-keepnames class com.android.window.flags.Flags`，keepnames 不阻止移除）。R8 为何保留该类（候选：baseline profile 钉住、R8 内部 keep 语义）未继续深挖——它不影响 gate 语义与方案对比，如实记录为 unknown。
 
 ### 2.6 可再生性（必须/禁止入库清单）
@@ -128,8 +128,8 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 
 未来 rewrite 落地后，Gradle Release 应达到 stock 同构：
 
-1. 四个 critical source（推及 725 条规则的全部 source）**不被引用**，引用改写为对应 hidden target；
-2. **不打包平台定义**：R8 shrinking 后 APK 不携带 `com.android.internal.hidden_from_bootclasspath.*`（那是 framework 的类）——实现上不得把改名后的平台类作为 program class 打进 APK；
+1. 四个 critical source **不被引用**。本 gate 仅对这四个 critical source 强制完全缺席；**不得**推广为“725 条规则的全部 source 都不被 type_ids 引用”——§2.5 已证明 app 自带 aconfig 定义（如 stock 的 `android.app.admin.flags.FeatureFlagsImpl`）合法地以原名出现在 type_ids 中，无指令级/所有权感知判据就无法区分它们与违规引用。全规则 source 统计仅作诊断输出，直到存在这样的判据为止；
+2. **不打包平台定义**：APK 不得 define 725 条规则集合中的**任何** target descriptor（`com.android.internal.hidden_from_bootclasspath.*` 是设备 framework 的类，critical target 是子集）——gate 已硬化（任一 target 被 define 即 FAIL），实现上也不得把改名后的平台类作为 program class 打进 APK；
 3. **所有权安全**：app 自带 aconfig 库的原名定义（如 stock 的 `android.app.admin.flags.FeatureFlagsImpl`、我们的 `systemui-aconfig-flags.jar`）是合法的，变换不得删除、改名或把它们重定向到 framework 副本；
 4. Debug/Release 一致：同一变换对 D8（无 shrinking）与 R8（有 shrinking）都成立，且需明确变换后 Debug 中残留原名定义的 gate 口径（定义同样出现在 type_ids）。
 
@@ -139,15 +139,15 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 
 ### 4.1 方案族 A：pre-R8 程序输入变换（AGP scoped artifact API 或等价 seam）——**保留为首选族；具体算法证据不足**
 
-**可用 seam（直接观察）**：`AndroidComponentsExtension.onVariants { variant -> variant.artifacts.useScope(...).use(task).toTransform(ScopedArtifact.CLASSES, …) }`。AGP 9.3.1 `gradle-api` 源码已验证（`com/android/build/api/artifact/ScopedArtifact.kt`）：`CLASSES : ScopedArtifact(), Appendable, Transformable, Replaceable`；scope 有 `PROJECT` 与 `ALL`（后者含 project/imported/external 全量 classes，位于 R8/dex 之前）。
+**可用 seam（直接观察，二轮复审更正）**：正确 API 是 `AndroidComponentsExtension.onVariants { variant -> variant.artifacts.forScope(ScopedArtifacts.Scope.PROJECT).use(task).toTransform(ScopedArtifact.CLASSES, …) }`——`Artifacts.forScope(scope): ScopedArtifacts`（`gradle-api-9.3.1-sources.jar` 内 `com/android/build/api/artifact/Artifacts.kt:136`）；`useScope` 不存在，初审 API 名有误。`Scope.PROJECT` 的 KDoc 明确“not including imported projects nor external dependencies”（`com/android/build/api/variant/ScopedArtifacts.kt:31-38`）；`ScopedArtifact.kt` 已验证 `CLASSES : ScopedArtifact(), Appendable, Transformable, Replaceable`。**关键限制**：`:app` 无自有源码，仅在 `:app` 注册 `forScope(PROJECT)` 什么都不变换，也覆盖不了 16 个 library 模块——不存在“单点 registration / 17 模块零 hook”的形态。Soong 同构的候选必须是**集中配置**（如 build-logic convention plugin）的 registration，应用到**每个参与编译的 Android 源码模块**自己的 PROJECT classes；JVM 模块（`:SystemUI-plugin-core`、`:SystemUI-utils-kairos`）的 classes 以 external jar 形态进入 app，不在任何 Android 模块的 PROJECT scope 内，需要显式盘点与另行处理（等价 plain-Java 变换或其它裁决；`:SystemUI-plugin-processor` 为 build-time only 不进 APK，不参与）；res-only 模块无 classes 不参与。该逐模块机制属于 A 族自身的执行机制，其集中配置的可行性与完整参与清单**未证明**：若 E 实验显示无法集中配置，A 族标记 unresolved。
 
-**初审算法已废弃（复审结论）**：初审提议 `useScope(ALL)` 一次性 jarjar 后“删除全部 hidden 定义”。该算法所有权不安全：Scope.ALL 会把**依赖 jar 里的 app 自带 aconfig 定义**（如 `systemui-aconfig-flags.jar` 的 `android/os/Flags`）一并改名，整体删除随后会抹掉或重定向这些合法 app 实现，与 §2.5 stock `FeatureFlagsImpl` 证据和 §3.3 目标直接矛盾。且 AGP 侧根本不存在能区分“平台副本”与“app 自带实现”的删除判据。废弃，不得复活。
+**初审算法已废弃（复审结论）**：初审提议 `forScope(ALL)` 一次性 jarjar 后“删除全部 hidden 定义”。该算法所有权不安全：Scope.ALL 会把**依赖 jar 里的 app 自带 aconfig 定义**（如 `systemui-aconfig-flags.jar` 的 `android/os/Flags`）一并改名，整体删除随后会抹掉或重定向这些合法 app 实现，与 §2.5 stock `FeatureFlagsImpl` 证据和 §3.3 目标直接矛盾。且 AGP 侧根本不存在能区分“平台副本”与“app 自带实现”的删除判据。废弃，不得复活。
 
 **R8 library 论断更正（复审）**：初审声称“SysUISdk android.jar / framework.jar 不含 hidden 名、需附加 turbine jar 或窄域 dontwarn”——**错误**。直接观察：`/home/conv/Android/Sdk/platforms/android-SysUISdk/android.jar` 与 `libs/framework.jar` 均同时含四个 critical 类的**原名与 hidden 名两份**（`unzip -l` 验证）。按 ADR 0006，SysUISdk android.jar 正是向 R8 提供 library classes 的入口，改写后的 hidden 引用在 library classpath 上**应当**可解析；但“实际 R8 运行中可解析”需下一任务验证（E4），不得假设。“额外 turbine jar vs dontwarn”的裁决项整体撤销；`-dontwarn` 被 brief 禁止，**不作为可选路径提出**。
 
 **候选算法（Soong 同构，未验证）**：
 1. 按 stock rsp 的逐产物变体选择对齐交付物：把需要改写的 AAR（SettingsLib、WM-Shell 等，完整清单见 E1）改从 AOSP `repackaged-jarjar/` 中间产物重打包（修 `tools/package_aosp_aar.py` 的输入选择，纯产物来源修正）；
-2. 仅对 project 模块编译产物做 jarjar 引用改写（Gradle seam：`Scope.PROJECT` 的 `ScopedArtifact.CLASSES` 或等价 classfile 变换）；
+2. 仅对 project 模块编译产物做 jarjar 引用改写（Gradle seam：集中配置到每个参与 Android 源码模块的 `forScope(Scope.PROJECT)` `ScopedArtifact.CLASSES` 变换，或等价 classfile 变换；参与清单含 JVM 模块的显式处理，见上段）；
 3. **不做任何定义删除**：app 自带 aconfig jar 的原名定义与内部引用原样保留，交给 R8 liveness 收缩，与 stock 行为同构（§2.7 原名变体产物同样直接进 R8）。
 
 **证据不足之处与必需的有界实验（不得跳过，不得声称“无需实验”）**：
@@ -157,57 +157,78 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 - **E4**：验证 SysUISdk android.jar 在实际 R8 运行中对 hidden 名的解析。
 - **Debug 口径**：变换后 Debug 将保留 app 自带 jar 的原名定义（定义出现在 type_ids，source-absent 判据同样适用），是否接受该状态（stock debug 构建同形态）需用户裁决。
 
-**评价**：支持性好（AGP 公开 API 或 AAR 重打包均为常规机制，单点注册）；正确性**未证明**（候选算法与 stock 同构的论证依赖 E1–E4）；可再生性好（§2.6）；规则合规（AAR 换 repackaged 变体仍是 AOSP 原始产物交付，不违反规则 R/②；project 侧改写只改构建产物，不碰 src/res）。
+**评价**：支持性中-高（AGP 公开 API 常规，但需集中配置到每个参与模块，非单点；AAR 重打包常规）；正确性**未证明**（候选算法与 stock 同构的论证依赖 E1–E4）；可再生性好（§2.6）；规则合规（AAR 换 repackaged 变体仍是 AOSP 原始产物交付，不违反规则 R/②；project 侧改写只改构建产物，不碰 src/res）。
 
 ### 4.2 方案 B：post-R8 DEX 改写——否决
 
 在最终 `classes*.dex` 上重写 type 引用。否决理由：Soong jarjar 只吃 classfile，DEX 级需自研/引入 dexlib2 等重写器（string_ids 增删牵动全部 id 表、map_off、checksum、adler 校验）；签名前插入但位于一切 shrinking/merging 之后，丢失 R8 shrinking 协同（原名定义已被 R8 保留，还得再做定义清理）；multidex 边界、mapping.txt 与 debug info 均显示改名前名字，排障困难；Debug（D8）路径需复制一份实现。正确性与可维护性风险在三者中最高，收益为零。
 
-### 4.3 方案 C：整建制复用 Soong JarJar 产物——否决（工具除外）
+### 4.3 方案 C：消费 Soong 预编译的 SystemUI 代码/最终产物——否决（工具除外）
 
-把 AOSP 侧已重写的 `SystemUI-core`/`SystemUI-application` 中间 jar 直接当 Gradle 依赖，或在 Gradle 里逐模块 hook compileJava/compileKotlin 输出复刻 Soong per-module 重写。前者以 prebuilt 替换源码依赖，直接违反规则 S 与 ADR 0003（源码模块是本项目根基），**红线否决**。后者（逐模块复刻）机制上最忠实于 §2.4 的 Soong 架构，但在 Gradle 里意味着 17 个模块的编译输出 hook、增量编译失效风险、模块间 jar 缓存语义重排，复杂度高而语义收益低（A 族的 project 范围 seam + 变体对齐在最终效果上同样覆盖 project 产物改写；依赖产物改写则由 AAR 变体对齐完成，不需 Gradle 侧 hook）。
+把 AOSP 侧已重写的 `SystemUI-core`/`SystemUI-application` 中间 jar 或最终产物直接当 Gradle 依赖。这以 prebuilt 替换源码模块，直接违反规则 S 与 ADR 0003（源码模块是本项目根基），**红线否决**。（更正：逐模块在 Gradle 侧复刻 Soong per-module 重写**不属于**方案 C——它是 A 族自身的执行机制，见 §4.1，其复杂度代价已在 A 内如实计入。）
 
-**工具层面的复用是方案 C 的合法残余并已并入方案 A**：jarjar.jar 与冻结规则文件都来自 AOSP（§2.6），方案 A 只是换了执行 seam，不换工具与规则。
+**工具层面的复用是方案 C 的合法残余并已并入 A 族**：jarjar.jar 与冻结规则文件都来自 AOSP（§2.6），A 族只是换了执行 seam，不换工具与规则。
 
 ### 4.4 结论矩阵
 
-| 维度 | A 族：pre-R8 变换（变体对齐 + project 范围改写） | B：post-R8 DEX | C：复用 Soong 产物/逐模块 |
+| 维度 | A 族：pre-R8 变换（变体对齐 + 逐参与模块 PROJECT 改写） | B：post-R8 DEX | C：消费 Soong prebuilt SystemUI 产物 |
 |---|---|---|---|
-| 支持性 | 高（AGP 公开 API / AAR 重打包，单点） | 低（自研 DEX 重写） | 低（17 模块 hook）/ 红线（prebuilt） |
+| 支持性 | 中-高（AGP 公开 API，需集中配置到每个参与模块；AAR 重打包） | 低（自研 DEX 重写） | 红线（prebuilt 替换源码模块） |
 | 正确性 | **未证明**（算法与 stock 同构依赖 E1–E4） | 低-中（id 表/签名/mapping 风险） | 高（机制同 A 族）/ — |
 | 可再生性 | 高（AOSP 工具+规则冻结入库） | 中 | 高 |
-| 规则合规 | 合规（repackaged 变体仍是 AOSP 原始产物） | 合规但高风险 | prebuilt 形态违规；逐模块形态合规 |
+| 规则合规 | 合规（repackaged 变体仍是 AOSP 原始产物） | 合规但高风险 | **红线违规**（规则 S/ADR 0003） |
 | **结论** | **保留为首选族，算法待实验** | 否决 | 否决（工具复用并入 A 族） |
 
 ### 4.5 推荐（族级，待用户裁决）
 
-**保留 pre-R8 变换族（方案 A 族）为首选**，但**具体算法的证据不足**：初审的一次性 Scope.ALL + 删除 hidden 定义的算法已证伪（所有权不安全，§4.1）；替换后的候选算法（变体对齐 + project 范围改写 + 不删除）与 stock 同构的论证依赖 E1–E4 四个有界实验，**在实验完成并经用户裁决前不得进入实施，不得声称“无需补充实验”**。方案 B/C 维持否决。
+**保留 pre-R8 变换族（方案 A 族）为首选**，但**具体算法的证据不足**：初审的一次性 Scope.ALL + 删除 hidden 定义的算法已证伪（所有权不安全，§4.1）；替换后的候选算法（变体对齐 + 逐参与模块 PROJECT 改写 + 不删除）与 stock 同构的论证依赖 E1–E4 四个有界实验，**在实验完成并经用户裁决前不得进入实施，不得声称“无需补充实验”**；若集中配置的逐模块 registration 不可行，A 族本身标记 unresolved。方案 B/C 维持否决。
 
 ---
 
-## 5. 实现 brief 草稿（未执行；仅供用户裁决，且前置 E1–E4 实验）
+## 5. 下一任务 brief 草稿（未执行；本轮只定义 E1–E4 实验任务，实现任务范围显式 defer）
 
-**前置条件**：E1（逐产物变体表 + 判定规则追溯）、E2（AAR repackaged 变体干跑）、E3（project 产物 jarjar 干跑 + 耗时实测）、E4（SysUISdk R8 解析验证）全部完成并落档。
+“证据不足”的诚实后果：E1–E4 完成前，实现任务的确切路径（Allowed Paths、受影响 AAR 坐标清单、registration 形态与参与模块清单）**不可知，也不得虚构**。因此下一张可执行的任务 brief 只覆盖有界实验；实现 brief 在 E1 输出完整清单后另立。
 
-**范围**：(i) `tools/package_aosp_aar.py` 输入变体选择修正，受影响 AAR 族重打包（多 consumer 族走本地 Maven 升坐标，直接消费族按 Task 059 判例）；(ii) project 范围 classfile 引用改写的 Gradle registration（`:app`，`Scope.PROJECT` 或等价）；(iii) `tools/data/jarjar_rules_725.txt` 冻结规则（SHA-256 `f79a08d4…`）+ `tools/jarjar/jarjar.jar` host 工具入库。
+### 5.1 实验任务（E1–E4）brief
 
-**步骤**：
-1. 冻结规则文件与 host 工具入库，附校验脚本（Python，`uv run`）。
-2. 按 E1 清单重打包受影响 AAR：从 AOSP `repackaged-jarjar/` 中间产物输入，常量池复扫验收（critical 原名引用归零、hidden 引用出现）。
-3. project 范围 jarjar 变换任务（`-DremoveAndroidCompatAnnotations=true` 同 Soong）；**不含任何定义删除步骤**；变换前后断言：输入不含 hidden 条目、输出不含 725 个 source 的定义新增。
-4. R8 验证（E4 的构建期复验）：以现有 SysUISdk android.jar 作 library classpath 跑 Release，确认 hidden 引用可解析；如出现 missing class，按规则 H 上报用户裁决。**禁用 `-dontwarn` 掩盖（红线）**。
-5. 测试：Release gate 翻绿（`uv run python tools/check_aconfig_jarjar_references.py --apk app/build/outputs/apk/release/app-release.apk --rules tools/data/jarjar_rules_725.txt` → exit 0、RESULT=PASS、四 target present）；变换任务自身单测（fixture：原名引用 + 原名定义 → 断言引用改写、定义保留）；Debug 口径按 §4.1 裁决项执行后验证。
-6. 红线：不改 `SystemUI-*/src/**`、res、manifest；不删除/改名/重定向 app 自带 aconfig 定义；不用 `@Suppress`/dontwarn；不改 AGENTS/ADR；AOSP 目录只读。
-7. 回滚：AAR 重打包按坐标回退旧版；registration + 入库文件删除即完全回滚（gate 复红）。
+**目标**：产出实现任务所需的全部判定输入，零行为变更。
 
-**验收**：Release gate exit 0；stock 对照仍 exit 0；`git diff --name-only` 仅含新增文件、AAR 产物与单点 registration。
+**Allowed Paths**（实验任务）：
+- `docs/issues/<date>-c5-jarjar-e1-e4.md`（新，实验记录）
+- `docs/architecture/<date>-c5-jarjar-e1-e4.md`（新，变体表与实验报告）
+- `tools/` 下新增只读分析脚本与 scratch 产物（Python，`uv run`；不得修改 gate 语义）
+- 实验任务自身的 task brief
+
+**Forbidden Paths**（实验任务）：
+- 一切 `*.gradle*`、`libs/**`、`SystemUI-*/src/**`、res、manifest、`AGENTS.md`、`docs/adr/**`、`docs/orchestration/CHARTER.md`
+- `/home/conv/myspace/aosp/**` 写入（干跑只能写 scratch 副本）
+- Soong/Gradle/ADB/emulator 命令：E3 用现有 Gradle 编译中间产物副本 + host `jarjar.jar`；E4 若需实际 R8 运行则超范围，降级为 library classpath 静态解析检查并明示
+
+**实验内容与 gate**：
+- **E1（变体表）**：rsp 全 463 项 × 我们 `libs/` 与 project 模块清单逐一对照（不抽样）→ 完整“需换 repackaged 变体”清单 + Soong 变体选择判定规则追溯 + participating-module/JVM 模块处理清单。gate：清单覆盖全部 463 项。
+- **E2（AAR 干跑）**：受影响 AAR 的 repackaged 变体 scratch 打包 + 常量池复扫。gate：critical 原名引用归零、hidden 引用出现、**无新增 hidden 定义**（target-defined 为零）。
+- **E3（project 产物干跑）**：对各参与模块现有编译中间产物副本跑 `jarjar.jar` + 冻结规则。**前置断言**：每个被变换 artifact 中 725 个 source 的 matching 定义数为零（若有定义，候选算法需再评估并按规则 H 上报）；**后置断言**：725 个 target 的定义为零（hidden 平台定义不得被引入——注意 jarjar 同时改名引用与定义，无法“变换含原名定义的 artifact 又保留该定义”，前置断言正是为此存在）。同时实测耗时。
+- **E4（SysUISdk R8 解析）**：验证 hidden 名在 SysUISdk android.jar 作 library classpath 下的解析（静态类存在性检查；实际 R8 运行留待实现任务或用户授权）。
+- **整体 gate**：`uv run pytest tools/tests/test_check_aconfig_jarjar_references.py -q` 全绿；Release gate 仍 exit 1 `RESULT=FAIL`、stock 仍 exit 0 `RESULT=PASS`（实验零行为变更）；`git diff --check` 干净；只触及 Allowed Paths。
+
+### 5.2 实现任务（deferred，待 E1 输出后另立 brief）
+
+实现任务的 Allowed Paths、受影响 AAR 坐标清单、participating-module registration 清单**在此显式不列出**：它们由 E1–E4 的输出决定。E1 清单落档前，任何声称“实现路径已知”的 brief 都是虚构。
+
+不依赖 E 输出、现在即可固定的方向性红线：
+- 不删除/改名/重定向 app 自带 aconfig 定义；被变换 artifact 前置断言零 matching source 定义、后置断言零 hidden target 定义；
+- 不打包平台类（gate 已硬化：任一 target 被 define 即 FAIL）；
+- 禁 `-dontwarn` / `@Suppress`；不改 src/res/manifest/AGENTS/ADR；AOSP 只读；
+- 变换任务单测 fixture 必须是**分离输入**：(a) PROJECT 型 artifact——含 source 引用、零 matching source 定义，被变换；(b) external/app-owned aconfig 定义 jar——**故意不变换**；组合后断言：引用全部变 hidden、external 原名定义仍在、未引入任何 hidden target 定义。不得使用“单 artifact 同时含定义又被变换”的错误形态；
+- Release gate 翻绿（exit 0、RESULT=PASS、四 critical target present 且全规则 target-defined 为零）；stock 对照仍 exit 0；Debug 口径按 §4.1 裁决项执行后验证。
 
 ---
 
 ## 6. 本任务执行记录
 
 - 初审（commit `1f5e93e8`）：`uv run pytest …`（19 passed）、两次 gate 验收（Release exit 1 / stock exit 0）、AOSP 只读检索（grep/sed/unzip/python zipfile）。**未运行任何 Gradle/Soong/ADB/emulator 命令**（任务约束）。
-- 复审修正（本 commit）：同 pytest 套件（23 passed，新增 4 项：raw-bytes sha256、非法 UTF-8 exit 2、uleb128 六字节拒绝、uleb128 五字节边界值）、两次 gate 复跑确认冻结输出不变、`libs/` 97 产物常量池扫描、`SystemUI.jar.rsp` 变体分析、SysUISdk android.jar / framework.jar 双形态验证。同样未运行任何 Gradle/Soong/ADB/emulator 命令。
+- 一轮修正（commit `b4e021e8`）：同 pytest 套件（23 passed）、两次 gate 复跑确认冻结输出不变、`libs/` 97 产物常量池扫描、`SystemUI.jar.rsp` 变体分析、SysUISdk android.jar / framework.jar 双形态验证。
+- 二轮修正（本 commit，chief FAIL 复审后）：gate 硬化（任一 target defined 即 FAIL）+ 3 个新单测（26 passed）；AGP API 更正为 `forScope(Scope.PROJECT)`（一手源码验证 `Artifacts.kt:136`、`variant/ScopedArtifacts.kt:31-38`）；`:app` 无源码、单点 registration 不可行的限制写入 §4.1；§3.1 收窄为仅四 critical source 强制缺席；§5 重构为“实验任务 brief + 实现 defer”。两次 gate 复跑：Release 仍 exit 1 FAIL、stock 仍 exit 0 PASS（36 target referenced / 0 defined）。三轮均未运行任何 Gradle/Soong/ADB/emulator 命令。
 - 所有 AOSP 引用文件均为只读；AOSP checkout 无任何写入。
 
 ## 7. 证据索引
@@ -228,4 +249,5 @@ java -DremoveAndroidCompatAnnotations=true -jar jarjar.jar \
 | R8 输入含 5 个原名 admin 类、无外部引用者 | `withres/SystemUI.jar` 全量扫描 |
 | flags keep 规则仅有 keepnames(window.Flags) | `frameworks/base/packages/SystemUI/proguard_common.flags` |
 | AGP 9.3.1 ScopedArtifact.CLASSES Transformable | `gradle-api-9.3.1-sources.jar` 内 `ScopedArtifact.kt` |
+| AGP API 为 `Artifacts.forScope(scope): ScopedArtifacts`，PROJECT 不含 imported/external | 同 jar 内 `com/android/build/api/artifact/Artifacts.kt:136`、`com/android/build/api/variant/ScopedArtifacts.kt:31-38` |
 | Gradle 定义来源 | `libs/systemui-aconfig-flags.jar` 条目清单（`unzip -l`） |
