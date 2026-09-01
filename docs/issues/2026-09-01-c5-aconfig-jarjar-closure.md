@@ -42,7 +42,35 @@ Phase C 的 C1–C4 已完成。task075 在 AOSP 17 emu64x 上证明 Debug 可�
 
 ## 结果
 
-待 task078 获批并执行后填写。
+**task078 已完成（研究+gate；rewrite 未实施，待用户裁决）。** 架构报告：`docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md`。
+
+### P1 gate（已落地）
+
+- 工具 `tools/check_aconfig_jarjar_references.py`（纯 stdlib DEX type-table/class-defs 读取器，exact 规则校验，critical 四类硬编码）+ 19 个单测全绿：
+  `uv run pytest tools/tests/test_check_aconfig_jarjar_references.py -q` → `19 passed`。
+- Gradle Release：exit 1、`RESULT=FAIL`（4 source present / 4 target absent；全规则 30 source / 0 target；defined 原名仅 3：`android.os.Flags`、`android.os.FeatureFlagsImpl`、`com.android.window.flags.Flags`）。
+- stock APK：exit 0、`RESULT=PASS`（4 source absent / 4 target present；全规则 1 source / 36 target）。
+- 直接死因确认：`android.app.Flags` 被引用但 program input 无定义（`libs/systemui-aconfig-flags.jar` 只含 `android/os/Flags.class`、`com/android/window/flags/Flags.class` 等），设备 bootclasspath 又只有 hidden 名 → `NoClassDefFoundError`。
+- 事实更正：规则文件 726 行 = **725 条规则** + 末尾空行（此前记录的 "726 rules" 不准确）。
+
+### P2 Soong 重建（要点，全部一手源码）
+
+- 规则生成：`java_aconfig_library` 以空 target 声明 5 类改名（`build/soong/aconfig/codegen/java_aconfig_library.go:127-135`）。
+- 填充：`framework-minus-apex` 的 `jarjar_prefix: "com.android.internal.hidden_from_bootclasspath"`（`frameworks/base/Android.bp:580-581`）。
+- 传播：blueprint provider + 非空胜过空（`build/soong/java/base.go:1272-1283`）；SystemUI-core/application/compat 三处 repackaging.txt 同 SHA `f79a08d4…`。
+- 执行点：**各模块自己的 javac/kotlinc/turbine 产物上、编译后静态库合并前**（`base.go:1633,1718,1726,1795,1827,1833,3436-3441`）；命令 `builder.go:356-368`。SystemUI android_app 自身无重写（无自有源码）。
+- 1/36 解释：settingslib 引用已被改写为 hidden `Flags`；`FeatureFlagsImpl` 是 SettingsLib 静态链接 `device_policy_aconfig_flags_lib`（`SettingsLib/Android.bp:82`）带入的原名定义，R8 后仅存该类。R8 存活链精确原因标注 unknown（R8 输入中无引用者、无 keep 规则，见报告 §2.5）。
+- 可再生性：规则文件与 `jarjar.jar`（源码 `external/jarjar`，Apache-2.0）均可从干净 AOSP 树重建（`m framework-minus-apex` / `m jarjar.jar`）。
+
+### P3 推荐（待用户裁决）
+
+- 对比三族：A pre-R8 AGP `ScopedArtifact.CLASSES`（`useScope(ALL)`）单点变换；B post-R8 DEX 改写；C 复用/再处理 Soong 产物（prebuilt 形态违反规则 S/ADR 0003）。
+- **推荐 A**：复用 Soong 的 jarjar.jar + 冻结 725 规则在 AGP 公开 API seam 上做 classfile 级改写，剥离改名产生的 hidden 定义，R8 shrinking 自然清除失引用原名定义（与 stock 同构）。开放裁决项：R8 对 hidden 名 missing-class 的解法（附加 AOSP repackaged framework turbine 作 library vs 窄域 dontwarn，后者需用户逐条批准）。
+- 实现 brief 草稿见报告 §5（未执行）。
+
+### 构建声明
+
+本任务**未运行**任何 Gradle/Soong/ADB/emulator 命令（任务约束）；Debug APK 未构建（输出目录为空），Debug 可运行性解释为推断。
 
 ## 错误数演变
 
@@ -50,7 +78,9 @@ Phase C 的 C1–C4 已完成。task075 在 AOSP 17 emu64x 上证明 Debug 可�
 
 ## 待解决问题
 
-- 726 条规则在 Soong 中的精确自动传播机制和最终执行点。
-- Gradle 可支持且最接近 Soong 的程序类变换 seam。
-- 如何只改写应改写的引用，同时避免将 framework-owned 原名或改名类作为 APK 自有实现打包。
-- Debug 当前是否因打包部分原名 Flags 类而“偶然可运行”，以及最终方案是否必须统一 Debug/Release 输出语义。
+- [已答] 725 条规则生成/传播/执行机制：见架构报告 §2（生成→prefix 填充→provider 传播→各模块编译产物 jarjar，全部一手源码定位）。
+- [已答] Gradle seam 对比与推荐：方案 A（AGP `ScopedArtifact.CLASSES` pre-R8 变换 + Soong jarjar.jar + 冻结规则），待用户裁决后开实现任务（brief 草稿见报告 §5）。
+- [已答] 只改引用不打平台类：变换后剥离 `com/android/internal/hidden_from_bootclasspath/**` 定义条目（输入侧断言恒为零，输出侧全部为刚改名产物）；R8 missing-class 解法待裁决。
+- [部分答] Debug/Release 一致性：方案 A 对 D8/R8 同一变换产物，Release 收敛到 stock 形态、Debug 保持自洽（原名定义残留但无悬空引用）；Debug 当前未构建，其可运行性为推断。
+- [新] R8 侧对 hidden 名 missing-class 的裁决（附加 library jar vs 窄域 dontwarn）。
+- [新] stock `FeatureFlagsImpl` 的 R8 存活链未完全追溯（不影响 gate 与方案，已标 unknown）。
