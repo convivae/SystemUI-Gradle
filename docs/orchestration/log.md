@@ -346,3 +346,7 @@
 
 - Chief froze the current descriptor evidence: four runtime-critical source names are present only in Gradle Release and their relocated targets only in stock; an all-726-rule scan additionally found Gradle 30 source/0 target versus stock 1 source/36 target. Because stock itself defines one original `FeatureFlagsImpl`, the proposed gate is intentionally critical-pair based rather than a false blanket-zero assertion.
 - Prepared issue `docs/issues/2026-09-01-c5-aconfig-jarjar-closure.md` and brief `docs/orchestration/tasks/078-c5-aconfig-jarjar-closure-research.md`. Scope is diagnostic tool/tests, Soong stage reconstruction, and comparison of pre-R8 class rewrite/post-R8 DEX rewrite/Soong-artifact reuse. Dispatch awaits user approval; no Gradle, Soong, ADB, or rewrite implementation is authorized in task078.
+
+## 2026-09-01 — task078 dispatched
+
+- User approved the exact Task 078 brief. Worker `task078` started in `w2:t2R` / `w2:p2X` with explicit `joycode/GLM-5.3`; session modelId and full CONTRACT verified. Scope is limited to the static descriptor checker/tests, read-only AOSP/Soong pipeline reconstruction, three-seam comparison, and a draft implementation brief. No Gradle, Soong, emulator, ADB, AOSP/out mutation, or rewrite implementation is authorized. Completed Task 077 worker tab `w2:t2P` was closed.

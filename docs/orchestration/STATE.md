@@ -9,15 +9,17 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| — | — | — | — | no active worker | task077 review-PASS and pushed through `95cb24c2` |
+| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | static gate implementation + read-only Soong research | Only the five brief Allowed Paths; no Gradle/Soong/emulator/ADB, no AOSP or `out/` writes, and no rewrite implementation |
 
 ## Queue
 
-1. Await user approval for `docs/orchestration/tasks/078-c5-aconfig-jarjar-closure-research.md`: add the static Release/stock descriptor gate, reconstruct Soong's 726-rule pipeline, and compare three solution families. No rewrite implementation is authorized.
+1. Complete and independently review Task 078: add the static Release/stock descriptor gate, reconstruct Soong's repackaging pipeline, and compare three solution families. No rewrite implementation is authorized.
 2. After the research report and a separate user architecture ruling, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — User approved Task 078. Worker `task078` started in `w2:t2R` / `w2:p2X` with explicit `joycode/GLM-5.3`; session `modelId` and the complete CONTRACT were independently verified. Scope remains static tool/tests, read-only AOSP/Soong reconstruction, three-option comparison, and a draft implementation brief only. Gradle, Soong, emulator, ADB, AOSP/`out/` mutation, and rewrite implementation are forbidden. The completed Task 077 worker tab was closed.
 
 - 2026-09-01 — Task 078 diagnostic/research brief prepared at `docs/orchestration/tasks/078-c5-aconfig-jarjar-closure-research.md`; dispatch is blocked on the mandatory user approval gate. Scope is static checker + primary-source pipeline reconstruction + three-option comparison only, with no Gradle rewrite implementation or build/device mutation.
 
