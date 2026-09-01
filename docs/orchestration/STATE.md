@@ -9,9 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | final correction committed as `cb1223f4`; independent dual-axis review running | Same five Allowed Paths only; no Gradle/Soong/emulator/ADB or rewrite implementation |
-| 078 Standards review | `w1Z:t1` / `w1Z:p1` | `review/task078-standards` / `SystemUI-Gradle-wt-078-standards` | `joycode/Kimi-K3-jcloud` | reviewing fixed range `28015906...cb1223f4` | Read-only; static standards/correctness review; no Gradle/Soong/emulator/ADB |
-| 078 Spec review | `w1Y:t1` / `w1Y:p1` | `review/task078-spec` / `SystemUI-Gradle-wt-078-spec` | `joycode/Kimi-K3-jcloud` | reviewing fixed range `28015906...cb1223f4` | Read-only; final correction/spec review; no Gradle/Soong/emulator/ADB |
+| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | dual-axis reviewers PASS, but chief found E4 contract contradiction; narrow docs correction requested | Same five Allowed Paths only; align E4 with actual AGP 9.3.1 R8 validation without Gradle/Soong/device or rewrite implementation |
 
 ## Queue
 
@@ -20,6 +18,8 @@
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Independent Kimi-K3 Standards and Spec reviewers both returned PASS for `28015906...cb1223f4`; 26 tests and both real-APK gates were independently reproduced. Chief acceptance nevertheless remains FAIL on one internal contradiction the reviewers missed: report §4.1/§4.5 says candidate correctness depends on E4 validating hidden names in an actual R8 run before implementation, while §5.1 forbids every R8-capable path and downgrades E4 to the already-known static class-existence check, postponing the promised evidence until implementation. The same worker will make a docs-only correction defining a direct AGP 9.3.1 bundled-R8 probe (no Gradle task, no behavior change) and make all E4 statements consistent.
 
 - 2026-09-01 — Task 078 final correction `cb1223f4` landed on the shared `main` checkout and chief independently reproduced 26 focused tests, Release exit 1/`RESULT=FAIL`, stock exit 0/`RESULT=PASS`, clean diff formatting, and exact five-path worker scope. The correction uses `variant.artifacts.forScope(PROJECT)`, rejects every rule target defined in the APK, narrows source absence to the four critical classes, separates transform/external-definition ownership, and defers implementation paths until E1. Independent fixed-range Standards and Spec reviewers are running in isolated worktrees with explicit `joycode/Kimi-K3-jcloud`; both are static-only.
 
