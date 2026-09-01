@@ -9,15 +9,17 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 079 | replacement pending | shared `main` | `joycode/GLM-5.3` low | replacing stalled first session; allowed-path red-test checkpoint retained | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
+| 079 | none (serialized E1 replacement pending) | shared `main` at `488b7996` | `joycode/GLM-5.2/5.3` low only | analysis-primitives checkpoint pushed; full `run` still fail-closed and no E1–E4 evidence exists | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
 
 ## Queue
 
-1. Task 079 is dispatched under the user-approved exact brief. It covers the complete 464-token (463 `.jar` + 1 `.srcjar`)/17-module inventory, scratch AAR/project JarJar dry-runs, and standalone AGP 9.3.1 bundled-R8 positive/negative probe; it still forbids Gradle/Soong/device operations and all project behavior changes. Initial preflight correctly stopped because the brief had mislabeled the known 463 JAR count as the total RSP token count; Chief independently confirmed 464 unique tokens and corrected the contract without changing scope.
-2. Only after Task 079 evidence and a separate user architecture ruling, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
+1. Task 079 is dispatched under the user-approved exact brief, but no worker is currently active. Commit `488b7996` is pushed and provides green analysis primitives/tests only (`45 passed`); its `run` command intentionally exits 2 and no E1–E4 artifact may be inferred from it. The next serialized worker is limited first to E1: complete 464-token/17-module inventories and frozen local-output hashes under the approved scratch root, with zero unknowns or a truthful `E1=FAIL`.
+2. After an independently verified E1 checkpoint, continue the same approved contract serially through scratch-only E2/E3 and standalone bundled-R8 E4. Only after complete Task 079 evidence and a separate user architecture ruling may the narrow build-time reference rewrite be implemented without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 079 has no active worker. Chief pushed checkpoint `488b7996`, which contains only the allowed driver primitives, focused tests, and issue note; `45 passed`, `py_compile`, and `diff --check` were green, while `run` remains deliberately fail-closed with exit 2 and no E1–E4 artifact exists. The second GLM-5.3 worker was stopped after returning to design narration and an unauthorized `/tmp/task079-scan1.json` write (immediately deleted). A third serialized GLM-5.2 E1-only worker printed the correct CONTRACT but was halted before edits after using direct `python3 -c` twice instead of mandatory `uv run`; it left the repository and approved scratch root untouched. Another narrow E1 replacement is pending.
 
 - 2026-09-01 — Task 079's first GLM-5.3 high-thinking session was stopped after repeatedly spending its context on speculative evidence synthesis instead of implementing the approved experiment driver. Its two allowed-path uncommitted outputs are retained: the issue now records resumed base `eb9bd9c8` and the read-only direct-`python3` process deviation, and a focused red test file exists; no E1–E4 experiment, Gradle/Soong/device operation, scratch write, or commit occurred. Per the established Task 043 recovery pattern, Chief is replacing it with a fresh explicit GLM-5.3 low-thinking worker on the same serialized checkout.
 

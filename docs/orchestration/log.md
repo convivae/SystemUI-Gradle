@@ -395,3 +395,9 @@
 
 - The first `task079` GLM-5.3 high-thinking session was stopped cleanly after repeated steering and Escape interrupts failed to move it beyond speculative planning. It left only two allowed-path, uncommitted artifacts: the issue's resumed-base/process-deviation note and a focused red test file. It reported the focused test collection fails because the driver does not yet exist; E1–E4, Gradle, Soong, ADB, emulator, scratch writes, and commits were not run.
 - The tab `w2:t2S` was closed. Chief retained the two-file checkpoint and will re-dispatch the already user-approved exact brief to a fresh explicit `joycode/GLM-5.3` worker at low thinking, following the same recovery pattern recorded for Task 043. Same checkout remains serialized.
+
+## 2026-09-01 — task079 analysis checkpoint and further serialized replacements
+
+- The second low-thinking GLM-5.3 worker repaired the synthetic classfile/AAR fixtures and implemented reusable analysis primitives. Chief made the driver honest and fail-closed: `run` exits 2 with an explicit INCOMPLETE message and creates no experiment artifact. Focused verification passed (`45 passed`, `py_compile`, `git diff --check`), and checkpoint `488b7996` was pushed. This checkpoint is not E1–E4 evidence.
+- The second worker was stopped after repeatedly returning to design narration and writing exploratory JSON outside the approved scratch root (`/tmp/task079-scan1.json`); Chief deleted that file immediately. No Gradle, Soong, device, AOSP/out, project build, libs, or SDK mutation occurred.
+- A third serialized E1-only GLM-5.2 worker printed the required CONTRACT and confirmed the repository base, but Chief halted it before any edit after it invoked direct `python3 -c` twice instead of mandatory `uv run`. It left both the worktree and `/tmp/task079-c5-jarjar-e1-e4/` untouched. No worker is active; another narrow E1 replacement is pending.
