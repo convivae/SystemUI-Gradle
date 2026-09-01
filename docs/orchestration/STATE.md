@@ -9,16 +9,18 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 080 | none (brief approval pending) | shared `main` | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | planned; not dispatched | read-only origin trace for the four runtime-critical old class references; no Gradle, no rewrite, no device |
+| 080 | `w2:t2X` / `w2:p32` | shared `main` (`61786387`) | `joycode/Kimi-K3` (session metadata verified) | dispatched; required reading/CONTRACT in progress under Chief supervision | read-only origin trace for the four runtime-critical old class references; no Gradle, no rewrite, no device |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
 
-1. Await user confirmation of the exact small Task 080 brief. Then one closely monitored Kimi worker only traces the four concrete old class references back to current project/dependency class outputs; no build and no fix.
+1. Task 080 is actively running under close Chief supervision. It may only trace the four concrete old class references to existing project/dependency outputs; no build and no fix.
 2. After Chief independently verifies Task 080, prepare and separately approve one small implementation brief that adds the proven pre-D8/R8 reference conversion without modifying AOSP source or packaging platform classes.
 3. Serialize Debug build, Release build, static APK checks, then persistent Debug and Release emulator reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — User approved the exact Task 080 brief. Chief started one serial worker in `w2:t2X` / `w2:p32` with explicit `joycode/Kimi-K3`; session metadata confirmed `provider=joycode`, `modelId=Kimi-K3`. The worker is limited to the four-class read-only origin trace. Chief immediately corrected the startup sequence when the worker requested AGENTS and CHARTER in the same turn: it must re-read CHARTER after AGENTS, then the brief, print `CONTRACT:`, and only then investigate.
 
 - 2026-09-01 — User confirmed the goal-facing plan: preserve AOSP source, add the Android-17 reference conversion between class compilation and D8/R8, then rebuild and run both APKs. User required workers to stay narrowly scoped and continuously supervised so they cannot take shortcuts. Chief paused the broad 464-input Task 079 replay and drafted Task 080 as a single read-only question: identify the exact current project/dependency outputs responsible for the four crashing old class references. Dispatch awaits exact-brief confirmation.
 

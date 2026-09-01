@@ -412,3 +412,8 @@
 - User confirmed the plain goal: both APKs compile, then both APKs survive deployment and reboot without crash. The immediate technical direction is to preserve AOSP source and restore the missing Android-17 class-reference conversion between class compilation and D8/R8.
 - To prevent another worker from shortcutting or absorbing too much scope, Chief paused the broad Task 079 replay and drafted Task 080 as a read-only, four-class origin trace only. It cannot run Gradle, modify behavior, execute JarJar, or operate a device. A later implementation, builds, and runtime validation will each be separate serialized tasks with separate acceptance gates.
 - Exact brief: `docs/orchestration/tasks/080-c5-find-reference-origins.md`. Per orchestration policy, worker dispatch waits for the user's confirmation of this small brief.
+
+## 2026-09-01 — task080 dispatched under close supervision
+
+- User approved the exact small brief. Chief created dedicated tab `w2:t2X` / pane `w2:p32` and started `task080` with explicit `joycode/Kimi-K3`; the session JSON independently confirms `provider=joycode`, `modelId=Kimi-K3`.
+- Scope is only the four-class read-only origin trace against existing outputs. No Gradle, JarJar, implementation, AOSP/out write, or device work is permitted. When the worker initially requested AGENTS and CHARTER in one tool turn, Chief immediately required a sequential CHARTER re-read followed by the brief and literal CONTRACT before investigation.
