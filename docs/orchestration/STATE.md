@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 079 | none (serialized E1 replacement pending) | shared `main` (`488b7996` checkpoint) | `joycode/GLM-5.2/5.3` low only | analysis-primitives checkpoint pushed; full `run` still fail-closed and no E1–E4 evidence exists | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
+| 079 | none (serialized E1 replacement pending) | shared `main` (`488b7996` checkpoint) | only `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud` | rejected fourth-worker draft removed; driver restored to fail-closed checkpoint; no E1–E4 evidence exists | E1–E4 evidence only; 464 RSP tokens (463 JAR + 1 source JAR), 17 modules, scratch-only JarJar/R8; no Gradle/Soong/device/write implementation |
 
 ## Queue
 
@@ -18,6 +18,8 @@
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — User rejected the fourth E1 worker's uncommitted classification draft after Chief explained that replacing Gradle module names with Soong owner names was directionally motivated but semantically insufficient: E1 requires an explicit Soong-owner → Gradle-counterpart/category evidence map, not identity assignment. Chief discarded both modified files, deleted the invalid scratch inventory/summary, closed the worker tab, and restored the pushed fail-closed checkpoint. The user further restricted every future worker/reviewer to `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud`, required active Chief guidance at key milestones, and capped each monitoring sleep/poll at 60 seconds.
 
 - 2026-09-01 — Task 079 has no active worker. Chief pushed checkpoint `488b7996`, which contains only the allowed driver primitives, focused tests, and issue note; `45 passed`, `py_compile`, and `diff --check` were green, while `run` remains deliberately fail-closed with exit 2 and no E1–E4 artifact exists. The second GLM-5.3 worker was stopped after returning to design narration and an unauthorized `/tmp/task079-scan1.json` write (immediately deleted). A third serialized GLM-5.2 E1-only worker printed the correct CONTRACT but was halted before edits after using direct `python3 -c` twice instead of mandatory `uv run`; it left the repository and approved scratch root untouched. Another narrow E1 replacement is pending.
 

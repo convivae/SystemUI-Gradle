@@ -48,6 +48,7 @@ All frozen inputs are read-only. If an input is absent or its frozen count/hash/
 ## Global constraints
 
 - Same checkout and serial execution. No other worker is authorized to mutate this checkout.
+- Worker/reviewer model is restricted to explicit `joycode/Kimi-K3` or `joycode/Kimi-K3-jcloud`; Chief verifies the exact session `modelId` before accepting `CONTRACT:` and actively reviews preflight, first write, real experiment launch, and pre-commit state. Every monitoring sleep/poll is at most 60 seconds.
 - **Never run Gradle, Soong/Ninja, `m`, lunch, emulator, or ADB.** Direct `java -jar .../jarjar.jar process ...` in scratch and direct `java -cp builder-9.3.1.jar com.android.tools.r8.R8 ...` are the only build-like commands authorized.
 - Do not write `/home/conv/myspace/aosp/**`, including `out/`; copy inputs into scratch first when a tool needs an output-side path.
 - Do not write `app/build/**`, any module `build/**`, `libs/**`, or either SDK platform.

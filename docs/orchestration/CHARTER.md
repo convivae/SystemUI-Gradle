@@ -163,6 +163,7 @@ HANDOFF:
   public equivalent exists.
 - Never use `@Suppress` to bypass; consult official docs when unsure.
 - Reference implementation: `CarSystemUIGradle`.
-- Herdr worker model whitelist: **Kimi-K3, GLM-5.3, GLM-5.2 only**. The architect must pass an explicit model when starting pi (for example `-- --model joycode/GLM-5.3`) and verify the worker session's `modelId` before accepting `CONTRACT:`; never rely on pi's default model.
+- Herdr worker/reviewer model whitelist: **only `joycode/Kimi-K3` and `joycode/Kimi-K3-jcloud`**. No GLM or other model may be dispatched after the 2026-09-01 user directive. The architect must pass an explicit model when starting pi and verify the worker session's exact `modelId` before accepting `CONTRACT:`; never rely on pi's default model.
+- Active oversight is mandatory: the architect must inspect the worker after dispatch/model verification, after `CONTRACT:`, at preflight, first write, real experiment/build launch, pre-commit, and completion. The architect must intervene with concrete advice at each material decision or immediately halt scope/process drift. No single monitoring `sleep` or polling interval may exceed **60 seconds**.
 - Leave a complete handoff for the next AI — this CHARTER + STATE.md exist for
   exactly that purpose.
