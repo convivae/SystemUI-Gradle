@@ -1,13 +1,13 @@
 # Task 079 — C5 JarJar E1–E4 bounded experiments
 
 **Phase**: C5 blocker evidence closure
-**Status**: proposed; user approved the E1–E4 direction, exact brief awaiting dispatch confirmation
+**Status**: dispatched; initial preflight correctly blocked on a brief count typo, then Chief corrected the frozen RSP total to 464 tokens (463 `.jar` + 1 `.srcjar`) without changing scope
 **Authority**: `self-commit` — worker may commit only Allowed Paths and must never push
 **Reports To**: Chief architect in the current herdr workspace
 
 ## Goal
 
-Produce every evidence input required to adjudicate the pre-R8 JarJar implementation seam, with zero project behavior change: complete the 463-entry stock R8 variant/ownership inventory, dry-run affected AAR and project/JVM artifacts in scratch, and prove or disprove SysUISdk hidden-name resolution through a standalone AGP 9.3.1 bundled-R8 positive/negative probe. Do not implement the rewrite.
+Produce every evidence input required to adjudicate the pre-R8 JarJar implementation seam, with zero project behavior change: complete the 464-entry stock R8 variant/ownership inventory (463 JARs plus one source JAR), dry-run affected AAR and project/JVM artifacts in scratch, and prove or disprove SysUISdk hidden-name resolution through a standalone AGP 9.3.1 bundled-R8 positive/negative probe. Do not implement the rewrite.
 
 ## Required reading
 
@@ -23,7 +23,7 @@ Produce every evidence input required to adjudicate the pre-R8 JarJar implementa
 - Dispatch base: record exact `git rev-parse HEAD` in the issue before experimentation.
 - Stock R8 input list:
   `/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/packages/SystemUI/SystemUI/android_common/withres/SystemUI.jar.rsp`
-  (expected 463 shell tokens).
+  (expected 464 shell tokens: exactly 463 `.jar` entries and one `.srcjar` entry, `SystemUI-flag-types.srcjar`).
 - JarJar rules:
   `/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/framework/android_common/repackaged-jarjar/repackaging.txt`
   (expected 725 exact rules / 726 physical lines / SHA-256 `f79a08d481147a5e6a532ec254e6f075ccb661d844b9ac19db764cd085a6de97`).
@@ -84,7 +84,7 @@ Exactly these five paths:
 |---|---|
 | `tools/analyze_aconfig_jarjar_experiments.py` | Parse/classify RSP inputs, inspect JAR/AAR/class references and definitions, prepare scratch packages, invoke the frozen JarJar/R8 tools, and print stable machine-checkable summaries |
 | `tools/tests/test_analyze_aconfig_jarjar_experiments.py` | Synthetic tests for RSP tokenization, archive/class inspection, ownership preconditions, AAR invariants, and positive/negative result interpretation |
-| `docs/architecture/2026-09-01-c5-jarjar-e1-e4.md` | Complete 463-row inventory or lossless equivalent, 17-module classification, E2/E3 matrices, E4 commands/diagnostics, and final candidate verdict |
+| `docs/architecture/2026-09-01-c5-jarjar-e1-e4.md` | Complete 464-row inventory or lossless equivalent (463 JARs + 1 source JAR), 17-module classification, E2/E3 matrices, E4 commands/diagnostics, and final candidate verdict |
 | `docs/issues/2026-09-01-c5-jarjar-e1-e4.md` | Chronological commands, actual outputs, deviations, and unresolved questions |
 | this brief | Contract and checked execution record |
 
@@ -94,17 +94,17 @@ Exactly these five paths:
 
 - [ ] Record dispatch base and prove all frozen input paths, rule hash/count, RSP token count, R8 version, and scratch isolation before running E1–E4.
 - [ ] Add focused failing tests first, then implement a stdlib-only Python driver. It must never infer success from filename alone when archive contents are inspectable.
-- [ ] Make the driver emit stable summary keys including `RULES`, `RSP_INPUTS`, `RSP_CLASSIFIED`, `RSP_UNKNOWN`, `GRADLE_MODULES`, `GRADLE_MODULES_CLASSIFIED`, `E1`, `E2`, `E3`, `E4_POSITIVE`, `E4_NEGATIVE`, `CANDIDATE`, and `EXPERIMENTS_COMPLETE`.
+- [ ] Make the driver emit stable summary keys including `RULES`, `RSP_INPUTS`, `RSP_CLASSIFIED`, `RSP_UNKNOWN`, `RSP_JARS`, `RSP_SRCJARS`, `GRADLE_MODULES`, `GRADLE_MODULES_CLASSIFIED`, `E1`, `E2`, `E3`, `E4_POSITIVE`, `E4_NEGATIVE`, `CANDIDATE`, and `EXPERIMENTS_COMPLETE`.
 
 ### P1 — E1 complete variant/ownership inventory
 
 - [ ] Parse every RSP shell token in original order; preserve duplicates as separate rows and report unique-path count separately.
-- [ ] For all 463 rows, record path, inferred Soong owner with evidence, ordinary versus `repackaged-jarjar` variant, archive SHA-256, rule-source/rule-target references and definitions, Gradle counterpart or a reasoned no-counterpart category, and E2/E3 disposition. No sampling and no `UNKNOWN` are allowed.
+- [ ] For all 464 rows (463 `.jar` + 1 `.srcjar`), record path, inferred Soong owner with evidence, ordinary versus `repackaged-jarjar` variant, archive SHA-256, rule-source/rule-target references and definitions, Gradle counterpart or a reasoned no-counterpart category, and E2/E3 disposition. No sampling and no `UNKNOWN` are allowed.
 - [ ] Trace the exact Soong decision that selects ordinary versus repackaged variants. Clearly separate direct source evidence from path/content inference.
 - [ ] Classify all 17 Gradle modules as Android class-producing, JVM class-producing, res-only, source-empty app, or other evidenced category. Freeze every existing Release local-output path used by E3 with size/SHA; distinguish local PROJECT output from merged/external dependencies.
 - [ ] Produce the exact affected-AAR list and exact affected project/JVM output list. Do not invent implementation Allowed Paths or coordinates beyond what E1 proves.
 
-E1 completeness gate: `RSP_INPUTS=463`, `RSP_CLASSIFIED=463`, `RSP_UNKNOWN=0`, `GRADLE_MODULES=17`, `GRADLE_MODULES_CLASSIFIED=17`, and no unclassified affected artifact.
+E1 completeness gate: `RSP_INPUTS=464`, `RSP_CLASSIFIED=464`, `RSP_UNKNOWN=0`, `GRADLE_MODULES=17`, `GRADLE_MODULES_CLASSIFIED=17`, and no unclassified affected artifact. The report must additionally prove the expected composition `RSP_JARS=463` and `RSP_SRCJARS=1`.
 
 ### P2 — E2 affected-AAR scratch dry-run
 
@@ -138,6 +138,10 @@ E1 completeness gate: `RSP_INPUTS=463`, `RSP_CLASSIFIED=463`, `RSP_UNKNOWN=0`, `
 - [ ] Verify no files outside Allowed Paths changed and no scratch artifacts are tracked.
 - [ ] Update the issue and this brief with actual results, commit only explicit Allowed Paths with an English message, never push, and finish with the CHARTER four-part report plus terminal `HANDOFF:` block.
 
+## Chief correction after initial preflight
+
+The initial worker preflight at dispatch base `e87f29d23a76004d8a262367f58c841b456d5492` stopped exactly as required because this brief said 463 shell tokens while `shlex.split` and `wc -w` both showed 464. Chief independently verified that the list is 464 unique tokens composed of exactly 463 `.jar` entries plus one `.srcjar`, `out/soong/.intermediates/frameworks/base/packages/SystemUI/shared/SystemUI-flag-types/android_common/SystemUI-flag-types.srcjar`. Thus Task 078's 463 figure was the JAR-only count and this brief had mislabeled it as the total token count. The frozen rule hash/count remained unchanged. This correction preserves the approved requirement to classify every RSP input without sampling; it does not expand behavior-change authority. The worker may resume from the same clean checkout after re-reading this corrected contract.
+
 ## Acceptance
 
 ### A. Focused tests
@@ -167,9 +171,11 @@ Expected candidate result:
 
 ```text
 RULES=725
-RSP_INPUTS=463
-RSP_CLASSIFIED=463
+RSP_INPUTS=464
+RSP_CLASSIFIED=464
 RSP_UNKNOWN=0
+RSP_JARS=463
+RSP_SRCJARS=1
 GRADLE_MODULES=17
 GRADLE_MODULES_CLASSIFIED=17
 E1=PASS
