@@ -16,7 +16,7 @@
 - [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
 - [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
-- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行已通过；task076 Release protobuf-lite 反射字段已修复；task077 已完成 goldfish super 扩容、582MiB durable scratch、五分区 overlay 和 64MiB 探针跨重启验收。当前 blocker 是 AOSP 17 platform aconfig 的 726 条 jarjar 改名未同步到 Gradle Release 程序类引用，需先做等价 rewrite，再重跑 Debug/Release 整机重启门。
+- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行已通过；task076 Release protobuf-lite 反射字段已修复；task077 已完成 goldfish super 扩容、582MiB durable scratch、五分区 overlay 和 64MiB 探针跨重启验收；task078 已完成 725 条 exact JarJar 规则的秒级 DEX gate、Soong 主源机制研究与 E1–E4 实验合同（review-PASS，rewrite 未实施）。下一步须先获用户批准执行 E1–E4，再依据完整变体/模块清单和 standalone R8 resolution 证据裁决实现，最后重跑 Debug/Release 整机重启门。
 - [ ] C6：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
 ### 2. 尾账（Release 阶段处理）
@@ -49,7 +49,8 @@
 （**DEBUG_RUNTIME_PASS** 2026-08-25 + **RELEASE_RUNTIME_PASS** 2026-08-26，emulator-5554）
 的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 归档。
 Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1/C3/C2/C4 已完成；C5 的
-持久部署基础设施已完成，runtime 剩 platform aconfig jarjar 引用改写 blocker。最新证据见
+持久部署基础设施与 task078 研究/gate 已完成；runtime 仍受 platform aconfig JarJar 引用错位阻塞。
+下一步不是直接实施 rewrite，而是经用户批准完成 E1–E4 有界实验，再按实验清单另立实现 brief。最新证据见
 `docs/issues/2026-09-01-c5-emulator-super-slack.md`，此前阶段报告见
 `docs/issues/2026-08-27-c3-source-realignment-execution.md`、
 `docs/issues/2026-08-27-c2-libs-regen-17.md`、`docs/issues/2026-08-28-c4-gradle-wiring.md`。

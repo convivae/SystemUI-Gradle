@@ -9,19 +9,17 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | E4 docs correction `60191e89` landed; final dual-axis re-review running | Same five Allowed Paths only; no rewrite implementation |
-| 078-standards-final | `w10:t1` / `w10:p1` | `review/task078-final-standards` / isolated worktree | `joycode/Kimi-K3-jcloud` | independent Standards review | Read-only fixed range `28015906...60191e89`; no Gradle/Soong/device |
-| 078-spec-final | `w21:t1` / `w21:p1` | `review/task078-final-spec` / isolated worktree | `joycode/Kimi-K3-jcloud` | independent Spec review | Read-only fixed range `28015906...60191e89`; no Gradle/Soong/device |
+| — | — | — | — | no active workers | Task 078 review-PASS; E1–E4 await explicit user approval |
 
 ## Queue
 
-1. Complete and independently review Task 078: add the static Release/stock descriptor gate, reconstruct Soong's repackaging pipeline, and compare three solution families. No rewrite implementation is authorized.
-2. After the research report and a separate user architecture ruling, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
+1. Await user approval for the bounded E1–E4 experiment task defined in Task 078 §5.1. It may inventory/scan existing artifacts, run scratch JarJar/AAR dry-runs, and directly invoke AGP 9.3.1 bundled R8 for E4, but may not run Gradle/Soong/device operations or change project behavior.
+2. Only after E1–E4 evidence and a separate user architecture ruling, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
 
-- 2026-09-01 — Task 078 worker landed docs-only E4 contract correction `60191e89`: future E4 now directly invokes the AGP 9.3.1 bundled R8 9.3.16 outside Gradle with a scratch four-hidden-target reference probe, SysUISdk as library input, explicit success/output/no-definition gates, and an official-base-SDK negative control. E1–E4 remain unexecuted and no rewrite is authorized. Fresh independent Standards and Spec reviewers are running on fixed range `28015906...60191e89` in isolated worktrees with `joycode/Kimi-K3-jcloud`.
+- 2026-09-01 — Task 078 final closure is review-PASS on fixed range `28015906...60191e89`. Fresh independent `joycode/Kimi-K3-jcloud` Standards and Spec reviewers both reproduced 26 focused tests, Release exit 1/`RESULT=FAIL`, stock exit 0/`RESULT=PASS`, exact 725-rule semantics, clean formatting, and E4 synchronization. Standards reported only one LOW (future brief should pin the already-supported R8 CLI flags) and two TRIVIAL notes; Spec reported no missing, scope-creep, or wrong-implementation findings. Chief additionally verified bundled R8 9.3.16 help exposes `--lib`, `--no-tree-shaking`, `--no-minification`, `--no-desugaring`, and `--pg-conf`, so the LOW does not block the bounded experiment contract. No rewrite is authorized; E1–E4 await user approval.
 
 - 2026-09-01 — Independent Kimi-K3 Standards and Spec reviewers both returned PASS for `28015906...cb1223f4`; 26 tests and both real-APK gates were independently reproduced. Chief acceptance nevertheless remains FAIL on one internal contradiction the reviewers missed: report §4.1/§4.5 says candidate correctness depends on E4 validating hidden names in an actual R8 run before implementation, while §5.1 forbids every R8-capable path and downgrades E4 to the already-known static class-existence check, postponing the promised evidence until implementation. The same worker will make a docs-only correction defining a direct AGP 9.3.1 bundled-R8 probe (no Gradle task, no behavior change) and make all E4 statements consistent.
 

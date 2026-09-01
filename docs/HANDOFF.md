@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 的 17 镜像 durable overlay 基础设施已通过跨重启验收，Debug 热运行通过，Release protobuf 反射问题已修复；当前唯一 blocker 是 AOSP 17 platform aconfig 的 726 条自动传播 jarjar 改名未在 Gradle Release 程序类引用中重现，导致 `NoClassDefFoundError`。下一步先完成等价引用改写，再重跑双冷启动门并进入 C6。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的秒级 DEX gate 与 Soong/JarJar 研究已 review-PASS：规则为 725 条 exact / 726 物理行，当前 Release 稳定 FAIL、stock 稳定 PASS；首选 pre-R8 方案族仍须先经用户批准完成 E1–E4 有界实验，之后才能裁决/实施 rewrite、重跑双冷启动门并进入 C6。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：先解决 C5 的 AOSP 17 platform aconfig jarjar 引用改写缺口（不得打包 platform Flags、不得 stub/dontwarn），再在 task077 已验证的 durable overlay 上重跑 Debug/Release 整机重启门，最后做 C6 manifest 快照 + tag + README/version 收口。
+5. **当前唯一工程优先级**：task078 研究/gate 已完成；先向用户申请 E1–E4 实验批准（仅清单、scratch JarJar/AAR 干跑及 standalone R8 resolution probe，零行为变更），实验通过并再次裁决后才实施 C5 JarJar 引用改写。不得打包 platform Flags、不得 stub/dontwarn/源码 import 批量改写；随后在 task077 durable overlay 上重跑 Debug/Release 整机重启门，最后做 C6。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -30,6 +30,7 @@
 | C4b（task073） | 17-module Debug 编译闭环（含 kairos 与 AOSP-17 SysUISdk 重建）✅ | `docs/issues/2026-08-28-c4b-debug-compile-closure.md` |
 | C4c（task074） | Release/R8 missing refs 31→0，`:app:assembleRelease` ✅ | `docs/issues/2026-09-01-c4c-release-r8-closure.md` |
 | C5 task075–077 | Debug 热运行 ✅；Release proto keep ✅；goldfish 2880MiB super / 582MiB scratch / 64MiB probe 跨重启 ✅；Release jarjar runtime blocker 待修 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
+| C5 task078 | DEX 静态 gate + 725-rule Soong/JarJar 机制研究 review-PASS；Release FAIL / stock PASS；E1–E4 与 rewrite 均未执行 | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -78,4 +79,4 @@ DEX 对 AOSP 17 platform aconfig Flags 的原名引用与设备 jarjar 后类名
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：形成并裁决 platform aconfig jarjar 等价改写方案 → C5 双冷启动门 → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：请求用户裁决并执行 E1–E4 有界实验 → 基于实验结果另立并裁决 JarJar rewrite 实现 brief → C5 双冷启动门 → C6 收口。

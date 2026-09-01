@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-01（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 将 goldfish dynamic-partition group 扩为 2880MiB，正式 `m -j16` 成功，super-backed scratch 实测 582MiB、五分区 overlay 和 64MiB 探针均跨整机重启持久。**当前唯一 blocker 是 AOSP 17 `jarjar_prefix` 语义缺口：Gradle Release DEX 仍引用原名 platform aconfig Flags，而设备只提供 `com.android.internal.hidden_from_bootclasspath.*` 改名类；需先完成等价 class-reference rewrite，再重跑 Release 冷启动门，之后进入 C6。**）
+> **Last verified**: 2026-09-01（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 将 goldfish dynamic-partition group 扩为 2880MiB，正式 `m -j16` 成功，super-backed scratch 实测 582MiB、五分区 overlay 和 64MiB 探针均跨整机重启持久。task078 已落地秒级 DEX gate 并从 Soong 主源还原 725 条 exact JarJar 规则的逐产物传播/执行边界；当前 Release 稳定红、stock 稳定绿。**当前唯一 blocker 仍是 AOSP 17 `jarjar_prefix` 语义缺口：下一步须先经用户批准并完成 E1–E4 有界实验（含直接调用 AGP 9.3.1 bundled R8 的 hidden-name resolution 探针），再裁决/实施等价 class-reference rewrite，最后重跑双冷启动门并进入 C6。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⚠️ 17 emu64x 在线且 stock SystemUI 健康；`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS。项目 Release 因 aconfig jarjar 描述符未改名而 crash-loop |
-| 当前唯一工程优先级 | **C5 blocker**：为 Gradle 程序类实现与 Soong 726 条自动传播 jarjar 规则等价的引用改写，不打包平台类、不用 stub/dontwarn；随后重跑 Debug/Release 持久冷启动门 → C6 |
+| 当前唯一工程优先级 | **C5 blocker**：task078 已完成 725 条 exact 规则（规则文件 726 物理行）的静态 gate 与方案研究；先经用户批准执行 E1–E4，再按实验结果裁决/实施 Gradle 引用改写。禁止打包平台类、stub、`dontwarn` 或源码 import 批量改写；随后重跑 Debug/Release 持久冷启动门 → C6 |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -51,7 +51,8 @@
 | 2026-08-28 | **C4a Gradle 接线（task072，review-PASS）**：16-module 拓扑注册 + catalog 23 族 2.0.0 + 依赖增删 + surfaceeffects×3/uilatencystats-flags jar + dynamiccolors AAR 新产物 + `:app` 最小 manifest 壳 + core namespace→`com.android.systemui.core`；`./gradlew help`/`projects` 绿、`--strict` exit 0、pytest 293 passed | `docs/issues/2026-08-28-c4-gradle-wiring.md` |
 | 2026-08-31 | **C4b Debug 编译闭环（task073）**：追加 kairos 形成 17-module 拓扑；AOSP-17 SysUISdk 重建；`:app:assembleDebug` BUILD SUCCESSFUL；对齐、pytest 305、冻结指纹 22/22 PASS | `docs/issues/2026-08-28-c4b-debug-compile-closure.md` |
 | 2026-08-31 | **C4c Release/R8 编译闭环（task074）**：missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；SettingsLib/WM-Shell 修正产物升 2.0.1；pytest 310、冻结指纹 24/24 PASS | `docs/issues/2026-09-01-c4c-release-r8-closure.md` |
-| 2026-09-01 | **C5 部分闭环（tasks075–077）**：Debug 热运行 PASS；Release protobuf 反射修复 PASS；goldfish 2880MiB super、582MiB scratch、五 overlay、64MiB probe 跨重启 PASS。剩余 blocker：Release platform aconfig jarjar 引用未改名 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
+| 2026-09-01 | **C5 部分闭环（tasks075–077）**：Debug 热运行 PASS；Release protobuf 反射修复 PASS；goldfish 2880MiB super、582MiB scratch、五 overlay、64MiB probe 跨重启 PASS。剩余 blocker：Release platform aconfig JarJar 引用未改名 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
+| 2026-09-01 | **C5 task078 研究/gate 闭环（review-PASS）**：纯 stdlib DEX checker + 26 个 focused tests；Release exit 1（30 source/0 target）、stock exit 0（1 source/36 target）；725 条 exact 规则主源传播/执行时序已还原；首选 pre-R8 族保持“证据不足”，实施前须完成 E1–E4 并由用户裁决 | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 
 ## Current build and verification matrix
 
@@ -65,6 +66,7 @@
 | `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（chief 2026-08-31 重跑证实；K 错误 R1 182 → R4 5 → R50 0；四层修复：aapt2 双阶段 feature-flags、SysUISdk 重建 D12 选项 ①、17 依赖图接线 R9-R31（compose 首次真编译 188→0）、Dagger api 化 R24-R50） | task073（5 commits `a65e2d9c..517ca6d6`） |
 | `:app:assembleRelease` / R8 | ✅ BUILD SUCCESSFUL、missing refs=0；task076 的 GeneratedMessageLite 字段 keep 修复后，三轮 clean build 的 ZIP 条目内容 SHA 均为 `2a5e372f…`（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
 | 设备/模拟器 runtime | ⚠️ task075 Debug 热运行门 PASS；task077 durable super/overlay/64MiB probe 跨重启 PASS。修复后 Release 在冷启动时因 `android.view.accessibility.Flags` 等原名引用触发 `NoClassDefFoundError`；stock APK 已恢复且健康 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
+| Aconfig JarJar 静态 gate | ✅ task078 focused tests 26 passed；规则 725 条 exact / 726 物理行，SHA `f79a08d…`；当前 Release exit 1 `RESULT=FAIL`（30 source/0 target），stock exit 0 `RESULT=PASS`（1 source/36 target，target-defined=0） | `tools/check_aconfig_jarjar_references.py`；`docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 
 ## Toolchain and module topology
 
@@ -123,10 +125,11 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **task078：AOSP 17 platform aconfig jarjar closure**。以 Release DEX 描述符扫描作为秒级红灯，对照 AOSP `framework`/`SystemUI-core` 同一份 726 行 `repackaging.txt`，选择并实现 Gradle 程序类引用改写。禁止把 platform Flags 打入 APK，禁止 stub、`dontwarn` 或源码 import 批量改写；架构方案需先给用户裁决。
-2. **C5 runtime 收口**：重新构建 Release，静态确认原名描述符归零且目标 `hidden_from_bootclasspath` 描述符存在；部署到 task077 的 durable overlay，整机重启后核对 APK SHA 不回退并跑 fatal/PID/UI 门；同时重跑 Debug 冷启动门。
-3. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
-4. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
+1. **E1–E4 有界实验（待用户批准）**：task078 的秒级 gate 与 Soong/JarJar 研究已 review-PASS，尚未实施 rewrite。下一张任务只做：(E1) stock R8 463 个输入的完整变体/模块清单；(E2) 受影响 AAR repackaged 变体 scratch 干跑；(E3) 各参与 project 产物 scratch JarJar 干跑；(E4) 直接调用 AGP 9.3.1 bundled R8 9.3.16，以 SysUISdk 为 `--lib` 验证四个 hidden target 的真实解析并用官方 `android-37.0` 做阴性对照。禁止 Gradle/Soong/device、行为变更和提前实施 rewrite。
+2. **引用改写实现（仍待 E1–E4 + 用户裁决）**：仅在 E1 清单和四项实验落档后另立精确 brief；不得打包 platform Flags，不得 stub、`dontwarn`、源码 import 批量改写或复活已否决的 `Scope.ALL` + 删除定义算法。
+3. **C5 runtime 收口**：实现获批并完成后重新构建 Release，静态确认四 critical 原名描述符归零、hidden target 存在且 725-rule target-defined 全零；部署到 task077 durable overlay，整机重启后核对 APK SHA 不回退并跑 fatal/PID/UI 门；同时重跑 Debug 冷启动门。
+4. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
+5. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
 
 ## Verification commands and evidence
 
@@ -156,9 +159,11 @@ uv run python tools/check_source_alignment.py --strict
 manifest-dex closure 24/24、missing=0；Debug 热运行 PID/crash/UI 门通过；Release protobuf-lite
 反射字段已修复且三轮内容级构建一致。AOSP goldfish 单行容量变更经正式 `m -j16` 构建成功，
 `super.img` SHA `50496c9b…`，设备 scratch 582MiB、五分区 overlay、64MiB 探针跨整机重启
-持久。当前 Release 冷启动唯一已知 blocker 是 platform aconfig jarjar：AOSP 726 条规则将
-原名类移入 `com.android.internal.hidden_from_bootclasspath`，Gradle DEX 尚未同步改写引用。
-详见 `docs/issues/2026-09-01-c5-emulator-super-slack.md`。
+持久。task078 已将该 blocker 固化为秒级 gate：AOSP 规则文件含 725 条 exact 规则（726 个物理行，
+SHA `f79a08d…`）；当前 Release 为 30 source/0 target、exit 1 `RESULT=FAIL`，stock 为
+1 source/36 target、target-defined=0、exit 0 `RESULT=PASS`。Soong 逐产物重写机制与三方案对比
+已 review-PASS，但首选 pre-R8 方案族的具体算法仍依赖 E1–E4，且尚未获用户批准执行；详见
+`docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md`。
 
 **16 时代历史证据（AOSP main 快照，2026-08-21→26，保留供追溯）**：
 Task 045 main fresh（SysUISdk 单事务生成器两次 11,382 文件逐字节相等；Debug exit 0；fresh

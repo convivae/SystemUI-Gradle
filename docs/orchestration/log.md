@@ -342,6 +342,12 @@
 - Task077 review required two docs-only revisions (`b68bda80`, `95cb24c2`) to satisfy the ≥50MiB acceptance and correct stale wording. Chief independently rechecked repository scope, AOSP one-line diff, image SHA/size, and live device state; **review-PASS**.
 - C5 runtime remains open for a separate blocker: Gradle Release retains original platform aconfig `Flags` descriptors while AOSP 17 device framework exposes the 726-rule `com.android.internal.hidden_from_bootclasspath.*` jarjar names. No platform-class packaging, stub, source-import rewrite, or `dontwarn` workaround is authorized; task078 design/research is next.
 
+## 2026-09-01 — task078 final review-PASS and closure
+
+- Fresh independent Standards and Spec reviewers on fixed range `28015906...60191e89` both returned PASS. They reproduced 26 focused tests, Release exit 1/`RESULT=FAIL`, stock exit 0/`RESULT=PASS`, 725-rule hash/count semantics, full-target-definition rejection, four-critical-source-only absence gating, clean formatting, and the synchronized standalone-R8 E4 contract. Standards listed one non-blocking LOW (pin exact CLI controls in the executable E1–E4 brief) plus two TRIVIAL notes; Spec found no missing, scope-creep, or wrong-implementation requirements.
+- Chief confirmed AGP 9.3.1 bundled R8 9.3.16 exposes `--lib`, `--no-tree-shaking`, `--no-minification`, `--no-desugaring`, and `--pg-conf`; the future E4 gate is executable without a Gradle task. Task 078 is closed as research/gate only. E1–E4 and rewrite implementation remain unexecuted and require explicit user approval.
+- Process note: the shared-checkout worker used `git add -A` for the final docs-only correction despite the task's path-specific staging rule. Chief verified the pre-stage tree had no unrelated changes and commit `60191e89` contains exactly three allowed documentation paths, so no artifact contamination occurred; the command violation is recorded and must not recur.
+
 ## 2026-09-01 — task078 E4 correction and final dual-axis re-review
 
 - Worker docs-only correction `60191e89` resolves the final-acceptance contradiction: future E4 is now a direct standalone invocation of the exact AGP 9.3.1 bundled R8 9.3.16, not a Gradle task. Its scratch program references all four critical hidden targets and defines none; SysUISdk is the library input; success requires no missing-class diagnostic, retained hidden references, and zero hidden definitions, with the official base SDK as negative control. E1–E4 were not run and rewrite implementation remains forbidden.
