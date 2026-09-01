@@ -377,3 +377,10 @@
 - Worker correction `cb1223f4` addressed the second chief review findings on the original five Allowed Paths. Chief independently reproduced `26 passed`, Release exit 1/`RESULT=FAIL`, stock exit 0/`RESULT=PASS`, clean `git diff --check`, and exact worker scope.
 - Fixed range `28015906...cb1223f4` received PASS from both independent Kimi-K3 reviewers. Their checks reproduced the 26-test suite, Release red gate, stock green gate, rule-file hash/count, AGP API wording, module ownership constraints, and E1–E4 scope.
 - Chief still rejected closure on one contradiction missed by both reviews: §4.1/§4.5 requires E4 to validate SysUISdk hidden-name resolution in an actual R8 run before implementation, but §5.1 forbids any such execution and downgrades E4 to the static class-presence fact already proven in Task 078. The same worker will add a direct AGP 9.3.1 bundled-R8 probe to the future experiment contract (no Gradle task, no project behavior change) and synchronize the issue/report/brief. Review worktrees were clean and removed.
+
+## 2026-09-01 — task079 exact E1–E4 brief prepared
+
+- User approved the bounded E1–E4 experimental direction from Task 078. Chief prepared `docs/issues/2026-09-01-c5-jarjar-e1-e4.md` and exact brief `docs/orchestration/tasks/079-c5-jarjar-e1-e4-experiments.md` for the mandatory pre-dispatch confirmation.
+- Task 079 covers all 463 stock R8 input tokens and all 17 Gradle modules, scratch-only repackaged-AAR and per-project/JVM JarJar dry-runs, and a standalone AGP bundled R8 9.3.16 positive/negative probe with exact `--release --no-tree-shaking --no-minification --no-desugaring` controls. Generated experiment artifacts are confined to `/tmp/task079-c5-jarjar-e1-e4/`.
+- Red lines remain unchanged: no Gradle/Soong/Ninja/emulator/ADB, no AOSP/out or project build writes, no `libs/`/SDK/source/resource/manifest/ProGuard changes, no checker weakening, no platform-class packaging/stubs/dontwarn, and no rewrite implementation. A future implementation still requires E1–E4 evidence plus a separate user architecture ruling.
+- No worker has been dispatched. Exact brief approval is pending.

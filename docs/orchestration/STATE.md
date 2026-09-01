@@ -9,15 +9,17 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| — | — | — | — | no active workers | Task 078 review-PASS; E1–E4 await explicit user approval |
+| — | — | — | — | no active workers | Task 079 E1–E4 direction approved; exact brief awaits user dispatch confirmation |
 
 ## Queue
 
-1. Await user approval for the bounded E1–E4 experiment task defined in Task 078 §5.1. It may inventory/scan existing artifacts, run scratch JarJar/AAR dry-runs, and directly invoke AGP 9.3.1 bundled R8 for E4, but may not run Gradle/Soong/device operations or change project behavior.
-2. Only after E1–E4 evidence and a separate user architecture ruling, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
+1. User approved the bounded E1–E4 direction. Exact Task 079 brief is prepared at `docs/orchestration/tasks/079-c5-jarjar-e1-e4-experiments.md` and awaits the mandatory dispatch confirmation. It covers the complete 463-input/17-module inventory, scratch AAR/project JarJar dry-runs, and standalone AGP 9.3.1 bundled-R8 positive/negative probe; it still forbids Gradle/Soong/device operations and all project behavior changes.
+2. Only after Task 079 evidence and a separate user architecture ruling, implement the narrow build-time reference rewrite without packaging platform classes, stubs, source-import rewrites, or `dontwarn`; keep Debug/Release compile gates serialized.
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — User approved execution of the bounded E1–E4 direction. Chief converted Task 078 §5.1 into exact Task 079: complete classification of all 463 stock R8 inputs and all 17 Gradle modules, scratch-only repackaged-AAR and project/JVM JarJar dry-runs with zero-definition ownership gates, and an exact standalone R8 9.3.16 positive/negative probe (`--release --no-tree-shaking --no-minification --no-desugaring`, no pg-conf/dontwarn). Gradle, Soong, emulator, ADB, AOSP/out writes, `libs/` writes, and rewrite implementation remain forbidden. Dispatch awaits user confirmation of the exact brief.
 
 - 2026-09-01 — Task 078 final closure is review-PASS on fixed range `28015906...60191e89`. Fresh independent `joycode/Kimi-K3-jcloud` Standards and Spec reviewers both reproduced 26 focused tests, Release exit 1/`RESULT=FAIL`, stock exit 0/`RESULT=PASS`, exact 725-rule semantics, clean formatting, and E4 synchronization. Standards reported only one LOW (future brief should pin the already-supported R8 CLI flags) and two TRIVIAL notes; Spec reported no missing, scope-creep, or wrong-implementation findings. Chief additionally verified bundled R8 9.3.16 help exposes `--lib`, `--no-tree-shaking`, `--no-minification`, `--no-desugaring`, and `--pg-conf`, so the LOW does not block the bounded experiment contract. No rewrite is authorized; E1–E4 await user approval.
 
