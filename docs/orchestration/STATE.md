@@ -9,7 +9,9 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | second chief review failed; final narrow revision requested | Same five Allowed Paths only; fix ineffective `:app`/`Scope.PROJECT` seam, gate hidden-definition invariant, source-definition semantics, and exact future brief/tests; still no Gradle/Soong/emulator/ADB or rewrite implementation |
+| 078 | `w2:t2R` / `w2:p2X` | `main` / shared checkout | `joycode/GLM-5.3` | final correction committed as `cb1223f4`; independent dual-axis review running | Same five Allowed Paths only; no Gradle/Soong/emulator/ADB or rewrite implementation |
+| 078 Standards review | `w1Z:t1` / `w1Z:p1` | `review/task078-standards` / `SystemUI-Gradle-wt-078-standards` | `joycode/Kimi-K3-jcloud` | reviewing fixed range `28015906...cb1223f4` | Read-only; static standards/correctness review; no Gradle/Soong/emulator/ADB |
+| 078 Spec review | `w1Y:t1` / `w1Y:p1` | `review/task078-spec` / `SystemUI-Gradle-wt-078-spec` | `joycode/Kimi-K3-jcloud` | reviewing fixed range `28015906...cb1223f4` | Read-only; final correction/spec review; no Gradle/Soong/emulator/ADB |
 
 ## Queue
 
@@ -18,6 +20,8 @@
 3. Re-run persistent Debug/Release cold-boot runtime gates, then execute C6 manifest/tag/README/version closure.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-01 — Task 078 final correction `cb1223f4` landed on the shared `main` checkout and chief independently reproduced 26 focused tests, Release exit 1/`RESULT=FAIL`, stock exit 0/`RESULT=PASS`, clean diff formatting, and exact five-path worker scope. The correction uses `variant.artifacts.forScope(PROJECT)`, rejects every rule target defined in the APK, narrows source absence to the four critical classes, separates transform/external-definition ownership, and defers implementation paths until E1. Independent fixed-range Standards and Spec reviewers are running in isolated worktrees with explicit `joycode/Kimi-K3-jcloud`; both are static-only.
 
 - 2026-09-01 — Task 078 correction `b4e021e8` resolved the six initial findings and added valuable stock-R8-input/AAR-variant evidence, but second chief review still failed on the executable design contract. AGP's API is `artifacts.forScope(...)`, not `useScope(...)`; registering `Scope.PROJECT` only in source-empty `:app` cannot transform the 16 library modules; the future gate would pass an APK that defines hidden platform classes; §3.1 again generalizes source absence to all 725 rules despite the documented legal definition exception; and the implementation fixture asks raw JarJar to preserve a definition in the same transformed input, which JarJar cannot do. The worker is receiving one final narrow documentation/gate correction before independent dual-axis review.
 
