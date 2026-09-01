@@ -333,3 +333,11 @@
 - task076（B1 Release proto keep fix）完成并 push（2eec7dbb）：反射字段 keep 复现 Soong 端态；条目级构建复现（三 clean 一致 2a5e372f）；AGP SDKP 随机块为上源非确定因，决策点 includeDependencyInfoInApks=false 待用户；构建稳定性协议固化（双杀补 kotlin-daemon 括号防自杀、R8 竞速两阶段协议）
 - task077（B3 super 余量）获准起 AOSP 构建（单行 BOARD_EMULATOR_DYNAMIC_PARTITIONS_SIZE 1800→2880MiB）；AOSP 树 commit c18f6a3f 本地待审
 - task075 commits 于 17:40 push（6abc6ee5）；B1+B3 合并后统一 runtime 门再判双 runtime PASS
+
+## 2026-09-01 — task077 B3 durable overlay infrastructure review-PASS
+
+- AOSP goldfish local commit `c18f6a3f` changes only `BOARD_EMULATOR_DYNAMIC_PARTITIONS_SIZE` 1800→2880MiB. With user-enabled 40GiB swap, formal `m -j16` completed successfully; `super.img` is 3,028,287,488 B, SHA-256 `50496c9b…`.
+- A stale-GPT incremental-image hazard was diagnosed and added to the relaunch runbook: after changing super size, delete `system-qemu.img` and `*.qcow2` before `m systemimage` so `mk_combined_img.py` cannot retain the old partition table.
+- Runtime infrastructure PASS: super-backed scratch 582MiB, five overlay mounts, orange verified boot, deterministic 64MiB probe host/staged/device SHA `3b6a07d0…`, same SHA after reboot, and deletion persisted after a second reboot. Final device state is healthy stock SystemUI (`d0e36b33…`), zero crash-buffer lines, probe absent.
+- Task077 review required two docs-only revisions (`b68bda80`, `95cb24c2`) to satisfy the ≥50MiB acceptance and correct stale wording. Chief independently rechecked repository scope, AOSP one-line diff, image SHA/size, and live device state; **review-PASS**.
+- C5 runtime remains open for a separate blocker: Gradle Release retains original platform aconfig `Flags` descriptors while AOSP 17 device framework exposes the 726-rule `com.android.internal.hidden_from_bootclasspath.*` jarjar names. No platform-class packaging, stub, source-import rewrite, or `dontwarn` workaround is authorized; task078 design/research is next.

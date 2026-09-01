@@ -14,10 +14,10 @@
 - [x] ~~C3：源码 17 重对齐（task070）~~ ✅ 2026-08-27（`--strict` exit 0；删 847/移 34/拷 2566/覆 3067；CONV 重标 5806 处；MODIFIED 终态 1 src + 86 res 均白名单）
 - [x] ~~C2：libs/ 全删 + 脚本再生（task071）~~ ✅ 2026-08-28（104 删 → 7 脚本再生 102 文件，无手工产物；maven 全族 2.0.0；`motion_tool_lib.jar`/`settingslib-selector-flags.jar`/security-flags/quickaccesswallet-flags 族退役）
 - [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
-- [ ] **C4b：编译闭环（task073，进行中）**：恢复 `:app:assembleDebug` BUILD SUCCESSFUL；验收 = assembleDebug 绿 + 对齐门/pytest 绿 + 新产物可复现
-- [ ] task074：Release/R8 闭环恢复绿（`minifyReleaseWithR8` 零 missing refs + `assembleRelease`；含 view_capture proto keep 等 task073 移交项）
-- [ ] C5：17 镜像模拟器双 runtime 门：先从 AOSP-17 `out/` 重跑 `build_sysuisdk.py`（当前 live SDK 为 16 时代产物）；按 runbook 重拉模拟器；Debug + Release 部署、零 FATAL、窗口在屏（runbook：`docs/issues/2026-08-26-emulator-relaunch-runbook.md`）
-- [ ] C6：manifest 快照 + release tag + README 版本声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
+- [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
+- [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
+- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行已通过；task076 Release protobuf-lite 反射字段已修复；task077 已完成 goldfish super 扩容、582MiB durable scratch、五分区 overlay 和 64MiB 探针跨重启验收。当前 blocker 是 AOSP 17 platform aconfig 的 726 条 jarjar 改名未同步到 Gradle Release 程序类引用，需先做等价 rewrite，再重跑 Debug/Release 整机重启门。
+- [ ] C6：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
 ### 2. 尾账（Release 阶段处理）
 
@@ -48,6 +48,8 @@
 从 5296 个编译错误到 16 时代（AOSP main 快照）的 Debug APK、双 runtime 门
 （**DEBUG_RUNTIME_PASS** 2026-08-25 + **RELEASE_RUNTIME_PASS** 2026-08-26，emulator-5554）
 的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 归档。
-Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1/C3/C2/C4a 已完成，报告见
+Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1/C3/C2/C4 已完成；C5 的
+持久部署基础设施已完成，runtime 剩 platform aconfig jarjar 引用改写 blocker。最新证据见
+`docs/issues/2026-09-01-c5-emulator-super-slack.md`，此前阶段报告见
 `docs/issues/2026-08-27-c3-source-realignment-execution.md`、
 `docs/issues/2026-08-27-c2-libs-regen-17.md`、`docs/issues/2026-08-28-c4-gradle-wiring.md`。
