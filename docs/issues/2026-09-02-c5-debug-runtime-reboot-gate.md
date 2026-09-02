@@ -1,7 +1,7 @@
 # C5 Task 098：fresh Debug APK runtime reboot gate
 
 **日期**：2026-09-02
-**状态**：REPLACEMENT REQUIRED — 两次 worker 均因流程违规退休；第二次已完成部署到 Checkpoint A 早期采样，但在技术验收前定性为 `RETIRED_PROTOCOL`，因此仍无 Debug runtime PASS/FAIL 结论
+**状态**：REPLACEMENT REQUIRED — 三次 worker 均因流程违规退休；第二次已完成部署到 Checkpoint A 早期采样但在技术验收前定性为 `RETIRED_PROTOCOL`，第三次仅在 startup 读取阶段运行了禁止的 `wc -l` 后即退休，因此仍无 Debug runtime PASS/FAIL 结论
 **前置**：Task 096 fresh Debug build/static gate `PASS`；Task 097 fresh Release build/R8/static gate `PASS`；Task 077 已验收 17 emu64x durable super/overlay 通道。
 
 ## 背景
@@ -62,8 +62,9 @@ Task 096 已冻结 Debug APK 的构建与静态身份，但没有在设备上执
 - 第二次尝试确实发生了 runtime mutation：在证明无 owner 后删除五个旧 generated `.qcow2`；创建 instance/log 路径；在 owned tab `w2:t48` 启动 fresh `emulator-5554`；`adb root` 后授予 `BLUETOOTH_CONNECT` 与 `READ_CONTACTS`；完成 permission-baseline reboot 1/4；执行 `adb disable-verity` 并完成 reboot 2/4；建立五个 durable overlay 与约 581 MiB scratch；以 staged SHA gate、同文件系统临时文件和 atomic `mv` 将冻结 Debug APK 部署到 `/system_ext/priv-app/SystemUI/SystemUI.apk`，恢复 owner/mode/SELinux label并清理 oat/dalvik cache；完成 deployment reboot 3/4。stock baseline 为 boot ID `ba5cfe0d-1610-402f-8ba5-d2dda59635fb`、APK SHA `d0e36b33…`、PID `1027`、crash buffer 0；deployment boot ID 为 `a3d80326-a5ff-4cc5-8620-03c7ace0bd8b`，device APK SHA 为 `f3af35d9…`，最初 PID 为 `3425`。
 - Checkpoint A 仅采集 3/11 个样本即收到 stop order：sample 1 PID 为 `4276`，已不同于初始 `3425`；samples 2–3 的 `pidof` 为空，并伴随由空 PID 触发的 `grep: no REGEX`。stop order 前没有完成 fresh crash/full log、窗口、statusbar、layout或截图门；因此该序列只是待新合规尝试验证的异常线索，不是正式 `DEBUG_RUNTIME_REBOOT_FAIL`。
 - worker 停止了进一步 ADB/reboot，未执行 reboot 4/4 或 Checkpoint B；保留 `/tmp/task098-c5-debug-runtime-reboot/` 和 regenerated `.qcow2`，只关闭自己拥有的 emulator tab `w2:t48`。独立 census 显示 emulator/QEMU 已停止、ADB 无设备。worker 未改 tracked files，未运行 Gradle/Soong/Ninja，未 commit/push；完整退休记录见 `/tmp/task098-c5-debug-runtime-reboot/RETIREMENT.txt`。
-- 下一 replacement 必须从新的 clean pushed dispatch base 启动，并在任何 Herdr control action 前完成 `herdr --skill`、精确 command help 查询和 caller workspace/tab/pane 记录。它必须先证明无 emulator/QEMU owner，再按 frozen brief 删除第二次尝试生成的顶层 `.qcow2` 与精确 instance directory，从基础镜像重做完整四次 reboot 和两个 checkpoint；若复现 PID 变化、进程消失或 crash/UI failure，立即保存正式证据并 fail closed，不得修复或继续。
+- 下一 replacement 必须从新的 clean pushed dispatch base 启动，并在 frozen startup 读取期间只使用串行 `read`，不得插入 `wc` 或任何 bash 命令；在任何 Herdr control action 前还必须完成 `herdr --skill`、精确 command help 查询和 caller workspace/tab/pane 记录。它必须先证明无 emulator/QEMU owner，再按 frozen brief 删除第二次尝试生成的顶层 `.qcow2` 与精确 instance directory，从基础镜像重做完整四次 reboot 和两个 checkpoint；若复现 PID 变化、进程消失或 crash/UI failure，立即保存正式证据并 fail closed，不得修复或继续。
+- 第三个 worker `task098-debug-runtime-r3` 位于 `w2:t49` / `w2:p4E`，session 为 `/home/conv/.pi/agent/sessions/--home-conv-myspace-SystemUI-Gradle--/2026-09-02T13-29-25-255Z_01a0624f-6407-7474-b470-cd45d7b102a5.jsonl`；session 独立确认 `provider=joycode`、`modelId=GLM-5.3`、`thinkingLevel=high`。它按序完成 AGENTS、HANDOFF、CHARTER 和完整 STATE 读取后，在读取冻结 log tail 前执行了 dispatch 明确禁止的 `wc -l docs/orchestration/log.md`，中断了“只串行读取”的 startup 序列。Chief 拒绝 CONTRACT 并在 preflight 前退休该尝试。除该只读 line-count 命令和文档读取外，没有 scratch、git、Herdr、emulator/QEMU、ADB、build 或 tracked/untracked file mutation；tab 已关闭，独立 census 仍为无 emulator/QEMU、无 ADB device。
 
 ## 构建记录
 
-规划及两次退休尝试均未运行 Gradle、Soong、Ninja、测试或任何构建命令。第一次尝试仅读取文档；第二次只消费已有冻结 Debug APK并执行 emulator/ADB runtime mutation。当前仍无可接受的 Debug runtime 技术结论。
+规划及三次退休尝试均未运行 Gradle、Soong、Ninja、测试或任何构建命令。第一次与第三次尝试仅做文档读取（第三次另有一次无写副作用但违反 startup 协议的 `wc -l`）；第二次只消费已有冻结 Debug APK并执行 emulator/ADB runtime mutation。当前仍无可接受的 Debug runtime 技术结论。
