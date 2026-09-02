@@ -16,7 +16,7 @@
 - [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
 - [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
-- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行已通过；task076 Release protobuf-lite 反射字段已修复；task077 已完成 goldfish super 扩容、582MiB durable scratch、五分区 overlay 和 64MiB 探针跨重启验收；task078 已完成 725 条 exact JarJar 规则的秒级 DEX gate；task080 已将四个 runtime-critical 旧名精确归属到 166 个唯一 program reference classes，并排除 compileOnly `framework.jar`。Task 079 broad replay 保持暂停。Task 081 首个 worker 已建立 focused RED 后停止并保留两项未提交测试脚手架；下一步由 `joycode/GLM-5.3`、`thinking=high` replacement 补齐十项 mandatory tests并实现，随后按双轴复核、Debug build、Release build/static gate、Debug runtime、Release runtime 串行推进。
+- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行、task076 Release protobuf-lite、task077 durable emulator、task078/080 四条 exact mappings 与 166 caller identities均已闭合；Task 081 reference-only build logic已通过 focused tests/双轴review。Task 082真实Debug pipeline暴露AGP factory isolation；Task 083/084固定literal field path，Task 086排除所有`None`/no-op `ALL` factory必败，Task 087因无执行证据为`INCONCLUSIVE`，Tasks 088/089未找到升级是targeted fix的直接证据。**Task 090已以factory sentinel取得可观察`PASS`，证明production parameter类型与两个file-property槽位不是充分trigger。当前Task 091只恢复一次sentinel-scoped `FrozenAconfigInputs.load(...)`；其后按filter→cache→reference visitor逐层单变量恢复，找到最小trigger并修复，再依次执行Debug build/static、Release build/static、Debug runtime、Release runtime。** Task 079 broad replay保持暂停。
 - [ ] C6：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
 ### 2. 尾账（Release 阶段处理）
@@ -49,12 +49,14 @@
 （**DEBUG_RUNTIME_PASS** 2026-08-25 + **RELEASE_RUNTIME_PASS** 2026-08-26，emulator-5554）
 的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 归档。
 Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1/C3/C2/C4 已完成；C5 的
-持久部署基础设施、task078 静态 gate 与 task080 四类来源闭环已完成；runtime 仍受 platform aconfig
-class reference 未在 D8/R8 前改名阻塞。Task 079 broad replay 已暂停。Task 081 首个 worker 已建立
-focused RED 后停止，只保留两个未提交 buildSrc 测试脚手架；replacement 统一使用 `joycode/GLM-5.3`、
-`thinking=high`，当前 production implementation 尚未开始、APK 未重编。主机重启后模拟器当前未运行，
-Task 081 不需要设备，后续 runtime gate 前再启动。最新证据见
-`docs/issues/2026-09-01-c5-focused-reference-origins.md`、
-`docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`，此前阶段报告见
+持久部署基础设施、task078 静态 gate、task080 四类来源闭环和task081 reference-only build logic
+已完成。Task 082真实Debug pipeline在AGP factory isolation失败；Task 083/084固定最深literal path。
+Task 086 corrected no-op control通过，Task 087无execution evidence而`INCONCLUSIVE`；Tasks 088/089
+未找到升级是targeted fix的第一方证据。Task 090现已用唯一declared input和factory sentinel取得
+可观察`PASS`，排除production parameter shape作为充分trigger。当前Task 091只恢复managed file access +
+`FrozenAconfigInputs.load(...)`，随后才逐层恢复filter/cache/reference visitor并选择production fix。
+APK尚未重编，Task 079 broad replay暂停，模拟器当前未运行。最新证据见
+`docs/issues/2026-09-02-c5-observable-file-params-control.md`、
+`docs/issues/2026-09-02-c5-frozen-input-load-control.md`、
 `docs/issues/2026-08-27-c3-source-realignment-execution.md`、
 `docs/issues/2026-08-27-c2-libs-regen-17.md`、`docs/issues/2026-08-28-c4-gradle-wiring.md`。

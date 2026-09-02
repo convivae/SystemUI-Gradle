@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 将最深原因和 literal object path固定为 AGP runtime-generated `InstrumentationContext_Decorated.__apiVersion__` 中的 `DefaultProperty`；Task 086 的 `None`/no-op control成功。Task 087因target `UP-TO-DATE`正式归类为`INCONCLUSIVE`。Tasks 088/089第一方研究与双轴review均完成：未发现升级是targeted fix的直接证据，当前seam的pre-D8/pre-R8位置已证，但serialization边界仍属未文档化区域。下一步Task 090通过改变annotated file input并输出factory sentinel，取得transform实际执行证据。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 将最深原因和 literal object path固定为 AGP runtime-generated `InstrumentationContext_Decorated.__apiVersion__` 中的 `DefaultProperty`；Task 086 的 `None`/no-op control成功，Task 087因target `UP-TO-DATE`为`INCONCLUSIVE`。Tasks 088/089未找到升级是targeted fix的直接证据。Task 090现已用唯一input与factory sentinel取得可观察`PASS`：production parameter类型和两个file-property槽位不是已观察failure的充分触发条件；下一步Task 091只恢复一次sentinel-scoped `FrozenAconfigInputs.load(...)`，继续逐层隔离production factory implementation。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 blocker**：Task 084 已逐字取得AGP生成的 `InstrumentationContext_Decorated.__apiVersion__` → production factory `__instrumentationContext__`路径。Task 086 `InstrumentationParameters.None` no-op `ALL` control成功，但Task 087恢复production file-parameter shape后target为`UP-TO-DATE`，故结果为`INCONCLUSIVE`，不能据此选择production seam。Tasks 088/089未发现升级是targeted fix的第一方证据，并确认`ScopedArtifacts.Scope.ALL`仅是pre-R8已证、pre-D8未证的bounded candidate。Task 090将用语义无害的独特`@InputFile` probe与factory execution sentinel证明artifact transform实际执行或在isolation失败；之后才决定production seam、focused regression、Debug/Release build/static gate与双runtime gate。Task 079 broad replay保持暂停 |
+| 当前唯一工程优先级 | **C5 blocker**：Task 090 已在production parameter类型、两个file-property槽位、application-only `ALL`、`COPY_FRAMES`下取得可观察control `PASS`：唯一command exit 0，factory sentinel count 1，45条`AsmClassesTransform`记录且无serialization path。故custom file-parameter shape不是已观察failure的充分trigger。Task 091保持这些维度及class-byte no-op不变，只对已知sentinel恢复一次managed file读取与`FrozenAconfigInputs.load(...)`，不恢复positive filter/cache/reference visitor；随后才逐层恢复余下implementation并选择production fix。Task 079 broad replay保持暂停 |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -61,6 +61,7 @@
 | 2026-09-02 | **C5 task086 corrected control PASS**：临时 `InstrumentationParameters.None`、field-free no-op、`ALL` registration显式传空lambda；唯一direct task `:app:desugarDebugFileDependencies` BUILD SUCCESSFUL in 21s，日志98行 SHA `938d2248…`；随后byte-for-byte恢复且worktree clean。该结果排除所有None/no-op ALL factory必然失败，但未单独隔离parameters与factory行为 | `docs/issues/2026-09-02-c5-none-all-control-corrected.md` |
 | 2026-09-02 | **C5 task087 control INCONCLUSIVE**：field-free no-op + production `AconfigReferenceRewriteParameters` command exit 0，但`:app:desugarDebugFileDependencies UP-TO-DATE`；无artifact-transform/factory实际执行证据，不能判定custom file parameters通过 | `docs/issues/2026-09-02-c5-custom-file-params-control.md` |
 | 2026-09-02 | **C5 tasks088/089 official research review-PASS**：未发现AGP/Gradle升级是当前literal failure的targeted fix证据；当前ASM seam的pre-D8/pre-R8与compileOnly排除由AGP 9.3.1 source证明，serialization触发边界仍unknown；`ScopedArtifacts`仅bounded candidate。四个独立Standards/Spec review均PASS | `docs/architecture/2026-09-02-agp-gradle-upgrade-feasibility.md`；`docs/architecture/2026-09-02-agp-instrumentation-isolation-research.md` |
+| 2026-09-02 | **C5 task090 observable control PASS**：production `AconfigReferenceRewriteParameters` 两个file-property槽位 + field-free no-op `ALL` factory在唯一input fingerprint下实际执行；sentinel 1、`AsmClassesTransform`记录45、exit 0、无serialization path。只排除parameter shape作为充分trigger，不证明production implementation或APK | `docs/issues/2026-09-02-c5-observable-file-params-control.md` |
 
 ## Current build and verification matrix
 
@@ -74,7 +75,7 @@
 | `:app:assembleDebug` | ⚠️ C4b/task073 历史基线 BUILD SUCCESSFUL；Task 081 plugin 后的 Task 082 fresh pipeline FAIL at `:app:desugarDebugFileDependencies`：`AsmClassesTransform.Parameters` isolation → `Could not serialize value of type AconfigReferenceRewriteFactory`。新 Debug APK 未验收 | task082，`/tmp/task082-c5-debug-build/assemble-debug.log`（2026-09-02） |
 | `:app:assembleRelease` / R8 | ✅ BUILD SUCCESSFUL、missing refs=0；task076 的 GeneratedMessageLite 字段 keep 修复后，三轮 clean build 的 ZIP 条目内容 SHA 均为 `2a5e372f…`（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
 | 设备/模拟器 runtime | ⚠️ task075 Debug 热运行门 PASS；task077 durable super/overlay/64MiB probe 跨重启 PASS。修复后 Release 在冷启动时因 `android.view.accessibility.Flags` 等原名引用触发 `NoClassDefFoundError`；stock APK 已恢复且健康 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
-| Aconfig JarJar 静态/build-logic gate | ⚠️ task078 checker/focused tests与 task081 9 个 buildSrc tests通过；Task 082 证明真实 AGP `ALL` dependency transform 在 factory serialization/isolation 阶段失败，尚无新 APK 可运行四 hidden-reference/零 hidden-definition gate | `tools/check_aconfig_jarjar_references.py`；Task 081/082 issues |
+| Aconfig JarJar 静态/build-logic gate | ⚠️ task078 checker/focused tests与 task081 9 个 buildSrc tests通过；Task 090又证明production custom file-parameter shape在可观察artifact-transform执行中可通过，但production factory implementation仍在Task 082路径失败，尚无新 APK 可运行四 hidden-reference/零 hidden-definition gate | `tools/check_aconfig_jarjar_references.py`；Tasks 081/082/090 issues |
 
 ## Toolchain and module topology
 
@@ -134,8 +135,8 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **可观察的 custom file-parameters control（Task 090）**：Task 087因target `UP-TO-DATE`为`INCONCLUSIVE`。Task 090保持field-free no-op、production parameter类型/两个file-property槽位、application-only `ALL`与`COPY_FRAMES`，将rules输入临时指向内容指纹唯一的scratch probe，并由`android.os.CustomFeatureFlags` sentinel证明factory实际执行；唯一direct task使用`--info`。只有literal failure或sentinel出现才允许作结论。
-2. **Production修复与focused regression**：按Task 090证据选择受支持的最小seam，保持四条exact mappings、166-class allowlist、reference-only ownership和零hidden definitions；实现后先跑focused tests与双轴review。
+1. **Frozen-input load control（Task 091）**：保持Task 090已证明可执行的production parameter type/two file slots、application-only `ALL`、`COPY_FRAMES`与field-free/no-cache/no-op bytes，只在`android.os.CustomFeatureFlags`上读取managed files并执行一次`FrozenAconfigInputs.load(...)`；由entered/loaded双sentinel区分isolation与load层结果。
+2. **逐层恢复production factory并修复**：Task 091若PASS，后续独立micro-control依次恢复positive allowlist filter、`inputs()`/transient cache和`referenceOnlyVisitor`，每次只改一个implementation layer；找到最小trigger后实现production fix、跑focused tests并做双轴review。
 3. **独立 Debug build/static gate**：fix review-PASS 后重新立 no-fix build task，运行 fresh `:app:assembleDebug`，验证 APK ZIP/SHA、四 hidden references、零 hidden target definitions和无非法 old-name caller。
 4. **Release build/static gate**：Debug 成功后独立停止 Gradle/Kotlin daemons并运行 Release/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
 5. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。
@@ -186,9 +187,13 @@ shape后command同样退出0，但target为`UP-TO-DATE`，日志没有证明arti
 所以正式结论为`INCONCLUSIVE`。Tasks 088/089随后完成第一方研究及四个独立PASS review：未找到升级
 是targeted fix的直接证据；AGP 9.3.1 source证明当前ASM seam覆盖runtime classpath且位于D8/R8前，
 但公开契约不能解释observed nested decorated-factory serialization，`ScopedArtifacts.Scope.ALL`也仅为
-pre-R8已证/pre-D8未证的bounded candidate。Task 090将改变语义无害的annotated scratch file input并
-打印factory sentinel，以取得transform实际执行证据；Task 079 broad replay保持暂停；主机当前无连接设备或
-emulator/QEMU，后续 runtime gate 前再启动。详见
+pre-R8已证/pre-D8未证的bounded candidate。Task 090随后改变语义无害的annotated scratch file input并
+打印factory sentinel：唯一command exit 0，398行日志SHA `762d53cb…`，sentinel count 1、
+`AsmClassesTransform`记录45条、serialization path为0；direct target虽为`UP-TO-DATE`，factory实际执行已由
+sentinel证明，故正式归类`PASS`。这只排除production parameter type/two file slots作为充分trigger，
+不证明production implementation。Task 091现只恢复一次sentinel-scoped managed file access与
+`FrozenAconfigInputs.load(...)`，保持无cache、filter不放行、visitor不构造，继续实施单变量bisection；
+Task 079 broad replay保持暂停；主机当前无连接设备或emulator/QEMU，后续 runtime gate 前再启动。详见
 `docs/issues/2026-09-01-c5-focused-reference-origins.md`、
 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`、
 `docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md`、
@@ -198,8 +203,9 @@ emulator/QEMU，后续 runtime gate 前再启动。详见
 `docs/issues/2026-09-02-c5-none-all-control-corrected.md`、
 `docs/issues/2026-09-02-c5-custom-file-params-control.md`、
 `docs/architecture/2026-09-02-agp-gradle-upgrade-feasibility.md`、
-`docs/architecture/2026-09-02-agp-instrumentation-isolation-research.md` 与
-`docs/issues/2026-09-02-c5-observable-file-params-control.md`。
+`docs/architecture/2026-09-02-agp-instrumentation-isolation-research.md`、
+`docs/issues/2026-09-02-c5-observable-file-params-control.md` 与
+`docs/issues/2026-09-02-c5-frozen-input-load-control.md`。
 
 **16 时代历史证据（AOSP main 快照，2026-08-21→26，保留供追溯）**：
 Task 045 main fresh（SysUISdk 单事务生成器两次 11,382 文件逐字节相等；Debug exit 0；fresh

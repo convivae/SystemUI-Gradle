@@ -1,5 +1,7 @@
 # Task 090 — Make the custom file-parameter transform execution observable
 
+**Status:** Closed `PASS` on 2026-09-02; temporary diff fully restored, no production change.
+
 ## Goal
 
 Run one fully reversible application-only `InstrumentationScope.ALL` micro-control that retains the production `AconfigReferenceRewriteParameters` shape and field-free no-op behavior, changes one declared file input to a unique scratch probe, and emits a sentinel only from actual factory execution. Conclusively classify the run as `CUSTOM_PARAMS_FAILURE`, `PASS`, `INCONCLUSIVE`, or `OTHER_FAILURE`.
@@ -117,3 +119,9 @@ All other tracked/untracked paths; production factory/parameter interface; froze
   NEXT=Chief defines the result-conditioned next task
   ```
 - End with a concise `HANDOFF:` block.
+
+## Closure
+
+The sole authorized Gradle wrapper invocation exited `0`. The 398-line log at `/tmp/task090-c5-observable-file-params-control/desugar-observable-file-params.log` has SHA-256 `762d53cb40bd3f3d81f79444444daa8aeee7c47efbaf6b9ef59fb1ff8da4352f`; line 386 contains the exact factory sentinel once. The log contains 45 `Caching disabled for AsmClassesTransform:` lines, zero `NotSerializableException`/`__instrumentationContext__`/`__apiVersion__`, and ends with `BUILD SUCCESSFUL in 8s`. The direct target remained task-level `UP-TO-DATE`, but the sentinel independently proves factory execution, so the frozen result matrix requires `PASS`.
+
+The plugin was restored byte-for-byte, the temporary factory was deleted, production factory/rules/allowlist hashes remained unchanged, the worktree was clean, and no build process remained. One cleanup-process deviation was recorded: the worker initially used non-mandated patterns; Chief then required the exact three bracket-pattern commands and all returned exit 1 (no matching process). This result proves only the custom file-parameter/no-op control rung; it does not prove production behavior, an APK, R8, or runtime.

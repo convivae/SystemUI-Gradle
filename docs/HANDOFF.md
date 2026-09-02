@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的 725-rule 秒级 DEX gate 已 review-PASS；task080 又将四个 critical 旧名归属到 166 个唯一 program reference classes，`UNKNOWN=0`，并隔离 compileOnly `framework.jar`。Task 079 broad replay 已暂停；Task 081 首个 worker 已建立 focused RED 后停止并保留两项未提交测试脚手架，下一步由 `joycode/GLM-5.3`、`thinking=high` replacement 补齐测试并实现。)
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 081 reference-only build logic已通过focused tests与双轴review，但Task 082真实Debug pipeline暴露AGP factory isolation。Tasks 083–089完成literal-path诊断、controls与第一方研究；**Task 090已用factory sentinel取得可观察`PASS`，排除production parameter type/two file slots作为充分trigger。当前下一步是Task 091：只恢复一次sentinel-scoped `FrozenAconfigInputs.load(...)`，继续对production factory implementation做单变量bisection。** Task 079 broad replay保持暂停。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：执行已获批准的 Task 081 exact brief。实现只在 `:app` 建一个 AGP 9.3.1 pre-D8/R8 seam，以 Task 080 冻结的 166-class allowlist 将实际 visitor 范围限制到已证明 program classes，并只改四条 critical exact references；必须保持 `this_class`、hidden target definitions=0。Task 079 不恢复。实现并 review-PASS 后，再把 Debug build、Release build/static gate 和双 runtime reboot gate 拆成串行小任务。主机重启后模拟器当前未运行，Task 081 不需要启动设备。
+5. **当前唯一工程优先级**：按 `docs/orchestration/tasks/091-c5-frozen-input-load-control.md` 执行一个temporary、single-command、fully-restored micro-control。保持Task 090已证明可执行的production parameter shape、application-only `ALL`、`COPY_FRAMES`、field-free/no-cache和class-byte no-op，只在`android.os.CustomFeatureFlags`上读取managed inputs并完成一次`FrozenAconfigInputs.load(...)`。Task 091之前不得恢复filter/cache/reference visitor，不得full assemble/Release/device；Task 079不恢复。Task 091后继续按一个implementation layer一个任务串行隔离，production fix review-PASS后才拆分Debug build、Release build/static和双runtime reboot gates。模拟器当前未运行。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -32,7 +32,11 @@
 | C5 task075–077 | Debug 热运行 ✅；Release proto keep ✅；goldfish 2880MiB super / 582MiB scratch / 64MiB probe 跨重启 ✅；Release jarjar runtime blocker 待修 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
 | C5 task078 | DEX 静态 gate + 725-rule Soong/JarJar 机制研究 review-PASS；Release FAIL / stock PASS | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 | C5 task080 | 四个 critical old references 的 166-class program-input 来源闭环；50/7/5/104、`UNKNOWN=0`，compileOnly 隔离 | `docs/issues/2026-09-01-c5-focused-reference-origins.md` |
-| C5 task081 | 最小 pre-D8/R8 reference-only build logic 已获批准；首个 worker 建立 RED 后停止，保留两项未提交测试脚手架，等待 GLM-5.3/high replacement | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
+| C5 task081 | app-only `ALL` reference-only build logic、四规则/166 allowlist、9 focused tests与双轴review ✅ | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
+| C5 task082–084 | 真实Debug pipeline FAIL；最深literal path固定为`InstrumentationContext_Decorated.__apiVersion__` → production factory `__instrumentationContext__` | `docs/issues/2026-09-02-c5-serialization-field-path.md` |
+| C5 task085–089 | no-op controls + first-party research：Task086 PASS、Task087 INCONCLUSIVE；无升级targeted-fix证据，当前ASM seam pre-D8/pre-R8已证 | `docs/architecture/2026-09-02-agp-instrumentation-isolation-research.md` |
+| C5 task090 | production custom file-parameter shape + field-free no-op control以factory sentinel实际执行，正式`PASS`；不证明production implementation/APK | `docs/issues/2026-09-02-c5-observable-file-params-control.md` |
+| C5 task091 | 下一步：只恢复sentinel-scoped managed file access + `FrozenAconfigInputs.load(...)`，不恢复filter/cache/reference visitor | `docs/issues/2026-09-02-c5-frozen-input-load-control.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -60,10 +64,12 @@ ls /home/conv/Android/Sdk/platforms/            # 必须有 android-SysUISdk
 ./gradlew --version                             # Gradle 9.5
 ```
 
-`libs/` 已全部提交入 git（Phase C 后产物均由 tools 脚本从 AOSP-17 再生）；
-`:app:assembleDebug` 与 `:app:assembleRelease` 均可构建。当前失败面不是编译，而是 Release
-DEX 对 AOSP 17 platform aconfig Flags 的原名引用与设备 jarjar 后类名不一致；具体证据和
-设备终态见 `docs/issues/2026-09-01-c5-emulator-super-slack.md`。
+`libs/` 已全部提交入 git（Phase C 后产物均由 tools 脚本从 AOSP-17 再生）。C4基线的
+`:app:assembleDebug` / `:app:assembleRelease`均曾成功；但Task 081 plugin接入后的最新真实Debug pipeline
+在`:app:desugarDebugFileDependencies`被production factory isolation阻塞，**不能称当前Debug build通过**，
+新APK尚未产出。Task 090只关闭parameter-shape假设；production implementation仍待Task 091起逐层隔离。
+Runtime根因仍是Gradle APK对AOSP 17 platform aconfig Flags保留原名，而设备只有jarjar后类名；详见
+`docs/issues/2026-09-01-c5-emulator-super-slack.md`与Task 081–091文档。
 
 ## 3. 红线速查（违反即停，详见 AGENTS/CHARTER）
 
@@ -81,4 +87,4 @@ DEX 对 AOSP 17 platform aconfig Flags 的原名引用与设备 jarjar 后类名
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：Task 081 build logic TDD 与双轴复核 → 串行 Debug/Release build + 静态 gate → 启动专用模拟器并分别执行双 runtime reboot gate → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：Task 091 frozen-input load control → filter/cache/reference visitor逐层单变量隔离 → production fix与双轴复核 → 串行 Debug/Release build + 静态 gate → 启动专用模拟器分别执行双 runtime reboot gate → C6 收口。
