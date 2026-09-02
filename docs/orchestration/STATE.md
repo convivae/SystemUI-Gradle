@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 092 | pending dedicated tab | shared `main` after pushed planning base | `joycode/GLM-5.3`, `thinking=high` | positive allowlist admission control brief drafted; dispatch pending | exact two-path temporary diff + byte-exact scratch rules copy, one direct `--info` Gradle command, accepted/no-op-visitor sentinels, mandatory restoration and one-shot cleanup block |
+| 092 | dedicated tab `w2:t3T` / pane `w2:p3Z`, agent `task092` | shared `main` @ `d9b13366` | `joycode/GLM-5.3`, `thinking=high` (session events verified) | strict startup complete; corrected CONTRACT accepted; stopped before preflight | exact two-path temporary diff + byte-exact scratch rules copy, one direct `--info` Gradle command, accepted/no-op-visitor sentinels, mandatory restoration and one-shot cleanup block |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -25,6 +25,8 @@
 9. After Task 092, restore at most one production implementation layer per task, unless positive admission already activates the known isolation path and first requires a production-fix design. Only after a production fix and review proceed to Debug build/static, Release build/R8/static, and separate Debug/Release runtime gates. Task 079 remains paused.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 092 worker `task092` dispatched in dedicated tab `w2:t3T` / pane `w2:p3Z` from pushed base `d9b13366`. Session JSON independently verifies `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`; strict AGENTS → CHARTER startup completed. Chief required a complete four-chunk read of the 1463-line Task 091 log and corrected the worker's initial 46-record miscount to the authoritative 45 before accepting the corrected CONTRACT. The worker remains stopped before preflight; no scratch, tracked edit, Gradle, or cleanup command has run.
 
 - 2026-09-02 — Task 091 frozen-input load control closed `PASS`. Worker `task091` ran in dedicated tab `w2:t3S` / pane `w2:p3Y`; session events independently verified `joycode/GLM-5.3`, `thinking=high`, strict startup, exactly one Gradle-wrapper tool call, and no direct Python. The 1463-line log SHA is `de243bd45b8b56995562cf17ba6a9ddb96451d91303d3202370b8e7fadbb8eb5`; entered/loaded sentinels each appear once, 45 ASM transform records appear, exit is 0, and the known serialization path is absent. Production paths were restored and the final process census was empty. Cleanup nevertheless deviated: the GradleDaemon `pkill` was repeated and three exit codes were not preserved. Task 092 now freezes positive allowlist admission plus a byte-no-op visitor and fixes cleanup capture with one non-repeatable shell block.
 
@@ -406,6 +408,8 @@
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-09-02 — Task 092 worker `task092` is active in `w2:t3T` / `w2:p3Z` from pushed base `d9b13366`; session events verify `joycode/GLM-5.3`, `thinking=high`, strict startup, complete Task 091 evidence reading, and an accepted corrected CONTRACT. It is stopped before preflight with no mutation or Gradle command yet.
 
 2026-09-02 — Task 091 closed observable `PASS`: the sole direct command exited 0; entered/loaded sentinels each appeared once in a 1463-line log (SHA-256 `de243bd45b8b56995562cf17ba6a9ddb96451d91303d3202370b8e7fadbb8eb5`), with 45 ASM transform records and no serialization path. Production paths were restored. Cleanup had a separate recorded deviation: GradleDaemon `pkill` repeated once and all three exit codes were lost. The result excludes managed property access plus one `FrozenAconfigInputs.load(...)` as a sufficient trigger but proves no positive admission/cache/visitor/APK. Task 092 is the exact next rung: positive production allowlist admission of the known sentinel into a class-byte no-op visitor, still no cache or `referenceOnlyVisitor(...)`.
 
