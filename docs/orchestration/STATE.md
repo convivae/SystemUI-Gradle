@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 086-r2 | `w2:t3E` / `w2:p3K` (`task086-r2`) | shared `main` at `1804fb38` dispatch base | `joycode/GLM-5.3`, `thinking=high` (session events verified) | strict AGENTS → CHARTER → sources startup complete; CONTRACT accepted; preflight not yet authorized | preflight may use `ps`/`pgrep`, never Gradle wrapper; then exact two-path temporary diff with `{ }`, one direct Gradle command after Chief approval, mandatory restoration |
+| 087 | none | shared `main` | future dispatch: `joycode/GLM-5.3`, `thinking=high` | brief and issue drafted; dispatch pending pushed clean base | exact two-path temporary diff, same custom file parameters + field-free no-op, one direct Gradle command, mandatory restoration |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -20,8 +20,11 @@
 4. Task 083 is closed PASS at the diagnosis rung. Its only direct task reproduced the same failure in 5 seconds and exposed deepest cause `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`; classfile evidence rejects the transient cache as direct cause, and Task 084 subsequently resolved the runtime decorator field path.
 5. Task 084 is closed PASS at the field-path diagnosis rung. Its single extended-info direct task reproduced the exact failure and all 46 deepest chains identify `InstrumentationContext_Decorated.__apiVersion__` via factory decorator `__instrumentationContext__`; first failure ownership is AGP-injected state, not custom parameters or the transient cache.
 6. Task 085 is closed `OTHER_FAILURE`. Its exact one-command control failed at `:buildSrc:compileKotlin` because the temporary `InstrumentationParameters.None` registration omitted AGP 9.3.1's mandatory configuration lambda; it never reached isolation. The two Allowed Paths were restored, daemons stopped, worktree clean, and the worker tab closed.
-7. Task 086 is next: rerun the same bounded no-op `ALL` control with the sole correction `transformClassesWith(..., ALL) { }`. It retains the exact two-path temporary scope, one direct Gradle command, mandatory restoration, and all production/build/device prohibitions.
+7. Task 086 is closed `PASS`. The corrected `InstrumentationParameters.None` field-free no-op `ALL` control ran the direct task once and got `BUILD SUCCESSFUL in 21s`; its 98-line log SHA is `938d2248…`. Chief verified exact restoration, clean worktree, and no build processes. This rejects a universal injected-`apiVersion` failure for all None/no-op factories but does not isolate parameters from factory behavior.
+8. Task 087 is next: keep a field-free no-op factory while restoring exactly `AconfigReferenceRewriteParameters` and the production two-file configuration. One direct task will classify `CUSTOM_PARAMS_FAILURE|PASS|OTHER_FAILURE`; no production fix is authorized.
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 086 replacement completed `PASS` and its tab was closed. The sole authorized corrected command reached `:app:desugarDebugFileDependencies` and returned `BUILD SUCCESSFUL in 21s` (`LOOP_EXIT=0`); full log is 98 lines with SHA `938d2248910800094776e87f9fd661b128e4d3eeafe0d003fd4b6d4e9cb0980b`. Chief independently verified zero serialization errors, exact plugin restoration (`f50685c3…`), temporary factory deletion, unchanged production factory/rules/allowlist, clean worktree, and no build processes. Because Task 086 changed both parameters and factory implementation, Task 087 is defined as the narrower same-custom-parameters/field-free-no-op control before any production seam.
 
 - 2026-09-02 — Task 086 replacement `task086-r2` dispatched from pushed base `1804fb38` in dedicated tab `w2:t3E` / pane `w2:p3K`. Session events independently verify `joycode/GLM-5.3`, `thinking=high`. Strict AGENTS → CHARTER → sources startup and CONTRACT acceptance completed. It is stopped before preflight, explicitly forbidden from invoking the Gradle wrapper until the sole experiment command.
 
@@ -389,6 +392,8 @@
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-09-02 — Task 086 corrected no-op `ALL` control closed PASS: the single direct dependency-transform task succeeded, the temporary diff was fully restored, and Task 087 is now the exact next custom-file-parameters control. No production fix or new APK is claimed.
 
 2026-09-02 00:35 — Task 080 closed: four old-reference origins proven; Chief acceptance complete; clean Kimi-K3-jcloud Standards/Spec rerun PASS with zero findings. Release APK remains intentionally unfixed (`RESULT=FAIL`) pending a separately approved pre-D8/R8 rewrite task.
 
