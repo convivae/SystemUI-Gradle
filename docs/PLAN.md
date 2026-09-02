@@ -16,7 +16,7 @@
 - [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
 - [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
-- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行、task076 Release protobuf-lite、task077 durable emulator、task078/080 四条 exact mappings 与 166 caller identities均已闭合；Task 081 reference-only build logic已通过 focused tests/双轴review。Task 082真实Debug pipeline暴露AGP factory isolation；Tasks 090–094完成seam bisection。**Task 095已迁移production immutable 4/166 managed seam、移除factory cache/state并恢复visitor：focused tests 9/9，direct transform exit 0、45 ASM records、零serialization markers，一个真实instruction rewrite落DEX且hidden definitions为0；corrected bounded gate与Standards/Spec双轴review均PASS。下一步依次执行fresh Debug build/static、Release build/static、Debug runtime、Release runtime。** Task 079 broad replay保持暂停。
+- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行、task076 Release protobuf-lite、task077 durable emulator、task078/080 四条 exact mappings 与 166 caller identities均已闭合；Tasks 081–095完成reference-only build logic、isolation诊断与production immutable-input seam。**Task 096 fresh Debug build/static已PASS：唯一build exit 0，APK 190,547,804 B / SHA `f3af35d9…` / 13 DEX；critical hidden refs `4/4`、725-rule hidden defs `0`、old-owner residual PASS。下一步依次执行fresh Release build/R8/static、Debug runtime、Release runtime。** Task 079 broad replay保持暂停。
 - [ ] C6：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
 ### 2. 尾账（Release 阶段处理）
@@ -56,12 +56,13 @@ Task 086 corrected no-op control通过，Task 087无execution evidence而`INCONC
 可观察`PASS`，依次排除production parameter shape、managed input load、positive allowlist admission与class-byte
 no-op visitor creation作为充分trigger。Task 093随后只加入exact production-shaped transient cache layer，唯一command
 exit 1并在任何callback前重现Task 084 path，故正式归类`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer
-是当前最小已知activation boundary，但不证明其中单个字段、annotation、accessor或writeback为sole trigger。Task 094随后正式`PASS`：configuration-time validated immutable managed values + field-free no-op factory的唯一direct control exit 0，三个sentinel各1、45条ASM records，known serialization markers为0。Task 095随后完成production迁移并恢复`referenceOnlyVisitor(...)`：9个focused tests全绿；direct transform exit 0、45条ASM records、known serialization markers为0，一个真实allowlisted instruction rewrite已落DEX，hidden definitions为0且old definitions保留。原fixed two-output 0/2→2/2判据因第二输出不存在可达caller实际只能到1/2；用户批准corrected bounded gate，Standards/Spec双轴review及focused re-review均PASS。完整四映射仍由下一fresh Debug APK static gate验证。APK尚未重编，Task 079 broad replay暂停，模拟器当前未运行。最新证据见
+是当前最小已知activation boundary，但不证明其中单个字段、annotation、accessor或writeback为sole trigger。Task 094随后正式`PASS`：configuration-time validated immutable managed values + field-free no-op factory的唯一direct control exit 0，三个sentinel各1、45条ASM records，known serialization markers为0。Task 095完成production迁移并恢复`referenceOnlyVisitor(...)`，9个focused tests、corrected bounded direct gate及双轴review均PASS。Task 096随后完成fresh Debug APK static gate：唯一build exit 0、APK SHA `f3af35d9…`、四hidden refs `4/4`、725-rule hidden defs `0`、old-owner residual PASS。下一步是fresh Release build/R8/static；之后分别执行Debug/Release runtime。Task 079 broad replay暂停，模拟器当前未运行。最新证据见
 `docs/issues/2026-09-02-c5-observable-file-params-control.md`、
 `docs/issues/2026-09-02-c5-frozen-input-load-control.md`、
 `docs/issues/2026-09-02-c5-positive-allowlist-control.md`、
 `docs/issues/2026-09-02-c5-transient-cache-control.md`、
 `docs/issues/2026-09-02-c5-immutable-input-snapshot-control.md`、
 `docs/issues/2026-09-02-c5-production-immutable-input-seam.md`、
+`docs/issues/2026-09-02-c5-debug-build-static-gate.md`、
 `docs/issues/2026-08-27-c3-source-realignment-execution.md`、
 `docs/issues/2026-08-27-c2-libs-regen-17.md`、`docs/issues/2026-08-28-c4-gradle-wiring.md`。
