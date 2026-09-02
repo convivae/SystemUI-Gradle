@@ -436,3 +436,9 @@
 - Behavior is frozen to four runtime-critical exact mappings. The visitor must preserve every input `this_class` and current-class self reference, never define a hidden platform target, never delete a class, and never touch source, `libs/**`, SDK, AOSP/out, ProGuard, settings, or DEX. The four-rule file SHA is `ff79a84d…`; the sorted 166-class allowlist SHA is `926f102e…`; full AOSP provenance remains `f79a08d…`.
 - Proposed Task 081 is build-logic TDD only: focused tests and ADR 0008, no Android app build, R8, emulator, or ADB. Debug build, Release build/static gate, Debug runtime, and Release runtime remain separate serialized follow-ups. Task 079 broad replay stays paused.
 - Exact brief: `docs/orchestration/tasks/081-c5-pre-dex-reference-rewrite.md`. Because it authorizes a new long-lived build seam and ADR, dispatch is blocked on explicit user approval. No worker is active and no behavior change has been made.
+
+## 2026-09-02 — task081 exact brief approved; emulator intentionally remains stopped
+
+- User explicitly approved the complete Task 081 brief: the repository-owned `buildSrc` plugin, one `:app` `InstrumentationScope.ALL` registration bounded by the frozen 166-class allowlist, only four exact runtime-critical mappings, reference-only ownership, focused build-logic TDD, and ADR 0008.
+- After the user's host reboot, Chief observed an empty `adb devices -l` result and no emulator/QEMU process. Task 081 prohibits and does not need device work, so no emulator restart is needed now. The dedicated Android 17 emulator will be started and identity-gated only for the later serialized Debug/Release runtime tasks.
+- Chief is committing and pushing this approval record to create the immutable Task 081 dispatch base. No worker, build, R8, emulator, or APK validation has started yet.

@@ -1,7 +1,7 @@
 # C5：最小 pre-D8/R8 平台 aconfig 引用改写设计
 
 **日期**：2026-09-02
-**状态**：方案与 Task 081 brief 已起草，等待用户明确批准；未实现、未构建
+**状态**：用户已明确批准 Task 081 exact brief 与 ADR 0008；等待从已 push fixed base 串行 dispatch
 
 ## 背景
 
@@ -117,12 +117,14 @@ Task 081 只实现 build logic 与 focused tests，不运行 app Debug/Release b
 
 Task 081 的 focused tests 绿色不代表 APK 或 runtime 已修复。
 
-## 待用户裁决
+## 用户裁决与主机重启状态
 
-请明确批准或否决：
+用户于 2026-09-02 明确批准以下完整方案：
 
 - 新增 `buildSrc` pre-D8/R8 reference-only AGP instrumentation plugin；
 - `:app` 使用 `InstrumentationScope.ALL`，但以冻结 166-class allowlist 限定实际 instrument 范围；
 - 只启用四条 runtime-critical exact mappings；
 - Task 081 可新增 ADR 0008 记录此架构决定；
 - Task 081 不运行 app build，构建与设备验收继续拆成后续串行任务。
+
+用户同时说明主机已重启。Chief 复查后确认当前 `adb devices -l` 为空，且没有 emulator/QEMU 进程；Task 081 禁止且不需要设备操作，因此本任务开始前不重启模拟器。后续进入独立 Debug/Release runtime gate 前，再按当前 runbook 启动并核验专用 Android 17 模拟器。

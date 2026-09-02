@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的 725-rule 秒级 DEX gate 已 review-PASS；task080 又将四个 critical 旧名归属到 166 个唯一 program reference classes，`UNKNOWN=0`，并隔离 compileOnly `framework.jar`。Task 079 broad replay 已暂停；Task 081 最小 pre-D8/R8 reference-only AGP instrumentation 方案与 exact brief 已起草，等待用户批准后才可实现。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的 725-rule 秒级 DEX gate 已 review-PASS；task080 又将四个 critical 旧名归属到 166 个唯一 program reference classes，`UNKNOWN=0`，并隔离 compileOnly `framework.jar`。Task 079 broad replay 已暂停；用户已批准 Task 081 最小 pre-D8/R8 reference-only AGP instrumentation exact brief 与 ADR 0008，下一步是串行 build-logic TDD。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：向用户请求批准 Task 081 exact brief。候选实现只在 `:app` 建一个 AGP 9.3.1 pre-D8/R8 seam，以 Task 080 冻结的 166-class allowlist 将实际 visitor 范围限制到已证明 program classes，并只改四条 critical exact references；必须保持 `this_class`、hidden target definitions=0。Task 079 不恢复。获批、实现并 review-PASS 后，再把 Debug build、Release build/static gate 和双 runtime reboot gate 拆成串行小任务。
+5. **当前唯一工程优先级**：执行已获批准的 Task 081 exact brief。实现只在 `:app` 建一个 AGP 9.3.1 pre-D8/R8 seam，以 Task 080 冻结的 166-class allowlist 将实际 visitor 范围限制到已证明 program classes，并只改四条 critical exact references；必须保持 `this_class`、hidden target definitions=0。Task 079 不恢复。实现并 review-PASS 后，再把 Debug build、Release build/static gate 和双 runtime reboot gate 拆成串行小任务。主机重启后模拟器当前未运行，Task 081 不需要启动设备。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -32,7 +32,7 @@
 | C5 task075–077 | Debug 热运行 ✅；Release proto keep ✅；goldfish 2880MiB super / 582MiB scratch / 64MiB probe 跨重启 ✅；Release jarjar runtime blocker 待修 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
 | C5 task078 | DEX 静态 gate + 725-rule Soong/JarJar 机制研究 review-PASS；Release FAIL / stock PASS | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 | C5 task080 | 四个 critical old references 的 166-class program-input 来源闭环；50/7/5/104、`UNKNOWN=0`，compileOnly 隔离 | `docs/issues/2026-09-01-c5-focused-reference-origins.md` |
-| C5 task081 | 最小 pre-D8/R8 reference-only build logic 方案/brief 已起草，等待用户批准；尚未实现或构建 | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
+| C5 task081 | 最小 pre-D8/R8 reference-only build logic exact brief 与 ADR 0008 已获用户批准；等待串行实现，尚未构建 APK | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -81,4 +81,4 @@ DEX 对 AOSP 17 platform aconfig Flags 的原名引用与设备 jarjar 后类名
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：请用户裁决 Task 081 exact brief → build logic TDD 与双轴复核 → 串行 Debug/Release build + 静态 gate → 分别执行双 runtime reboot gate → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：Task 081 build logic TDD 与双轴复核 → 串行 Debug/Release build + 静态 gate → 启动专用模拟器并分别执行双 runtime reboot gate → C6 收口。

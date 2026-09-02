@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 goldfish 2880MiB dynamic-partition group、582MiB durable scratch、五分区 overlay 与跨重启探针。task078 落地 725-rule 秒级 DEX gate；task080 又以 class 常量池证据将四个 runtime-critical 旧名归属到 166 个唯一 program reference classes，覆盖项目类、直接 JAR、本地 Maven AAR 和直接 AAR，`UNKNOWN=0`，并排除 compileOnly `framework.jar`。**当前唯一 blocker 仍是缺失 pre-D8/R8 class-reference rewrite：Task 079 broad replay 已暂停；Task 081 的最小 `buildSrc` + app-level AGP instrumentation 方案与 exact brief 已起草，等待用户批准后才可实现。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 goldfish 2880MiB dynamic-partition group、582MiB durable scratch、五分区 overlay 与跨重启探针。task078 落地 725-rule 秒级 DEX gate；task080 又以 class 常量池证据将四个 runtime-critical 旧名归属到 166 个唯一 program reference classes，覆盖项目类、直接 JAR、本地 Maven AAR 和直接 AAR，`UNKNOWN=0`，并排除 compileOnly `framework.jar`。**当前唯一 blocker 仍是缺失 pre-D8/R8 class-reference rewrite：Task 079 broad replay 已暂停；用户已批准 Task 081 的最小 `buildSrc` + app-level AGP instrumentation exact brief 与 ADR 0008，下一步从已 push fixed base 串行实现。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -17,8 +17,8 @@
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
-| 设备/模拟器 | ⚠️ 17 emu64x 在线且 stock SystemUI 健康；`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS。项目 Release 因 aconfig jarjar 描述符未改名而 crash-loop |
-| 当前唯一工程优先级 | **C5 blocker**：task080 已证明四个旧名来自 166 个唯一 program reference classes，compileOnly `framework.jar` 已隔离。Task 079 broad replay 保持暂停；先请用户批准 Task 081 的最小 pre-D8/R8 reference-only AGP instrumentation brief，再按 build logic → Debug build → Release build/static gate → 双 runtime gate 串行推进。禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
+| 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；Task 081 不需要启动设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
+| 当前唯一工程优先级 | **C5 blocker**：task080 已证明四个旧名来自 166 个唯一 program reference classes，compileOnly `framework.jar` 已隔离。Task 079 broad replay 保持暂停；用户已批准 Task 081 的最小 pre-D8/R8 reference-only AGP instrumentation exact brief 与 ADR 0008，现按 build logic → 双轴复核 → Debug build → Release build/static gate → 双 runtime gate 串行推进。禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -126,8 +126,8 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Task 081 exact brief 用户裁决**：已起草 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` 与 `docs/orchestration/tasks/081-c5-pre-dex-reference-rewrite.md`。候选方案是在 `:app` 以 AGP 9.3.1 public instrumentation `Scope.ALL` 建立单一 pre-D8/R8 seam，但只允许 Task 080 冻结的 166 个 class identity 进入 visitor，并只改四条 critical exact reference；`this_class` 保持，hidden target definitions 必须为 0。未经批准不得 dispatch 或实现。
-2. **Task 081 build-logic TDD（批准后）**：只新增 `buildSrc` plugin、四规则/166-class 冻结输入、ADR 0008 与 focused tests；不运行 Android app build，不改 source/`libs/**`/SDK/AOSP/out/settings。
+1. **Task 081 build-logic TDD（已批准）**：用户已批准 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`、`docs/orchestration/tasks/081-c5-pre-dex-reference-rewrite.md` 与 ADR 0008。只在 `:app` 以 AGP 9.3.1 public instrumentation `Scope.ALL` 建立单一 pre-D8/R8 seam，只允许 Task 080 冻结的 166 个 class identity 进入 visitor，并只改四条 critical exact reference；`this_class` 保持，hidden target definitions 必须为 0。实现只新增 `buildSrc` plugin、四规则/166-class 冻结输入、ADR 0008 与 focused tests；不运行 Android app build，不改 source/`libs/**`/SDK/AOSP/out/settings。
+2. **Task 081 Chief 验收与双轴复核**：focused gate 通过后，Chief 独立复验并以固定 range 分别执行 Standards/Spec review；Task 081 不能声明 APK 或 runtime 已修复。
 3. **串行构建与静态 gate**：Task 081 review-PASS 后，分别立小任务停止 Gradle/Kotlin daemon并运行 Debug build、Release build/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
 4. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。
 5. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
@@ -165,8 +165,9 @@ manifest-dex closure 24/24、missing=0；Debug 热运行 PID/crash/UI 门通过�
 SHA `f79a08d…`）；当前 Release 为 30 source/0 target、exit 1 `RESULT=FAIL`，stock 为
 1 source/36 target、target-defined=0、exit 0 `RESULT=PASS`。task080 又将四个 critical old references
 归属到 166 个唯一 program classes（50/7/5/104，`UNKNOWN=0`），并明确隔离 compileOnly
-`framework.jar`。Task 079 broad replay 保持暂停；Task 081 最小 pre-D8/R8 reference-only 方案和 exact
-brief 已起草但尚未获用户批准，当前 APK 未变、Release gate 仍红。详见
+`framework.jar`。Task 079 broad replay 保持暂停；用户已批准 Task 081 最小 pre-D8/R8 reference-only 方案、exact
+brief 与 ADR 0008，当前 APK 未变、Release gate 仍红。主机重启后当前无连接设备或 emulator/QEMU
+进程；Task 081 不需要设备，后续 runtime gate 前再启动。详见
 `docs/issues/2026-09-01-c5-focused-reference-origins.md` 与
 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`。
 

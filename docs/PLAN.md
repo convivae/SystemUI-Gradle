@@ -16,7 +16,7 @@
 - [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
 - [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
-- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行已通过；task076 Release protobuf-lite 反射字段已修复；task077 已完成 goldfish super 扩容、582MiB durable scratch、五分区 overlay 和 64MiB 探针跨重启验收；task078 已完成 725 条 exact JarJar 规则的秒级 DEX gate；task080 已将四个 runtime-critical 旧名精确归属到 166 个唯一 program reference classes，并排除 compileOnly `framework.jar`。Task 079 broad replay 保持暂停。下一步是用户裁决 Task 081 的最小 `buildSrc` + app-level AGP reference-only instrumentation brief；批准后按 build logic、Debug build、Release build/static gate、Debug runtime、Release runtime 串行推进。
+- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行已通过；task076 Release protobuf-lite 反射字段已修复；task077 已完成 goldfish super 扩容、582MiB durable scratch、五分区 overlay 和 64MiB 探针跨重启验收；task078 已完成 725 条 exact JarJar 规则的秒级 DEX gate；task080 已将四个 runtime-critical 旧名精确归属到 166 个唯一 program reference classes，并排除 compileOnly `framework.jar`。Task 079 broad replay 保持暂停。用户已批准 Task 081 的最小 `buildSrc` + app-level AGP reference-only instrumentation exact brief 与 ADR 0008；现按 build logic、双轴复核、Debug build、Release build/static gate、Debug runtime、Release runtime 串行推进。
 - [ ] C6：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
 ### 2. 尾账（Release 阶段处理）
@@ -50,8 +50,9 @@
 的历程与证据，见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) 与 `docs/issues/` 归档。
 Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1/C3/C2/C4 已完成；C5 的
 持久部署基础设施、task078 静态 gate 与 task080 四类来源闭环已完成；runtime 仍受 platform aconfig
-class reference 未在 D8/R8 前改名阻塞。Task 079 broad replay 已暂停。下一步是用户裁决已起草的
-Task 081 最小 reference-only implementation brief；当前尚未实现、未重编。最新证据见
+class reference 未在 D8/R8 前改名阻塞。Task 079 broad replay 已暂停。用户已批准 Task 081 最小
+reference-only implementation brief 与 ADR 0008；当前尚未实现、未重编。主机重启后模拟器当前未运行，
+Task 081 不需要设备，后续 runtime gate 前再启动。最新证据见
 `docs/issues/2026-09-01-c5-focused-reference-origins.md`、
 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`，此前阶段报告见
 `docs/issues/2026-08-27-c3-source-realignment-execution.md`、

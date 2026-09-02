@@ -1,6 +1,6 @@
 # Task 081 — 实现最小 pre-D8/R8 平台 aconfig 引用改写
 
-**Authority**: `redline-gated self-commit`（用户明确批准本 brief 后才可 dispatch；worker 不 push）
+**Authority**: `redline-gated self-commit`（用户已于 2026-09-02 明确批准本 exact brief 与 ADR 0008；worker 不 push）
 **Reports To**: Chief architect
 **执行方式**: shared checkout 串行；只能使用显式 `joycode/Kimi-K3` 或 `joycode/Kimi-K3-jcloud`
 **Base**: Chief 在 dispatch 前固定为包含本 brief 的已 push commit
@@ -11,7 +11,7 @@
 
 本任务只实现 build logic、冻结输入和 focused tests。不得构建 app APK，不得运行 R8、模拟器或 ADB。
 
-## Approved design（用户批准后生效）
+## Approved design（用户已于 2026-09-02 明确批准）
 
 - 在 `buildSrc` 新增仓库内 Gradle plugin。
 - 只在 `:app` 注册 `InstrumentationScope.ALL`。

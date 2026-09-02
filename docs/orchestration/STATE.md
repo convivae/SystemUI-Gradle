@@ -14,10 +14,12 @@
 ## Queue
 
 1. Task 080 is closed and pushed at `36b4a3cd`: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed.
-2. Task 081 design and exact redline-gated brief are drafted. Await explicit user approval for the `buildSrc` + app-level AGP instrumentation seam, frozen four-rule/166-class inputs, and ADR 0008 before any dispatch or implementation.
-3. After Task 081 review-PASS, serialize Debug build, Release build/static APK checks, then persistent Debug and Release emulator reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
+2. Task 081 exact brief and ADR 0008 are user-approved. Freeze and push the approval-record base, then dispatch one serialized Kimi implementation worker for build-logic-only TDD; no Android build or device action belongs to Task 081.
+3. After Task 081 review-PASS, serialize Debug build, Release build/static APK checks, then start the dedicated Android 17 emulator for persistent Debug and Release reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — User explicitly approved Task 081's exact `buildSrc` + app-level AGP instrumentation design, frozen four-rule/166-class inputs, and ADR 0008. A post-host-reboot preflight found no connected ADB device and no emulator/QEMU process. This does not block Task 081 because it forbids device work; the dedicated emulator will be started later at the separate runtime-gate stage. Chief is freezing a pushed approval-record base before the single serialized Kimi worker dispatch.
 
 - 2026-09-02 — Chief drafted Task 081 as a redline-gated build-logic-only task. The proposed seam is one `:app` AGP 9.3.1 `InstrumentationScope.ALL` registration constrained by Task 080's frozen 166-class allowlist and four exact runtime-critical mappings. It must preserve `this_class`, produce zero hidden target definitions, leave `settings.gradle.kts`/source/`libs/**` untouched, and run only focused buildSrc tests. Task 079 remains paused. No worker, implementation, app build, R8, or device action is authorized until the user explicitly approves the exact brief and ADR 0008.
 
