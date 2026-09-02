@@ -2,12 +2,16 @@
 
 - Date: 2026-09-02
 - Type: read-only primary-source research
-- Status: planned
+- Status: completed; report merged as `a03beaba`, independent Standards/Spec reviews PASS
 - Report owner: `docs/architecture/2026-09-02-agp-instrumentation-isolation-research.md`
+
+## Result
+
+The reviewed report at `docs/architecture/2026-09-02-agp-instrumentation-isolation-research.md` proves the current ASM seam's pre-D8/pre-R8 position and runtime-classpath/compileOnly boundary from AGP 9.3.1 source, but finds no public contract that explains the observed nested decorated-factory serialization. `ScopedArtifacts.Scope.ALL` remains only a bounded candidate because pre-D8 consumption is unproven. The smallest recommended next step is a successor micro-control that changes an annotated transform input and independently proves factory execution; this is Task 090.
 
 ## Background
 
-The application registers an app-only `InstrumentationScope.ALL` `AsmClassVisitorFactory` to perform four exact, reference-only class-name mappings before D8/R8. Focused tests pass, but the real `:app:desugarDebugFileDependencies` transform fails while Gradle isolates `AsmClassesTransform.Parameters`. JDK extended serialization evidence identifies `InstrumentationContext_Decorated.__apiVersion__` (`DefaultProperty`) through the decorated factory's `__instrumentationContext__`. A field-free `InstrumentationParameters.None` no-op `ALL` control passes. Task 087 is separately testing the same no-op behavior with the production two `RegularFileProperty` parameters.
+The application registers an app-only `InstrumentationScope.ALL` `AsmClassVisitorFactory` to perform four exact, reference-only class-name mappings before D8/R8. Focused tests pass, but the real `:app:desugarDebugFileDependencies` transform fails while Gradle isolates `AsmClassesTransform.Parameters`. JDK extended serialization evidence identifies `InstrumentationContext_Decorated.__apiVersion__` (`DefaultProperty`) through the decorated factory's `__instrumentationContext__`. A field-free `InstrumentationParameters.None` no-op `ALL` control passes. Task 087 later attempted the same no-op behavior with the production two `RegularFileProperty` parameters, but remained `INCONCLUSIVE` because the target was `UP-TO-DATE`.
 
 ## Question
 

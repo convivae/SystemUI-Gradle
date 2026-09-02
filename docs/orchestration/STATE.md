@@ -9,23 +9,26 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 087 | `w2:t3F` / `w2:p3M` (`task087`) | shared `main` | verified `joycode/GLM-5.3`, `thinking=high` | strict startup complete; CONTRACT accepted; waiting before non-Gradle preflight while research briefs are frozen | exact two-path temporary diff, same custom file parameters + field-free no-op, one direct Gradle command, mandatory restoration |
-| 088 | pending dedicated tab | isolated worktree from next pushed base | `joycode/GLM-5.3`, `thinking=high` | official toolchain-upgrade research brief drafted | one cited report only; no Gradle/tool install/version edit |
-| 089 | pending dedicated tab | isolated worktree from next pushed base | `joycode/GLM-5.3`, `thinking=high` | official AGP instrumentation/isolation research brief drafted | one cited report only; no Gradle/buildSrc edit/build/device action |
+| 090 | pending dedicated tab | shared `main` after pushed planning base | `joycode/GLM-5.3`, `thinking=high` | observable custom-file-parameter control brief drafted; dispatch pending | exact two-path temporary diff + scratch probe, one direct `--info` Gradle command, sentinel-required PASS, mandatory restoration |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
 
-1. Task 080 is closed and pushed at `36b4a3cd`: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed.
-2. Task 081 implementation `3173d426` and review closure `26b1346b` are pushed. Fixed range `aba9534f...3173d426` passed Standards/Spec and Chief focused acceptance; this proves build logic only, not APK/R8/runtime.
-3. Task 082 is closed FAIL. Its only authorized command reached the real AGP application pipeline but stopped at `:app:desugarDebugFileDependencies`: Gradle could not isolate `AsmClassesTransform.Parameters` because it could not serialize `AconfigReferenceRewriteFactory`. No APK/static gate ran and no tracked file changed.
-4. Task 083 is closed PASS at the diagnosis rung. Its only direct task reproduced the same failure in 5 seconds and exposed deepest cause `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`; classfile evidence rejects the transient cache as direct cause, and Task 084 subsequently resolved the runtime decorator field path.
-5. Task 084 is closed PASS at the field-path diagnosis rung. Its single extended-info direct task reproduced the exact failure and all 46 deepest chains identify `InstrumentationContext_Decorated.__apiVersion__` via factory decorator `__instrumentationContext__`; first failure ownership is AGP-injected state, not custom parameters or the transient cache.
-6. Task 085 is closed `OTHER_FAILURE`. Its exact one-command control failed at `:buildSrc:compileKotlin` because the temporary `InstrumentationParameters.None` registration omitted AGP 9.3.1's mandatory configuration lambda; it never reached isolation. The two Allowed Paths were restored, daemons stopped, worktree clean, and the worker tab closed.
-7. Task 086 is closed `PASS`. The corrected `InstrumentationParameters.None` field-free no-op `ALL` control ran the direct task once and got `BUILD SUCCESSFUL in 21s`; its 98-line log SHA is `938d2248…`. Chief verified exact restoration, clean worktree, and no build processes. This rejects a universal injected-`apiVersion` failure for all None/no-op factories but does not isolate parameters from factory behavior.
-8. Task 087 is active: keep a field-free no-op factory while restoring exactly `AconfigReferenceRewriteParameters` and the production two-file configuration. One direct task will classify `CUSTOM_PARAMS_FAILURE|PASS|OTHER_FAILURE`; no production fix is authorized.
-9. Tasks 088 and 089 are independent official-source research requested by the user. They may run in parallel in isolated worktrees while Task 087 owns the shared checkout: Task 088 evaluates supported toolchain upgrades and relevant post-9.3.1 fixes; Task 089 researches the official instrumentation/isolation contract and supported alternatives. Neither may run Gradle or change versions/production code.
+1. Tasks 080/081 are closed and pushed: four mappings and 166 callers are frozen; the reference-only build logic passed focused tests and dual-axis review but not the real Android pipeline.
+2. Tasks 082–084 identify the real blocker and literal first failure: `AsmClassesTransform` isolation reaches `InstrumentationContext_Decorated.__apiVersion__` (`DefaultProperty`) through the decorated production factory.
+3. Task 086 is closed `PASS` for `InstrumentationParameters.None` + field-free no-op `ALL`; it rejects a universal injected-field failure but does not isolate custom parameters.
+4. Task 087 is closed **`INCONCLUSIVE`**. Its only command exited 0, but `:app:desugarDebugFileDependencies` was `UP-TO-DATE`; no artifact-transform/factory execution was proven. Final restoration and process cleanup passed.
+5. Tasks 088/089 are merged and review-PASS. Task 088 found no direct first-party evidence that a toolchain upgrade is a targeted fix; inaccessible post-9.3.1 release/source facts remain unknown. Task 089 proves the current seam is pre-D8/pre-R8 and runtime-classpath-scoped, but the serialization boundary is undocumented; `ScopedArtifacts.Scope.ALL` is only a bounded candidate.
+6. Task 090 is the next serial diagnostic: preserve the production parameter type and two file slots with a field-free no-op factory, point one annotated file input at a unique scratch probe, and require an `android.os.CustomFeatureFlags` factory sentinel (or the literal isolation failure) before drawing any conclusion. No production fix is authorized.
+7. After Task 090, define one result-conditioned production task, then focused review, Debug build/static gate, Release build/R8/static gate, and separate Debug/Release runtime gates. Task 079 remains paused.
+
 ## Recent Orchestration Transitions
+
+- Task 090 brief drafted on main after Task 087 was formally reclassified `INCONCLUSIVE`; its PASS gate requires the exact runtime-JAR sentinel, not task-level success.
+- Tasks 088/089 were cherry-picked linearly as `bf3c96a0` and `a03beaba`, `git diff --check HEAD~2..HEAD` passed, and Chief pushed `874ec5f0..a03beaba` to `origin/main`.
+- Task 088 Standards and Spec reviewers independently verified fixed ranges, non-empty one-commit diffs, official-source claim boundaries, and `joycode/GLM-5.3` + `thinking=high`; both returned PASS.
+- Task 089 Standards and Spec reviewers independently verified the same range/model discipline and returned PASS. Standards retained one disclosed low-severity process finding: the replacement researcher used direct read-only `python3` once; no write side effect or report-claim contamination was found.
+- Task 087 command exit 0 and `BUILD SUCCESSFUL in 17s`, but `:app:desugarDebugFileDependencies UP-TO-DATE`; Chief classified the run `INCONCLUSIVE`, verified byte-for-byte restoration/temporary-factory absence/clean status, and found no live Gradle/Kotlin/Soong/Ninja process.
 
 - 2026-09-02 — User requested that the current diagnosis continue while independent Workers research official documentation and newer supported toolchain versions instead of relying only on local experiments. Task 087 is started in dedicated tab `w2:t3F` / pane `w2:p3M`; session events independently verify `joycode/GLM-5.3`, `thinking=high`, and its strict AGENTS → CHARTER → sources startup plus matching CONTRACT are complete. Tasks 088/089 are drafted as isolated, report-only, first-party-source research and will not share mutable paths or run Gradle.
 
@@ -398,7 +401,7 @@
 
 ## Last Updated
 
-2026-09-02 — Task 086 corrected no-op `ALL` control closed PASS: the single direct dependency-transform task succeeded, the temporary diff was fully restored, and Task 087 is now the exact next custom-file-parameters control. No production fix or new APK is claimed.
+2026-09-02 — Tasks 087–089 closed and pushed: Task 087 is `INCONCLUSIVE` because its successful direct task was `UP-TO-DATE` and did not prove transform/factory execution. Task 088/089 reports were independently reviewed on Standards and Spec (four PASS verdicts), cherry-picked as `bf3c96a0` / `a03beaba`, and pushed through `a03beaba`. No targeted-upgrade evidence was found; the current ASM seam location is proven but its serialization boundary remains undocumented. Task 090 is the exact next observable file-input/sentinel control. No production fix or new APK is claimed.
 
 2026-09-02 00:35 — Task 080 closed: four old-reference origins proven; Chief acceptance complete; clean Kimi-K3-jcloud Standards/Spec rerun PASS with zero findings. Release APK remains intentionally unfixed (`RESULT=FAIL`) pending a separately approved pre-D8/R8 rewrite task.
 
