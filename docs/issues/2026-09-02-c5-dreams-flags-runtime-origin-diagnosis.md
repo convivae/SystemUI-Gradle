@@ -1,7 +1,7 @@
 # C5 Task 099：`android.service.dreams.Flags` runtime origin diagnosis
 
 **日期**：2026-09-02
-**状态**：PLANNED — 等待独立只读诊断；不得修复、构建或操作设备
+**状态**：PLANNED — 四次 startup/CONTRACT attempt 已 fail-closed 退休；等待新的独立只读诊断；不得修复、构建或操作设备
 **前置**：Task 098 已以 `DEBUG_RUNTIME_REBOOT_FAIL` 关闭；Task 096/097 的 fresh Debug/Release build/static 结论仍分别为 PASS，但不构成 runtime PASS。
 
 ## 背景
@@ -64,6 +64,17 @@ Task 098 只证明一个未重写 old-owner reference 到达 runtime；它没有
 - 3–5 个 hypotheses 的逐项证据和 verdict；
 - 单一最小根因陈述，以及下一 production-fix task 的最小建议范围与必须新增的 regression/static gates；
 - 明确声明未 build、未修复、未操作设备，Debug/Release runtime 均未因此变为 PASS。
+
+## Startup attempts（均无技术 authority）
+
+在开始任何 preflight 或诊断前，Chief 已 fail-closed 退休四个 attempt；它们只形成流程记录，任何读取内容、推测或 malformed CONTRACT 均不得作为 Task 099 技术证据：
+
+- `task099-dreams`（`w2:t4C` / `w2:p4H`）：CONTRACT 未逐字复现冻结 six-field authority，擅自扩大 `tools/**` writable scope并预判 coverage 结论。
+- `task099-dreams-r2`（`w2:t4D` / `w2:p4J`）：在唯一冻结 log-tail read 后额外探测 line 715，并在 mandatory source 13 后因 compaction 重读 brief。
+- `task099-dreams-r3`（`w2:t4E` / `w2:p4K`）：完成 source continuation，但未输出冻结的 exact six-field CONTRACT。
+- `task099-dreams-r4`（`w2:t4F` / `w2:p4M`）：`docs/orchestration/STATE.md` 在 line 176/514 截断后未以 offset 177 续读即继续后续 sources；Chief 在其唯一响应前退休。
+
+四次 session 均独立记录 `joycode/GLM-5.3`、`thinking=high`。它们没有运行 preflight、static RED loop、Gradle/Soong/Ninja/D8/R8/JarJar、emulator/ADB、build、production fix、commit 或 push，也没有 tracked change；Task 099 诊断仍未开始。
 
 ## 构建与错误数记录
 
