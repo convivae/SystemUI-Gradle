@@ -7,10 +7,6 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.commons.ClassRemapper
 import org.objectweb.asm.commons.Remapper
 
-internal class AconfigReferenceRewriteFilter(private val allowlist: Set<String>) {
-    fun isInstrumentable(className: String): Boolean = className in allowlist
-}
-
 internal class ReferenceOnlyClassRewriter(mappings: Map<String, String>) {
     private val internalMappings = mappings
         .mapKeys { (source, _) -> source.replace('.', '/') }
@@ -42,6 +38,13 @@ internal fun referenceOnlyVisitor(
     currentClass: String,
     internalMappings: Map<String, String>,
 ): ClassVisitor {
+    // Fail closed: a hidden platform definition as transform input is never
+    // legitimate (the device framework owns those classes). Instrumenting
+    // everything (Task 099 Chief decision) makes this guard the only thing
+    // standing between the build and a hidden definition sneaking in.
+    check(currentClass !in internalMappings.values) {
+        "Refusing to instrument a hidden platform definition: $currentClass"
+    }
     val remapper = object : Remapper(Opcodes.ASM9) {
         override fun map(internalName: String): String =
             if (internalName == currentClass) currentClass else internalMappings[internalName] ?: internalName

@@ -21,7 +21,6 @@ internal object AconfigInstrumentationRegistration {
             InstrumentationScope.ALL,
         ) { parameters ->
             parameters.mappings.putAll(frozenInputs.mappings)
-            parameters.allowlist.addAll(frozenInputs.allowlist)
         }
         instrumentation.setAsmFramesComputationMode(FramesComputationMode.COPY_FRAMES)
         return true
@@ -35,8 +34,7 @@ class AconfigReferenceRewritePlugin : Plugin<Project> {
                 ApplicationAndroidComponentsExtension::class.java,
             )
             val frozenInputs = FrozenAconfigInputs.load(
-                project.rootProject.file("gradle/aosp17-critical-aconfig-reference-rules.txt"),
-                project.rootProject.file("gradle/aosp17-critical-aconfig-reference-classes.txt"),
+                project.rootProject.file("gradle/aosp17-aconfig-repackaging-rules.txt"),
             )
             androidComponents.onVariants(androidComponents.selector().all()) { variant ->
                 check(

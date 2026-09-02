@@ -1,4 +1,0 @@
-rule android.app.Flags com.android.internal.hidden_from_bootclasspath.android.app.Flags
-rule android.os.Flags com.android.internal.hidden_from_bootclasspath.android.os.Flags
-rule android.view.accessibility.Flags com.android.internal.hidden_from_bootclasspath.android.view.accessibility.Flags
-rule com.android.window.flags.Flags com.android.internal.hidden_from_bootclasspath.com.android.window.flags.Flags

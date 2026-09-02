@@ -2,6 +2,7 @@ package com.android.systemui.aconfigrewrite
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.objectweb.asm.ClassReader
@@ -27,20 +28,12 @@ class ReferenceOnlyClassRewriterTest {
     private val rewriter = ReferenceOnlyClassRewriter(mappings)
 
     @Test
-    fun `allowlisted caller class references are rewritten and other callers are rejected by filter`() {
+    fun `every caller class is rewritten without any allowlist or skip-set`() {
+        // Task 099 Chief decision: instrument EVERYTHING (no source/target
+        // skip-set, no caller allowlist) -- D8 synthesizes lambda classes
+        // after the ASM transform, so any skipped class leaves unrewritable
+        // old-name method handles behind.
         val caller = "com.android.systemui.statusbar.CommandQueue"
-        val allowlist = setOf(caller)
-        val filter = AconfigReferenceRewriteFilter(allowlist)
-        assertTrue(filter.isInstrumentable(caller))
-        assertFalse(filter.isInstrumentable("com.android.systemui.NotProvenByTask080"))
-        assertTrue(isAllowlistedClass(caller, allowlist))
-        assertFalse(
-            isAllowlistedClass(
-                "com.android.systemui.NotProvenByTask080",
-                allowlist,
-            ),
-        )
-
         val output = node(rewriter.rewrite(simpleFixture(caller.replace('.', '/'), "android/app/Flags")))
         val fieldReference = instructions(output).filterIsInstance<FieldInsnNode>().single()
         assertEquals(internalMappings.getValue("android/app/Flags"), fieldReference.owner)
@@ -127,6 +120,40 @@ class ReferenceOnlyClassRewriterTest {
         )
     }
 
+    @Test
+    fun `bootstrap method handle of a source class is rewritten so D8 lambdas come out hidden-referencing`() {
+        // The D8 lambda lesson (2026-09-03 Debug build): a mapping-source
+        // class's BootstrapMethods method handle referencing a sibling old
+        // name MUST be rewritten -- D8 synthesizes the lambda caller classes
+        // from it at dex time, after the ASM transform.
+        val sourceOwner = "android/app/Flags"
+        val sibling = "android/os/Flags"
+        val output = node(rewriter.rewrite(lambdaFixture(sourceOwner, sibling)))
+
+        // The source definition stays under its old name (dead shell) ...
+        assertEquals(sourceOwner, output.name)
+        // ... but the invokedynamic implementation handle points at the hidden twin.
+        val invokeDynamic = instructions(output).filterIsInstance<InvokeDynamicInsnNode>().single()
+        val implHandle = invokeDynamic.bsmArgs.filterIsInstance<Handle>().single()
+        assertEquals(internalMappings.getValue(sibling), implHandle.owner)
+    }
+
+    @Test
+    fun `hidden platform definition as transform input fails closed`() {
+        val hiddenTarget = internalMappings.values.first()
+        // The visitor seam (used by the AGP factory path) refuses hidden inputs.
+        val error = assertThrows(IllegalStateException::class.java) {
+            referenceOnlyVisitor(ClassWriter(0), hiddenTarget, internalMappings)
+        }
+        assertTrue(error.message!!.contains("Refusing to instrument a hidden platform definition"))
+        // The byte-level rewriter path refuses them too.
+        val bytes = newClass(hiddenTarget).apply { visitEnd() }.toByteArray()
+        val rewriteError = assertThrows(IllegalStateException::class.java) {
+            rewriter.rewrite(bytes)
+        }
+        assertTrue(rewriteError.message!!.contains("Refusing to instrument a hidden platform definition"))
+    }
+
     private fun simpleFixture(owner: String, referencedOwner: String): ByteArray {
         val writer = newClass(owner)
         val method = writer.visitMethod(Opcodes.ACC_PUBLIC, "call", "()V", null, null)
@@ -153,6 +180,31 @@ class ReferenceOnlyClassRewriterTest {
         self.visitInsn(Opcodes.ARETURN)
         self.visitMaxs(1, 2)
         self.visitEnd()
+        writer.visitEnd()
+        return writer.toByteArray()
+    }
+
+    private fun lambdaFixture(owner: String, sibling: String): ByteArray {
+        val writer = newClass(owner)
+        val method = writer.visitMethod(Opcodes.ACC_PUBLIC, "flag", "()Z", null, null)
+        method.visitCode()
+        method.visitInvokeDynamicInsn(
+            "test",
+            "()Ljava/util/function/Predicate;",
+            Handle(
+                Opcodes.H_INVOKESTATIC,
+                "java/lang/invoke/LambdaMetafactory",
+                "metafactory",
+                "(Ljava/lang/invoke/MethodHandles\$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;",
+                false,
+            ),
+            Handle(Opcodes.H_INVOKEINTERFACE, sibling, "enabled", "()Z", true),
+        )
+        method.visitInsn(Opcodes.POP)
+        method.visitInsn(Opcodes.ICONST_1)
+        method.visitInsn(Opcodes.IRETURN)
+        method.visitMaxs(1, 1)
+        method.visitEnd()
         writer.visitEnd()
         return writer.toByteArray()
     }

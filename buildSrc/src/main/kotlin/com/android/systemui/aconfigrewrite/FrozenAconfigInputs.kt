@@ -5,25 +5,27 @@ import java.security.MessageDigest
 
 internal data class FrozenAconfigInputs(
     val mappings: Map<String, String>,
-    val allowlist: Set<String>,
 ) {
+    val sourceClasses: Set<String> get() = mappings.keys
+    val targetClasses: Set<String> get() = mappings.values.toSet()
+
     companion object {
-        const val RULES_SHA256 = "ff79a84d8ba250eeae789af007aa97828f5b31b2f41950cf519465f20fe79d85"
-        const val ALLOWLIST_SHA256 = "926f102e3c899dbcac4ee7e5054bf294f9cde327eaf9f6a43bc29f2d6d2b682b"
+        // SHA-256 of gradle/aosp17-aconfig-repackaging-rules.txt: the complete
+        // authoritative Soong framework jarjar rule set (725 exact class
+        // renames, source -> com.android.internal.hidden_from_bootclasspath.*).
+        // Derived from the frozen AOSP repackaging.txt whose own sha256 is
+        // FULL_AOSP_RULES_SHA256; the repo copy is byte-canonical (no trailing
+        // blank line, exactly one final LF).
+        const val RULES_SHA256 = "411ad0e60c4647b3cc4c0160573e12f1a8ae5eadf9fc3f5492b76071b78d5191"
         const val FULL_AOSP_RULES_SHA256 = "f79a08d481147a5e6a532ec254e6f075ccb661d844b9ac19db764cd085a6de97"
+        const val RULE_COUNT = 725
+        private const val TARGET_PREFIX = "com.android.internal.hidden_from_bootclasspath."
 
-        private val approvedMappings = linkedMapOf(
-            "android.app.Flags" to "com.android.internal.hidden_from_bootclasspath.android.app.Flags",
-            "android.os.Flags" to "com.android.internal.hidden_from_bootclasspath.android.os.Flags",
-            "android.view.accessibility.Flags" to "com.android.internal.hidden_from_bootclasspath.android.view.accessibility.Flags",
-            "com.android.window.flags.Flags" to "com.android.internal.hidden_from_bootclasspath.com.android.window.flags.Flags",
-        )
         private val rulePattern = Regex("rule ([A-Za-z_$][A-Za-z0-9_$.]*) ([A-Za-z_$][A-Za-z0-9_$.]*)")
-        private val classPattern = Regex("[A-Za-z_$][A-Za-z0-9_$.]*")
 
-        fun load(rulesFile: File, allowlistFile: File): FrozenAconfigInputs {
-            val ruleLines = readCanonicalFile(rulesFile, "rules", RULES_SHA256, 4)
-            val parsedRules = ruleLines.map { line ->
+        fun load(rulesFile: File): FrozenAconfigInputs {
+            val lines = readCanonicalFile(rulesFile, "rules", RULES_SHA256, RULE_COUNT)
+            val parsedRules = lines.map { line ->
                 val match = rulePattern.matchEntire(line)
                     ?: fail("Malformed frozen rule: $line")
                 match.groupValues[1] to match.groupValues[2]
@@ -34,18 +36,13 @@ internal data class FrozenAconfigInputs(
             if (parsedRules.map { it.first }.toSet().size != parsedRules.size) {
                 fail("Frozen rules contain duplicate source classes")
             }
+            for ((source, target) in parsedRules) {
+                if (!target.startsWith(TARGET_PREFIX) || target != TARGET_PREFIX + source) {
+                    fail("Frozen rule is not the canonical identity-shaped hidden rename: $source -> $target")
+                }
+            }
             val mappings = parsedRules.toMap(LinkedHashMap())
-            if (mappings != approvedMappings) {
-                fail("Frozen rules differ from the four approved mappings")
-            }
-
-            val classes = readCanonicalFile(allowlistFile, "allowlist", ALLOWLIST_SHA256, 166)
-            if (classes != classes.sorted()) fail("Frozen allowlist is not sorted")
-            if (classes.toSet().size != classes.size) fail("Frozen allowlist contains duplicates")
-            if (classes.any { !classPattern.matches(it) || '/' in it }) {
-                fail("Frozen allowlist contains a malformed dot-FQCN")
-            }
-            return FrozenAconfigInputs(mappings, LinkedHashSet(classes))
+            return FrozenAconfigInputs(mappings)
         }
 
         private fun readCanonicalFile(file: File, label: String, expectedSha: String, expectedCount: Int): List<String> {
