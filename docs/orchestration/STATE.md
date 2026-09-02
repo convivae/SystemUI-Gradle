@@ -9,6 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
+| 085 | `w2:t3C` / `w2:p3H` (`task085-none-all`) | shared `main` at `0e4aba69` dispatch base | `joycode/GLM-5.3`, `thinking=high` (session events verified) | strict startup complete; CONTRACT accepted; preflight not yet authorized | exact two-path temporary diff, one direct Gradle command after Chief diff approval, then mandatory restoration; no production fix/full build/Release/device |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -20,6 +21,8 @@
 5. Task 084 is closed PASS at the field-path diagnosis rung. Its single extended-info direct task reproduced the exact failure and all 46 deepest chains identify `InstrumentationContext_Decorated.__apiVersion__` via factory decorator `__instrumentationContext__`; first failure ownership is AGP-injected state, not custom parameters or the transient cache.
 6. Task 085 is next: temporarily replace only the registration with an `InstrumentationParameters.None` no-op `InstrumentationScope.ALL` control, inspect the exact two-path diff before one direct task, capture the result, and restore to a clean worktree. No production fix/full build/Release/device work is allowed.
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 085 dispatched from pushed base `0e4aba69` in dedicated tab `w2:t3C` / pane `w2:p3H`. Session events independently verify `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`. Strict sequential AGENTS → CHARTER → worker-contract/brief/issues/Task 084 scratch startup completed and Chief accepted the exact temporary-control CONTRACT. It remains stopped before preflight; no Task 085 scratch, tracked edit, or Gradle command has run.
 
 - 2026-09-02 — Task 084 closed PASS. Its sole authorized command ran once at `dfde2718`, exited 1 after 5 seconds, and exactly reproduced the dependency-transform isolation failure. JDK extended serialization info produced the same literal path in all 46 deepest chains: `InstrumentationContext_Decorated.__apiVersion__` (`DefaultProperty`) via `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__`. Chief independently verified the 8051-line log SHA `dc9cac2b…`, path counts, outer failure, AGP injection source, clean worktree, and no residual build processes. Worker tab `w2:t3B` was closed. Task 085 is defined as a temporary `InstrumentationParameters.None` no-op `ALL` control; no production change is yet authorized.
 
