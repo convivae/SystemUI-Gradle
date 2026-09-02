@@ -134,3 +134,13 @@ All other tracked/untracked paths; production factory/parameter interface/input 
   NEXT=Chief defines the result-conditioned next task
   ```
 - End with a concise `HANDOFF:` block.
+
+## Closure
+
+Task 092 completed with `CONTROL_RESULT=PASS`. The sole Gradle invocation exited 0; the 1467-line log at `/tmp/task092-c5-positive-allowlist-control/desugar-positive-allowlist.log` has SHA-256 `8379c3573a201891a7a13d48784dccd0862cc958076cbb729442c6b7c968d4a5`, `BUILD SUCCESSFUL in 17s`, and `5 actionable tasks: 2 executed, 3 up-to-date`. Entered, accepted, and no-op visitor sentinels each occurred exactly once; 45 ASM transform records occurred; the three known serialization markers were absent.
+
+The temporary diff was fully restored, the factory removed, production hashes restored, worktree clean, and final process census empty. Scratch rules remained byte-identical. The saved patch/factory/plugin hashes are recorded in the issue owner.
+
+Two process deviations remain part of the durable record. First, the frozen cleanup shell self-matched its own later unbracketed daemon literal: command 1 ran once and killed its wrapper before saving its exit code, so its exit file is absent; commands 2/3 were subsequently run exactly once with Chief approval and saved exit codes 0/1. Second, `/tmp/task092-code-only.kts` was briefly created outside the authorized scratch root and then deleted. Neither deviation changes the experimental classification.
+
+The accepted claim is only that positive production allowlist admission reaches a class-byte no-op visitor without the known isolation path. Task 093 is the next independent rung and may add only the production-shaped transient cache layer; `referenceOnlyVisitor(...)` remains forbidden.

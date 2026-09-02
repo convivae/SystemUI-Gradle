@@ -16,7 +16,7 @@
 - [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
 - [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
-- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行、task076 Release protobuf-lite、task077 durable emulator、task078/080 四条 exact mappings 与 166 caller identities均已闭合；Task 081 reference-only build logic已通过 focused tests/双轴review。Task 082真实Debug pipeline暴露AGP factory isolation；Task 083/084固定literal field path，Task 086排除所有`None`/no-op `ALL` factory必败，Task 087因无执行证据为`INCONCLUSIVE`，Tasks 088/089未找到升级是targeted fix的直接证据。**Tasks 090/091已连续取得可观察`PASS`，证明production parameter/file slots及managed property access + 一次`FrozenAconfigInputs.load(...)`都不是充分trigger。当前Task 092只恢复positive allowlist admission并进入class-byte no-op visitor；其后按cache→reference visitor逐层单变量恢复，或在admission已激活known isolation path时先设计production fix，再依次执行Debug build/static、Release build/static、Debug runtime、Release runtime。** Task 079 broad replay保持暂停。
+- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行、task076 Release protobuf-lite、task077 durable emulator、task078/080 四条 exact mappings 与 166 caller identities均已闭合；Task 081 reference-only build logic已通过 focused tests/双轴review。Task 082真实Debug pipeline暴露AGP factory isolation；Task 083/084固定literal field path，Task 086排除所有`None`/no-op `ALL` factory必败，Task 087因无执行证据为`INCONCLUSIVE`，Tasks 088/089未找到升级是targeted fix的直接证据。**Tasks 090–092已连续取得可观察`PASS`，证明production parameter/load、positive admission与class-byte no-op visitor都不是充分trigger。当前Task 093只恢复production-shaped transient cache；`referenceOnlyVisitor(...)`留待下一独立rung。找到最小trigger并完成production fix/review后，再依次执行Debug build/static、Release build/static、Debug runtime、Release runtime。** Task 079 broad replay保持暂停。
 - [ ] C6：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
 ### 2. 尾账（Release 阶段处理）
@@ -52,12 +52,13 @@ Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1/C3/C2/C4 已完
 持久部署基础设施、task078 静态 gate、task080 四类来源闭环和task081 reference-only build logic
 已完成。Task 082真实Debug pipeline在AGP factory isolation失败；Task 083/084固定最深literal path。
 Task 086 corrected no-op control通过，Task 087无execution evidence而`INCONCLUSIVE`；Tasks 088/089
-未找到升级是targeted fix的第一方证据。Tasks 090/091现已用唯一declared input和factory sentinels连续取得
-可观察`PASS`，排除production parameter shape与managed input load作为充分trigger。当前Task 092只恢复
-positive allowlist admission并进入class-byte no-op visitor，随后才逐层恢复cache/reference visitor或围绕
-已固定的最小激活边界选择production fix。APK尚未重编，Task 079 broad replay暂停，模拟器当前未运行。最新证据见
+未找到升级是targeted fix的第一方证据。Tasks 090–092现已用唯一declared input和factory sentinels连续取得
+可观察`PASS`，依次排除production parameter shape、managed input load、positive allowlist admission与class-byte
+no-op visitor creation作为充分trigger。当前Task 093只恢复production-shaped transient cache，随后才以独立rung恢复
+`referenceOnlyVisitor(...)`或围绕已固定的最小激活边界选择production fix。APK尚未重编，Task 079 broad replay暂停，模拟器当前未运行。最新证据见
 `docs/issues/2026-09-02-c5-observable-file-params-control.md`、
 `docs/issues/2026-09-02-c5-frozen-input-load-control.md`、
 `docs/issues/2026-09-02-c5-positive-allowlist-control.md`、
+`docs/issues/2026-09-02-c5-transient-cache-control.md`、
 `docs/issues/2026-08-27-c3-source-realignment-execution.md`、
 `docs/issues/2026-08-27-c2-libs-regen-17.md`、`docs/issues/2026-08-28-c4-gradle-wiring.md`。

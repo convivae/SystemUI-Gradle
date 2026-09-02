@@ -1,7 +1,7 @@
 # C5 Task 092：positive allowlist admission control
 
 **日期**：2026-09-02
-**状态**：待执行
+**状态**：已执行，`PASS`（positive allowlist admission与class-byte no-op visitor均可观察完成；temporary diff已完整恢复）
 **前置**：Task 091 已取得可观察 `PASS`。在 production `AconfigReferenceRewriteParameters`、两个 managed file slots、application-only `InstrumentationScope.ALL`、`COPY_FRAMES`、field-free/no-cache 且所有类均被拒绝的控制中，`android.os.CustomFeatureFlags` 已完成一次 production `FrozenAconfigInputs.load(...)`；entered/loaded sentinel 各 1，唯一 command exit 0。因此 managed property access 与 frozen-input validation 不是已观察 isolation failure 的充分触发条件。
 
 ## 问题
@@ -67,3 +67,34 @@
 scratch仅限 `/tmp/task092-c5-positive-allowlist-control/**`。禁止修改production `AconfigReferenceRewriteFactory.kt`、`AconfigReferenceRewriteParameters`、`FrozenAconfigInputs.kt`、`ReferenceOnlyClassRewriter.kt`、四规则、166-class allowlist、`:app` wiring、AOSP/SDK/`libs/**`、ProGuard、SystemUI源码或其他tracked path。禁止第二个Gradle command、full assemble、Release/R8、checker、device、Soong/Ninja、commit/push、direct `python`/`python3`。
 
 即使 `PASS`，也只证明一次positive allowlist admission能到达class-byte no-op visitor；不证明production transient cache、reference-only visitor、APK、Release或runtime。PASS后的下一独立任务才允许恢复 transient cache；若出现`ADMISSION_ACTIVATED_ISOLATION_FAILURE`，下一任务必须围绕该最小激活边界设计production修复，不得继续叠加cache或visitor。
+
+## 实际结果
+
+唯一授权的Gradle wrapper invocation按冻结命令准确执行一次，pipeline exit `0`。完整日志 `/tmp/task092-c5-positive-allowlist-control/desugar-positive-allowlist.log` 共1467行，SHA-256 `8379c3573a201891a7a13d48784dccd0862cc958076cbb729442c6b7c968d4a5`；构建摘要为 `BUILD SUCCESSFUL in 17s`、`5 actionable tasks: 2 executed, 3 up-to-date`。精确sentinels均出现一次：
+
+```text
+TASK092_FILTER_ENTERED=android.os.CustomFeatureFlags
+TASK092_FILTER_ACCEPTED=android.os.CustomFeatureFlags;mappings=4;allowlist=166
+TASK092_NOOP_VISITOR_CREATED=android.os.CustomFeatureFlags
+```
+
+日志有45条 `Caching disabled for AsmClassesTransform:`，且 `NotSerializableException`、`__instrumentationContext__`、`__apiVersion__` counts均为0。Target-level `UP-TO-DATE`不否定accepted/visitor direct evidence；按预先冻结矩阵正式分类 **`PASS`**。
+
+Scratch rules与production rules逐字节相等，SHA-256均为 `ff79a84d8ba250eeae789af007aa97828f5b31b2f41950cf519465f20fe79d85`；production allowlist中`android.os.CustomFeatureFlags`精确出现一次。Temporary evidence hashes为：saved patch `c164e30df62a56944cf97276c039e7e2a8217bf6a20872142fbba75957a195ca`、factory copy `0752a3b7b7e2a689c10162b27e074da435dedf0cb3ad05716c7e147d13cee1ac`、temporary plugin `9fc3497068c258c16a81368e393ec74e42d7a6d8f9b28bfbd36e27c09654f3a3`。Session审计确认worker为`joycode/GLM-5.3`、`thinking=high`，且仅执行一次Gradle wrapper command。
+
+恢复后worktree clean，`PositiveAllowlistControlFactory.kt`不存在，production plugin/factory/input-loader/reference-rewriter/rules/allowlist SHA-256分别为 `f50685c37db713d10e91d5aa1851a57f0203578b02d48ee5e2af6507196feda5`、`bd92aeedd70aa677e6ee2e1c6231fa1c7dc3dca26768890950aa54a011c798cb`、`e56922137fc0573e6310063c376f84d480eb6b649aab2c42cff1e10261526f27`、`c6fbfca057d73f6d8e01c117c7886d07acb34987b301aa42536d0298fa00e7ac`、`ff79a84d8ba250eeae789af007aa97828f5b31b2f41950cf519465f20fe79d85`、`926f102e3c899dbcac4ee7e5054bf294f9cde327eaf9f6a43bc29f2d6d2b682b`。最终read-only process census为空。
+
+## 过程偏差
+
+Cleanup与scratch纪律有两项必须永久保留的偏差，但均发生在实验日志已完成之后，不改变`PASS`分类：
+
+1. 冻结cleanup shell中的首个 `pkill -9 -f 'Gradle[D]aemon'` 会匹配wrapper完整command line后部未括号化的同名literal，导致shell self-kill。首个command只执行一次并清除了Gradle daemon，但exit code未保存，`cleanup-gradle-daemon.exit`不存在；同一shell中的commands 2/3因此未执行。Chief确认后只补执行原先未运行的commands 2/3，各一次且未重跑首个command；保存结果为`cleanup-kotlin-compile-daemon.exit=0`、`cleanup-kotlin-embeddable-daemon.exit=1`。
+2. Worker曾在授权scratch root外短暂创建 `/tmp/task092-code-only.kts`，随后删除；终态不存在。
+
+后续cleanup block必须避免在shell command line其他位置出现可被目标regex匹配的literal；输出丢失或shell中断时不得重跑已执行的cleanup命令。
+
+## 结论范围与下一步
+
+Task 092只证明：在Tasks 090/091已证明安全的parameter/load层上，production helper positive allowlist admission与class-byte no-op visitor creation也不是已观察failure的充分trigger。它不证明transient cache、`referenceOnlyVisitor(...)`、完整166-class execution、APK、R8或runtime，也不能把cache fields、caller count或production visitor断言为root cause。
+
+下一独立Task 093只恢复production-shaped transient cache layer，保持sentinel positive admission和class-byte no-op visitor，不调用 `referenceOnlyVisitor(...)`。若Task 093 `PASS`，后续再以独立rung恢复production visitor construction；若重现known path，则围绕cache最小边界设计production fix。
