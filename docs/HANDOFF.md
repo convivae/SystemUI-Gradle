@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 081 build logic已通过focused tests与双轴review，但真实AGP pipeline仍被factory isolation阻塞。**Task 093把完整transient cache layer固定为当前最小已知activation boundary；Task 094已正式`PASS`，证明configuration-time validated `MapProperty`/`SetProperty` immutable snapshot + field-free no-op factory可通过真实dependency-transform isolation。Production source仍未迁移，下一步为Task 095恢复production visitor并做focused/direct proof。** Task 079 broad replay保持暂停。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 081 build logic已通过focused tests与双轴review。**Task 095现已把Task 094证明的immutable 4/166 managed snapshot迁入production、移除factory cache/state并恢复visitor；9个focused tests全绿，direct transform成功且一个真实instruction rewrite落DEX、hidden definitions为0。原fixed two-output 2/2 gate因第二输出无可达caller实际为1/2，用户批准corrected bounded gate；Standards/Spec双轴review及focused re-review均PASS。下一步是独立fresh Debug build/static gate，新Debug APK尚未构建。** Task 079 broad replay保持暂停。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：执行Task 095 production immutable-input seam + visitor proof。将Task 094已证的managed 4/166 snapshot迁入production，移除factory cache/state，恢复`referenceOnlyVisitor(...)`；只运行9个focused buildSrc tests和一次direct dependency transform，并要求两个已证明external-file outputs的hidden target refs从0/2变为2/2、hidden definitions保持0/2。不得混入full assemble、Release/R8、最终checker、device或Task 079。Task 095需Chief验收和双轴review后，才进入独立Debug build/static gate。模拟器当前未运行。
+5. **当前唯一工程优先级**：Task 095 production immutable-input seam已通过Standards/Spec双轴review及focused re-review并等待Chief提交/push。随后另立独立fresh Debug build/static task，用新APK验证全部四hidden mappings、零hidden target definitions和无非法old caller；不得把Task 095 bounded proof冒充APK成功，模拟器当前未运行。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -40,7 +40,7 @@
 | C5 task092 | positive allowlist admission与class-byte no-op visitor可观察`PASS`；entered/accepted/visitor各1；cleanup self-match/exit-code及scratch偏差已记录 | `docs/issues/2026-09-02-c5-positive-allowlist-control.md` |
 | C5 task093 | exact production-shaped transient cache layer在callback前重现Task 084 path；`CACHE_ACTIVATED_ISOLATION_FAILURE`，当前最小已知activation boundary固定为完整cache layer | `docs/issues/2026-09-02-c5-transient-cache-control.md` |
 | C5 task094 | immutable managed-value + field-free no-op control正式`PASS`：三个sentinel各1、45 ASM records、known serialization markers 0；只证明isolation seam | `docs/issues/2026-09-02-c5-immutable-input-snapshot-control.md` |
-| C5 task095 | production managed-value seam迁移 + `referenceOnlyVisitor(...)` focused/direct proof；已设计、待执行 | `docs/issues/2026-09-02-c5-production-immutable-input-seam.md` |
+| C5 task095 | production managed-value seam + `referenceOnlyVisitor(...)` focused/direct proof；corrected bounded gate与双轴review均PASS，新APK未构建 | `docs/issues/2026-09-02-c5-production-immutable-input-seam.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -69,11 +69,11 @@ ls /home/conv/Android/Sdk/platforms/            # 必须有 android-SysUISdk
 ```
 
 `libs/` 已全部提交入 git（Phase C 后产物均由 tools 脚本从 AOSP-17 再生）。C4基线的
-`:app:assembleDebug` / `:app:assembleRelease`均曾成功；但Task 081 plugin接入后的最新真实Debug pipeline
-在`:app:desugarDebugFileDependencies`被production factory isolation阻塞，**不能称当前Debug build通过**，
-新APK尚未产出。Tasks 090–092连续排除production parameter shape、managed input load、positive allowlist admission与class-byte no-op visitor creation作为充分trigger；Task 093加入exact production-shaped transient cache layer后，在任何factory callback前重现known literal path。Task 094随后正式`PASS`：4/166 managed values与field-free no-op factory通过真实dependency transform，三个sentinel各1、45个ASM records且known serialization markers为0。Production fix现在必须迁移该边界并独立证明`referenceOnlyVisitor(...)`，不得把Task 094冒充visitor或APK成功。Runtime根因仍是Gradle APK对AOSP 17 platform aconfig
+`:app:assembleDebug` / `:app:assembleRelease`均曾成功；但Task 081 plugin接入后的Task 082真实Debug pipeline
+曾在`:app:desugarDebugFileDependencies`被production factory isolation阻塞，**不能称当前Debug build通过**，
+新APK尚未产出。Tasks 090–094完成isolation bisection；Task 095已迁入immutable 4/166 managed seam并恢复production `referenceOnlyVisitor(...)`，9个focused tests全绿，direct transform成功且一个真实instruction rewrite落DEX，随后通过Standards/Spec双轴review。完整四映射仍须由下一独立fresh Debug APK/static gate证明，不得将bounded direct proof冒充APK成功。Runtime根因仍是Gradle APK对AOSP 17 platform aconfig
 Flags保留原名，而设备只有jarjar后类名；详见
-`docs/issues/2026-09-01-c5-emulator-super-slack.md`与Task 081–093文档。
+`docs/issues/2026-09-01-c5-emulator-super-slack.md`与Task 081–095文档。
 
 ## 3. 红线速查（违反即停，详见 AGENTS/CHARTER）
 
@@ -91,4 +91,4 @@ Flags保留原名，而设备只有jarjar后类名；详见
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：执行Task 095 production seam + visitor focused/direct proof → Chief验收与双轴review → 串行 Debug/Release build + 静态 gate → 启动专用模拟器分别执行双 runtime reboot gate → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：显式提交/push Task 095 review-PASS production seam → 独立fresh Debug build/static gate → 串行 Release build/static → 启动专用模拟器分别执行Debug/Release runtime reboot gate → C6 收口。

@@ -33,9 +33,9 @@ class ReferenceOnlyClassRewriterTest {
         val filter = AconfigReferenceRewriteFilter(allowlist)
         assertTrue(filter.isInstrumentable(caller))
         assertFalse(filter.isInstrumentable("com.android.systemui.NotProvenByTask080"))
-        assertTrue(AconfigReferenceRewriteFactory.isAllowlistedClass(caller, allowlist))
+        assertTrue(isAllowlistedClass(caller, allowlist))
         assertFalse(
-            AconfigReferenceRewriteFactory.isAllowlistedClass(
+            isAllowlistedClass(
                 "com.android.systemui.NotProvenByTask080",
                 allowlist,
             ),

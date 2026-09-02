@@ -139,6 +139,20 @@ Do not run full `assembleDebug`, Release/R8, APK checker, device/ADB/emulator, S
 
 Python is allowed only as `uv run python` for the frozen DEX evidence and read-only session/evidence processing. Direct `python`/`python3`, `pip`, `uv pip`, package installation, and new scripts are forbidden.
 
+## Post-execution user decision — corrected direct gate (2026-09-02)
+
+The frozen `0/2 -> 2/2` hidden-reference gate remains part of the historical execution record and produced `INCONCLUSIVE_DIRECT_VISITOR` at `1/2`. Post-DEX diagnosis proved that one of the two fixed outputs contains no reachable `com.android.window.flags.Flags` instruction-level caller: its old-name evidence is definition/self-reference or an unvisited orphan constant-pool entry.
+
+The user explicitly approved the Chief's corrected bounded direct gate: Task 095 passes when the existing evidence proves at least one real allowlisted instruction-level rewrite reached DEX, hidden target definitions remain zero, old source definitions remain present, the direct transform and isolation markers pass, and focused tests pass. Existing evidence satisfies that corrected gate. No Gradle rerun is authorized or required.
+
+This decision authorizes Standards and Spec review of the current production change. It does **not** weaken the later full Debug APK gate: all four frozen mappings and zero hidden target definitions must still be proved against the newly assembled APK before Release or runtime stages.
+
+## Review closure (2026-09-02)
+
+Independent Standards and Spec reviewers examined fixed base `46a070193028fe5ad3228da4223c39c3de422edf` through the 11-path working-tree diff. Both reviewer sessions were independently verified as `joycode/GLM-5.3`, `thinking=high`; both returned PASS with zero BLOCKER/HIGH/MEDIUM. The initial LOW findings were limited to a misleading allowlist line citation and the absent parameters-interface `javap` capture. Chief corrected the citation to line 2 of the 166-line allowlist and recorded a read-only `javap -p` result proving the interface exposes exactly `getMappings` and `getAllowlist`; focused re-review on both axes returned PASS and closed all LOWs. No additional Gradle command, full build, Release/R8, APK checker, device action, or Task 079 replay occurred.
+
+Task 095 is therefore review-PASS only at the production immutable-input seam and bounded real-visitor rung. The next independent task must produce a fresh Debug APK and prove all four frozen hidden references, zero hidden target definitions, and no illegal old-name callers before any Release or runtime stage.
+
 ## Restoration, cleanup, and final report
 
 This is a production implementation task: do not restore accepted production/test changes. If a gate fails, stop with the exact diff and evidence; Chief decides whether to retain or revert.
