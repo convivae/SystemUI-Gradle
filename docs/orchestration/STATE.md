@@ -9,7 +9,6 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 085 | `w2:t3C` / `w2:p3H` (`task085-none-all`) | shared `main` at `0e4aba69` dispatch base | `joycode/GLM-5.3`, `thinking=high` (session events verified) | strict startup complete; CONTRACT accepted; preflight not yet authorized | exact two-path temporary diff, one direct Gradle command after Chief diff approval, then mandatory restoration; no production fix/full build/Release/device |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -17,10 +16,13 @@
 1. Task 080 is closed and pushed at `36b4a3cd`: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed.
 2. Task 081 implementation `3173d426` and review closure `26b1346b` are pushed. Fixed range `aba9534f...3173d426` passed Standards/Spec and Chief focused acceptance; this proves build logic only, not APK/R8/runtime.
 3. Task 082 is closed FAIL. Its only authorized command reached the real AGP application pipeline but stopped at `:app:desugarDebugFileDependencies`: Gradle could not isolate `AsmClassesTransform.Parameters` because it could not serialize `AconfigReferenceRewriteFactory`. No APK/static gate ran and no tracked file changed.
-4. Task 083 is closed PASS at the diagnosis rung. Its only direct task reproduced the same failure in 5 seconds and exposed deepest cause `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`; classfile evidence rejects the transient cache as direct cause, but the runtime decorator field path remains unknown.
+4. Task 083 is closed PASS at the diagnosis rung. Its only direct task reproduced the same failure in 5 seconds and exposed deepest cause `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`; classfile evidence rejects the transient cache as direct cause, and Task 084 subsequently resolved the runtime decorator field path.
 5. Task 084 is closed PASS at the field-path diagnosis rung. Its single extended-info direct task reproduced the exact failure and all 46 deepest chains identify `InstrumentationContext_Decorated.__apiVersion__` via factory decorator `__instrumentationContext__`; first failure ownership is AGP-injected state, not custom parameters or the transient cache.
-6. Task 085 is next: temporarily replace only the registration with an `InstrumentationParameters.None` no-op `InstrumentationScope.ALL` control, inspect the exact two-path diff before one direct task, capture the result, and restore to a clean worktree. No production fix/full build/Release/device work is allowed.
+6. Task 085 is closed `OTHER_FAILURE`. Its exact one-command control failed at `:buildSrc:compileKotlin` because the temporary `InstrumentationParameters.None` registration omitted AGP 9.3.1's mandatory configuration lambda; it never reached isolation. The two Allowed Paths were restored, daemons stopped, worktree clean, and the worker tab closed.
+7. Task 086 is next: rerun the same bounded no-op `ALL` control with the sole correction `transformClassesWith(..., ALL) { }`. It retains the exact two-path temporary scope, one direct Gradle command, mandatory restoration, and all production/build/device prohibitions.
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 085 closed `OTHER_FAILURE`, not a diagnostic answer. Its single command exited 1 in 5 seconds at `:buildSrc:compileKotlin` because the temporary `transformClassesWith` call omitted AGP 9.3.1's required `instrumentationParamsConfig`; the log contains zero `NotSerializableException`, `__apiVersion__`, or target-task occurrences. Chief verified the 220-line log SHA `12b365f8…`, original plugin SHA, clean worktree, and no residual daemons. No second control ran; worker tab `w2:t3C` was closed. Task 086 is defined with the sole corrected setup detail: explicit empty lambda `{ }`.
 
 - 2026-09-02 — Task 085 dispatched from pushed base `0e4aba69` in dedicated tab `w2:t3C` / pane `w2:p3H`. Session events independently verify `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`. Strict sequential AGENTS → CHARTER → worker-contract/brief/issues/Task 084 scratch startup completed and Chief accepted the exact temporary-control CONTRACT. It remains stopped before preflight; no Task 085 scratch, tracked edit, or Gradle command has run.
 

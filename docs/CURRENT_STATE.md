@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 已把最深原因和 literal object path固定为 AGP runtime-generated `InstrumentationContext_Decorated.__apiVersion__` 中的 `DefaultProperty`，经 factory decorator的 `__instrumentationContext__` 可达；当前下一步是 Task 085 `InstrumentationParameters.None` no-op `ALL` control，区分通用 AGP/Gradle isolation incompatibility与 custom parameters影响。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 已把最深原因和 literal object path固定为 AGP runtime-generated `InstrumentationContext_Decorated.__apiVersion__` 中的 `DefaultProperty`。Task 085 control因漏传 AGP 9.3.1必须的空 `instrumentationParamsConfig` lambda而在 buildSrc编译阶段得到 `OTHER_FAILURE`，没有触达 isolation；当前下一步是 Task 086同构 corrected control，唯一变化为显式空 lambda `{ }`。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 blocker**：Task 084 已逐字取得 Java serialization路径：AGP生成的 `InstrumentationContext_Decorated.__apiVersion__` 持有首个失败的 `DefaultProperty`，并经 `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__` 可达；不是 transient cache，也不是路径中首先失败的 custom parameters。Task 085先用 `InstrumentationParameters.None` no-op `ALL` control验证该失败是否独立于 custom parameters，再决定受支持的 production seam与 regression gate；之后才重跑 Debug build/static gate、Release build/static gate与双 runtime gate。Task 079 broad replay保持暂停；禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
+| 当前唯一工程优先级 | **C5 blocker**：Task 084 已逐字取得 AGP生成的 `InstrumentationContext_Decorated.__apiVersion__` → factory `__instrumentationContext__`路径。Task 085 no-op `ALL` control只得到 buildSrc compile-time `OTHER_FAILURE`：AGP 9.3.1 的 `transformClassesWith` 要求 `instrumentationParamsConfig`，即使 parameters为 `None`也必须传空 lambda。Task 086以完全相同边界重跑 corrected control，仅补 `{ }`；之后才决定 production seam、focused regression、Debug/Release build/static gate与双 runtime gate。Task 079 broad replay保持暂停 |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -130,7 +130,7 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **No-op `ALL` control（Task 085）**：Task 084 已证明首个不可序列化对象是 AGP注入的 `InstrumentationContext_Decorated.__apiVersion__`，经 factory decorator `__instrumentationContext__` 可达。下一任务临时注册 `InstrumentationParameters.None` no-op `InstrumentationScope.ALL` factory并仅运行同一 direct task一次，随后恢复临时 diff；据结果区分通用 AGP 9.3.1/Gradle 9.5.0 dependency-transform isolation incompatibility与 custom parameters影响。不得扩大四规则、166-class allowlist或 rewrite semantics。
+1. **Corrected no-op `ALL` control（Task 086）**：Task 085 已按边界只运行一次，但临时 registration省略了 AGP 9.3.1无默认值的 `instrumentationParamsConfig`，故在 `:buildSrc:compileKotlin` 得到 `OTHER_FAILURE`，未触达 `:app:desugarDebugFileDependencies`。Task 086保持 `InstrumentationParameters.None`、no-op factory、`ALL`、`COPY_FRAMES`及所有禁止项不变，只把 registration写成显式空 lambda `{ }`并运行同一 direct task一次。
 2. **独立 Debug build/static gate**：fix review-PASS 后重新立 no-fix build task，运行 fresh `:app:assembleDebug`，验证 APK ZIP/SHA、四 hidden references、零 hidden target definitions和无非法 old-name caller。
 3. **Release build/static gate**：Debug 成功后独立停止 Gradle/Kotlin daemons并运行 Release/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
 4. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。
@@ -172,15 +172,18 @@ manifest-dex closure 24/24、missing=0；Debug 热运行 PID/crash/UI 门通过�
 org.gradle.api.internal.provider.DefaultProperty`。Task 084 再以 extended Java serialization info运行同一
 command一次，46 个 cause chain均给出 literal path：`InstrumentationContext_Decorated.__apiVersion__`
 经 `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__` 可达；AGP 9.3.1 source确认
-`apiVersion`由 `AsmClassVisitorFactoryEntry.configure()` 注入。当前下一步是 Task 085 no-op `ALL`
-control；Task 079 broad replay保持暂停；主机当前无连接设备或
+`apiVersion`由 `AsmClassVisitorFactoryEntry.configure()` 注入。Task 085 的首个 no-op control按单命令边界
+结束为 `OTHER_FAILURE`：临时 registration漏传必需的空 `instrumentationParamsConfig` lambda，故
+`:buildSrc:compileKotlin`先失败，未触达 isolation。当前下一步是 Task 086 corrected no-op `ALL`
+control（仅补空 `{ }`）；Task 079 broad replay保持暂停；主机当前无连接设备或
 emulator/QEMU，后续 runtime gate 前再启动。详见
 `docs/issues/2026-09-01-c5-focused-reference-origins.md`、
 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`、
 `docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md`、
 `docs/issues/2026-09-02-c5-asm-factory-isolation.md`、
-`docs/issues/2026-09-02-c5-serialization-field-path.md` 与
-`docs/issues/2026-09-02-c5-none-all-control.md`。
+`docs/issues/2026-09-02-c5-serialization-field-path.md`、
+`docs/issues/2026-09-02-c5-none-all-control.md` 与
+`docs/issues/2026-09-02-c5-none-all-control-corrected.md`。
 
 **16 时代历史证据（AOSP main 快照，2026-08-21→26，保留供追溯）**：
 Task 045 main fresh（SysUISdk 单事务生成器两次 11,382 文件逐字节相等；Debug exit 0；fresh

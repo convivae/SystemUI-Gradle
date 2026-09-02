@@ -1,7 +1,7 @@
 # C5 Task 085：`InstrumentationParameters.None` no-op `ALL` control
 
 **日期**：2026-09-02
-**状态**：待执行
+**状态**：已结束（`OTHER_FAILURE`；控制未触达 isolation）
 **前置**：Task 084 证明首个不可序列化对象为 AGP runtime-generated `InstrumentationContext_Decorated.__apiVersion__`，经 `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__` 可达。尚未证明该失败对所有 `InstrumentationScope.ALL` factory都成立，也未证明 custom parameters是否存在后续独立问题。
 
 ## 问题
@@ -32,3 +32,17 @@
 - `buildSrc/src/main/kotlin/com/android/systemui/aconfigrewrite/NoOpAllScopeFactory.kt`（临时新文件）
 
 禁止修改 production `AconfigReferenceRewriteFactory.kt`、规则/allowlist、app wiring、源码、`libs/**`、AOSP、SDK、ProGuard或任何文档。禁止 full Debug、Release/R8、checker、device、Soong/Ninja、第二个 Gradle task、commit/push。Python若确有需要只能 `uv run`，但本实验不需要 Python。
+
+## 实际结果
+
+唯一授权 command 运行一次，`LOOP_EXIT=1`，5 秒后在 `:buildSrc:compileKotlin` 失败；未进入 `:app:desugarDebugFileDependencies`：
+
+```text
+e: file:///home/conv/myspace/SystemUI-Gradle/buildSrc/src/main/kotlin/com/android/systemui/aconfigrewrite/AconfigReferenceRewritePlugin.kt:23:13 No value passed for parameter 'instrumentationParamsConfig'.
+BUILD FAILED in 5s
+3 actionable tasks: 1 executed, 2 up-to-date
+```
+
+`CONTROL_RESULT=OTHER_FAILURE`。日志中 `NotSerializableException=0`、`__apiVersion__=0`、`:app:desugarDebugFileDependencies=0`，因此本任务没有回答 custom parameters是否相关。原因是临时 registration把 custom配置 lambda整体删除，但 AGP 9.3.1 `transformClassesWith` 即使使用 `InstrumentationParameters.None` 也要求显式传入空 `instrumentationParamsConfig` lambda。
+
+完整日志为 `/tmp/task085-c5-none-all-control/desugar-none-all.log`：220 行，SHA-256 `12b365f83d0015840b3869a46c33c1b4195125cca199844768d552c9661730b0`。临时 plugin已恢复至 SHA-256 `f50685c37db713d10e91d5aa1851a57f0203578b02d48ee5e2af6507196feda5`，临时 factory已删除，最终 worktree clean且无 Gradle/Kotlin/Soong/Ninja残留进程。按单任务边界没有运行第二个 control；corrected空-lambda实验转交 Task 086。
