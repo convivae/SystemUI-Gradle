@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 固定 AGP decorated factory 的 literal serialization path；Tasks 090–092连续可观察`PASS`，排除production parameter/load、positive admission及class-byte no-op visitor作为充分trigger。Task 093加入exact production-shaped transient cache layer后，在任何callback前重现同一路径，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer是当前最小已知activation boundary，但尚未证明其中任一字段、annotation、accessor或writeback是sole trigger。下一步围绕该边界设计独立production fix；不恢复Task 079 broad replay。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 固定 AGP decorated factory 的 literal serialization path；Tasks 090–092连续可观察`PASS`，排除production parameter/load、positive admission及class-byte no-op visitor作为充分trigger。Task 093加入exact production-shaped transient cache layer后，在任何callback前重现同一路径，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer是当前最小已知activation boundary，但尚未证明其中任一字段、annotation、accessor或writeback是sole trigger。Task 094已冻结首选control：configuration-time validated `MapProperty`/`SetProperty` immutable snapshot + field-free no-op factory；尚未执行。Task 079 broad replay继续暂停。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 blocker**：Task 093在Task 092 `PASS` control上只加入production-shaped transient cache layer，唯一command于callback/sentinel前重现Task 084 literal path，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。日志9387行、SHA `7f760669…`，三个sentinel与ASM records均0，known path markers各46。完整cache layer是当前最小已知activation boundary；不得扩大为字段本身、instance state、`@Transient`或writeback已被单独证明。下一步只设计/验证isolation-safe production cache/factory seam；不得混入full build、Release/R8、runtime或Task 079 broad replay |
+| 当前唯一工程优先级 | **C5 blocker**：Task 093在Task 092 `PASS` control上只加入production-shaped transient cache layer，唯一command于callback/sentinel前重现Task 084 literal path，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer是当前最小已知activation boundary；不得扩大为任一子元素已被单独归因。Task 094现已设计为首选单变量control：plugin配置阶段一次性校验4 mappings/166 allowlist并写入Gradle-managed `MapProperty`/`SetProperty`，factory保持field-free且visitor byte-no-op。它尚未执行，且不得混入full build、production visitor、Release/R8、runtime或Task 079 broad replay |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -64,6 +64,7 @@
 | 2026-09-02 | **C5 task090 observable control PASS**：production `AconfigReferenceRewriteParameters` 两个file-property槽位 + field-free no-op `ALL` factory在唯一input fingerprint下实际执行；sentinel 1、`AsmClassesTransform`记录45、exit 0、无serialization path。只排除parameter shape作为充分trigger，不证明production implementation或APK | `docs/issues/2026-09-02-c5-observable-file-params-control.md` |
 | 2026-09-02 | **C5 task091 frozen-input load control PASS**：唯一command exit 0；entered/loaded sentinels各1，`FrozenAconfigInputs.load(...)`完成4 mappings/166 allowlist校验，ASM记录45且无serialization path。恢复完整；cleanup重复一次GradleDaemon pkill且三exit codes未保存的过程偏差已记录 | `docs/issues/2026-09-02-c5-frozen-input-load-control.md` |
 | 2026-09-02 | **C5 task092 positive-admission control PASS**：唯一command exit 0；entered/accepted/no-op-visitor sentinels各1，ASM记录45且无serialization path，证明positive admission与class-byte no-op visitor不是充分trigger。恢复完整；cleanup shell self-match、首个exit code缺失及短暂out-of-root scratch偏差已记录 | `docs/issues/2026-09-02-c5-positive-allowlist-control.md` |
+| 2026-09-02 | **C5 task093 cache activation control FAIL（已闭合）**：唯一command exit 1；三个sentinel与ASM records均0，Task 084 literal path markers各46。完整production-shaped transient cache layer是当前最小已知activation boundary；未单独归因任一子元素 | `docs/issues/2026-09-02-c5-transient-cache-control.md` |
 
 ## Current build and verification matrix
 
@@ -137,8 +138,8 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Production cache/factory seam fix**：Task 093证明完整production-shaped transient cache layer足以在factory callback前激活known isolation path。下一独立任务只设计并验证不把cache state挂在decorated factory instance上的isolation-safe seam；不得同时执行full assemble、Release/R8或runtime，也不得把结果表述为字段/annotation单独归因。
-2. **Production visitor + focused proof/review**：cache/factory seam稳定后，独立恢复production `referenceOnlyVisitor(...)`并完成focused buildSrc tests、真实direct-transform proof、Chief验收与Standards/Spec双轴review。
+1. **Task 094 immutable input snapshot control（待执行）**：首选seam不保留任何factory cache state；plugin配置阶段一次调用`FrozenAconfigInputs.load(...)`，把4 mappings/166 allowlist写入Gradle-managed `MapProperty`/`SetProperty` transform inputs，field-free factory只做sentinel positive admission和byte-no-op visitor。任务只允许运行一次direct dependency-transform command；不包含production visitor、full assemble、Release/R8或runtime。
+2. **Production seam + visitor focused proof/review**：Task 094若`PASS`，下一独立任务才把production factory迁移到immutable managed-value seam，恢复`referenceOnlyVisitor(...)`并完成focused buildSrc tests、真实direct-transform proof、Chief验收与Standards/Spec双轴review。Task 094若非PASS，停止并重新排序外部weak cache/无cache备选，不在同一任务切换方案。
 3. **独立 Debug build/static gate**：fix review-PASS 后重新立 no-fix build task，运行 fresh `:app:assembleDebug`，验证 APK ZIP/SHA、四 hidden references、零 hidden target definitions和无非法 old-name caller。
 4. **Release build/static gate**：Debug 成功后独立停止 Gradle/Kotlin daemons并运行 Release/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
 5. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。

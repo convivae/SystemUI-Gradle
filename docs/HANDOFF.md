@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 081 build logic已通过focused tests与双轴review，但真实AGP pipeline仍被factory isolation阻塞。**Tasks 090–092连续`PASS`后，Task 093只加入production-shaped transient cache layer即在任何callback前重现Task 084 literal path，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer是当前最小已知activation boundary，但任一字段/annotation/accessor尚未被单独归因。下一步只围绕该边界设计isolation-safe production fix。** Task 079 broad replay保持暂停。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 081 build logic已通过focused tests与双轴review，但真实AGP pipeline仍被factory isolation阻塞。**Tasks 090–092连续`PASS`后，Task 093只加入production-shaped transient cache layer即在任何callback前重现Task 084 literal path，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。Task 094已冻结首选control：configuration-time validated `MapProperty`/`SetProperty` immutable snapshot + field-free no-op factory；尚未执行。** Task 079 broad replay保持暂停。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：Task 093已闭合为`CACHE_ACTIVATED_ISOLATION_FAILURE`。下一任务只设计/验证不把cache state挂在decorated factory instance上的isolation-safe seam；不得把cache layer扩大解释为某个字段或`@Transient`已被单独证明，不得混入full assemble、Release/R8、checker或device。seam稳定后再独立恢复production visitor并走focused proof与双轴review；Task 079不恢复。模拟器当前未运行。
+5. **当前唯一工程优先级**：执行已冻结的Task 094 immutable input snapshot control。它只验证配置阶段一次校验后写入Gradle-managed `MapProperty`/`SetProperty`、field-free no-op factory能否通过真实dependency-transform isolation；不得把结果扩展为production visitor/APK成功，不得混入full assemble、Release/R8、checker、device或Task 079。若`PASS`，下一独立任务才迁移production seam并恢复visitor/focused proof/双轴review。模拟器当前未运行。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -39,6 +39,7 @@
 | C5 task091 | sentinel-scoped managed file access + `FrozenAconfigInputs.load(...)` 可观察`PASS`；entered/loaded各1；cleanup重复/exit-code缺失偏差已记录 | `docs/issues/2026-09-02-c5-frozen-input-load-control.md` |
 | C5 task092 | positive allowlist admission与class-byte no-op visitor可观察`PASS`；entered/accepted/visitor各1；cleanup self-match/exit-code及scratch偏差已记录 | `docs/issues/2026-09-02-c5-positive-allowlist-control.md` |
 | C5 task093 | exact production-shaped transient cache layer在callback前重现Task 084 path；`CACHE_ACTIVATED_ISOLATION_FAILURE`，当前最小已知activation boundary固定为完整cache layer | `docs/issues/2026-09-02-c5-transient-cache-control.md` |
+| C5 task094 | immutable managed-value + field-free no-op control已完成设计、尚未执行；只验证isolation seam | `docs/issues/2026-09-02-c5-immutable-input-snapshot-control.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -89,4 +90,4 @@ Flags保留原名，而设备只有jarjar后类名；详见
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：围绕Task 093固定的cache activation boundary设计独立isolation-safe production seam → 单独恢复production visitor并做focused proof/双轴review → 串行 Debug/Release build + 静态 gate → 启动专用模拟器分别执行双 runtime reboot gate → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：执行Task 094 immutable input snapshot control → 若PASS，独立迁移production seam并恢复visitor/focused proof/双轴review → 串行 Debug/Release build + 静态 gate → 启动专用模拟器分别执行双 runtime reboot gate → C6 收口。
