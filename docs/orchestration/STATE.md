@@ -9,6 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
+| 086 | `w2:t3D` / `w2:p3J` (`task086-none-all-corrected`) | shared `main` at `8a80bf5f` dispatch base | `joycode/GLM-5.3`, `thinking=high` (session events verified) | strict AGENTS → CHARTER → sources startup complete; CONTRACT accepted; preflight not yet authorized | exact two-path temporary diff with explicit `{ }`, one direct Gradle command after Chief diff approval, then mandatory restoration; no production fix/full build/Release/device |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -21,6 +22,8 @@
 6. Task 085 is closed `OTHER_FAILURE`. Its exact one-command control failed at `:buildSrc:compileKotlin` because the temporary `InstrumentationParameters.None` registration omitted AGP 9.3.1's mandatory configuration lambda; it never reached isolation. The two Allowed Paths were restored, daemons stopped, worktree clean, and the worker tab closed.
 7. Task 086 is next: rerun the same bounded no-op `ALL` control with the sole correction `transformClassesWith(..., ALL) { }`. It retains the exact two-path temporary scope, one direct Gradle command, mandatory restoration, and all production/build/device prohibitions.
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 086 dispatched from pushed base `8a80bf5f` in dedicated tab `w2:t3D` / pane `w2:p3J`. Session events independently verify `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`. Strict separate AGENTS → CHARTER → worker-contract/brief/issues/scratch-evidence startup completed and Chief accepted the temporary-control CONTRACT. It remains stopped before preflight; no Task 086 scratch, edit, or Gradle command has run.
 
 - 2026-09-02 — Task 085 closed `OTHER_FAILURE`, not a diagnostic answer. Its single command exited 1 in 5 seconds at `:buildSrc:compileKotlin` because the temporary `transformClassesWith` call omitted AGP 9.3.1's required `instrumentationParamsConfig`; the log contains zero `NotSerializableException`, `__apiVersion__`, or target-task occurrences. Chief verified the 220-line log SHA `12b365f8…`, original plugin SHA, clean worktree, and no residual daemons. No second control ran; worker tab `w2:t3C` was closed. Task 086 is defined with the sole corrected setup detail: explicit empty lambda `{ }`.
 
