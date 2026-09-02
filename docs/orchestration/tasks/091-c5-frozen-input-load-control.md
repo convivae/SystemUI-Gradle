@@ -1,5 +1,7 @@
 # Task 091 — Make frozen input loading observable inside the custom-parameter factory
 
+**Status:** Closed `PASS` on 2026-09-02; temporary diff fully restored. Experimental evidence passed, with a separately recorded cleanup-procedure deviation.
+
 ## Goal
 
 Run one fully reversible application-only `InstrumentationScope.ALL` micro-control that keeps Task 090's proven production parameter shape and field-free class-byte no-op, but executes exactly one sentinel-scoped production `FrozenAconfigInputs.load(...)`. Conclusively classify whether managed file access/frozen-input validation can complete before restoring any production filter, cache, or visitor behavior.
@@ -124,3 +126,13 @@ All other tracked/untracked paths; production factory/parameter interface/input 
   NEXT=Chief defines the result-conditioned next task
   ```
 - End with a concise `HANDOFF:` block.
+
+## Closure
+
+The sole authorized Gradle wrapper invocation exited `0`. The 1463-line log at `/tmp/task091-c5-frozen-input-load-control/desugar-frozen-input-load.log` has SHA-256 `de243bd45b8b56995562cf17ba6a9ddb96451d91303d3202370b8e7fadbb8eb5`; `TASK091_LOAD_ENTERED=android.os.CustomFeatureFlags` appears once at line 1450 and `TASK091_INPUTS_LOADED=android.os.CustomFeatureFlags;mappings=4;allowlist=166` appears once at line 1453. The log contains 45 `Caching disabled for AsmClassesTransform:` records, zero known serialization-path markers, and ends with `BUILD SUCCESSFUL in 17s` / `5 actionable tasks: 2 executed, 3 up-to-date`. Target-level `UP-TO-DATE` does not negate the direct loaded sentinel, so the frozen matrix requires `PASS`.
+
+The scratch rules were byte-identical to production. The temporary plugin/factory/patch hashes were `826412b…`, `ba850194…`, and `316b0b1e…`; session audit found one Gradle-wrapper tool call and no direct Python. Restoration returned the plugin/factory/input-loader/reference-rewriter/rules/allowlist to the documented production hashes, removed the temporary factory, left a clean worktree, and ended with no build process.
+
+Cleanup was not fully contract-compliant: `pkill -9 -f 'Gradle[D]aemon'` ran twice, the other two mandated patterns ran once each, and none of the three exit codes were preserved after command output was lost. This deviation does not alter the execution/load evidence or `PASS` classification, but it is not waived. Task 092 freezes all three cleanup commands into one shell block with immediate scratch exit-code writes and forbids any rerun.
+
+This result proves only managed-file access plus one production `FrozenAconfigInputs.load(...)` in the negative-admission control. Task 092 restores only positive allowlist admission with a byte-no-op visitor; cache state, `referenceOnlyVisitor(...)`, APK, R8, and runtime remain unproved.
