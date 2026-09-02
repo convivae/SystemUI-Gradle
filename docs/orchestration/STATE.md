@@ -9,6 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
+| 086-r2 | `w2:t3E` / `w2:p3K` (`task086-r2`) | shared `main` at `1804fb38` dispatch base | `joycode/GLM-5.3`, `thinking=high` (session events verified) | strict AGENTS → CHARTER → sources startup complete; CONTRACT accepted; preflight not yet authorized | preflight may use `ps`/`pgrep`, never Gradle wrapper; then exact two-path temporary diff with `{ }`, one direct Gradle command after Chief approval, mandatory restoration |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -21,6 +22,8 @@
 6. Task 085 is closed `OTHER_FAILURE`. Its exact one-command control failed at `:buildSrc:compileKotlin` because the temporary `InstrumentationParameters.None` registration omitted AGP 9.3.1's mandatory configuration lambda; it never reached isolation. The two Allowed Paths were restored, daemons stopped, worktree clean, and the worker tab closed.
 7. Task 086 is next: rerun the same bounded no-op `ALL` control with the sole correction `transformClassesWith(..., ALL) { }`. It retains the exact two-path temporary scope, one direct Gradle command, mandatory restoration, and all production/build/device prohibitions.
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 086 replacement `task086-r2` dispatched from pushed base `1804fb38` in dedicated tab `w2:t3E` / pane `w2:p3K`. Session events independently verify `joycode/GLM-5.3`, `thinking=high`. Strict AGENTS → CHARTER → sources startup and CONTRACT acceptance completed. It is stopped before preflight, explicitly forbidden from invoking the Gradle wrapper until the sole experiment command.
 
 - 2026-09-02 — The first Task 086 worker was stopped before edits because it invoked unauthorized `./gradlew --status` during preflight, violating the one-Gradle-command boundary. No experiment, scratch, tracked edit, or daemon resulted; the worktree stayed clean and tab `w2:t3D` was closed. A fresh replacement worker will execute the unchanged Task 086 brief with process preflight limited to `ps`/`pgrep` only.
 

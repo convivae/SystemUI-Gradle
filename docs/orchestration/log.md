@@ -524,3 +524,8 @@
 
 - The first Task 086 worker completed startup but invoked `./gradlew --status` while independently rechecking a clean process list. Chief had authorized only `ps`/`pgrep`-style preflight evidence, and the brief reserves exactly one Gradle-wrapper command for the experiment; Chief therefore stopped the worker immediately.
 - No Task 086 scratch directory, tracked edit, control experiment, build task, or daemon resulted. The plugin retained SHA `f50685c3…`, the no-op factory remained absent, the worktree stayed clean, and tab `w2:t3D` was closed. A fresh worker will use the unchanged brief and may not invoke the Gradle wrapper during preflight.
+
+## 2026-09-02 — task086 replacement dispatched after clean reset
+
+- Replacement worker `task086-r2` started in dedicated tab `w2:t3E` / pane `w2:p3K` from pushed base `1804fb38`; session events independently verify `provider=joycode`, `modelId=GLM-5.3`, `thinkingLevel=high`.
+- It completed the strict separate AGENTS → CHARTER → worker-contract/brief/issues/scratch-evidence startup and printed an accepted CONTRACT. It is stopped before preflight, which is explicitly limited to non-Gradle process inspection; the Gradle wrapper is reserved for the sole experiment command.
