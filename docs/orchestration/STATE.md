@@ -10,15 +10,17 @@
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
-| 081 | none (first worker stopped; replacement pending) | shared `main` (`584ad47e` fixed base plus uncommitted RED test scaffold) | replacement: `joycode/GLM-5.3`, `thinking=high` | RED established; mandatory-test expansion and production implementation not started | only Task 081 Allowed Paths and focused `buildSrc` test gate; no Android build/R8/device action |
+| 081 | `task081-r3` — `w2:t36` / `w2:p3B` | shared `main` (`847f77c0` plus uncommitted RED scaffold) | verified `joycode/GLM-5.3`, `thinking=high` | CONTRACT accepted; first checkpoint is non-ignored, complete ten-group test diff only | only Task 081 Allowed Paths and focused `buildSrc` test gate; no production code until Chief accepts first test diff; no Android build/R8/device action |
 
 ## Queue
 
 1. Task 080 is closed and pushed at `36b4a3cd`: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed.
-2. Task 081 exact brief and ADR 0008 are user-approved. Preserve the first stopped worker's two uncommitted RED-scaffold files, dispatch one serialized `joycode/GLM-5.3` high-thinking replacement, complete the ten mandatory focused tests, then implement the build-logic-only seam; no Android build or device action belongs to Task 081.
+2. Task 081 exact brief and ADR 0008 are user-approved. Worker `task081-r3` is active in dedicated tab `w2:t36`; its session independently verifies `joycode/GLM-5.3` with `thinking=high`, and Chief accepted its startup CONTRACT. First checkpoint is limited to relocating the ignored RED test out of the `**/build/` path and completing all ten mandatory test groups without production implementation; no Android build or device action belongs to Task 081.
 3. After Task 081 review-PASS, serialize Debug build, Release build/static APK checks, then start the dedicated Android 17 emulator for persistent Debug and Release reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — User asked Chief to continue. Chief restored/reconciled the two-file RED scaffold and found that the existing test path `com/android/systemui/build/aconfig/` is hidden by repository `.gitignore` pattern `**/build/`; the file exists but cannot be tracked at that path. Replacement `task081-r3` started in dedicated tab `w2:t36` / pane `w2:p3B`; session metadata independently confirms `provider=joycode`, `modelId=GLM-5.3`, `thinking=high`. Its CONTRACT matches the approved brief. Chief limited the first accepted checkpoint to a real, trackable test-only diff covering all ten mandatory groups; production implementation remains forbidden until that checkpoint is accepted.
 
 - 2026-09-02 — User replaced the prior future-worker model restriction: every subsequently created worker/reviewer must use explicit `joycode/GLM-5.3` with `thinking=high`; a worker already running at the time did not need adjustment. Task 081's first worker had already established the expected RED with uncommitted `buildSrc/build.gradle.kts` and `AconfigReferenceRewriteTest.kt`, but was stopped after an unauthorized `./gradlew --status` and prolonged design narration instead of completing all ten mandatory test groups. No production implementation, frozen inputs, app wiring, ADR, Android build, R8, emulator, ADB, or commit occurred. Chief terminated Gradle/Kotlin daemons; the replacement will inherit the exact two-file RED scaffold on the shared checkout.
 

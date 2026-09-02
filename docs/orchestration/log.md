@@ -443,6 +443,12 @@
 - After the user's host reboot, Chief observed an empty `adb devices -l` result and no emulator/QEMU process. Task 081 prohibits and does not need device work, so no emulator restart is needed now. The dedicated Android 17 emulator will be started and identity-gated only for the later serialized Debug/Release runtime tasks.
 - Chief is committing and pushing this approval record to create the immutable Task 081 dispatch base. No worker, build, R8, emulator, or APK validation has started yet.
 
+## 2026-09-02 — task081 replacement r3 dispatched; test-only checkpoint active
+
+- User asked Chief to continue. Chief reconciled the two-file RED scaffold and confirmed the earlier test file still exists, but its package path `com/android/systemui/build/aconfig/` is ignored by `.gitignore` pattern `**/build/`; this explains why normal `git status --untracked-files=all` listed only `buildSrc/build.gradle.kts`.
+- Chief created dedicated tab `w2:t36` / pane `w2:p3B` and started `task081-r3` with explicit `--provider joycode --model GLM-5.3 --thinking high`. Session JSON independently records `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`; the worker completed the required startup sequence and printed a matching CONTRACT without edits or builds.
+- Chief accepted only the first checkpoint: relocate the test to a non-ignored package/path and expand the fixture/tests to cover all ten mandatory Task 081 contracts. No production implementation, frozen inputs, app wiring, ADR, Gradle gate, Android build, R8, emulator, ADB, or commit is authorized before Chief inspects that first test diff.
+
 ## 2026-09-02 — task081 first RED attempt stopped; future model policy changed
 
 - Task 081's first worker started from pushed fixed base `584ad47e`. It added only `buildSrc/build.gradle.kts` and `buildSrc/src/test/kotlin/com/android/systemui/build/aconfig/AconfigReferenceRewriteTest.kt`, then ran the allowed focused gate `./gradlew -p buildSrc test --console=plain`. The gate failed at test compilation because `AconfigReferenceRewriter` does not exist, establishing the intended RED before production code.
