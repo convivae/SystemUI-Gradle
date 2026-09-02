@@ -9,6 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
+| 084 | `w2:t3B` / `w2:p3G` (`task084-path`) | shared `main` at `fdd2ebc5` dispatch base | `joycode/GLM-5.3`, `thinking=high` (session events verified) | CONTRACT accepted; preflight not yet authorized | read-only, one exact direct Gradle command; scratch only under `/tmp/task084-c5-serialization-field-path/**`; no fix/full build/Release/device |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -17,9 +18,11 @@
 2. Task 081 implementation `3173d426` and review closure `26b1346b` are pushed. Fixed range `aba9534f...3173d426` passed Standards/Spec and Chief focused acceptance; this proves build logic only, not APK/R8/runtime.
 3. Task 082 is closed FAIL. Its only authorized command reached the real AGP application pipeline but stopped at `:app:desugarDebugFileDependencies`: Gradle could not isolate `AsmClassesTransform.Parameters` because it could not serialize `AconfigReferenceRewriteFactory`. No APK/static gate ran and no tracked file changed.
 4. Task 083 is closed PASS at the diagnosis rung. Its only direct task reproduced the same failure in 5 seconds and exposed deepest cause `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`; classfile evidence rejects the transient cache as direct cause, but the runtime decorator field path remains unknown.
-5. Task 084 is next: one read-only worker enables JDK extended Java-serialization debug info for the same direct task and records the literal object-graph field path, or honestly reports it unavailable. No fix, full build, Release/R8, or device work is allowed.
+5. Task 084 is active in dedicated tab `w2:t3B` / pane `w2:p3G`. Session events independently verify `joycode/GLM-5.3`, `thinking=high`; strict AGENTS → CHARTER → Task 084 sources startup completed and Chief accepted the read-only one-command CONTRACT. Preflight and the sole extended-serialization command have not yet run.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 084 dispatched from pushed base `fdd2ebc5` in dedicated tab `w2:t3B` / pane `w2:p3G`. Session events independently prove `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`. The worker completed strict AGENTS → CHARTER → brief/issue/scratch startup and printed an accepted CONTRACT. It remains stopped before preflight; only one exact extended-serialization direct Gradle command will be authorized after a clean/no-process check.
 
 - 2026-09-02 — Task 083 closed PASS as a read-only diagnosis. Worker `task083-isolation` in `w2:t3A` / `w2:p3F` used independently verified `joycode/GLM-5.3`, `thinking=high`, passed strict startup/preflight, and ran only direct `:app:desugarDebugFileDependencies --stacktrace`. It reproduced the exact Task 082 failure in 5 seconds; deepest cause is `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`. The factory cache is `ACC_TRANSIENT`, H1 is rejected, and no classloader/Kotlin-shape cause appears; however, ordinary stacktrace cannot identify which runtime-generated decorator property owns the object. Worktree remained clean and daemons were stopped. Task 084 is defined as a second read-only, single-command rung using JDK extended serialization debug info to capture that literal field path before any implementation.
 
