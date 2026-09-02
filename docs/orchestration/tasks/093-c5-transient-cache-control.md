@@ -4,6 +4,12 @@
 
 Run one reversible application-only `InstrumentationScope.ALL` control that retains Task 092's proven parameter loading, positive allowlist admission, and class-byte no-op visitor, while adding exactly the production-shaped transient cache layer. Classify whether that layer activates the known factory-isolation path.
 
+## Outcome
+
+Closed as **`CACHE_ACTIVATED_ISOLATION_FAILURE`** from pushed base `81e190e322424d8779a2d1949b355ab40427721c`. The sole frozen Gradle command exited 1 at `:app:desugarDebugFileDependencies`; the 9387-line log has SHA-256 `7f760669721065eb672c4a7ee8c07c848c45ce32c07a77c0aa7e6248c102ff31`. All three Task 093 sentinels and ASM transform records have count 0, while `NotSerializableException`, `InstrumentationContext_Decorated.__apiVersion__`, and `TransientCacheControlFactory_Decorated.__instrumentationContext__` each have count 46. The failure therefore precedes factory callbacks and exactly reproduces the Task 084 isolation path.
+
+The full cache layer is the minimum known activation boundary relative to Task 092, not proof that any individual field, annotation, accessor, or writeback is the sole trigger. Temporary paths were fully restored and the final worktree/process census was clean. Session audit found exactly one Gradle-wrapper call and zero direct Python calls. Cleanup deviated: saved exit codes are 0 and 1, the third file was never created, and no cleanup command was rerun; see the issue for full evidence.
+
 ## Sources of truth
 
 - `AGENTS.md`

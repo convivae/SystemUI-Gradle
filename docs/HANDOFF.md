@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 081 reference-only build logic已通过focused tests与双轴review，但Task 082真实Debug pipeline暴露AGP factory isolation。Tasks 083–089完成literal-path诊断、controls与第一方研究；**Tasks 090–092已连续取得可观察`PASS`，排除production parameter/load、positive admission及class-byte no-op visitor作为充分trigger。当前下一步是Task 093：只恢复production-shaped transient cache；`referenceOnlyVisitor(...)`仍禁止。** Task 079 broad replay保持暂停。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 081 build logic已通过focused tests与双轴review，但真实AGP pipeline仍被factory isolation阻塞。**Tasks 090–092连续`PASS`后，Task 093只加入production-shaped transient cache layer即在任何callback前重现Task 084 literal path，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer是当前最小已知activation boundary，但任一字段/annotation/accessor尚未被单独归因。下一步只围绕该边界设计isolation-safe production fix。** Task 079 broad replay保持暂停。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：按 `docs/orchestration/tasks/093-c5-transient-cache-control.md` 执行一个temporary、single-command、fully-restored micro-control。保持Task 092已证明可执行的production parameter/load、positive admission、application-only `ALL`、`COPY_FRAMES`和class-byte no-op visitor，只恢复production-shaped transient cache layer。Task 093不得调用`referenceOnlyVisitor(...)`，不得full assemble/Release/device；Task 079不恢复。若cache通过，后续仍以独立任务恢复production visitor；production fix review-PASS后才拆分Debug build、Release build/static和双runtime reboot gates。模拟器当前未运行。
+5. **当前唯一工程优先级**：Task 093已闭合为`CACHE_ACTIVATED_ISOLATION_FAILURE`。下一任务只设计/验证不把cache state挂在decorated factory instance上的isolation-safe seam；不得把cache layer扩大解释为某个字段或`@Transient`已被单独证明，不得混入full assemble、Release/R8、checker或device。seam稳定后再独立恢复production visitor并走focused proof与双轴review；Task 079不恢复。模拟器当前未运行。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -38,7 +38,7 @@
 | C5 task090 | production custom file-parameter shape + field-free no-op control以factory sentinel实际执行，正式`PASS`；不证明production implementation/APK | `docs/issues/2026-09-02-c5-observable-file-params-control.md` |
 | C5 task091 | sentinel-scoped managed file access + `FrozenAconfigInputs.load(...)` 可观察`PASS`；entered/loaded各1；cleanup重复/exit-code缺失偏差已记录 | `docs/issues/2026-09-02-c5-frozen-input-load-control.md` |
 | C5 task092 | positive allowlist admission与class-byte no-op visitor可观察`PASS`；entered/accepted/visitor各1；cleanup self-match/exit-code及scratch偏差已记录 | `docs/issues/2026-09-02-c5-positive-allowlist-control.md` |
-| C5 task093 | 下一步：只恢复production-shaped transient cache，保持positive admission与class-byte no-op visitor，不调用reference visitor | `docs/issues/2026-09-02-c5-transient-cache-control.md` |
+| C5 task093 | exact production-shaped transient cache layer在callback前重现Task 084 path；`CACHE_ACTIVATED_ISOLATION_FAILURE`，当前最小已知activation boundary固定为完整cache layer | `docs/issues/2026-09-02-c5-transient-cache-control.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -69,7 +69,7 @@ ls /home/conv/Android/Sdk/platforms/            # 必须有 android-SysUISdk
 `libs/` 已全部提交入 git（Phase C 后产物均由 tools 脚本从 AOSP-17 再生）。C4基线的
 `:app:assembleDebug` / `:app:assembleRelease`均曾成功；但Task 081 plugin接入后的最新真实Debug pipeline
 在`:app:desugarDebugFileDependencies`被production factory isolation阻塞，**不能称当前Debug build通过**，
-新APK尚未产出。Tasks 090–092已连续取得可观察`PASS`，依次排除production parameter shape、managed input load、positive allowlist admission与class-byte no-op visitor creation作为充分trigger；production implementation仍待Task 093从transient cache继续隔离。Runtime根因仍是Gradle APK对AOSP 17 platform aconfig
+新APK尚未产出。Tasks 090–092连续排除production parameter shape、managed input load、positive allowlist admission与class-byte no-op visitor creation作为充分trigger；Task 093加入exact production-shaped transient cache layer后，在任何factory callback前重现known literal path。完整cache layer现为最小已知activation boundary，production fix必须绕开decorated factory instance cache state，且不得把单个字段、annotation或accessor冒充已证明根因。Runtime根因仍是Gradle APK对AOSP 17 platform aconfig
 Flags保留原名，而设备只有jarjar后类名；详见
 `docs/issues/2026-09-01-c5-emulator-super-slack.md`与Task 081–093文档。
 
@@ -89,4 +89,4 @@ Flags保留原名，而设备只有jarjar后类名；详见
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：Task 093 transient cache control → reference visitor独立rung或围绕已固定的最小激活边界设计fix → production fix与双轴复核 → 串行 Debug/Release build + 静态 gate → 启动专用模拟器分别执行双 runtime reboot gate → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：围绕Task 093固定的cache activation boundary设计独立isolation-safe production seam → 单独恢复production visitor并做focused proof/双轴review → 串行 Debug/Release build + 静态 gate → 启动专用模拟器分别执行双 runtime reboot gate → C6 收口。
