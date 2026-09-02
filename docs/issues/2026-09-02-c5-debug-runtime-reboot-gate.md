@@ -1,7 +1,7 @@
 # C5 Task 098：fresh Debug APK runtime reboot gate
 
 **日期**：2026-09-02
-**状态**：REPLACEMENT REQUIRED — 三次 worker 均因流程违规退休；第二次已完成部署到 Checkpoint A 早期采样但在技术验收前定性为 `RETIRED_PROTOCOL`，第三次仅在 startup 读取阶段运行了禁止的 `wc -l` 后即退休，因此仍无 Debug runtime PASS/FAIL 结论
+**状态**：`DEBUG_RUNTIME_REBOOT_FAIL` — 第四个 replacement 完成合规 startup、Herdr protocol、fresh deployment 与 Checkpoint A；部署后的 Debug SystemUI 因 `android.service.dreams.Flags` old-owner reference 未重写而持续 crash-loop，Checkpoint A fail closed，reboot 4/4 与 Checkpoint B 未运行
 **前置**：Task 096 fresh Debug build/static gate `PASS`；Task 097 fresh Release build/R8/static gate `PASS`；Task 077 已验收 17 emu64x durable super/overlay 通道。
 
 ## 背景
@@ -65,6 +65,17 @@ Task 096 已冻结 Debug APK 的构建与静态身份，但没有在设备上执
 - 下一 replacement 必须从新的 clean pushed dispatch base 启动，并在 frozen startup 读取期间只使用串行 `read`，不得插入 `wc` 或任何 bash 命令；在任何 Herdr control action 前还必须完成 `herdr --skill`、精确 command help 查询和 caller workspace/tab/pane 记录。它必须先证明无 emulator/QEMU owner，再按 frozen brief 删除第二次尝试生成的顶层 `.qcow2` 与精确 instance directory，从基础镜像重做完整四次 reboot 和两个 checkpoint；若复现 PID 变化、进程消失或 crash/UI failure，立即保存正式证据并 fail closed，不得修复或继续。
 - 第三个 worker `task098-debug-runtime-r3` 位于 `w2:t49` / `w2:p4E`，session 为 `/home/conv/.pi/agent/sessions/--home-conv-myspace-SystemUI-Gradle--/2026-09-02T13-29-25-255Z_01a0624f-6407-7474-b470-cd45d7b102a5.jsonl`；session 独立确认 `provider=joycode`、`modelId=GLM-5.3`、`thinkingLevel=high`。它按序完成 AGENTS、HANDOFF、CHARTER 和完整 STATE 读取后，在读取冻结 log tail 前执行了 dispatch 明确禁止的 `wc -l docs/orchestration/log.md`，中断了“只串行读取”的 startup 序列。Chief 拒绝 CONTRACT 并在 preflight 前退休该尝试。除该只读 line-count 命令和文档读取外，没有 scratch、git、Herdr、emulator/QEMU、ADB、build 或 tracked/untracked file mutation；tab 已关闭，独立 census 仍为无 emulator/QEMU、无 ADB device。
 
+### 第四个 replacement：正式技术结论
+
+- 第四个 worker `task098-debug-runtime-r4` 位于 `w2:t4A` / `w2:p4F`，session 为 `/home/conv/.pi/agent/sessions/--home-conv-myspace-SystemUI-Gradle--/2026-09-02T13-39-20-036Z_01a06258-7764-72bf-bf2e-a286aa918b57.jsonl`；session 独立确认 `provider=joycode`、`modelId=GLM-5.3`、`thinkingLevel=high`、`HERDR_ENV=1`。它严格串行完成 frozen startup，CONTRACT 获 Chief 接受，并在首次 operational Herdr action 前完整读取 `herdr --skill`、查询实际使用命令的 exact help、记录 caller workspace `w2` / tab `w2:t4A` / pane `w2:p4F`。因此本次结果是 Task 098 的首个合规技术 authority。
+- Preflight 在 `HEAD == origin/main == 09d2314a585d0f561ccc4cedb9df05ed196a7619`、clean worktree 上通过；Task 096/097 closure 均为 ancestor。冻结 APK 和 `super.img` 的 size/SHA 均精确匹配，初始 emulator/QEMU/build census 为零，ADB 无设备。证明无 owner 后，仅删除授权的五个 generated 顶层 `.qcow2` 与精确 instance directory，并在 dedicated service tab `w2:t4B` / pane `w2:p4G` 启动 fresh emulator。
+- 本次完成 reboot `3/4`：permission-baseline reboot、disable-verity reboot、deployment cold boot。只授予 `BLUETOOTH_CONNECT` 与 `READ_CONTACTS`；stock SHA 为 `d0e36b33a5170c44b092da00efbf3e0aced2b8dbc5862b2fc3d088d3b77a5e25`，当前运行单独证据记录 stock PID `842` 且 crash buffer 为空。随后建立五个 durable overlay（部署前 scratch total `595496` KiB、available `526204` KiB），按 staged SHA、同文件系统 temp 与 atomic `mv` 部署冻结 Debug APK，恢复 `root:root` / `0644` / `u:object_r:system_file:s0` 并清理 oat/dalvik cache。部署后 target SHA 与 host SHA 均为 `f3af35d9da9d8f6f41b017276844e2b6de1e3f6074312fb5a67f76280a1f532b`，`pm path` 指向 `/system_ext/priv-app/SystemUI/SystemUI.apk`。
+- Checkpoint A 的完整 11×30 秒窗口正式失败：PID 依次为 `6533, 8217, 9871, empty, 13199, 14854, 16539, 18176, empty, 21495, 23143`；所有非空样本 elapsed 均为 `00:00:00`，从未形成单一稳定 PID，也未达到 ≥300 秒。deployment reboot 前已清空的 fresh crash buffer 保存为 `checkpointA-crash.txt`：13,716 行、1,812,966 bytes、622 个 `FATAL EXCEPTION`、622 个 `NoClassDefFoundError`。首个 fatal 为 21:49:50.182、PID 849、thread `wmshell.main`，在 `com.android.wm.shell.keyguard.KeyguardTransitionHandler.onInit(KeyguardTransitionHandler.java:155)` 命中 `Landroid/service/dreams/Flags;`。
+- 结论严格限定为：一个未重写的 `android.service.dreams.Flags` old-owner runtime reference 到达设备。authoritative AOSP `repackaging.txt:350` 为 `rule android.service.dreams.Flags com.android.internal.hidden_from_bootclasspath.android.service.dreams.Flags`。本任务没有执行修复或额外根因诊断，也不泛化为“设备缺少该类”。
+- 按 fail-closed 边界，reboot 4/4、Checkpoint B、两组 layout 与两组视觉截图均为 `NOT_RUN_DUE_CHECKPOINT_A_FAIL`。失败后的 `service call statusbar 1` 仅为 fail-probe，即使返回 Parcel 也不是 statusbar gate PASS。最终状态为 **`DEBUG_RUNTIME_REBOOT_FAIL`**；Release runtime 仍阻塞，必须先由独立任务完成 bounded 诊断与后续获批修复。
+- 证据偏差如实保留：evidence root 混有先前退休尝试的 stale 文件（包括 `RETIREMENT.txt`、旧 `preflight.txt`、旧 `checkpointA-pid.log`，以及内容时间戳为 21:14 的旧 `stock-baseline.txt`）；本次 preflight authority 位于 `preflight/`，运行证据以 21:45–21:56 的当前 phase files 与单独 `stock-pid.txt` / `stock-sha.txt` / `stock-crash.txt` 为准。`reboot3.txt` 错读不存在的 `ro.boot.boot_id`，因此 PRE/POST 字段为空；仅捕获 post-reboot `/proc/sys/kernel/random/boot_id` `0491a5ec-6fc8-496e-b9af-565107660e79`，uptime reset、完整 PID window 和 622 条 fresh fatal/NCDFE 是正式失败 authority。
+- worker 未运行 Gradle/Soong/Ninja、未 rebuild、未修复、未修改 tracked files。按 frozen FAIL stop state，`emulator-5554`、verity-disabled overlays 与部署后的 Debug APK 保持运行供 Chief 验收；不能据此继续 ADB、reboot 或试修。
+
 ## 构建记录
 
-规划及三次退休尝试均未运行 Gradle、Soong、Ninja、测试或任何构建命令。第一次与第三次尝试仅做文档读取（第三次另有一次无写副作用但违反 startup 协议的 `wc -l`）；第二次只消费已有冻结 Debug APK并执行 emulator/ADB runtime mutation。当前仍无可接受的 Debug runtime 技术结论。
+本任务第四次合规执行仍未运行 Gradle、Soong、Ninja、测试或任何构建命令；它只消费冻结的 Task 096 Debug APK并完成 runtime deployment。最终技术结论为 `DEBUG_RUNTIME_REBOOT_FAIL`，而不是 build failure。前三次退休尝试的流程事实保持不变。
