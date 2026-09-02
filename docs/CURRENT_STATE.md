@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 固定 AGP decorated factory 的 literal serialization path；Tasks 090–092连续可观察`PASS`，排除production parameter/load、positive admission及class-byte no-op visitor作为充分trigger。Task 093加入exact production-shaped transient cache layer后，在任何callback前重现同一路径，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer是当前最小已知activation boundary，但尚未证明其中任一字段、annotation、accessor或writeback是sole trigger。Task 094已冻结首选control：configuration-time validated `MapProperty`/`SetProperty` immutable snapshot + field-free no-op factory；尚未执行。Task 079 broad replay继续暂停。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 固定 AGP decorated factory 的 literal serialization path；Tasks 090–092连续可观察`PASS`，Task 093把完整transient cache layer固定为当前最小已知activation boundary。Task 094现已正式`PASS`：configuration-time validated `MapProperty`/`SetProperty` immutable snapshot + field-free no-op factory通过真实dependency-transform isolation；production factory仍未迁移且visitor尚未在该seam证明。下一步为Task 095 production migration + focused/direct visitor proof。Task 079 broad replay继续暂停。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 blocker**：Task 093在Task 092 `PASS` control上只加入production-shaped transient cache layer，唯一command于callback/sentinel前重现Task 084 literal path，正式`CACHE_ACTIVATED_ISOLATION_FAILURE`。完整cache layer是当前最小已知activation boundary；不得扩大为任一子元素已被单独归因。Task 094现已设计为首选单变量control：plugin配置阶段一次性校验4 mappings/166 allowlist并写入Gradle-managed `MapProperty`/`SetProperty`，factory保持field-free且visitor byte-no-op。它尚未执行，且不得混入full build、production visitor、Release/R8、runtime或Task 079 broad replay |
+| 当前唯一工程优先级 | **C5 blocker / Task 095**：Task 094 已正式 `PASS`。其唯一 direct command exit 0，4/166 managed values的 entered/accepted/no-op visitor sentinels各1，45个ASM records，known serialization markers为0，证明configuration-time validated `MapProperty`/`SetProperty` + field-free factory边界可通过真实dependency-transform isolation。Production source仍保留Task 093已知失败cache shape，且`referenceOnlyVisitor(...)`尚未在新seam执行；下一独立任务只迁移production seam、跑9个focused tests和两个external-file DEX的0/2→2/2 hidden-reference proof，不混入full build、Release/R8、device或Task 079 |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -78,7 +78,7 @@
 | `:app:assembleDebug` | ⚠️ C4b/task073 历史基线 BUILD SUCCESSFUL；Task 081 plugin 后的 Task 082 fresh pipeline FAIL at `:app:desugarDebugFileDependencies`：`AsmClassesTransform.Parameters` isolation → `Could not serialize value of type AconfigReferenceRewriteFactory`。新 Debug APK 未验收 | task082，`/tmp/task082-c5-debug-build/assemble-debug.log`（2026-09-02） |
 | `:app:assembleRelease` / R8 | ✅ BUILD SUCCESSFUL、missing refs=0；task076 的 GeneratedMessageLite 字段 keep 修复后，三轮 clean build 的 ZIP 条目内容 SHA 均为 `2a5e372f…`（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
 | 设备/模拟器 runtime | ⚠️ task075 Debug 热运行门 PASS；task077 durable super/overlay/64MiB probe 跨重启 PASS。修复后 Release 在冷启动时因 `android.view.accessibility.Flags` 等原名引用触发 `NoClassDefFoundError`；stock APK 已恢复且健康 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
-| Aconfig JarJar 静态/build-logic gate | ⚠️ task078 checker/focused tests与 task081 9 个 buildSrc tests通过；Tasks 090–092证明parameter/load/positive admission/no-op visitor本身可执行。Task 093已把完整transient cache layer固定为当前最小已知isolation activation boundary，但production factory仍无可用fix，`referenceOnlyVisitor(...)`尚未在真实pipeline执行，也无新APK可运行四hidden-reference/零hidden-definition gate | `tools/check_aconfig_jarjar_references.py`；Tasks 081/082/090–093 issues |
+| Aconfig JarJar 静态/build-logic gate | ⚠️ task078 checker/focused tests与 task081 9 个 buildSrc tests通过；Task 094证明managed immutable values + field-free no-op factory可通过真实dependency transform。Production source尚未迁移，`referenceOnlyVisitor(...)`尚未在新seam证明，也无新APK可运行四hidden-reference/零hidden-definition gate | `tools/check_aconfig_jarjar_references.py`；Tasks 081/082/090–095 issues |
 
 ## Toolchain and module topology
 
@@ -138,13 +138,12 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Task 094 immutable input snapshot control（待执行）**：首选seam不保留任何factory cache state；plugin配置阶段一次调用`FrozenAconfigInputs.load(...)`，把4 mappings/166 allowlist写入Gradle-managed `MapProperty`/`SetProperty` transform inputs，field-free factory只做sentinel positive admission和byte-no-op visitor。任务只允许运行一次direct dependency-transform command；不包含production visitor、full assemble、Release/R8或runtime。
-2. **Production seam + visitor focused proof/review**：Task 094若`PASS`，下一独立任务才把production factory迁移到immutable managed-value seam，恢复`referenceOnlyVisitor(...)`并完成focused buildSrc tests、真实direct-transform proof、Chief验收与Standards/Spec双轴review。Task 094若非PASS，停止并重新排序外部weak cache/无cache备选，不在同一任务切换方案。
-3. **独立 Debug build/static gate**：fix review-PASS 后重新立 no-fix build task，运行 fresh `:app:assembleDebug`，验证 APK ZIP/SHA、四 hidden references、零 hidden target definitions和无非法 old-name caller。
-4. **Release build/static gate**：Debug 成功后独立停止 Gradle/Kotlin daemons并运行 Release/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
-5. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。
-6. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
-7. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
+1. **Task 095 production immutable-input seam + visitor proof（待执行）**：plugin配置阶段一次调用`FrozenAconfigInputs.load(...)`，把4 mappings/166 allowlist写入managed `MapProperty`/`SetProperty`；production factory移除cache/state并恢复`referenceOnlyVisitor(...)`。只运行9个focused buildSrc tests和一次direct dependency transform；两个已证明external-file caller outputs必须从hidden target refs 0/2变为2/2，target definitions保持0/2，old definitions保持2/2。随后Chief验收与Standards/Spec双轴review。
+2. **独立 Debug build/static gate**：Task 095 review-PASS 后重新立 no-fix build task，运行 fresh `:app:assembleDebug`，验证 APK ZIP/SHA、四 hidden references、零 hidden target definitions和无非法 old-name caller。
+3. **Release build/static gate**：Debug 成功后独立停止 Gradle/Kotlin daemons并运行 Release/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
+4. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。
+5. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
+6. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
 
 ## Verification commands and evidence
 
@@ -207,10 +206,8 @@ exit code，后两条经确认未执行后各补执行一次并保存0/1；另�
 SHA `7f760669…`，三个sentinel和ASM transform records均为0，`NotSerializableException`、temporary factory
 `__instrumentationContext__`与`InstrumentationContext_Decorated.__apiVersion__`各46次，故正式归类
 `CACHE_ACTIVATED_ISOLATION_FAILURE`。这证明完整cache layer是相对Task 092的当前最小已知activation boundary，
-但不证明其中任一字段、instance state、annotation、accessor或writeback为sole trigger。Task 093已完整恢复；cleanup
-偏差为仅保存0/1两个exit code、第三个文件从未生成，且按Chief命令没有补跑或重跑；最终process census为空。
-下一步围绕该边界设计独立production fix；Task 079 broad replay保持暂停；主机当前无连接设备或emulator/QEMU，
-后续 runtime gate 前再启动。详见
+但不证明其中任一字段、instance state、annotation、accessor或writeback为sole trigger。Task 093已完整恢复；cleanup偏差为仅保存0/1两个exit code、第三个文件从未生成，且按Chief命令没有补跑或重跑；最终process census为空。Task 094随后把4 mappings/166 allowlist在plugin配置阶段一次校验并写入managed `MapProperty`/`SetProperty`，factory保持field-free且visitor byte-no-op。唯一command exit 0，1464行日志SHA `53fbffec…`，entered/accepted/no-op visitor sentinels各1、45条ASM records，known serialization markers均为0，故正式`PASS`。`javap`确认temporary factory无declared fields；session审计确认exactly one Gradle wrapper call和zero Python。Temporary sources已恢复，production/input hashes一致、worktree clean、process census为空。Cleanup三条命令各执行一次，exit codes `0/0/1`；初始census自匹配、错误test hash paths、普通diff遗漏untracked factory及gitignored compiled class四项evidence caveat均已披露，不改变分类。该结果只证明immutable managed-value/field-free no-op seam，不能冒充production visitor或APK成功。
+下一步执行Task 095：迁移production seam、恢复visitor、完成focused tests与两个external-file DEX的direct proof；Task 079 broad replay保持暂停；主机当前无连接设备或emulator/QEMU，后续 runtime gate 前再启动。详见
 `docs/issues/2026-09-01-c5-focused-reference-origins.md`、
 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`、
 `docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md`、
@@ -223,8 +220,10 @@ SHA `7f760669…`，三个sentinel和ASM transform records均为0，`NotSerializ
 `docs/architecture/2026-09-02-agp-instrumentation-isolation-research.md`、
 `docs/issues/2026-09-02-c5-observable-file-params-control.md`、
 `docs/issues/2026-09-02-c5-frozen-input-load-control.md`、
-`docs/issues/2026-09-02-c5-positive-allowlist-control.md` 与
-`docs/issues/2026-09-02-c5-transient-cache-control.md`。
+`docs/issues/2026-09-02-c5-positive-allowlist-control.md`、
+`docs/issues/2026-09-02-c5-transient-cache-control.md`、
+`docs/issues/2026-09-02-c5-immutable-input-snapshot-control.md` 与
+`docs/issues/2026-09-02-c5-production-immutable-input-seam.md`。
 
 **16 时代历史证据（AOSP main 快照，2026-08-21→26，保留供追溯）**：
 Task 045 main fresh（SysUISdk 单事务生成器两次 11,382 文件逐字节相等；Debug exit 0；fresh

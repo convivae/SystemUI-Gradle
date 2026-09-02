@@ -159,3 +159,9 @@ Then perform one read-only final process census and final repository status/hash
 ## Final report
 
 Report: exact base; model/session path; preflight; temporary hashes/diff invariants; exact command count; pipeline exit; log path/size/hash; sentinel and ASM counts; serialization marker counts and excerpts; provisional classification with bounded meaning; restoration hashes/status; cleanup exit files; final process census; all deviations. Stop and wait for Chief acceptance.
+
+## Accepted outcome
+
+Chief accepted Task 094 as **`PASS`**. The one wrapper command returned `PIPELINE_RC=0` / `BUILD SUCCESSFUL in 17s`; the 1464-line log SHA-256 is `53fbffec9cff08f3349762effca125725a8781f8a4e26f92a74a7f73e1c2f4c0`. Entered, 4/166 accepted, and no-op visitor sentinels each occurred exactly once; 45 ASM records occurred; all known serialization markers were zero. `javap` showed no temporary-factory fields. Session audit found one Gradle wrapper call and zero Python calls.
+
+Restoration and final process/worktree checks passed. Cleanup commands each ran once with exits `0/0/1`. Four caveats remain disclosed: an initial self-matching census later replaced by authoritative bracket-safe census; corrected test hash paths; ordinary diff omission of the separately saved untracked factory; and its gitignored compiled class output. This outcome proves only the immutable managed-value / field-free no-op isolation seam. Production visitor migration and proof are Task 095.

@@ -1,7 +1,7 @@
 # C5 Task 094：immutable parameter snapshot control
 
 **日期**：2026-09-02
-**状态**：已设计，待从 clean pushed planning base 串行执行
+**状态**：正式 `PASS`；temporary sources 已完整恢复，production 实现尚未迁移
 **前置**：Task 093 已闭合为 `CACHE_ACTIVATED_ISOLATION_FAILURE`。相对 Task 092，完整 production-shaped transient cache layer 足以在任何 factory callback 前激活 Task 084 literal path；但没有单独证明字段、instance state、`@Transient`、accessor 或 writeback 是 sole trigger。
 
 ## 问题与反馈环
@@ -81,6 +81,24 @@ printf 'one=%s\ntwo=%s\nthree=%s\n' "$first_rc" "$second_rc" "$third_rc"
 
 ## 错误数演变与待解决问题
 
-- 本任务尚未执行；当前真实 production pipeline 仍在 Task 093 所证 isolation path 阻塞，新 Debug APK 尚未产出。
-- 若 Task 094 `PASS`，下一独立 implementation task 才允许将 production factory 迁移到 immutable managed-value seam、补 focused tests，并在另一个明确 gate 中恢复 `referenceOnlyVisitor(...)`。
-- 若非 PASS，保留唯一 log/field path 后停止，由 Chief 重新排序 H2/H3；不恢复 Task 079 broad replay。
+- Task 094 唯一 Gradle command 正式 `PASS`：`PIPELINE_RC=0`，`BUILD SUCCESSFUL in 17s`，`5 actionable tasks: 2 executed, 3 up-to-date`。
+- 主日志 `/tmp/task094-c5-immutable-input-snapshot/desugar-immutable-inputs.log` 共 1464 行，SHA-256 `53fbffec9cff08f3349762effca125725a8781f8a4e26f92a74a7f73e1c2f4c0`。
+- 三个 sentinel 各恰好 1 次：entered、4/166 accepted、no-op visitor created；`AsmClassesTransform` records 45。`NotSerializableException`、temporary factory `__instrumentationContext__` 与 `InstrumentationContext_Decorated.__apiVersion__` marker 均为 0。
+- Direct target 显示 `UP-TO-DATE`，但三个 callback sentinel 与 45 个 ASM records 直接证明 relevant factory execution；不能用 task-level status 否定该 control。
+- `javap -p` 证明 temporary factory 无 declared fields；parameters 只有 `MapProperty<String, String>` 与 `SetProperty<String>` accessors。
+- Session 审计确认 exactly one `./gradlew` tool call、zero Python calls，temporary writes 仅两个 allowed paths。Plugin 已从 scratch byte-exact copy 恢复，temporary factory source 已删除；最终 production/input hashes恢复，worktree clean，process census为空。
+
+## Cleanup 与 evidence caveats
+
+Cleanup 三条命令各执行一次，保存 exit codes `0/0/1`，未补跑或重跑。以下 caveats 不改变 `PASS`，但必须保留：
+
+1. 初始一次未 bracket-escape 的 `pgrep -f` census 自匹配 wrapper；随后权威 census 使用 bracket-escaped/runtime-safe patterns，未错误终止任何过程。
+2. `pre-run-hashes.txt` 最初因错误 test paths 含 `No such file or directory`；只清理自己的 scratch evidence，正确 test hashes 保存在 `pre-run-hashes-testfiles.txt`。
+3. 普通 `git diff` 生成的 `post-mutation-diff.patch` 不包含 untracked temporary factory；其完整内容另存 `temporary-factory-copy.kt`，post-mutation status/hashes/invariants亦已保存。
+4. 编译后的 temporary factory class 仍存在于 gitignored `buildSrc/build`，属于授权 Gradle run 的自然输出；tracked worktree clean，production source 已恢复。
+
+## Bounded conclusion 与下一步
+
+Task 094 只证明 configuration-time validated 4/166 managed values + field-free no-op factory 可通过真实 dependency-transform isolation。它不证明 production `referenceOnlyVisitor(...)`、Debug APK、Release/R8、checker 或 runtime。
+
+下一独立 Task 095 将把该 seam 迁入 production：plugin 配置阶段一次 load，parameters 改为 managed map/set，factory 移除 cache/state 并恢复 `referenceOnlyVisitor(...)`；随后运行 focused tests 与 bounded direct-transform DEX proof。Task 095 review-PASS 前不得运行 full Debug build。Task 079 broad replay继续暂停。
