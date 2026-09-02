@@ -16,7 +16,7 @@
 - [x] ~~C4a：Gradle 接线（task072）~~ ✅ 2026-08-28（16-module 拓扑、catalog 23 族 2.0.0 + jsr330、`:app` 最小 manifest 壳、core namespace→`com.android.systemui.core`、surfaceeffects×3 + uilatencystats-flags + dynamiccolors 新产物；`gradle help`/`projects` 绿、`--strict` exit 0、pytest 293）
 - [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
-- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行、task076 Release protobuf-lite、task077 durable emulator、task078/080 四条 exact mappings 与 166 caller identities均已闭合；Tasks 081–095完成reference-only build logic、isolation诊断与production immutable-input seam。**Task 096 fresh Debug build/static已PASS：唯一build exit 0，APK 190,547,804 B / SHA `f3af35d9…` / 13 DEX；critical hidden refs `4/4`、725-rule hidden defs `0`、old-owner residual PASS。下一步依次执行fresh Release build/R8/static、Debug runtime、Release runtime。** Task 079 broad replay保持暂停。
+- [ ] **C5：17 镜像双 runtime 门**：task075 Debug 热运行、task076 Release protobuf-lite、task077 durable emulator、task078/080 四条 exact mappings 与 166 caller identities均已闭合；Tasks 081–095完成reference-only build logic、isolation诊断与production immutable-input seam。**Task 096 fresh Debug build/static已PASS：唯一build exit 0，APK 190,547,804 B / SHA `f3af35d9…` / 13 DEX；critical hidden refs `4/4`、725-rule hidden defs `0`、old-owner residual PASS。Task 097已规划；下一步依次执行fresh Release build/R8/static、Debug runtime、Release runtime。** Task 079 broad replay保持暂停。
 - [ ] C6：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）
 
 ### 2. 尾账（Release 阶段处理）

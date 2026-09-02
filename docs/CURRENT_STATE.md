@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 / fresh Release build/R8/static gate**：Task 096已用完整Debug APK证明四条critical hidden references `4/4`、全725-rule hidden target definitions `0`及无跨class old-owner残留。下一独立任务须fresh构建Release APK，要求R8成功、checker消除四个critical old references并保留四个hidden references、hidden target definitions为0；不得把Debug PASS冒充Release或runtime成功 |
+| 当前唯一工程优先级 | **C5 / Task 097 fresh Release build/R8/static gate（PLANNED）**：Task 096已用完整Debug APK证明四条critical hidden references `4/4`、全725-rule hidden target definitions `0`及无跨class old-owner残留。Task 097须fresh构建Release APK，要求R8成功、checker消除四个critical old references并保留四个hidden references、hidden target definitions为0；不得把Debug PASS冒充Release或runtime成功 |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -141,7 +141,7 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Release build/static gate**：Task 096 fresh Debug build/static已PASS。独立停止Gradle/Kotlin daemons后运行fresh Release/R8；Release checker必须消除四个critical old references、出现四个hidden references且hidden target definitions=0，并冻结APK ZIP/SHA/R8证据。
+1. **Task 097 Release build/static gate**：Task 096 fresh Debug build/static已PASS。独立停止Gradle/Kotlin daemons后运行fresh Release/R8；Release checker必须消除四个critical old references、出现四个hidden references且hidden target definitions=0，并冻结APK ZIP/SHA/R8证据。
 2. **Debug runtime gate**：Release静态成功后，启动task077 durable emulator，部署Task 096 Debug APK，核对host/device SHA、PID/fatal/UI门并验证整机重启前后稳定。
 3. **Release runtime gate**：Debug runtime通过后再独立部署fresh Release APK，执行相同冷启动/整机重启门。
 4. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。

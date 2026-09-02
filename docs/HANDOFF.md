@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：Task 096 fresh Debug build/static已PASS，证明完整APK四hidden mappings、零hidden target definitions和无非法old caller。下一独立任务是fresh Release build/R8/static gate；Debug与Release runtime均仍未重跑，模拟器当前未运行。
+5. **当前唯一工程优先级**：Task 096 fresh Debug build/static已PASS，证明完整APK四hidden mappings、零hidden target definitions和无非法old caller。Task 097已规划为fresh Release build/R8/static gate；Debug与Release runtime均仍未重跑，模拟器当前未运行。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -90,4 +90,4 @@ Flags保留原名，而设备只有jarjar后类名；详见
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：独立fresh Release build/R8/static gate → 启动专用模拟器分别执行Debug/Release runtime reboot gate → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：Task 097独立fresh Release build/R8/static gate → 启动专用模拟器分别执行Debug/Release runtime reboot gate → C6 收口。
