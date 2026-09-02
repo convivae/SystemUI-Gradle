@@ -172,3 +172,30 @@ RESULT=PASS
 ```
 
 Task 081 到此只达到 focused build-logic proof rung。Debug/Release APK 尚未重编，现有 Release APK checker 仍应保持旧的 `RESULT=FAIL`；Android build、R8、emulator 与 ADB 留给 review-PASS 后的独立串行任务。
+
+## 双轴 review 与 Chief 验收
+
+固定 review range 为 `aba9534f...3173d426`；merge-base 精确为 `aba9534f`，范围内只有实现 commit `3173d426 build: add focused aconfig reference rewrite`，diff 非空且严格为 14 个 Allowed Paths。
+
+- Standards reviewer：`PASS`，无 BLOCKER/HIGH/MEDIUM；记录 2 个 LOW（内部名转换重复、`gradle-api` dependency scope）与 2 个 TRIVIAL（registration test seam 的冗余 guard、测试默认 AOSP 路径）。Chief 判定均不阻塞：转换重复规模固定且保持 production/test seam 清晰；AGP API 保持 `implementation` 以避免在尚未执行 app build 前引入 classloader 风险；guard 用于直接证明 application-only contract；AOSP 路径可由 system property 覆盖且本 task brief 已冻结 owner。
+- Spec reviewer：`PASS`，十项 mandatory contract 全部逐项确认；无 BLOCKER/HIGH/MEDIUM/LOW，记录 3 个 TRIVIAL（未使用的 `kotlin-test`、仅测试使用的 `asm-tree` scope、production visitor 依赖按构造保持 identity 而非输出后重扫）。Chief 判定这些不改变 spec 正确性，也不在首次 APK build 前扩大改动范围。
+
+Chief 在 reviewers 完成且无并发 build 后重新运行：
+
+```text
+./gradlew -p buildSrc test --console=plain --rerun-tasks
+BUILD SUCCESSFUL in 8s
+9 tests, 0 failures, 0 errors
+```
+
+并独立复验：
+
+```text
+ALLOWED_PATHS=PASS
+FULL_AOSP_RULES_SHA256=PASS
+RULE_PROVENANCE=4/4
+ALLOWLIST_REPORT_IDENTITY=166/166
+RESULT=PASS
+```
+
+`git diff --check aba9534f...3173d426` 通过；reviewer 未修改仓库或创建临时文件；Chief 清理 focused-test scratch 并终止 Gradle/Kotlin daemon。Task 081 review-PASS，但该结论仍只覆盖 build logic；Debug/Release APK 和 runtime blocker 必须由后续独立任务验证。

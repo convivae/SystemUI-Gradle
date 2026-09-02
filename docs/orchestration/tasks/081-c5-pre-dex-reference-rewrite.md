@@ -193,3 +193,12 @@ RESULT=PASS
 ```
 
 另外 `git diff --check` 通过。Task 081 未配置或执行任何 Android module task、APK build、R8、emulator、ADB、Soong 或 Ninja；该结论只覆盖 build logic focused proof rung。
+
+## Review closure
+
+固定范围 `aba9534f...3173d426` 通过独立 Standards/Spec 双轴 review：
+
+- Standards：`PASS`，无 BLOCKER/HIGH/MEDIUM；2 LOW + 2 TRIVIAL 均为不阻塞的去重、dependency scope、test seam 与路径一致性建议。
+- Spec：`PASS`，十项 mandatory test contract 全覆盖；无 BLOCKER/HIGH/MEDIUM/LOW，3 TRIVIAL 不影响 acceptance。
+
+Chief 独立复验 `./gradlew -p buildSrc test --console=plain --rerun-tasks` 为 `BUILD SUCCESSFUL in 8s`，三个 suite 共 9 tests、0 failure/error；四规则 SHA、完整 AOSP provenance、166-class durable-report identity、Allowed Paths 与 `git diff --check` 均 PASS。Reviewers 未写仓库或 `/tmp`。Task 081 因此关闭为 build-logic review-PASS；APK/R8/runtime 仍未验证，必须由后续串行任务完成。
