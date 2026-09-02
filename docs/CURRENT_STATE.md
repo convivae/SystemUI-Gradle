@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 goldfish 2880MiB dynamic-partition group、582MiB durable scratch、五分区 overlay 与跨重启探针。task078 落地 725-rule 秒级 DEX gate；task080 又以 class 常量池证据将四个 runtime-critical 旧名归属到 166 个唯一 program reference classes，覆盖项目类、直接 JAR、本地 Maven AAR 和直接 AAR，`UNKNOWN=0`，并排除 compileOnly `framework.jar`。**当前唯一 blocker 仍是缺失 pre-D8/R8 class-reference rewrite：Task 079 broad replay 已暂停；Task 081 首个 worker 已建立 buildSrc focused RED 后停止，保留两项未提交测试脚手架；下一步用 `joycode/GLM-5.3`、`thinking=high` replacement 补齐十项 mandatory tests 并实现。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；**Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL：AGP `AsmClassesTransform` 无法隔离参数，因为 `AconfigReferenceRewriteFactory` 无法序列化。当前唯一 blocker 是修复该 transform-isolation contract，再重跑独立 Debug build/static gate。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -11,14 +11,14 @@
 | 维度 | 状态 |
 |------|------|
 | AOSP 基线 | **`android-17.0.0_r1`**（manifest `5bc9a7ce`，frameworks/base `94b4c163b`，1084 projects）；C1 全量构建 `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swap） |
-| Debug APK | ✅ C4b 编译闭合；C5 task075 在 17 模拟器完成部署与稳定运行（PID/crash/UI 门通过）。持久 super-backed overlay 已由 task077 独立以 64MiB 探针完成跨重启验收；最终 C5 收口时与修复后 Release 一并重跑冷启动门 |
+| Debug APK | ⚠️ C4b/Task 075 的旧 Debug APK 曾编译并热运行通过；Task 081 新增 reference-only build logic 后，Task 082 首次真实 `assembleDebug --rerun-tasks` 在 `:app:desugarDebugFileDependencies` 因 `AconfigReferenceRewriteFactory` transform-isolation serialization failure 停止，未产出或验收新的候选 APK |
 | Release APK | ⚠️ `:app:assembleRelease` 编译/R8 闭合；task076 已修复 protobuf-lite 反射字段并证明三轮内容 SHA 一致。task077 运行时暴露 AOSP 17 platform aconfig jarjar 改名缺口：DEX 引用原名 `Flags`、设备仅有 `hidden_from_bootclasspath` 改名类，当前冷启动 **FAIL** |
 | Gradle 配置解析 | ✅ `./gradlew help` + `projects` BUILD SUCCESSFUL（C4a 验收；16 模块全部识别，C4b 起追加 `:SystemUI-utils-kairos`） |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
-| 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；Task 081 不需要启动设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 blocker**：task080 已证明四个旧名来自 166 个唯一 program reference classes，compileOnly `framework.jar` 已隔离。Task 079 broad replay 保持暂停；Task 081 首个 worker 已得到预期 buildSrc RED 后停止，保留 `buildSrc/build.gradle.kts` 与 focused test 两项未提交脚手架；下一步由显式 `joycode/GLM-5.3`、`thinking=high` replacement 先补齐十项 mandatory tests，再实现 build logic → 双轴复核 → Debug build → Release build/static gate → 双 runtime gate。禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
+| 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
+| 当前唯一工程优先级 | **C5 blocker**：Task 081 的四-rule/166-class reference-only plugin 已通过 focused tests 与 review，但 Task 082 证明真实 AGP dependency transform 无法序列化 `AconfigReferenceRewriteFactory`。下一步先取得最深层 cause、建立 focused regression gate并只修 build logic，再以新任务重跑 Debug build/static gate；之后才允许 Release build/static gate与双 runtime gate。Task 079 broad replay保持暂停；禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -54,6 +54,8 @@
 | 2026-09-01 | **C5 部分闭环（tasks075–077）**：Debug 热运行 PASS；Release protobuf 反射修复 PASS；goldfish 2880MiB super、582MiB scratch、五 overlay、64MiB probe 跨重启 PASS。剩余 blocker：Release platform aconfig JarJar 引用未改名 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
 | 2026-09-01 | **C5 task078 研究/gate 闭环（review-PASS）**：纯 stdlib DEX checker + 26 个 focused tests；Release exit 1（30 source/0 target）、stock exit 0（1 source/36 target）；725 条 exact 规则主源传播/执行时序已还原 | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 | 2026-09-02 | **C5 task080 来源闭环（review-PASS）**：按 `CONSTANT_Class`/`this_class` 扫描并以引用类身份去重；四个 critical 旧名对应 50/7/5/104，共 166 个 program reference classes，`ORIGINS_PROVEN=4/4`、`UNKNOWN=0`；compileOnly `framework.jar` 明确隔离 | `docs/issues/2026-09-01-c5-focused-reference-origins.md` |
+| 2026-09-02 | **C5 task081 build-logic proof（review-PASS）**：app-only `InstrumentationScope.ALL` reference-only plugin；四规则/166-class inputs；9 focused tests；`ALL`/`COPY_FRAMES` registration与十项 mandatory contract通过双轴 review。只证明 build logic，不证明 Android pipeline | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
+| 2026-09-02 | **C5 task082 Debug pipeline FAIL**：唯一 `assembleDebug --rerun-tasks` exit 1；`:app:desugarDebugFileDependencies` 无法隔离 `AsmClassesTransform.Parameters`，最深已知消息为 `Could not serialize value of type AconfigReferenceRewriteFactory`；未验收 APK | `docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md` |
 
 ## Current build and verification matrix
 
@@ -64,10 +66,10 @@
 | Gradle 配置解析 | ✅ `./gradlew help` + `projects` BUILD SUCCESSFUL（16 模块识别） | task072（2026-08-28，先 `pkill -f GradleDaemon`） |
 | Python 工具测试 | ✅ 310 passed（+151 subtests） | task074 chief 复验（2026-08-31） |
 | 产物确定性 | ✅ 冻结指纹 `package_misc_jars.py --verify-only` 24/24 MATCH；task076 三轮 clean Release 的 ZIP 条目内容 SHA 一致（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
-| `:app:assembleDebug` | ✅ BUILD SUCCESSFUL（chief 2026-08-31 重跑证实；K 错误 R1 182 → R4 5 → R50 0；四层修复：aapt2 双阶段 feature-flags、SysUISdk 重建 D12 选项 ①、17 依赖图接线 R9-R31（compose 首次真编译 188→0）、Dagger api 化 R24-R50） | task073（5 commits `a65e2d9c..517ca6d6`） |
+| `:app:assembleDebug` | ⚠️ C4b/task073 历史基线 BUILD SUCCESSFUL；Task 081 plugin 后的 Task 082 fresh pipeline FAIL at `:app:desugarDebugFileDependencies`：`AsmClassesTransform.Parameters` isolation → `Could not serialize value of type AconfigReferenceRewriteFactory`。新 Debug APK 未验收 | task082，`/tmp/task082-c5-debug-build/assemble-debug.log`（2026-09-02） |
 | `:app:assembleRelease` / R8 | ✅ BUILD SUCCESSFUL、missing refs=0；task076 的 GeneratedMessageLite 字段 keep 修复后，三轮 clean build 的 ZIP 条目内容 SHA 均为 `2a5e372f…`（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
 | 设备/模拟器 runtime | ⚠️ task075 Debug 热运行门 PASS；task077 durable super/overlay/64MiB probe 跨重启 PASS。修复后 Release 在冷启动时因 `android.view.accessibility.Flags` 等原名引用触发 `NoClassDefFoundError`；stock APK 已恢复且健康 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
-| Aconfig JarJar 静态 gate | ✅ task078 focused tests 26 passed；规则 725 条 exact / 726 物理行，SHA `f79a08d…`；当前 Release exit 1 `RESULT=FAIL`（30 source/0 target），stock exit 0 `RESULT=PASS`（1 source/36 target，target-defined=0） | `tools/check_aconfig_jarjar_references.py`；`docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
+| Aconfig JarJar 静态/build-logic gate | ⚠️ task078 checker/focused tests与 task081 9 个 buildSrc tests通过；Task 082 证明真实 AGP `ALL` dependency transform 在 factory serialization/isolation 阶段失败，尚无新 APK 可运行四 hidden-reference/零 hidden-definition gate | `tools/check_aconfig_jarjar_references.py`；Task 081/082 issues |
 
 ## Toolchain and module topology
 
@@ -126,9 +128,9 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Task 081 build-logic TDD（已批准，RED 已建立）**：首个 worker 已新增未提交 `buildSrc/build.gradle.kts` 与 `AconfigReferenceRewriteTest.kt`，并以 production API 尚不存在的 test-compile failure 建立预期 RED；因运行未授权 `./gradlew --status` 且未继续补齐测试而停止。replacement 使用 `joycode/GLM-5.3`、`thinking=high`，继承该两文件并先补齐十项 mandatory tests。最终只在 `:app` 以 AGP 9.3.1 public instrumentation `Scope.ALL` 建立单一 pre-D8/R8 seam，只允许 Task 080 冻结的 166 个 class identity 进入 visitor，并只改四条 critical exact reference；`this_class` 保持，hidden target definitions 必须为 0。只新增 `buildSrc` plugin、四规则/166-class 冻结输入、ADR 0008 与 focused tests；不运行 Android app build，不改 source/`libs/**`/SDK/AOSP/out/settings。
-2. **Task 081 Chief 验收与双轴复核**：focused gate 通过后，Chief 独立复验并以固定 range 分别执行 Standards/Spec review；Task 081 不能声明 APK 或 runtime 已修复。
-3. **串行构建与静态 gate**：Task 081 review-PASS 后，分别立小任务停止 Gradle/Kotlin daemon并运行 Debug build、Release build/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
+1. **Transform-isolation diagnosis/fix**：Task 082 已以真实 pipeline 稳定触发 `:app:desugarDebugFileDependencies` failure。下一任务先在 cached dependency-transform 路径取得完整 stacktrace/最深 cause，建立最小正确 regression gate，再只修改 `buildSrc` factory/parameters 生命周期；不得扩大四规则、166-class allowlist或 rewrite seam。
+2. **独立 Debug build/static gate**：fix review-PASS 后重新立 no-fix build task，运行 fresh `:app:assembleDebug`，验证 APK ZIP/SHA、四 hidden references、零 hidden target definitions和无非法 old-name caller。
+3. **Release build/static gate**：Debug 成功后独立停止 Gradle/Kotlin daemons并运行 Release/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
 4. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。
 5. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
 6. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
@@ -161,15 +163,15 @@ uv run python tools/check_source_alignment.py --strict
 manifest-dex closure 24/24、missing=0；Debug 热运行 PID/crash/UI 门通过；Release protobuf-lite
 反射字段已修复且三轮内容级构建一致。AOSP goldfish 单行容量变更经正式 `m -j16` 构建成功，
 `super.img` SHA `50496c9b…`，设备 scratch 582MiB、五分区 overlay、64MiB 探针跨整机重启
-持久。task078 已将该 blocker 固化为秒级 gate：AOSP 规则文件含 725 条 exact 规则（726 个物理行，
-SHA `f79a08d…`）；当前 Release 为 30 source/0 target、exit 1 `RESULT=FAIL`，stock 为
-1 source/36 target、target-defined=0、exit 0 `RESULT=PASS`。task080 又将四个 critical old references
-归属到 166 个唯一 program classes（50/7/5/104，`UNKNOWN=0`），并明确隔离 compileOnly
-`framework.jar`。Task 079 broad replay 保持暂停；用户已批准 Task 081 最小 pre-D8/R8 reference-only 方案、exact
-brief 与 ADR 0008，当前 APK 未变、Release gate 仍红。主机重启后当前无连接设备或 emulator/QEMU
-进程；Task 081 不需要设备，后续 runtime gate 前再启动。详见
-`docs/issues/2026-09-01-c5-focused-reference-origins.md` 与
-`docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`。
+持久。task078/080 �� blocker 固定为四条 critical mappings和 166 个 program reference classes；Task 081
+的 reference-only plugin 已通过 9 个 focused tests与双轴 review。Task 082 首次真实 Debug pipeline
+运行唯一 `assembleDebug --rerun-tasks` 后 exit 1：`:app:desugarDebugFileDependencies` 无法隔离
+`AsmClassesTransform.Parameters`，因为 `AconfigReferenceRewriteFactory` 无法序列化。完整日志为
+`/tmp/task082-c5-debug-build/assemble-debug.log`；新 Debug APK/static gate 未执行。Task 079 broad replay
+保持暂停；主机当前无连接设备或 emulator/QEMU，后续 runtime gate 前再启动。详见
+`docs/issues/2026-09-01-c5-focused-reference-origins.md`、
+`docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` 与
+`docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md`。
 
 **16 时代历史证据（AOSP main 快照，2026-08-21→26，保留供追溯）**：
 Task 045 main fresh（SysUISdk 单事务生成器两次 11,382 文件逐字节相等；Debug exit 0；fresh

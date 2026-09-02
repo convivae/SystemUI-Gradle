@@ -15,10 +15,12 @@
 
 1. Task 080 is closed and pushed at `36b4a3cd`: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed.
 2. Task 081 implementation `3173d426` and review closure `26b1346b` are pushed. Fixed range `aba9534f...3173d426` passed Standards/Spec and Chief focused acceptance; this proves build logic only, not APK/R8/runtime.
-3. Task 082 is the next serialized rung: one no-fix worker runs only `:app:assembleDebug --rerun-tasks`, records APK SHA/size/ZIP integrity, and checks four hidden references plus zero hidden target definitions. Release/R8 and device work remain forbidden.
-4. After Task 082 is recorded, run a separate Release build/static APK gate, then start the dedicated Android 17 emulator for persistent Debug and Release reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
+3. Task 082 is closed FAIL. Its only authorized command reached the real AGP application pipeline but stopped at `:app:desugarDebugFileDependencies`: Gradle could not isolate `AsmClassesTransform.Parameters` because it could not serialize `AconfigReferenceRewriteFactory`. No APK/static gate ran and no tracked file changed.
+4. Next is a separate focused diagnosis/fix task: capture the deepest serialization cause on the cached `:app:desugarDebugFileDependencies` path, add the smallest correct regression gate, and fix only build logic. A fresh Debug build/static gate remains separate; Release/R8 and device work remain forbidden until Debug succeeds.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 082 closed FAIL without tracked changes. Worker `task082-debug-build` in `w2:t39` / `w2:p3E` used verified `joycode/GLM-5.3`, `thinking=high`, passed clean/no-process preflight, then ran only `:app:assembleDebug --rerun-tasks --max-workers=4`. The real pipeline exited 1 after 1m1s at `:app:desugarDebugFileDependencies`: AGP's `AsmClassesTransform` parameters could not be isolated because `AconfigReferenceRewriteFactory` could not be serialized. Full log is `/tmp/task082-c5-debug-build/assemble-debug.log`; no APK/checker/Release/device task ran. Chief terminated the resulting Gradle/Kotlin daemons. Next is a new focused serialization diagnosis/fix task, not a Task 082 retry.
 
 - 2026-09-02 — Task 081 implementation/review commits through `26b1346b` were pushed. Chief opened Task 082 as the first real Android-pipeline proof: one serial no-fix worker may run only `:app:assembleDebug --rerun-tasks`, then record APK integrity and reference-only static evidence. Debug's two app-owned old-name definitions may legitimately keep the release-oriented checker red; acceptance instead requires all four hidden targets referenced, zero hidden target definitions, and no non-definition old-name caller. Release/R8, emulator, ADB, Soong/Ninja, and tracked-file writes remain forbidden.
 
