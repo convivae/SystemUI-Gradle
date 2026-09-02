@@ -14,10 +14,13 @@
 ## Queue
 
 1. Task 080 is closed and pushed at `36b4a3cd`: fixed range `af849c52...8c49181a` passed Standards and Spec with zero findings after a clean Kimi-K3-jcloud read-only rerun; Chief acceptance also passed.
-2. Task 081 implementation `3173d426` is review-PASS on fixed range `aba9534f...3173d426`. Standards found no BLOCKER/HIGH/MEDIUM (2 LOW + 2 TRIVIAL non-blocking); Spec confirmed all ten mandatory contracts with no BLOCKER/HIGH/MEDIUM/LOW (3 TRIVIAL). Chief independently reran 9 focused tests with no-cache GREEN and reproduced exact rules/provenance/166-class/Allowed-Paths gates. No Android build, APK rebuild, R8, emulator, or ADB action occurred; closure docs are ready to commit and push.
-3. After Task 081 closure push, serialize Debug build, Release build/static APK checks, then start the dedicated Android 17 emulator for persistent Debug and Release reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
+2. Task 081 implementation `3173d426` and review closure `26b1346b` are pushed. Fixed range `aba9534f...3173d426` passed Standards/Spec and Chief focused acceptance; this proves build logic only, not APK/R8/runtime.
+3. Task 082 is the next serialized rung: one no-fix worker runs only `:app:assembleDebug --rerun-tasks`, records APK SHA/size/ZIP integrity, and checks four hidden references plus zero hidden target definitions. Release/R8 and device work remain forbidden.
+4. After Task 082 is recorded, run a separate Release build/static APK gate, then start the dedicated Android 17 emulator for persistent Debug and Release reboot/runtime gates. Complete C6 only after both APKs compile and run without crash.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 081 implementation/review commits through `26b1346b` were pushed. Chief opened Task 082 as the first real Android-pipeline proof: one serial no-fix worker may run only `:app:assembleDebug --rerun-tasks`, then record APK integrity and reference-only static evidence. Debug's two app-owned old-name definitions may legitimately keep the release-oriented checker red; acceptance instead requires all four hidden targets referenced, zero hidden target definitions, and no non-definition old-name caller. Release/R8, emulator, ADB, Soong/Ninja, and tracked-file writes remain forbidden.
 
 - 2026-09-02 — Task 081 fixed range `aba9534f...3173d426` passed independent read-only Standards and Spec review. Standards reported no BLOCKER/HIGH/MEDIUM and only 2 LOW + 2 TRIVIAL non-blocking suggestions; Spec checked all ten mandatory contracts and reported no BLOCKER/HIGH/MEDIUM/LOW, with 3 TRIVIAL observations. Chief independently reran the focused gate with `--rerun-tasks` (`BUILD SUCCESSFUL in 8s`, 9 tests, zero failures/errors), reproduced exact rules/full-AOSP provenance/166-class durable-report identity/Allowed-Paths gates, and confirmed clean fixed-range diff plus no active build processes. Reviewer worktrees remained clean and no reviewer scratch was created. Task 081 is review-PASS at the build-logic rung only; APK/R8/runtime remain untested and separate.
 
