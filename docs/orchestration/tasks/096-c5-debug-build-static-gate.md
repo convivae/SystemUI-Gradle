@@ -31,7 +31,8 @@ May NOT：修改/创建/删除任何tracked文件；运行第二个Gradle wrappe
 
 ## Frozen identity and paths
 
-- Expected base: `2994fa8f391233cdbc6bbfb7b121bf08c0d74f35`
+- Required production ancestor: `2994fa8f391233cdbc6bbfb7b121bf08c0d74f35`
+- Dispatch base: require `HEAD == origin/main`; record the actual planning/dispatch commit in preflight evidence
 - Branch: `main`
 - Scratch root only: `/tmp/task096-c5-debug-build-static/**`
 - Candidate APK: `app/build/outputs/apk/debug/app-debug.apk`
@@ -45,7 +46,7 @@ May NOT：修改/创建/删除任何tracked文件；运行第二个Gradle wrappe
 After Chief accepts CONTRACT:
 
 - Confirm `HERDR_ENV=1`.
-- Confirm `HEAD == origin/main ==` frozen base.
+- Confirm `HEAD == origin/main` and that frozen production commit `2994fa8f391233cdbc6bbfb7b121bf08c0d74f35` is an ancestor of `HEAD`.
 - Confirm `git status --short --untracked-files=all` is empty.
 - Use bracket-safe process census that cannot self-match. If any Gradle/Kotlin/Soong/Ninja process is active, stop and report; do not kill it.
 - Confirm rules parse as exactly 725 entries, frozen critical rules are 4 lines, and allowlist is 166 lines. Python, if used, must be `uv run python`; shell line counts are preferred.
