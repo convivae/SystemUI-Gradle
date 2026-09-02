@@ -9,6 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
+| 096 | `w2:t42` / `w2:p47`, agent `task096-debug-r2` | shared `main`, production ancestor `2994fa8f` | `joycode/GLM-5.3`, `thinking=high` | startup complete; CONTRACT accepted after dispatch record is pushed; waiting before preflight | no-fix, exactly one fresh Debug build; scratch/build outputs only; no Release/device/Task 079 |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
