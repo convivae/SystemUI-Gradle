@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083 已将最深原因固定为 `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`，但普通 stacktrace未给出 runtime-generated factory decorator中的字段路径；当前下一步是 Task 084 单命令 extended serialization field-path诊断，再据证据修复 transform-isolation contract。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 081 的 buildSrc reference-only plugin 已通过 9 个 focused tests 与双轴 review；Task 082 首次真实 Debug pipeline 在 `:app:desugarDebugFileDependencies` FAIL。**Task 083/084 已把最深原因和 literal object path固定为 AGP runtime-generated `InstrumentationContext_Decorated.__apiVersion__` 中的 `DefaultProperty`，经 factory decorator的 `__instrumentationContext__` 可达；当前下一步是 Task 085 `InstrumentationParameters.None` no-op `ALL` control，区分通用 AGP/Gradle isolation incompatibility与 custom parameters影响。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 blocker**：Task 083 的 5 秒 direct loop 已将真实 AGP dependency-transform failure固定到 `NotSerializableException: DefaultProperty`，并排除 transient `cachedInputs` 为直接原因；具体 injected property field ownership仍未知。Task 084先用 JDK extended serialization info获取字段路径，再另立最小 buildSrc修复与 regression gate；之后才重跑 Debug build/static gate、Release build/static gate与双 runtime gate。Task 079 broad replay保持暂停；禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
+| 当前唯一工程优先级 | **C5 blocker**：Task 084 已逐字取得 Java serialization路径：AGP生成的 `InstrumentationContext_Decorated.__apiVersion__` 持有首个失败的 `DefaultProperty`，并经 `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__` 可达；不是 transient cache，也不是路径中首先失败的 custom parameters。Task 085先用 `InstrumentationParameters.None` no-op `ALL` control验证该失败是否独立于 custom parameters，再决定受支持的 production seam与 regression gate；之后才重跑 Debug build/static gate、Release build/static gate与双 runtime gate。Task 079 broad replay保持暂停；禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -55,7 +55,8 @@
 | 2026-09-01 | **C5 task078 研究/gate 闭环（review-PASS）**：纯 stdlib DEX checker + 26 个 focused tests；Release exit 1（30 source/0 target）、stock exit 0（1 source/36 target）；725 条 exact 规则主源传播/执行时序已还原 | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 | 2026-09-02 | **C5 task080 来源闭环（review-PASS）**：按 `CONSTANT_Class`/`this_class` 扫描并以引用类身份去重；四个 critical 旧名对应 50/7/5/104，共 166 个 program reference classes，`ORIGINS_PROVEN=4/4`、`UNKNOWN=0`；compileOnly `framework.jar` 明确隔离 | `docs/issues/2026-09-01-c5-focused-reference-origins.md` |
 | 2026-09-02 | **C5 task081 build-logic proof（review-PASS）**：app-only `InstrumentationScope.ALL` reference-only plugin；四规则/166-class inputs；9 focused tests；`ALL`/`COPY_FRAMES` registration与十项 mandatory contract通过双轴 review。只证明 build logic，不证明 Android pipeline | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
-| 2026-09-02 | **C5 task083 isolation diagnosis PASS**：唯一 direct task在 5 秒内精确重现；deepest cause 为 `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`。Factory自有 cache已证为 transient；具体 runtime decorator field path仍待 Task 084 | `docs/issues/2026-09-02-c5-asm-factory-isolation.md` |
+| 2026-09-02 | **C5 task083 isolation diagnosis PASS**：唯一 direct task在 5 秒内精确重现；deepest cause 为 `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`。Factory自有 cache已证为 transient；具体 runtime decorator field path交由 Task 084 | `docs/issues/2026-09-02-c5-asm-factory-isolation.md` |
+| 2026-09-02 | **C5 task084 serialization field-path PASS**：唯一 extended-info direct task在 5 秒内精确重现；46 个 cause chain均显示 `InstrumentationContext_Decorated.__apiVersion__` → factory decorator `__instrumentationContext__` literal path。首个失败对象属于 AGP注入状态；custom parameters后续可否序列化仍未确定 | `docs/issues/2026-09-02-c5-serialization-field-path.md` |
 | 2026-09-02 | **C5 task082 Debug pipeline FAIL**：唯一 `assembleDebug --rerun-tasks` exit 1；`:app:desugarDebugFileDependencies` 无法隔离 `AsmClassesTransform.Parameters`，最深已知消息为 `Could not serialize value of type AconfigReferenceRewriteFactory`；未验收 APK | `docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md` |
 
 ## Current build and verification matrix
@@ -129,7 +130,7 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Transform-isolation field path（Task 084）**：Task 083 已以 direct task精确重现，并将 deepest cause固定为 `NotSerializableException: DefaultProperty`。下一任务只启用 JDK extended serialization debug info重跑同一 task一次，取得 runtime-generated factory decorator的具体字段路径；之后另立最小 buildSrc修复与 focused regression gate。不得扩大四规则、166-class allowlist或 rewrite seam。
+1. **No-op `ALL` control（Task 085）**：Task 084 已证明首个不可序列化对象是 AGP注入的 `InstrumentationContext_Decorated.__apiVersion__`，经 factory decorator `__instrumentationContext__` 可达。下一任务临时注册 `InstrumentationParameters.None` no-op `InstrumentationScope.ALL` factory并仅运行同一 direct task一次，随后恢复临时 diff；据结果区分通用 AGP 9.3.1/Gradle 9.5.0 dependency-transform isolation incompatibility与 custom parameters影响。不得扩大四规则、166-class allowlist或 rewrite semantics。
 2. **独立 Debug build/static gate**：fix review-PASS 后重新立 no-fix build task，运行 fresh `:app:assembleDebug`，验证 APK ZIP/SHA、四 hidden references、零 hidden target definitions和无非法 old-name caller。
 3. **Release build/static gate**：Debug 成功后独立停止 Gradle/Kotlin daemons并运行 Release/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
 4. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。
@@ -168,15 +169,18 @@ manifest-dex closure 24/24、missing=0；Debug 热运行 PID/crash/UI 门通过�
 的 reference-only plugin 已通过 9 个 focused tests与双轴 review。Task 082 首次真实 Debug pipeline
 运行唯一 `assembleDebug --rerun-tasks` 后 exit 1；Task 083 随后以同一 direct dependency-transform task在
 5 秒内精确重现，并将 deepest cause固定为 `java.io.NotSerializableException:
-org.gradle.api.internal.provider.DefaultProperty`。当前 classfile证明 `cachedInputs` 为 transient，但普通
-stacktrace未显示 runtime-generated factory decorator中的具体 field path；Task 084 将以 extended Java
-serialization info继续单命令取证。Task 079 broad replay保持暂停；主机当前无连接设备或
+org.gradle.api.internal.provider.DefaultProperty`。Task 084 再以 extended Java serialization info运行同一
+command一次，46 个 cause chain均给出 literal path：`InstrumentationContext_Decorated.__apiVersion__`
+经 `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__` 可达；AGP 9.3.1 source确认
+`apiVersion`由 `AsmClassVisitorFactoryEntry.configure()` 注入。当前下一步是 Task 085 no-op `ALL`
+control；Task 079 broad replay保持暂停；主机当前无连接设备或
 emulator/QEMU，后续 runtime gate 前再启动。详见
 `docs/issues/2026-09-01-c5-focused-reference-origins.md`、
 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`、
 `docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md`、
-`docs/issues/2026-09-02-c5-asm-factory-isolation.md` 与
-`docs/issues/2026-09-02-c5-serialization-field-path.md`。
+`docs/issues/2026-09-02-c5-asm-factory-isolation.md`、
+`docs/issues/2026-09-02-c5-serialization-field-path.md` 与
+`docs/issues/2026-09-02-c5-none-all-control.md`。
 
 **16 时代历史证据（AOSP main 快照，2026-08-21→26，保留供追溯）**：
 Task 045 main fresh（SysUISdk 单事务生成器两次 11,382 文件逐字节相等；Debug exit 0；fresh

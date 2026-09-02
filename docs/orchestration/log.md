@@ -497,3 +497,9 @@
 
 - Task 084 worker `task084-path` started in dedicated tab `w2:t3B` / pane `w2:p3G` from pushed base `fdd2ebc5`. Session JSON events independently verify `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`.
 - Strict startup completed as separate AGENTS → CHARTER → brief/issue/Task 083 scratch reads. Chief accepted the zero-write CONTRACT. Preflight and the sole authorized extended-serialization direct Gradle command have not yet run; no scratch, Gradle task, or tracked edit was made by the worker.
+
+## 2026-09-02 — task084 captured the literal injected-property field path
+
+- Task 084 ran its exact extended-info direct Gradle command once at `dfde2718`. It exited 1 after 5 seconds and reproduced the same `:app:desugarDebugFileDependencies` / `AsmClassesTransform` / `AconfigReferenceRewriteFactory` isolation failure. The 8051-line log SHA-256 is `dc9cac2bbc2a6745d800f8eb80b762cecb1d0860010fc3fca37b8334fd209a88`.
+- All 46 deepest chains identify the first non-serializable object as `InstrumentationContext_Decorated.__apiVersion__` (`DefaultProperty`), reached through `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__`. AGP 9.3.1 source independently confirms unconditional `instrumentationContext.apiVersion` injection; current factory classfile still has only static `Companion` and transient `cachedInputs` fields of its own.
+- The result does not prove whether custom parameters would fail later. Task 085 therefore uses a temporary `InstrumentationParameters.None` no-op `ALL` factory as the smallest control. The Task 084 worker made no tracked writes, ran no second build task, stopped its daemon, left the worktree clean, and its dedicated tab was closed.

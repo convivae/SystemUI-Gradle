@@ -9,7 +9,6 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 084 | `w2:t3B` / `w2:p3G` (`task084-path`) | shared `main` at `fdd2ebc5` dispatch base | `joycode/GLM-5.3`, `thinking=high` (session events verified) | CONTRACT accepted; preflight not yet authorized | read-only, one exact direct Gradle command; scratch only under `/tmp/task084-c5-serialization-field-path/**`; no fix/full build/Release/device |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -18,9 +17,11 @@
 2. Task 081 implementation `3173d426` and review closure `26b1346b` are pushed. Fixed range `aba9534f...3173d426` passed Standards/Spec and Chief focused acceptance; this proves build logic only, not APK/R8/runtime.
 3. Task 082 is closed FAIL. Its only authorized command reached the real AGP application pipeline but stopped at `:app:desugarDebugFileDependencies`: Gradle could not isolate `AsmClassesTransform.Parameters` because it could not serialize `AconfigReferenceRewriteFactory`. No APK/static gate ran and no tracked file changed.
 4. Task 083 is closed PASS at the diagnosis rung. Its only direct task reproduced the same failure in 5 seconds and exposed deepest cause `java.io.NotSerializableException: org.gradle.api.internal.provider.DefaultProperty`; classfile evidence rejects the transient cache as direct cause, but the runtime decorator field path remains unknown.
-5. Task 084 is active in dedicated tab `w2:t3B` / pane `w2:p3G`. Session events independently verify `joycode/GLM-5.3`, `thinking=high`; strict AGENTS → CHARTER → Task 084 sources startup completed and Chief accepted the read-only one-command CONTRACT. Preflight and the sole extended-serialization command have not yet run.
-
+5. Task 084 is closed PASS at the field-path diagnosis rung. Its single extended-info direct task reproduced the exact failure and all 46 deepest chains identify `InstrumentationContext_Decorated.__apiVersion__` via factory decorator `__instrumentationContext__`; first failure ownership is AGP-injected state, not custom parameters or the transient cache.
+6. Task 085 is next: temporarily replace only the registration with an `InstrumentationParameters.None` no-op `InstrumentationScope.ALL` control, inspect the exact two-path diff before one direct task, capture the result, and restore to a clean worktree. No production fix/full build/Release/device work is allowed.
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 084 closed PASS. Its sole authorized command ran once at `dfde2718`, exited 1 after 5 seconds, and exactly reproduced the dependency-transform isolation failure. JDK extended serialization info produced the same literal path in all 46 deepest chains: `InstrumentationContext_Decorated.__apiVersion__` (`DefaultProperty`) via `AconfigReferenceRewriteFactory_Decorated.__instrumentationContext__`. Chief independently verified the 8051-line log SHA `dc9cac2b…`, path counts, outer failure, AGP injection source, clean worktree, and no residual build processes. Worker tab `w2:t3B` was closed. Task 085 is defined as a temporary `InstrumentationParameters.None` no-op `ALL` control; no production change is yet authorized.
 
 - 2026-09-02 — Task 084 dispatched from pushed base `fdd2ebc5` in dedicated tab `w2:t3B` / pane `w2:p3G`. Session events independently prove `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`. The worker completed strict AGENTS → CHARTER → brief/issue/scratch startup and printed an accepted CONTRACT. It remains stopped before preflight; only one exact extended-serialization direct Gradle command will be authorized after a clean/no-process check.
 
