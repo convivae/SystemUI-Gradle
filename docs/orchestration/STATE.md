@@ -1,15 +1,16 @@
 # Orchestration State
 
 > Technical live state: `docs/CURRENT_STATE.md` (sole complete owner — build matrix,
-> tests, blockers, roadmap; do not duplicate numbers here).
-> The architect MUST re-read this file (with CHARTER.md and the tail of log.md)
-> before every dispatch, review, or merge action.
+> tests, blockers, roadmap). This file records coordination history only; historical
+> task restrictions are not current authority. Current authority is the user's instructions
+> and `AGENTS.md`.
 
 ## Active Workers
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
+| 099 | `task099-dreams-r6`, `w2:t4H` / `w2:p4P` | shared `main` | `joycode/GLM-5.3`, `thinking=high` | Phase 1 accepted; full-rule scan, repair, tests/build/runtime authorized | `AGENTS.md`; one heavy build at a time; Worker may commit, Chief owns push |
+| 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained checkpoint; resume only if it helps the current goal |
 
 ## Queue
 
@@ -36,9 +37,11 @@
 21. The fresh crash buffer has 13,716 lines / 1,812,966 bytes, 622 `FATAL EXCEPTION` and 622 `NoClassDefFoundError` entries. The first fatal is `Landroid/service/dreams/Flags;` on `wmshell.main` at `KeyguardTransitionHandler.onInit:155`. The bounded finding is only that one unrepackaged old-owner runtime reference reached the device; AOSP `repackaging.txt:350` maps it to `com.android.internal.hidden_from_bootclasspath.android.service.dreams.Flags`. Task 098 performed no fix or additional diagnosis.
 22. Fail-closed execution stopped at reboot `3/4`; reboot 4, Checkpoint B, layout and visual gates are `NOT_RUN_DUE_CHECKPOINT_A_FAIL`. A post-failure statusbar service call was only a fail-probe and is not a statusbar PASS. Release runtime is blocked until an independent origin/coverage diagnosis, approved production fix, fresh Debug/Release build/static gates and a full Debug runtime rerun.
 23. Evidence root `/tmp/task098-c5-debug-runtime-reboot/` contains disclosed stale prior-attempt files; current authority is `preflight/` plus current phase files. `reboot3.txt` used nonexistent `ro.boot.boot_id`, leaving its PRE/POST fields empty; captured post-reboot `/proc` boot ID `0491a5ec-6fc8-496e-b9af-565107660e79`, uptime reset, the PID window and 622 fresh fatal/NCDFE entries are the authoritative failure evidence. No Gradle/Soong/Ninja, rebuild, repair or tracked edit occurred; the managed emulator and failed Debug deployment remain running only for Chief acceptance.
-24. Task 099 is planned as the next independent read-only diagnosis. It freezes the Task 096 Debug APK and `android.service.dreams.Flags` failure, must first establish a deterministic instruction-level static RED loop, then enumerate all caller identities/canonical artifact and AOSP provenance and explain four-rule/166-caller coverage membership. It forbids build, fix, device action, Task 079 and every tracked edit except its issue; production repair remains a later separately approved task.
+24. Task 099 Phase 1 is accepted: frozen Debug contains 41 real `android.service.dreams.Flags` old-owner instructions across 40 methods, 39 classes and 5 DEX files; all 39 callers are outside the current 166-class allowlist, the four-rule subset omits dreams, and the authoritative 725-rule file includes it. User cancelled all extra orchestration restrictions. Worker `task099-dreams-r6` may now diagnose, edit, test, build serially, use Herdr/device, and commit; Chief owns push.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — User cancelled every orchestration restriction beyond `AGENTS.md` and the final delivery goal. Mandatory startup order, exact CONTRACT text, fixed log reads/tool counts, read-only worker defaults, `/tmp` script bans, no-commit/no-Herdr/no-build defaults, and automatic retirement for harmless process deviations are abolished. Workers may investigate, edit, test, build, validate, use Herdr and commit; Chief owns push and coordinates the one-heavy-build machine limit. Task 099 r1–r5 were closed, while r6 Phase 1 was accepted and r6 was reauthorized to carry the repair through static/build/runtime evidence.
 
 - 2026-09-02 — Task 099 attempts 1–4 were retired before preflight/diagnosis and have no technical authority. Attempt 1 emitted a non-matching CONTRACT with expanded writable scope; attempt 2 probed beyond the frozen log tail and reread the brief after source 13; attempt 3 never emitted the exact six-field CONTRACT; attempt 4 skipped the mandatory continuation after `STATE.md` truncated at line 176/514. All four sessions independently record `joycode/GLM-5.3`, `thinking=high`; no attempt ran the static RED loop, build/device action, fix, commit or push, and no tracked change resulted. A fifth replacement must start from a new clean pushed base with explicit chunked reads for STATE and the authoritative rules file.
 

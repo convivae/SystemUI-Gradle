@@ -1,8 +1,16 @@
 # C5 Task 099：`android.service.dreams.Flags` runtime origin diagnosis
 
 **日期**：2026-09-02
-**状态**：PLANNED — 四次 startup/CONTRACT attempt 已 fail-closed 退休；等待新的独立只读诊断；不得修复、构建或操作设备
+**状态**：ACTIVE REPAIR — 用户已取消所有超出 `AGENTS.md` 的人为编排限制；Task 099 第六个 Worker 的 Phase 1 证据已接受，现可直接诊断、修改、测试、构建、操作 Herdr/设备并 commit（push 仍由 Chief 负责）
 **前置**：Task 098 已以 `DEBUG_RUNTIME_REBOOT_FAIL` 关闭；Task 096/097 的 fresh Debug/Release build/static 结论仍分别为 PASS，但不构成 runtime PASS。
+
+## 2026-09-02 用户纠偏与当前授权
+
+用户明确指出，固定 startup 顺序、逐字 `CONTRACT:`、只读诊断、禁止 `/tmp` 临时脚本、禁止 Worker commit/Herdr/build/device，以及因无害流程偏差自动退休 Worker，均不是项目要求，现已全部取消。当前唯一工程约束来自 `AGENTS.md` 和最终运行目标；协调层仅保留全机同一时间最多一个重型构建，以及最终 push 由 Chief 负责。
+
+Task 099 第六个 Worker 在 `/tmp/task099-c5-dreams-flags-diagnosis/` 完成的 Phase 1 正式接受：冻结 Debug APK 中有 41 条真实 old-owner `invoke-static`，分布于 40 个方法、39 个类和 5 个 DEX；APK 不定义 old/hidden owner；39 个 caller 均不在现有 166-class allowlist；四条 frozen mappings 不含 dreams rule，而 AOSP 725-rule authority 包含。其 `/tmp` Python 脚本属于允许的诊断工具，不构成证据失效原因。
+
+该 Worker 已重新获得完整工程权限，可继续做全 725-rule residual 扫描、健康/失败产物对比、生产修复、测试、串行 Debug/Release 构建、APK 静态验证和设备 runtime 验证，并可创建英文 commit。下文原有 “Allowed / forbidden”、startup attempts 和只读验收文字是历史任务设计，凡与本节冲突均已废止，不再具有当前约束力。
 
 ## 背景
 
