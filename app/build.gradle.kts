@@ -3,6 +3,7 @@
 
 plugins {
     alias(libs.plugins.android.application)
+    id("com.android.systemui.aconfig-reference-rewrite")
 }
 
 android {

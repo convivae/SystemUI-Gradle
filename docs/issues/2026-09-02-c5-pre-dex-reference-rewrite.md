@@ -1,7 +1,7 @@
 # C5：最小 pre-D8/R8 平台 aconfig 引用改写设计
 
 **日期**：2026-09-02
-**状态**：用户已明确批准 Task 081 exact brief 与 ADR 0008；首个 worker 已建立 focused RED 后停止，保留两项未提交测试脚手架，等待 GLM-5.3/high replacement 继续
+**状态**：Task 081 build-logic implementation 与 focused tests 已完成；等待 Chief 双轴 review，尚未运行任何 Android module build、R8 或设备验收
 
 ## 背景
 
@@ -138,4 +138,37 @@ Task 081 的 focused tests 绿色不代表 APK 或 runtime 已修复。
 
 它运行 `./gradlew -p buildSrc test --console=plain` 得到预期 RED：测试编译因 production API `AconfigReferenceRewriter` 尚不存在而失败。该 worker 随后额外运行了 brief 未授权的 `./gradlew --status`，且在 Chief 多次要求补齐十项 mandatory tests 后仍停留于设计推演，因此被停止。Chief 已终止 Gradle/Kotlin daemon；仓库中尚无 production implementation、冻结规则/allowlist、`:app` 接线、ADR 0008 或完成态证据，Android app build、R8、emulator 与 ADB 均未运行。
 
-用户随后指定：后续创建的 worker/reviewer 统一显式使用 `joycode/GLM-5.3`、`thinking=high`；指令到达时已经运行的 worker 不需要为此调整。Task 081 replacement 将继承上述两文件 RED scaffold，并先补齐 brief 的十项 mandatory tests，再进入 production implementation。
+用户随后指定：后续创建的 worker/reviewer 统一显式使用 `joycode/GLM-5.3`、`thinking=high`；指令到达时已经运行的 worker 不需要为此调整。Task 081 replacement `task081-r3` 经 session JSON 核实符合该模型政策并完成 CONTRACT，但连续两个受限 checkpoint 仍停留于设计叙述、没有产生首个 test diff，因此 Chief 按 no-progress 规则停止该 worker并接回本任务。
+
+## Task 081 实现与 focused TDD 证据
+
+Chief 先将被 `.gitignore` 的 `com/android/systemui/build/aconfig/` 测试迁移到可追踪的 `com/android/systemui/aconfigrewrite/` 包路径，并补成三组 focused tests，覆盖 brief 的十项 mandatory contract。生产实现前运行：
+
+```bash
+./gradlew -p buildSrc test --console=plain
+```
+
+得到预期 RED：`:compileTestKotlin FAILED`，未解析的生产 seam 包括 `FrozenAconfigInputs`、`ReferenceOnlyClassRewriter`、`AconfigReferenceRewriteFilter` 和 `AconfigInstrumentationRegistration`。该命令没有配置或执行根工程 Android module。
+
+随后完成：
+
+- 两个冻结输入文件及 count/SHA/格式 fail-closed loader；
+- 基于 ASM `ClassRemapper` 的 reference-only visitor，保持 `this_class` 和当前 class 自引用；
+- 166-class filter 与 AGP `AsmClassVisitorFactory`；
+- 仅由 `:app` 应用的 buildSrc plugin，registration 固定 `InstrumentationScope.ALL` 与 `FramesComputationMode.COPY_FRAMES`；
+- ADR 0008。
+
+同一 focused gate 的 GREEN 结果为 `BUILD SUCCESSFUL`，共 9 个 JUnit test（3 个 suite，0 failure/error）。测试逐项覆盖四规则与完整 AOSP provenance、166 allowlist、allowlisted/non-allowlisted filter、source-named class identity/self-reference、hidden definition 为零、普通字符串保持，以及 descriptor/signature/annotation/type instruction/method handle/invokedynamic remap。冻结输入复核结果：
+
+```text
+RULES=4
+RULES_SHA256=ff79a84d8ba250eeae789af007aa97828f5b31b2f41950cf519465f20fe79d85
+ALLOWLIST_CLASSES=166
+ALLOWLIST_SHA256=926f102e3c899dbcac4ee7e5054bf294f9cde327eaf9f6a43bc29f2d6d2b682b
+REFERENCE_ONLY_TESTS=PASS
+HIDDEN_TARGET_DEFINITIONS=0
+ANDROID_APP_BUILD=NOT_RUN
+RESULT=PASS
+```
+
+Task 081 到此只达到 focused build-logic proof rung。Debug/Release APK 尚未重编，现有 Release APK checker 仍应保持旧的 `RESULT=FAIL`；Android build、R8、emulator 与 ADB 留给 review-PASS 后的独立串行任务。

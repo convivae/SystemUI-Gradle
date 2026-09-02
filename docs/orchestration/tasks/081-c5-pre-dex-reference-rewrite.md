@@ -77,18 +77,19 @@ com.android.window.flags.Flags -> com.android.internal.hidden_from_bootclasspath
 
 ## TDD steps
 
-- [ ] 依次读取 `AGENTS.md`、`docs/orchestration/CHARTER.md`、本 brief；独立核实 `provider/modelId` 后打印完整 `CONTRACT:`，等待 Chief 接受。
-- [ ] 确认 fixed base、clean tree、无 active Gradle/Soong；只创建批准的 `/tmp` root。
-- [ ] 先写 focused tests 和 fixtures；在没有 production implementation 时运行并记录预期 RED。
-- [ ] 写入四规则文件与 166-class allowlist；验证精确 count、排序、LF、末尾换行与 SHA。
-- [ ] 实现 fail-closed rule/allowlist loader；缺失、重复、格式错误、count/SHA/集合漂移均失败。
-- [ ] 实现 ASM reference-only visitor：覆盖 descriptor、signature、annotation、instruction、handle、invokedynamic 等类型位置；不把任意字符串常量当类引用。
-- [ ] 保持每个输入 class 的 `this_class` 与自引用；任何输出都不得定义四个 hidden target。
-- [ ] 实现 `AsmClassVisitorFactory` 与 app plugin 注册；`isInstrumentable` 只接受 166-class allowlist，scope 固定 `ALL`，frames 固定 `COPY_FRAMES`。
-- [ ] 在 `app/build.gradle.kts` 只应用该 buildSrc plugin；不得添加其他构建行为。
-- [ ] 新增 ADR 0008，记录 provenance、seam、reference-only ownership、allowlist、fail-closed、替代方案和回滚方式。
-- [ ] 运行 focused GREEN gate；不得运行 app build。
-- [ ] 更新本 brief 与 issue 的实际命令/结果；显式 stage Allowed Paths，英文 commit，不 push。
+- [x] 依次读取 `AGENTS.md`、`docs/orchestration/CHARTER.md`、本 brief；replacement 从 session JSON 独立核实 `provider/modelId` 后打印完整 `CONTRACT:`，由 Chief 接受。
+- [x] 确认 fixed base、仅有已记录的 bounded RED scaffold、无 active Gradle/Soong；只使用批准的 `/tmp` root。
+- [x] 先写 focused tests 和 fixtures；在没有 production implementation 时运行并记录预期 RED。
+- [x] 写入四规则文件与 166-class allowlist；验证精确 count、排序、LF、末尾换行与 SHA。
+- [x] 实现 fail-closed rule/allowlist loader；缺失、重复、格式错误、count/SHA/集合漂移均失败。
+- [x] 实现 ASM reference-only visitor：覆盖 descriptor、signature、annotation、instruction、handle、invokedynamic 等类型位置；不把任意字符串常量当类引用。
+- [x] 保持每个输入 class 的 `this_class` 与自引用；任何输出都不得定义四个 hidden target。
+- [x] 实现 `AsmClassVisitorFactory` 与 app plugin 注册；`isInstrumentable` 只接受 166-class allowlist，scope 固定 `ALL`，frames 固定 `COPY_FRAMES`。
+- [x] 在 `app/build.gradle.kts` 只应用该 buildSrc plugin；不得添加其他构建行为。
+- [x] 新增 ADR 0008，记录 provenance、seam、reference-only ownership、allowlist、fail-closed、替代方案和回滚方式。
+- [x] 运行 focused GREEN gate；不得运行 app build。
+- [x] 更新本 brief 与 issue 的实际命令/结果。
+- [x] Chief 显式 stage Allowed Paths 并以英文 commit；未 push，等待双轴 review。
 
 ## Mandatory tests
 
@@ -158,3 +159,37 @@ Chief 将独立检查：
 4. 无法从 Task 080 durable report 重建精确 166-class allowlist；
 5. focused test 不能证明 `this_class` 保持和 hidden definition 为零；
 6. 需要运行 app build 才能完成本任务。
+
+## Actual focused evidence
+
+生产实现不存在时的首次 focused gate：
+
+```text
+./gradlew -p buildSrc test --console=plain
+:compileTestKotlin FAILED
+Unresolved reference: FrozenAconfigInputs / ReferenceOnlyClassRewriter /
+AconfigReferenceRewriteFilter / AconfigInstrumentationRegistration
+```
+
+实现后的无缓存复验：
+
+```text
+./gradlew -p buildSrc test --console=plain --rerun-tasks
+BUILD SUCCESSFUL in 2s
+9 tests, 0 failures, 0 errors
+```
+
+冻结输入与范围结论：
+
+```text
+RULES=4
+RULES_SHA256=ff79a84d8ba250eeae789af007aa97828f5b31b2f41950cf519465f20fe79d85
+ALLOWLIST_CLASSES=166
+ALLOWLIST_SHA256=926f102e3c899dbcac4ee7e5054bf294f9cde327eaf9f6a43bc29f2d6d2b682b
+REFERENCE_ONLY_TESTS=PASS
+HIDDEN_TARGET_DEFINITIONS=0
+ANDROID_APP_BUILD=NOT_RUN
+RESULT=PASS
+```
+
+另外 `git diff --check` 通过。Task 081 未配置或执行任何 Android module task、APK build、R8、emulator、ADB、Soong 或 Ninja；该结论只覆盖 build logic focused proof rung。
