@@ -1,7 +1,7 @@
 # C5 Task 099：`android.service.dreams.Flags` runtime origin diagnosis
 
-**日期**：2026-09-02
-**状态**：ACTIVE REPAIR — 用户已取消所有超出 `AGENTS.md` 的人为编排限制；Task 099 第六个 Worker 的 Phase 1 证据已接受，现可直接诊断、修改、测试、构建、操作 Herdr/设备并 commit（push 仍由 Chief 负责）
+**日期**：2026-09-02 → 2026-09-03（修复完成）
+**状态**：REPAIR COMPLETE — Debug 与 Release 均已通过 instruction-level 静态门与设备 runtime/reboot 门，等待 Chief 验收与 push（commits `ed40e4b4`、`ea9b2f52`，未 push）
 **前置**：Task 098 已以 `DEBUG_RUNTIME_REBOOT_FAIL` 关闭；Task 096/097 的 fresh Debug/Release build/static 结论仍分别为 PASS，但不构成 runtime PASS。
 
 ## 2026-09-02 用户纠偏与当前授权
@@ -88,7 +88,39 @@ Task 098 只证明一个未重写 old-owner reference 到达 runtime；它没有
 
 规划阶段未运行 Gradle、Soong、Ninja、测试或设备命令。当前 runtime blocker 仍是 Task 098 的 622 个 fresh fatal/NCDFE；本任务不以编译错误数为门槛。
 
-## 待解决
+## 修复完成记录（2026-09-03）
 
-- 独立 worker 完成只读诊断并由 Chief 验收。
-- 诊断闭包 commit/push 后，另建 production-fix task；不得在本任务内直接扩 mapping/allowlist。
+### 根因（经全量扫描与 A/B 实验确证）
+
+冻结 Debug APK 的 crash 并非单一 dreams 规则缺失，而是**覆盖率双重缺口**叠加：现有生产缝只有 4 条手写 mapping + 166-class caller allowlist，面对 AOSP authoritative 725-rule repackaging 集与任意第三方/生成 caller，任何不重叠的（rule, caller）组合都漏改写。Phase B 全量扫描：Debug 460 条未解析 old-owner ref（26 个 old 类）、Release 446 条（25 个类）；Task 098 runtime crash 的 `KeyguardTransitionHandler`（WindowManager-Shell jar）只是第一个到达 runtime 的 caller。「旧构建健康」的前提已经 A/B 实验证伪（old-healthy premise falsified），当前 crash 就是覆盖不完整。
+
+### 生产修复设计（两轮，第二轮由 Chief 裁决）
+
+1. **第一轮**：完整 725-rule frozen inputs（`gradle/aosp17-aconfig-repackaging-rules.txt`，与 AOSP `repackaging.txt` SHA 钉死，漂移 fail-closed）+ 废弃 166 allowlist + 仪器除 mapping source/target 外的所有类。Debug 重建后静态门：unresolved 460→0（crash 类 ref 全部改写），但 gate 仍 RED——**946 条残存 old-owner ref 全部来自 D8 在 dex 阶段（ASM transform 之后）从被跳过的 source 类（如 `CustomFeatureFlags`）未被改写的 `invokedynamic` BootstrapMethods method handle 合成的 `$$ExternalSyntheticLambda*` 类**（56 个 in `android.content.pm` + 4 个 in `android.app.smartspace.flags`，经 `javap -v` on `libs/systemui-aconfig-flags.jar` 证实）。跳过任何 source 类都会在 D8 lambda 合成路径漏出 old name，说明「跳过 mapping source」与「门要求所有 caller 改写完整」在设计上不可调和。
+2. **第二轮（生效，经 Chief 确认）**：**仪器所有类**。reference-only visitor 保持 this_class 与自身引用不变，把所有向外引用（含 BootstrapMethods method handle）全部改写为 hidden twin；每个 old-name 类在 APK 中成为自洽 dead shell，D8 从改写后 handle 合成的 lambda 类天然 hidden-referencing。hidden platform definition 仍是唯一非法输入，visitor 在 AGP factory 路径与 byte-level 路径都 fail-closed。门简化为：FAIL 于任何 caller != referenced old class 的 executable old-owner ref（self-reference 是唯一允许残留，解析到 APK 自身 dead-shell）；FAIL 于任何 hidden-target definition。
+
+### 验证结果
+
+- **buildSrc 测试**：11/11 绿（新增 D8-lambda BootstrapMethods 改写回归、hidden-input fail-closed、mappings-only seam 结构断言）。
+- **tools 测试**：362 passed + 151 subtests（33 个 gate 测试，全合成 DexBuilder 覆盖 code item/catch handler/static values/多 dex）。
+- **静态门（新 APK，instrument-everything）**：
+  - Debug SHA-256 `33e073195e6c5cfff61274e779927e1026571c805ef4b17ef2a8b50477c7ed65`（200,506,573 B）：13 dex，94,888 类，10,329,466 instruction refs；old-owner ref 3,571 条全部 = 自身引用残留（52 个 dead-shell 唯一对，如 `CustomFeatureFlags → CustomFeatureFlags`，解析到 APK 自身死定义）；**VIOLATIONS=0**；hidden-target ref 965（预期改写产物）；hidden definition 0；**RESULT=PASS**。
+  - Release SHA-256 `17358f4d73cee462eba515ae68519c14e28a61637acc63c84cfe7ada76e6fd7e`（45,030,130 B）：2 dex；old-owner ref 0（R8 将 dead shell 全部删除）；hidden ref 449；hidden definition 0；**RESULT=PASS**。
+- **设备 runtime（emulator-5554，Task 098 r4 保留基线）**：
+  - 部署前基线(`f3af35d9…`)：`android.service.dreams.Flags` NCDFE crash-loop 确活，crash buffer 113,911 行。
+  - **Debug**：staged SHA + atomic mv 部署 → 冷启动后仅剩已知 `BLUETOOTH_CONNECT` SecurityException（Task 098 r4 预授予未延续到本次部署，re-grant 后立即恢复；随后 Release 替换中同一授予反而存活，重置诱因未隔离，Chief 指示不再深挖；观察点：授予可跨 reboot 存活，但在某些 APK 文件替换 + 冷启动组合下被重置）；grant 后 PID 5664 稳定、crash 全停；**全机 reboot gate PASS**：boot `8cbb9aa0-daad-41dc-b8db-ba5178d8cd4b`，设备 SHA = host SHA，PID 848 稳定 90s×6 采样 0 crash，grant 存活，StatusBar/NotificationShade/Wallpaper 窗口全在，launcher 获焦，截图存证。
+  - **Release**：同程序部署 → 冷启动直接 PASS（PID 850 0 crash，grant 原生存活）；reboot gate PASS（boot `a33ae14c-f96a-4882-8d6f-1d7fe063f625`，PID 852 稳定 90s×6 采样 0 crash，同一组 UI 证据）。
+- 截图证据（visual API 读图遇 provider 端 500，改以 dumpsys 为准，截图文件保留）：`runtime-debug-33e07319-boot1.png`、`runtime-debug-33e07319-reboot-gate.png`、`runtime-release-17358f4d-coldboot.png`、`runtime-release-17358f4d-reboot-gate.png`。
+
+### Commits（未 push，等 Chief）
+
+- `ed40e4b4` — `aconfig rewrite: instrument every class from the frozen 725-rule inputs`
+- `ea9b2f52` — `aconfig gate: instruction-level checker enforces self-reference-only residuals`
+
+### 证据根
+
+`/tmp/task099-c5-dreams-flags-diagnosis/`：`gate-debug-instrument-all.txt`、`gate-release-instrument-all.txt`（RED 对照 `gate-debug-red.txt`、`gate-release-red.txt`）、`nfjar/`、`dump/`、runtime 截图、PHASE1_RECORD.md 等既往证据全部保留。
+
+### 收尾
+
+原「待解决」两项已被 2026-09-02 用户授权变更替代并超额完成。剩余：Chief 验收 + push + 关闭；`docs/CURRENT_STATE.md` 的实时状态同步与 Task 099 闭包由 Chief 执行。
