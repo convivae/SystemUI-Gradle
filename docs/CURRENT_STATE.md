@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 goldfish 2880MiB dynamic-partition group、582MiB durable scratch、五分区 overlay 与跨重启探针。task078 落地 725-rule 秒级 DEX gate；task080 又以 class 常量池证据将四个 runtime-critical 旧名归属到 166 个唯一 program reference classes，覆盖项目类、直接 JAR、本地 Maven AAR 和直接 AAR，`UNKNOWN=0`，并排除 compileOnly `framework.jar`。**当前唯一 blocker 仍是缺失 pre-D8/R8 class-reference rewrite：Task 079 broad replay 已暂停；用户已批准 Task 081 的最小 `buildSrc` + app-level AGP instrumentation exact brief 与 ADR 0008，下一步从已 push fixed base 串行实现。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 goldfish 2880MiB dynamic-partition group、582MiB durable scratch、五分区 overlay 与跨重启探针。task078 落地 725-rule 秒级 DEX gate；task080 又以 class 常量池证据将四个 runtime-critical 旧名归属到 166 个唯一 program reference classes，覆盖项目类、直接 JAR、本地 Maven AAR 和直接 AAR，`UNKNOWN=0`，并排除 compileOnly `framework.jar`。**当前唯一 blocker 仍是缺失 pre-D8/R8 class-reference rewrite：Task 079 broad replay 已暂停；Task 081 首个 worker 已建立 buildSrc focused RED 后停止，保留两项未提交测试脚手架；下一步用 `joycode/GLM-5.3`、`thinking=high` replacement 补齐十项 mandatory tests 并实现。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；Task 081 不需要启动设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 blocker**：task080 已证明四个旧名来自 166 个唯一 program reference classes，compileOnly `framework.jar` 已隔离。Task 079 broad replay 保持暂停；用户已批准 Task 081 的最小 pre-D8/R8 reference-only AGP instrumentation exact brief 与 ADR 0008，现按 build logic → 双轴复核 → Debug build → Release build/static gate → 双 runtime gate 串行推进。禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
+| 当前唯一工程优先级 | **C5 blocker**：task080 已证明四个旧名来自 166 个唯一 program reference classes，compileOnly `framework.jar` 已隔离。Task 079 broad replay 保持暂停；Task 081 首个 worker 已得到预期 buildSrc RED 后停止，保留 `buildSrc/build.gradle.kts` 与 focused test 两项未提交脚手架；下一步由显式 `joycode/GLM-5.3`、`thinking=high` replacement 先补齐十项 mandatory tests，再实现 build logic → 双轴复核 → Debug build → Release build/static gate → 双 runtime gate。禁止打包平台类、stub、`dontwarn`、源码 import 批量改写或 post-R8 DEX patch |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -126,7 +126,7 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Task 081 build-logic TDD（已批准）**：用户已批准 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`、`docs/orchestration/tasks/081-c5-pre-dex-reference-rewrite.md` 与 ADR 0008。只在 `:app` 以 AGP 9.3.1 public instrumentation `Scope.ALL` 建立单一 pre-D8/R8 seam，只允许 Task 080 冻结的 166 个 class identity 进入 visitor，并只改四条 critical exact reference；`this_class` 保持，hidden target definitions 必须为 0。实现只新增 `buildSrc` plugin、四规则/166-class 冻结输入、ADR 0008 与 focused tests；不运行 Android app build，不改 source/`libs/**`/SDK/AOSP/out/settings。
+1. **Task 081 build-logic TDD（已批准，RED 已建立）**：首个 worker 已新增未提交 `buildSrc/build.gradle.kts` 与 `AconfigReferenceRewriteTest.kt`，并以 production API 尚不存在的 test-compile failure 建立预期 RED；因运行未授权 `./gradlew --status` 且未继续补齐测试而停止。replacement 使用 `joycode/GLM-5.3`、`thinking=high`，继承该两文件并先补齐十项 mandatory tests。最终只在 `:app` 以 AGP 9.3.1 public instrumentation `Scope.ALL` 建立单一 pre-D8/R8 seam，只允许 Task 080 冻结的 166 个 class identity 进入 visitor，并只改四条 critical exact reference；`this_class` 保持，hidden target definitions 必须为 0。只新增 `buildSrc` plugin、四规则/166-class 冻结输入、ADR 0008 与 focused tests；不运行 Android app build，不改 source/`libs/**`/SDK/AOSP/out/settings。
 2. **Task 081 Chief 验收与双轴复核**：focused gate 通过后，Chief 独立复验并以固定 range 分别执行 Standards/Spec review；Task 081 不能声明 APK 或 runtime 已修复。
 3. **串行构建与静态 gate**：Task 081 review-PASS 后，分别立小任务停止 Gradle/Kotlin daemon并运行 Debug build、Release build/R8；Release checker 必须消除四个 critical old references、出现 hidden references且 hidden target definitions=0。
 4. **C5 runtime 收口**：分别部署 Debug 与 Release 到 task077 durable overlay，核对 host/device SHA、PID/fatal/UI 门并完成整机重启前后验证。

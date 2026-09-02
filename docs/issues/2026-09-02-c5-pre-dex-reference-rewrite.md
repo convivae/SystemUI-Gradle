@@ -1,7 +1,7 @@
 # C5：最小 pre-D8/R8 平台 aconfig 引用改写设计
 
 **日期**：2026-09-02
-**状态**：用户已明确批准 Task 081 exact brief 与 ADR 0008；等待从已 push fixed base 串行 dispatch
+**状态**：用户已明确批准 Task 081 exact brief 与 ADR 0008；首个 worker 已建立 focused RED 后停止，保留两项未提交测试脚手架，等待 GLM-5.3/high replacement 继续
 
 ## 背景
 
@@ -128,3 +128,14 @@ Task 081 的 focused tests 绿色不代表 APK 或 runtime 已修复。
 - Task 081 不运行 app build，构建与设备验收继续拆成后续串行任务。
 
 用户同时说明主机已重启。Chief 复查后确认当前 `adb devices -l` 为空，且没有 emulator/QEMU 进程；Task 081 禁止且不需要设备操作，因此本任务开始前不重启模拟器。后续进入独立 Debug/Release runtime gate 前，再按当前 runbook 启动并核验专用 Android 17 模拟器。
+
+## 首次 TDD worker 记录
+
+首个 worker 从 fixed base `584ad47e01728e3b0c7905b7229d75bc3f23833e` 开始，只留下两个 Allowed Paths 内的未提交文件：
+
+- `buildSrc/build.gradle.kts`
+- `buildSrc/src/test/kotlin/com/android/systemui/build/aconfig/AconfigReferenceRewriteTest.kt`
+
+它运行 `./gradlew -p buildSrc test --console=plain` 得到预期 RED：测试编译因 production API `AconfigReferenceRewriter` 尚不存在而失败。该 worker 随后额外运行了 brief 未授权的 `./gradlew --status`，且在 Chief 多次要求补齐十项 mandatory tests 后仍停留于设计推演，因此被停止。Chief 已终止 Gradle/Kotlin daemon；仓库中尚无 production implementation、冻结规则/allowlist、`:app` 接线、ADR 0008 或完成态证据，Android app build、R8、emulator 与 ADB 均未运行。
+
+用户随后指定：后续创建的 worker/reviewer 统一显式使用 `joycode/GLM-5.3`、`thinking=high`；指令到达时已经运行的 worker 不需要为此调整。Task 081 replacement 将继承上述两文件 RED scaffold，并先补齐 brief 的十项 mandatory tests，再进入 production implementation。

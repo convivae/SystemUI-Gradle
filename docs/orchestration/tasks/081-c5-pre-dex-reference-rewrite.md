@@ -2,7 +2,7 @@
 
 **Authority**: `redline-gated self-commit`（用户已于 2026-09-02 明确批准本 exact brief 与 ADR 0008；worker 不 push）
 **Reports To**: Chief architect
-**执行方式**: shared checkout 串行；只能使用显式 `joycode/Kimi-K3` 或 `joycode/Kimi-K3-jcloud`
+**执行方式**: shared checkout 串行；后续 replacement/reviewer 统一显式使用 `joycode/GLM-5.3`、`thinking=high`（首个 worker 在用户新指令前以 Kimi 启动，不要求重启）
 **Base**: Chief 在 dispatch 前固定为包含本 brief 的已 push commit
 
 ## Goal

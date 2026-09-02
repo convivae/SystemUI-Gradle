@@ -442,6 +442,7 @@ javap -p <ClassName>
 - **不用 `@Suppress("DEPRECATION")` 等绕过语法** (用户 2026-08-12 明确)
 - **遇到不会的内容去查官方文档** (用户 2026-08-12 明确)
 - **派发 herdr worker 时一个 worker 一个独立 tab**，不做同 tab split (用户 2026-08-19 明确)
+- **后续 herdr worker/reviewer 统一显式使用 `joycode/GLM-5.3`、`thinking=high`**；已在运行的 worker 无需为此重启，并须在接受 `CONTRACT:` 前独立核实 session `provider/modelId` (用户 2026-09-02 明确)
 - **skill 内不提及已删除的 skill** (用户 2026-08-25 明确)：不要求专门说明某 skill 被删除，只保留当前有效内容
 
 ---

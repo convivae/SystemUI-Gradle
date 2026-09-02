@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的 725-rule 秒级 DEX gate 已 review-PASS；task080 又将四个 critical 旧名归属到 166 个唯一 program reference classes，`UNKNOWN=0`，并隔离 compileOnly `framework.jar`。Task 079 broad replay 已暂停；用户已批准 Task 081 最小 pre-D8/R8 reference-only AGP instrumentation exact brief 与 ADR 0008，下一步是串行 build-logic TDD。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078 的 725-rule 秒级 DEX gate 已 review-PASS；task080 又将四个 critical 旧名归属到 166 个唯一 program reference classes，`UNKNOWN=0`，并隔离 compileOnly `framework.jar`。Task 079 broad replay 已暂停；Task 081 首个 worker 已建立 focused RED 后停止并保留两项未提交测试脚手架，下一步由 `joycode/GLM-5.3`、`thinking=high` replacement 补齐测试并实现。)
 
 ---
 
@@ -32,7 +32,7 @@
 | C5 task075–077 | Debug 热运行 ✅；Release proto keep ✅；goldfish 2880MiB super / 582MiB scratch / 64MiB probe 跨重启 ✅；Release jarjar runtime blocker 待修 | `docs/issues/2026-09-01-c5-emulator-super-slack.md` |
 | C5 task078 | DEX 静态 gate + 725-rule Soong/JarJar 机制研究 review-PASS；Release FAIL / stock PASS | `docs/architecture/2026-09-01-aosp17-systemui-jarjar-design.md` |
 | C5 task080 | 四个 critical old references 的 166-class program-input 来源闭环；50/7/5/104、`UNKNOWN=0`，compileOnly 隔离 | `docs/issues/2026-09-01-c5-focused-reference-origins.md` |
-| C5 task081 | 最小 pre-D8/R8 reference-only build logic exact brief 与 ADR 0008 已获用户批准；等待串行实现，尚未构建 APK | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
+| C5 task081 | 最小 pre-D8/R8 reference-only build logic 已获批准；首个 worker 建立 RED 后停止，保留两项未提交测试脚手架，等待 GLM-5.3/high replacement | `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md` |
 | C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
@@ -45,7 +45,7 @@
 | 059 | 4 个单 consumer AAR 族改为 `files("libs/aars/…")` 直接消费（用户逐族授权，字节中性已证） | `docs/issues/2026-08-25-aar-direct-consumption-migration.md` |
 | 058 | DEBUG_RUNTIME_PASS gate suite 六门全绿（在 GLM-5.3 worker 上运行） | `docs/issues/2026-08-25-debug-runtime-pass-gate-suite.md` |
 
-关键新纪律（均来自 08-25 起的实战，仍有效）：同工树=串行（两 Gradle 构建并发曾致 kernel OOM）；worker/reviewer 只允许显式 `joycode/Kimi-K3` 或 `joycode/Kimi-K3-jcloud`；部署后必须设备端 sha256 二次校验（toybox cp 静默截断）；verity 保持 disabled（enable-verity 拆 overlay，见 PITFALLS §14）。
+关键新纪律（均来自 08-25 起的实战，仍有效）：同工树=串行（两 Gradle 构建并发曾致 kernel OOM）；后续 worker/reviewer 统一显式使用 `joycode/GLM-5.3`、`thinking=high`，接受 CONTRACT 前独立核实 session 模型；部署后必须设备端 sha256 二次校验（toybox cp 静默截断）；verity 保持 disabled（enable-verity 拆 overlay，见 PITFALLS §14）。
 
 16 时代 Release 闭环（2026-08-26，task 060→061）：AssumeFalseForR8 精确 dontwarn →
 `-dontobfuscate`（对齐 Soong dex.go:545）→ 3 行 `-keep`（抗 R8 水平合并），
