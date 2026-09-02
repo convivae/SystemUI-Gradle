@@ -1,7 +1,7 @@
 # C5 Task 098：fresh Debug APK runtime reboot gate
 
 **日期**：2026-09-02
-**状态**：PLANNED — 尚未启动模拟器、尚未部署
+**状态**：DISPATCHED — 首个 worker 因 startup 顺序违规已退休；replacement 尚未启动模拟器或部署
 **前置**：Task 096 fresh Debug build/static gate `PASS`；Task 097 fresh Release build/R8/static gate `PASS`；Task 077 已验收 17 emu64x durable super/overlay 通道。
 
 ## 背景
@@ -53,6 +53,12 @@ Task 096 已冻结 Debug APK 的构建与静态身份，但没有在设备上执
 
 本任务 PASS 只关闭 Debug runtime reboot gate，不证明 Release runtime。Release 必须在 Debug durable closure 后由独立任务部署 Task 097 APK并重复同等级证据。Task 079 broad replay继续暂停。
 
+## 执行记录
+
+- planning 已提交并 push 为 `36394ca51dba4af74ce9bee8807104620110b7b9`。
+- 首个 worker `task098-debug-runtime` 曾位于 `w2:t46` / `w2:p4B`，session 为 `/home/conv/.pi/agent/sessions/--home-conv-myspace-SystemUI-Gradle--/2026-09-02T12-58-24-762Z_01a06233-007a-73ed-9c19-f2a32911a610.jsonl`。session 独立确认 `provider=joycode`、`modelId=GLM-5.3`、`thinkingLevel=high`，但该 worker 在 mandated `AGENTS.md → HANDOFF.md → CHARTER.md → STATE.md → log tail → task brief` 序列前先打开了 task brief，随后没有在冻结位置重新读取 task brief。其 startup 顺序因此不合格，CONTRACT 未被 Chief 接受，tab 已退休。
+- 该尝试只读取文档；未创建 evidence scratch，未执行 preflight、Gradle/Soong/Ninja、ADB、emulator/QEMU 或 process mutation，未修改 tracked files。下一 worker 必须从新的 clean pushed dispatch base 严格串行重新开始。
+
 ## 构建记录
 
-规划阶段未运行构建、Gradle、Soong、ADB部署或模拟器；只读取文档/状态并创建本计划。
+规划和首个退休尝试均未运行构建、Gradle、Soong、ADB部署或模拟器；只读取文档/状态并记录调度事实。
