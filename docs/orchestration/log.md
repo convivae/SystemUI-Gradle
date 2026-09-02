@@ -658,3 +658,11 @@
 - After preserving the first replacement's read-only evidence and pushing its retirement as `b33c08d2`, Chief started `task097-release-r3` in dedicated tab `w2:t45` / pane `w2:p4A` with `HERDR_ENV=1`.
 - Session `/home/conv/.pi/agent/sessions/--home-conv-myspace-SystemUI-Gradle--/2026-09-02T12-23-02-075Z_01a06212-9cbb-7aa4-83a0-ece87a09a7a8.jsonl` independently records `joycode/GLM-5.3`, `thinking=high`. Mandatory startup reads were serial in exact frozen order, including complete continuation reads for truncated STATE and AOSP rules files; no bash or mutation preceded CONTRACT.
 - Chief accepted the matching no-fix shared-checkout CONTRACT. The worker is stopped before preflight. Its sole Gradle-wrapper allowance remains explicitly reserved for the exact Release build command; `--version`, `--status`, help, clean, and every other wrapper invocation are forbidden.
+
+## 2026-09-02 — task097 fresh Release build/static closed PASS
+
+- `task097-release-r3` passed preflight at `HEAD == origin/main == 1420c7c5`; the known stale APK `f389bd45…` was recorded and deleted before build. Session audit shows only one actual wrapper invocation; a preflight evidence string mentioning `./gradlew` did not execute it.
+- The sole `:app:assembleRelease --console=plain --rerun-tasks --max-workers=4` call exited 0: `BUILD SUCCESSFUL in 7m 5s`, 493/493 actionable tasks executed. `:app:minifyReleaseWithR8` and `:app:packageRelease` both executed.
+- Fresh `app-release.apk` is 45,030,130 B, SHA-256 `641c6533e78a5977f2d8de97f293be236976e1053b40ff3a05a182bc594a1756`, ZIP-valid, with `classes.dex` and `classes2.dex`. The authoritative 725-rule checker exited 0 / `RESULT=PASS`: critical old refs/defs `0/4`, critical hidden refs `4/4`, hidden defs `0/4`, aggregate hidden target definitions 0.
+- Final repository status is clean and Chief independently found no Java/Gradle/Kotlin/Soong/Ninja process. Cleanup deviation: command 1 self-matched its inline shell after executing once and therefore lost its exit code; commands 2/3 each ran once and returned `1/1`. This does not alter the build/APK/checker PASS. Evidence root: `/tmp/task097-c5-release-build-static/`.
+- Task 097 closes only Release build/R8/static. Next is a fresh Debug runtime reboot gate, followed by a separate fresh Release runtime reboot gate. Task 079 remains paused.

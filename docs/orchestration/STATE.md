@@ -9,7 +9,6 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 097 | `w2:t45` / `w2:p4A`, agent `task097-release-r3` | shared `main` | `joycode/GLM-5.3`, `thinking=high` | strict startup complete; CONTRACT accepted; stopped before preflight | no-fix; sole wrapper call reserved for exact Release build |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained fail-closed checkpoint only; do not resume the 464-input task without a new user direction |
 
 ## Queue
@@ -30,9 +29,12 @@
 14. Task 095 is closed and pushed as `2994fa8f391233cdbc6bbfb7b121bf08c0d74f35`. Focused tests are 9/9; the direct transform exited 0 with 45 ASM records, zero known serialization markers, one real allowlisted instruction-level rewrite in DEX, zero hidden target definitions, and preserved old definitions. The historical frozen `2/2` output gate remains `INCONCLUSIVE_DIRECT_VISITOR` at `1/2` because the `window.flags` output has no reachable caller. The user-approved corrected bounded gate plus Standards/Spec review are PASS; this still does not prove a fresh APK.
 15. Task 096 is closed **`PASS`**. Its sole fresh `:app:assembleDebug --rerun-tasks` exited 0 with `BUILD SUCCESSFUL in 3m 55s` and 278/278 executed tasks. APK `f3af35d9…` is 190,547,804 B with 13 valid DEX entries; critical hidden references are `4/4`, all-725 hidden target definitions are 0, and SDK 37 `dexdump` found no old descriptor under another class context.
 16. Task 096 worktree/final process census are clean and cleanup exits are `0/0/1`. One unnecessary preflight `git fetch --all --quiet` updated only `.git/FETCH_HEAD`; this disclosed process deviation did not change tracked files, `HEAD`, `origin/main`, APK evidence, or technical PASS.
-17. Task 097 is the next independent no-fix stage: one fresh `:app:assembleRelease --rerun-tasks` invocation, proof that R8/package executed, APK ZIP/SHA identity, and strict checker exit 0 with critical old references/definitions 0/4, hidden references 4/4, hidden definitions 0/4, and all-725 hidden target definitions 0. Debug/device/fixes/Task 079 remain excluded.
+17. Task 097 is closed **`PASS`**. Its sole fresh `:app:assembleRelease --rerun-tasks` invocation exited 0 (`BUILD SUCCESSFUL in 7m 5s`, 493/493 executed); R8/package executed. APK `641c6533…` is 45,030,130 B with two valid DEX files; checker exit 0 / `RESULT=PASS`, critical old refs/defs `0/4`, hidden refs `4/4`, hidden defs `0/4`, all-725 hidden target definitions 0. Runtime remains unclaimed.
+18. Task 097 final status/process census are clean. Cleanup command 1 self-matched its inline shell after one execution and lost its exit code; commands 2/3 ran once with exits `1/1`. This disclosed process deviation does not alter build/APK/checker PASS. Next is an independent fresh Debug runtime reboot gate, then Release runtime.
 
 ## Recent Orchestration Transitions
+
+- 2026-09-02 — Task 097 fresh Release build/R8/static gate closed `PASS`. After two fail-closed startup/preflight retirements, `task097-release-r3` (`w2:t45` / `w2:p4A`) ran from pushed base `1420c7c5`; session independently proves `joycode/GLM-5.3`, `thinking=high` and exactly one actual wrapper invocation. Build exit 0, `BUILD SUCCESSFUL in 7m 5s`, 493/493 tasks executed; R8 minify and package executed. Fresh APK is 45,030,130 B, SHA `641c6533…`, ZIP-valid with two DEX files. Authoritative checker exit 0 / `RESULT=PASS`: old refs/defs `0/4`, hidden refs `4/4`, hidden defs `0/4`, all-725 hidden target definitions 0. Final worktree/process census are clean. Cleanup command 1 self-matched and lost its exit after executing once; commands 2/3 returned `1/1`; this disclosed deviation does not affect the technical gate. Debug and Release runtime remain unclaimed.
 
 - 2026-09-02 — Fresh replacement `task097-release-r3` is dispatched in `w2:t45` / `w2:p4A` from clean pushed base `b33c08d2`. Session `/home/conv/.pi/agent/sessions/--home-conv-myspace-SystemUI-Gradle--/2026-09-02T12-23-02-075Z_01a06212-9cbb-7aa4-83a0-ece87a09a7a8.jsonl` independently records `provider=joycode`, `modelId=GLM-5.3`, `thinkingLevel=high`; all startup reads were serial and in exact frozen order, with no bash/tool mutation before the matching CONTRACT. Chief accepted the CONTRACT. After this dispatch record is pushed, the worker may run only frozen non-wrapper preflight and report; it remains forbidden to delete the stale APK or run the build until a separate authorization.
 
@@ -434,6 +436,8 @@
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-09-02 — Task 097 closed `PASS`: sole fresh Release build exit 0 (`BUILD SUCCESSFUL in 7m 5s`, 493/493), R8/package executed, APK SHA `641c6533…` with two valid DEX files, checker exit 0 / `RESULT=PASS`, critical old refs/defs `0/4`, hidden refs `4/4`, hidden defs `0/4`, all-725 hidden target definitions 0. Final worktree/process census is clean. Cleanup command 1 self-matched and lost its exit after one execution; commands 2/3 returned `1/1`; deviation disclosed. Runtime remains unclaimed; next is Debug runtime reboot gate, then Release runtime.
 
 2026-09-02 — Task 093 closed `CACHE_ACTIVATED_ISOLATION_FAILURE`: the sole direct command exited 1 before callback execution; all three sentinels and ASM records are 0, while the known literal path markers each occur 46 times in a 9387-line log (SHA-256 `7f760669721065eb672c4a7ee8c07c848c45ce32c07a77c0aa7e6248c102ff31`). The complete production-shaped transient cache layer is the current minimum known activation boundary, without single-field/annotation/accessor attribution. Production paths are restored and process census is empty. Cleanup saved only exit codes 0/1; the third file was never created and no command was rerun. Next is a separate isolation-safe production cache/factory seam task.
 

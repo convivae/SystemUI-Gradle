@@ -1,7 +1,7 @@
 # C5 Task 097：fresh Release APK build/R8/static gate
 
 **日期**：2026-09-02
-**状态**：PLANNED
+**状态**：PASS（fresh Release build/R8/static closure；不声明runtime）
 **前置**：Task 095 production immutable-input seam已在`2994fa8f`落地；Task 096 fresh Debug build/static gate已PASS并由`7c0f4f0c`完成durable closure。
 
 ## 背景
@@ -33,3 +33,15 @@ PASS仅表示fresh Release APK完成R8且四映射静态闭合。它不证明部
 - 旧Release APK：critical old sources referenced，hidden targets `0/4`，checker FAIL。
 - Task 096 Debug APK：hidden targets `4/4`、hidden target definitions 0、old-owner residual PASS。
 - 本任务必须证明R8后的fresh Release APK达到checker严格PASS；失败时保留首个actionable failure和全部静态证据，由Chief另立修复任务，本任务自身不改代码。
+
+## 执行结果（2026-09-02）
+
+- fresh replacement `task097-release-r3`在pushed base `1420c7c5`上执行；session独立证明`joycode/GLM-5.3`、`thinking=high`、`HERDR_ENV=1`，startup严格串行。
+- 唯一Gradle-wrapper调用为冻结的`:app:assembleRelease --console=plain --rerun-tasks --max-workers=4`；exit 0，`BUILD SUCCESSFUL in 7m 5s`，`493 actionable tasks: 493 executed`。
+- `:app:minifyReleaseWithR8`与`:app:packageRelease`均实际执行，不是`UP-TO-DATE`、`FROM-CACHE`或skipped。
+- fresh APK：`app/build/outputs/apk/release/app-release.apk`，45,030,130 B，SHA-256 `641c6533e78a5977f2d8de97f293be236976e1053b40ff3a05a182bc594a1756`；`unzip -t` exit 0，2 DEX。
+- authoritative checker exit 0且`RESULT=PASS`：四个critical old source descriptors均`referenced=no, defined=no`；四个hidden targets均`referenced=yes, defined=no`；全725条规则hidden target definitions为0。
+- final worktree clean，Chief独立确认无Java/Gradle/Kotlin/Soong/Ninja残留进程。证据根：`/tmp/task097-c5-release-build-static/`。
+- 已披露cleanup过程偏差：第一条冻结`pkill -f`以内联形式执行并self-match杀死shell，因此其exit code丢失；该命令只执行一次，后两条各执行一次并返回1。最终独立process census为零。该偏差不改变fresh build、APK或checker技术PASS，也不声明runtime成功。
+
+下一步严格串行执行fresh Debug APK runtime reboot gate，再执行fresh Release APK runtime reboot gate。

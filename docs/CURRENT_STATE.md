@@ -1,7 +1,7 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 095已将immutable 4/166 managed snapshot迁入production并通过focused/direct proof与双轴review。**Task 096 fresh Debug build/static gate现已PASS：唯一`assembleDebug --rerun-tasks` exit 0、`BUILD SUCCESSFUL in 3m 55s`；新APK `190547804` B、SHA-256 `f3af35d9…`、ZIP完整、13 DEX。四条critical hidden references为`4/4`，725条规则的hidden target definitions为0；SDK 37 `dexdump`证明两个保留old definitions仅有same-class context，其他两个old descriptors为0。下一步是独立fresh Release build/R8/static gate；随后严格串行Debug runtime与Release runtime。Task 079 broad replay继续暂停。**）
+> **Last verified**: 2026-09-02（Phase C 的 C1–C4 全部完成；C5 编译、部署基础设施与 Debug 热运行已闭合。task076 修复 Release protobuf-lite 反射字段；task077 完成 durable emulator 基础设施；task078/080 将 AOSP-17 aconfig 改名缺口固定为四条 exact mappings、166 个 program reference classes。Task 095已将immutable 4/166 managed snapshot迁入production并通过focused/direct proof与双轴review。**Tasks 096/097 fresh Debug与Release build/static gates均已PASS。Release唯一`assembleRelease --rerun-tasks` exit 0，`BUILD SUCCESSFUL in 7m 5s`，493/493 tasks executed；fresh APK 45,030,130 B、SHA-256 `641c6533…`、ZIP完整、2 DEX。Release checker exit 0 / `RESULT=PASS`：critical old refs/defs `0/4`、hidden refs `4/4`、hidden defs `0/4`、全725-rule hidden target definitions 0。下一步严格串行执行fresh Debug runtime reboot gate，再执行fresh Release runtime reboot gate。Task 079 broad replay继续暂停。**）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -18,7 +18,7 @@
 | Python 工具测试 | ✅ **310 passed**（+151 subtests，C4c task074 chief 复验，2026-08-31） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ⏸️ 主机重启后当前无连接设备、无 emulator/QEMU 进程。17 emu64x durable runtime 基础设施已验收：`super.img` 3,028,287,488 B（SHA `50496c9b…`），scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；当前 build-logic/Debug build blocker 不需要设备，后续双 runtime gate 前再按 runbook 启动并核验专用模拟器 |
-| 当前唯一工程优先级 | **C5 / Task 097 fresh Release build/R8/static gate（PLANNED）**：Task 096已用完整Debug APK证明四条critical hidden references `4/4`、全725-rule hidden target definitions `0`及无跨class old-owner残留。Task 097须fresh构建Release APK，要求R8成功、checker消除四个critical old references并保留四个hidden references、hidden target definitions为0；不得把Debug PASS冒充Release或runtime成功 |
+| 当前唯一工程优先级 | **C5 / fresh Debug runtime reboot gate**：Tasks 096/097已分别证明fresh Debug与Release APK静态四映射闭合；Release APK `641c6533…` checker严格PASS。下一步部署Task 096 Debug APK至task077 durable emulator，冻结host/device SHA、PID/fatal/UI与整机重启前后稳定性；通过后再独立执行Release runtime gate |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -67,7 +67,8 @@
 | 2026-09-02 | **C5 task093 cache activation control FAIL（已闭合）**：唯一command exit 1；三个sentinel与ASM records均0，Task 084 literal path markers各46。完整production-shaped transient cache layer是当前最小已知activation boundary；未单独归因任一子元素 | `docs/issues/2026-09-02-c5-transient-cache-control.md` |
 | 2026-09-02 | **C5 task094 immutable snapshot control PASS**：configuration-time validated 4/166 managed values + field-free no-op factory的唯一direct command exit 0；45 ASM records、known serialization markers为0，证明isolation-safe seam，不证明visitor/APK | `docs/issues/2026-09-02-c5-immutable-input-snapshot-control.md` |
 | 2026-09-02 | **C5 task095 production seam review-PASS**：production迁移完成；focused tests 9/9；direct transform exit 0、45 ASM records、serialization markers 0。真实`android.os.Flags` instruction rewrite已落DEX，hidden defs 0/2、old defs 2/2；原2/2 gate实际1/2因`window.flags`无可达caller。用户批准corrected bounded gate；Standards/Spec及两处文档修正的focused re-review均PASS，不声明APK四映射/runtime成功 | `docs/issues/2026-09-02-c5-production-immutable-input-seam.md` |
-| 2026-09-02 | **C5 task096 fresh Debug build/static PASS**：唯一fresh build exit 0、278/278 tasks；APK 190,547,804 B、SHA `f3af35d9…`、ZIP/13 DEX通过；critical hidden refs `4/4`、725-rule hidden defs `0`；两个old definitions仅same-class context，另两个old descriptors为0。未声明Release/runtime | `docs/issues/2026-09-02-c5-debug-build-static-gate.md` |
+| 2026-09-02 | **C5 task096 fresh Debug build/static PASS**：唯一fresh build exit 0、278/278 tasks；APK 190,547,804 B、SHA `f3af35d9…`、ZIP/13 DEX通过；critical hidden refs `4/4`、725-rule hidden defs `0`；两个old definitions仅same-class context，另两个old descriptors为0。未声明runtime | `docs/issues/2026-09-02-c5-debug-build-static-gate.md` |
+| 2026-09-02 | **C5 task097 fresh Release build/R8/static PASS**：唯一fresh build exit 0、493/493 tasks、R8/package实际执行；APK 45,030,130 B、SHA `641c6533…`、ZIP/2 DEX通过；checker exit 0 / `RESULT=PASS`，critical old refs/defs `0/4`、hidden refs `4/4`、hidden defs `0/4`、全725-rule hidden defs `0`。cleanup首条self-match导致exit丢失的过程偏差已披露；未声明runtime | `docs/issues/2026-09-02-c5-release-build-static-gate.md` |
 
 ## Current build and verification matrix
 
@@ -141,11 +142,10 @@ task073 移交项）。16 时代 Release runtime 门（`d3968fb2…`，emulator-
 
 ## Next ordered work
 
-1. **Task 097 Release build/static gate**：Task 096 fresh Debug build/static已PASS。独立停止Gradle/Kotlin daemons后运行fresh Release/R8；Release checker必须消除四个critical old references、出现四个hidden references且hidden target definitions=0，并冻结APK ZIP/SHA/R8证据。
-2. **Debug runtime gate**：Release静态成功后，启动task077 durable emulator，部署Task 096 Debug APK，核对host/device SHA、PID/fatal/UI门并验证整机重启前后稳定。
-3. **Release runtime gate**：Debug runtime通过后再独立部署fresh Release APK，执行相同冷启动/整机重启门。
-4. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
-5. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
+1. **Debug runtime reboot gate**：部署Task 096 fresh Debug APK，核对host/device SHA、PID/fatal/UI门并验证整机重启前后稳定；不得把既有热运行或静态PASS冒充本轮runtime证据。
+2. **Release runtime reboot gate**：Debug runtime成功后独立部署Task 097 fresh Release APK（SHA `641c6533…`），执行相同冷启动/整机重启门。
+3. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。
+4. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
 
 ## Verification commands and evidence
 
@@ -209,7 +209,7 @@ SHA `7f760669…`，三个sentinel和ASM transform records均为0，`NotSerializ
 `__instrumentationContext__`与`InstrumentationContext_Decorated.__apiVersion__`各46次，故正式归类
 `CACHE_ACTIVATED_ISOLATION_FAILURE`。这证明完整cache layer是相对Task 092的当前最小已知activation boundary，
 但不证明其中任一字段、instance state、annotation、accessor或writeback为sole trigger。Task 093已完整恢复；cleanup偏差为仅保存0/1两个exit code、第三个文件从未生成，且按Chief命令没有补跑或重跑；最终process census为空。Task 094随后把4 mappings/166 allowlist在plugin配置阶段一次校验并写入managed `MapProperty`/`SetProperty`，factory保持field-free且visitor byte-no-op。唯一command exit 0，1464行日志SHA `53fbffec…`，entered/accepted/no-op visitor sentinels各1、45条ASM records，known serialization markers均为0，故正式`PASS`。`javap`确认temporary factory无declared fields；session审计确认exactly one Gradle wrapper call和zero Python。Temporary sources已恢复，production/input hashes一致、worktree clean、process census为空。Cleanup三条命令各执行一次，exit codes `0/0/1`；初始census自匹配、错误test hash paths、普通diff遗漏untracked factory及gitignored compiled class四项evidence caveat均已披露，不改变分类。该结果只证明immutable managed-value/field-free no-op seam，不能冒充production visitor或APK成功。
-Task 095已完成production seam迁移和visitor恢复：9个focused tests全绿，真实dependency transform成功，45条ASM records，known serialization markers为0；一个真实allowlisted instruction-level rewrite已落DEX，hidden definitions为0且old definitions保留。原fixed two-output `2/2` gate因第二输出无可达caller实际为1/2，用户已批准corrected bounded gate；Standards/Spec双轴review及两处文档修正的focused re-review均PASS。Task 096随后完成fresh Debug APK/static gate：唯一`assembleDebug --rerun-tasks` exit 0、`BUILD SUCCESSFUL in 3m 55s`，新APK 190,547,804 B、SHA `f3af35d9…`、ZIP完整且含13 DEX；四条critical hidden references `4/4`、725-rule hidden target definitions `0`。checker exit 1仅因`android.os.Flags`与`com.android.window.flags.Flags`保留Debug definitions；SDK 37 `dexdump`证明它们只在same-class context，另外两个critical old descriptors为0。下一步是独立fresh Release build/R8/static gate。Task 079 broad replay保持暂停；主机当前无连接设备或emulator/QEMU，后续 runtime gate 前再启动。详见
+Task 095已完成production seam迁移和visitor恢复：9个focused tests全绿，真实dependency transform成功，45条ASM records，known serialization markers为0；一个真实allowlisted instruction-level rewrite已落DEX，hidden definitions为0且old definitions保留。原fixed two-output `2/2` gate因第二输出无可达caller实际为1/2，用户已批准corrected bounded gate；Standards/Spec双轴review及两处文档修正的focused re-review均PASS。Task 096随后完成fresh Debug APK/static gate：唯一`assembleDebug --rerun-tasks` exit 0、`BUILD SUCCESSFUL in 3m 55s`，新APK 190,547,804 B、SHA `f3af35d9…`、ZIP完整且含13 DEX；四条critical hidden references `4/4`、725-rule hidden target definitions `0`。checker exit 1仅因`android.os.Flags`与`com.android.window.flags.Flags`保留Debug definitions；SDK 37 `dexdump`证明它们只在same-class context，另外两个critical old descriptors为0。Task 097随后完成fresh Release APK/R8/static gate：唯一`assembleRelease --rerun-tasks` exit 0、`BUILD SUCCESSFUL in 7m 5s`、493/493 tasks executed，R8/package实际执行；APK 45,030,130 B、SHA `641c6533…`、ZIP完整且含2 DEX。Release checker exit 0 / `RESULT=PASS`，critical old refs/defs `0/4`、hidden refs `4/4`、hidden defs `0/4`、全725-rule hidden target definitions 0。下一步严格串行执行fresh Debug runtime reboot gate，再执行fresh Release runtime reboot gate。Task 079 broad replay保持暂停；主机当前无连接设备或emulator/QEMU，runtime gate将启动task077 durable emulator。详见
 `docs/issues/2026-09-01-c5-focused-reference-origins.md`、
 `docs/issues/2026-09-02-c5-pre-dex-reference-rewrite.md`、
 `docs/issues/2026-09-02-c5-debug-build-after-reference-rewrite.md`、
