@@ -519,3 +519,8 @@
 
 - Task 086 worker `task086-none-all-corrected` started in dedicated tab `w2:t3D` / pane `w2:p3J` from pushed base `8a80bf5f`. Session events independently prove `provider=joycode`, `modelId=GLM-5.3`, and `thinkingLevel=high`.
 - The worker completed the required separate AGENTS → CHARTER → worker-contract/brief/issues/Task 084 summary/complete Task 085 log startup and printed an accepted CONTRACT. It remains stopped before preflight. The only correction from Task 085 is the explicit empty lambda `{ }`; the exact two-path temporary scope, one direct task, mandatory restoration, and all no-production/full-build/Release/device boundaries remain unchanged.
+
+## 2026-09-02 — first task086 worker stopped for preflight process deviation
+
+- The first Task 086 worker completed startup but invoked `./gradlew --status` while independently rechecking a clean process list. Chief had authorized only `ps`/`pgrep`-style preflight evidence, and the brief reserves exactly one Gradle-wrapper command for the experiment; Chief therefore stopped the worker immediately.
+- No Task 086 scratch directory, tracked edit, control experiment, build task, or daemon resulted. The plugin retained SHA `f50685c3…`, the no-op factory remained absent, the worktree stayed clean, and tab `w2:t3D` was closed. A fresh worker will use the unchanged brief and may not invoke the Gradle wrapper during preflight.
