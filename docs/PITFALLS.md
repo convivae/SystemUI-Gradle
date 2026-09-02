@@ -577,3 +577,37 @@ Release R8 的 missing refs 是真实 closure 缺口的信号；用宽泛 `-keep
 1. staging（`/data/local/tmp`）→ 同目录临时名 cp → `sync` → 原子 `mv`（同分区 rename）
 2. **mv 之后立刻 `su 0 sha256sum` 对比本地构建产物**，不一致 = 失败重来
 3. 空间不足时先 `am force-stop` + `kill -9` SystemUI 释放句柄，再删残缺文件
+
+## 15. AOSP 17 aconfig 改名与运行时引用（2026-09-03 收录，Task 099）
+
+### 15.1 平台 aconfig Flags 类在 Soong 构建中被 jarjar 改名，APK 编译期看到的名字在设备上不存在
+
+**现象**: APK 编译通过、静态检查正常，但部署后冷启动 crash-loop：`NoClassDefFoundError: Landroid/service/dreams/Flags;`（首批爆发的是 `KeyguardTransitionHandler`，共 26 个类受影响）。
+
+**根因**: AOSP 17 的 Soong 构建在 dex 前对 framework 做 jarjar repackaging，把 725 个 aconfig 生成类从原始包名改到 `com.android.internal.hidden_from_bootclasspath.*`。设备 framework 里只有改名后的类；而 Gradle 编译时 SysUISdk/framework.jar 提供的仍是原名，APK DEX 里的引用不去改就全部悬空。**只覆盖崩溃的那一个类远远不够**——权威规则表是
+`out/soong/.intermediates/frameworks/base/framework/android_common/repackaged-jarjar/repackaging.txt`（725 条 exact rename）。
+
+**结论/纪律**:
+- 修复必须基于**完整 725 条规则**做 reference-only 改写（本工程在 AGP 插桩阶段完成），不得只追崩溃类、不得打包 hidden 类进 APK
+- 每次构建后用 `tools/check_aconfig_jarjar_references.py --apk <apk>` 做指令级校验：任何非 self-reference 的 old-owner executable ref、或任何 hidden target 定义 = FAIL
+- "旧 APK 曾经能跑"的历史观察不可信：旧 APK 同样带着这些悬空引用，只是观察窗口内没走到致命路径（Task 099 A/B 实验证伪）
+
+### 15.2 想"跳过定义类只改引用"是行不通的——D8 在 ASM transform 之后才合成 lambda
+
+**现象**: 若插桩时跳过 mapping 的 source 定义类（想保留它们自洽），构建后门禁仍 RED：946 条残留 old-owner 引用来自 `$$ExternalSyntheticLambda*` 类。
+
+**根因**: 被跳过类的 `BootstrapMethods` 里的 method handle 仍携带旧名；D8 desugar 在 ASM transform **之后**才从这些 handle 合成 lambda caller 类，此时已无任何改写机会。
+
+**结论/纪律**: seam 必须 **instrument 一切类**（含 source 定义类）；visitor 保持 `this_class` 与 self-reference 不变、改写所有外向引用（含 BootstrapMethods），source 类变成指向 hidden twin 的 dead shell（Release 会被 R8 strip）。这是一条通用教训：**评估 ASM 改写方案时必须考虑 D8 desugar 的 LambdaMetafactory 合成时序**。
+
+### 15.3 部署后 `BLUETOOTH_CONNECT` / `READ_CONTACTS` grant 可能丢失
+
+**现象**: APK 替换 + 冷启动后 SystemUI 因 `SecurityException: Need android.permission.BLUETOOTH_CONNECT` crash-loop；重新 `pm grant` 后立即稳定。
+
+**结论/纪律**: 部署规程固定包含两个 frozen grant（`BLUETOOTH_CONNECT`、`READ_CONTACTS`）。grant 跨 reboot 保持，但在某些 "APK 文件替换 + 冷启动" 组合下会被重置（诱因未完全隔离）；**每次替换 APK 后先检查 grant 状态再判 runtime 结论**，避免把权限问题误判为代码回归。
+
+### 15.4 整机重启后 overlay 重新挂载为只读，需重新 `adb remount`
+
+**现象**: reboot gate 之后再部署新 APK，`adb push` 到 `/system_ext` 报 `Read-only file system`；`mount` 显示 overlay 为 `ro`（scratch 内容仍在，旧 APK 不受影响）。
+
+**结论/纪律**: overlay 的上层内容跨重启持久，但 rw 状态不持久；**每次重启后要写分区前重新 `adb root && adb remount`**（remount 本身不需要再 reboot）。

@@ -26,6 +26,8 @@
 - **ADR 0003** `app-module-aligns-aosp-bp.md` — 模块划分/依赖/入口类位置严格按 AOSP `Android.bp`
 - **ADR 0004** `conv-markup-and-alignment-discipline.md` — AOSP 源码改动用 CONV 标记追溯；对齐工具 strict 不卡 MODIFIED，靠人工对账
 - **ADR 0006** `sysuisdk-r8-library-class-bridge.md` — 通过单入口 SysUISdk 生成器（`tools/build_sysuisdk.py --aosp-root`）向 AGP/R8 提供真实平台与构建期 library classes，禁止 runtime 打包或 dontwarn 掩盖
+- **ADR 0007** `phase-c-clean-regen-release-tag.md` — Phase C：AOSP 固定 `android-17.0.0_r1` + 全管线清空重生（源码重对齐 / libs 脚本再生 / release tag 收口）
+- **ADR 0008** `pre-dex-aconfig-reference-rewrite.md` — pre-D8 aconfig reference rewrite：AGP 插桩阶段按 725 条 AOSP repackaging 规则做仅引用级改写，禁止打包 hidden 类、禁止 post-D8/DEX 改写
 
 写 ADR 的判定：决策 **难以反转 + 没有上下文会令人困惑 + 有真正权衡**。
 
@@ -241,6 +243,10 @@ res 缺失时按以下顺序处理（详见 `docs/adr/0001-aosp-res-via-local-ma
 - **ADR 0002** — `tools/` 下脚本一律 Python，禁止 .sh（除非纯系统 CLI 调用）
 - **ADR 0003** — 项目结构/模块命名/依赖严格按 AOSP `Android.bp`
 - **ADR 0004** — AOSP 源码改动用 CONV 标记追溯；对齐工具 strict 不卡 MODIFIED，靠人工对账
+- **ADR 0005** — SettingsLib 资源闭包的本地 Maven POM 携带 per-target 传递依赖边
+- **ADR 0006** — 单入口 SysUISdk 生成器向 AGP/R8 提供真实平台与构建期 library classes
+- **ADR 0007** — Phase C：AOSP 固定 `android-17.0.0_r1` + 全管线清空重生
+- **ADR 0008** — pre-D8 aconfig reference rewrite（725 规则、instrument-everything、reference-only）
 
 ---
 
@@ -395,6 +401,9 @@ javap -p <ClassName>
 # 查看依赖
 ./gradlew :SystemUI-core:dependencies --configuration debugCompileClasspath
 
+# APK 引用完整性门禁（Task 099；构建后必跑）
+uv run python tools/check_aconfig_jarjar_references.py --apk app/build/outputs/apk/debug/app-debug.apk
+
 # Debug 模式（看实际 classpath）
 ./gradlew :SystemUI-core:compileDebugKotlin --debug 2>&1 | grep -oE "[-]classpath [^ ]+"
 ```
@@ -419,6 +428,7 @@ javap -p <ClassName>
 | `tools/package_compilelib_jars.py` | 打包 compilelib debug/release JAR（确定性） |
 | `tools/package_aconfig_jars.py` | 从 AOSP `javac` 产物打包完整 aconfig runtime JAR |
 | `tools/build_sysuisdk.py` | 单入口 SysUISdk 生成器：从只读官方 SDK platform + 已构建 AOSP `out/` 产物事务性生成 `android-SysUISdk`（含 39-entry library bridge、私有资源、framework.aidl 隐藏接口声明） |
+| `tools/check_aconfig_jarjar_references.py` | APK 指令级引用完整性门禁：按 725 条 AOSP repackaging 规则遍历 DEX，非 self-reference 的 old-owner ref 或 hidden target 定义即 FAIL |
 | `tools/clean_prebuilts.py` | 清理 prebuilt jar 中的冲突类（与 maven 重复） |
 
 ---
@@ -460,6 +470,7 @@ javap -p <ClassName>
 | 2026-08-12 增订 | §4 更新：全依赖升级 + builtInKotlin 迁移（commit `e3548016`）；§4.2 重写为当前构建状态；新增 §4.3 版本矩阵；§2.4 记录 Compose inline 问题已解决 |
 | 2026-08-20 增订 | Task 039 文档治理：§四 由动态进度快照改为实时状态归属（指向 CURRENT_STATE）；规则 P/S/C/F/R/B/H/D/I、依赖策略、SysUISdk 规则、诊断流程与用户偏好全部保留不变 |
 | 2026-08-21 增订 | SysUISdk 工作流事实同步：旧 SDK 补丁脚本已退役，ADR 索引、§1.7、§2.4、§7 工具表统一为单入口 `python3 tools/build_sysuisdk.py --aosp-root`（ADR 0006 机制已修订） |
+| 2026-09-03 增订 | C5 闭环事实同步：ADR 索引补 0005/0007/0008；§7 工具表新增 `check_aconfig_jarjar_references.py`；§6 速查新增 APK 引用完整性门禁。README 双语重写为对外文档（不再承载内部进度快照） |
 
 ---
 

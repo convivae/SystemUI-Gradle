@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：Phase C 的 C1–C4 已完成；C5 durable overlay、Debug 热运行与 Release protobuf 修复均已闭合。task078/080将runtime blocker固定为四条critical mappings和166个program caller identities；Task 095 production immutable-input seam已通过focused/direct proof与双轴review。**Tasks 096/097 fresh Debug与Release build/static gates均已PASS；Release fresh APK 45,030,130 B / SHA `641c6533…` / 2 DEX，checker exit 0 / `RESULT=PASS`，critical old refs/defs `0/4`、hidden refs `4/4`、hidden defs `0/4`、全725-rule hidden defs 0。下一步严格串行Debug runtime reboot gate与Release runtime reboot gate。** Task 079 broad replay保持暂停。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：**Phase C 的 C1–C5 全部完成**。Task 099 完成 aconfig reference rewrite 生产修复（完整 725 条规则 + instrument-everything seam + 指令级门禁），fresh Debug `33e07319…` 与 fresh Release `17358f4d…` 双 APK 均通过静态门 + 部署 + 冷启动 + **整机重启门**（PID 稳定、0 FATAL）；commits `ed40e4b4`/`ea9b2f52`/`c79044b4` 已 push。Task 079 broad replay 保持暂停。下一步 C6 收口。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：Tasks 096/097 fresh Debug与Release build/static均已PASS；Release checker严格闭合四映射且零hidden definitions。下一步启动task077 durable emulator，先执行fresh Debug runtime reboot gate，再独立执行fresh Release runtime reboot gate。
+5. **当前唯一工程优先级**：C6 收口（manifest 快照 + release tag + 版本声明，ADR 0007）。C5 已由 Task 099 闭合：双 variant fresh APK 的静态门禁、部署、冷启动与整机重启门全部 PASS。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -42,8 +42,10 @@
 | C5 task094 | immutable managed-value + field-free no-op control正式`PASS`：三个sentinel各1、45 ASM records、known serialization markers 0；只证明isolation seam | `docs/issues/2026-09-02-c5-immutable-input-snapshot-control.md` |
 | C5 task095 | production managed-value seam + `referenceOnlyVisitor(...)` focused/direct proof；corrected bounded gate与双轴review均PASS | `docs/issues/2026-09-02-c5-production-immutable-input-seam.md` |
 | C5 task096 | fresh Debug build/static ✅：190,547,804 B / SHA `f3af35d9…` / 13 DEX；hidden refs `4/4`、hidden defs `0`、old-owner residual PASS | `docs/issues/2026-09-02-c5-debug-build-static-gate.md` |
-| C5 task097 | fresh Release build/R8/static ✅：45,030,130 B / SHA `641c6533…` / 2 DEX；R8/package执行；checker exit 0 / `RESULT=PASS`，old refs/defs `0/4`、hidden refs `4/4`、hidden defs `0/4` | `docs/issues/2026-09-02-c5-release-build-static-gate.md` |
-| C6 | manifest 快照 + release tag + README/version 声明 | 待 C5 完成 |
+| C5 task097 | fresh Release build/R8/static ✅：45,030,130 B / SHA `641c6533…` / 2 DEX；checker exit 0 / `RESULT=PASS` | `docs/issues/2026-09-02-c5-release-build-static-gate.md` |
+| C5 task098 | fresh Debug runtime 门 ❌ `DEBUG_RUNTIME_REBOOT_FAIL`（622 次 `dreams.Flags` NCDFE）→ 触发 Task 099 | `docs/issues/2026-09-02-c5-debug-runtime-reboot-gate.md` |
+| C5 task099 | **aconfig 生产修复 + C5 闭环 ✅**：725 规则 + instrument-everything seam + 指令级门禁；Debug `33e07319…` / Release `17358f4d…` 双 APK 静态 + 部署 + 冷启动 + 整机重启门全 PASS；commits `ed40e4b4`/`ea9b2f52`/`c79044b4` 已 push | `docs/issues/2026-09-02-c5-dreams-flags-runtime-origin-diagnosis.md` |
+| C6 | manifest 快照 + release tag + 版本声明（README 双语已于 2026-09-03 重写为对外文档） | 进行中 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
 
@@ -55,7 +57,7 @@
 | 059 | 4 个单 consumer AAR 族改为 `files("libs/aars/…")` 直接消费（用户逐族授权，字节中性已证） | `docs/issues/2026-08-25-aar-direct-consumption-migration.md` |
 | 058 | DEBUG_RUNTIME_PASS gate suite 六门全绿（在 GLM-5.3 worker 上运行） | `docs/issues/2026-08-25-debug-runtime-pass-gate-suite.md` |
 
-关键新纪律（均来自 08-25 起的实战，仍有效）：同工树=串行（两 Gradle 构建并发曾致 kernel OOM）；后续 worker/reviewer 统一显式使用 `joycode/GLM-5.3`、`thinking=high`，接受 CONTRACT 前独立核实 session 模型；部署后必须设备端 sha256 二次校验（toybox cp 静默截断）；verity 保持 disabled（enable-verity 拆 overlay，见 PITFALLS §14）。
+关键新纪律（均来自 08-25 起的实战，仍有效）：同工树=串行（两 Gradle 构建并发曾致 kernel OOM）；部署后必须设备端 sha256 二次校验（toybox cp 静默截断）；verity 保持 disabled（enable-verity 拆 overlay，见 PITFALLS §14）；重启后 overlay 重挂为只读，写分区前重新 `adb remount`（PITFALLS §15.4）。（2026-09-02 起用户已取消 worker 模型/CONTRACT 等人为编排限制，见 CHARTER。）
 
 16 时代 Release 闭环（2026-08-26，task 060→061）：AssumeFalseForR8 精确 dontwarn →
 `-dontobfuscate`（对齐 Soong dex.go:545）→ 3 行 `-keep`（抗 R8 水平合并），
@@ -70,10 +72,11 @@ ls /home/conv/Android/Sdk/platforms/            # 必须有 android-SysUISdk
 ./gradlew --version                             # Gradle 9.5
 ```
 
-`libs/` 已全部提交入 git（Phase C 后产物均由 tools 脚本从 AOSP-17 再生）。C4基线的
-`:app:assembleDebug`已由Task 096在production plugin接入后fresh重跑成功：唯一`--rerun-tasks` build exit 0，APK SHA `f3af35d9…`，四条critical hidden references `4/4`、hidden target definitions `0`且old-owner residual gate PASS。Task 097也已完成fresh Release/R8静态门：APK SHA `641c6533…`，checker exit 0 / `RESULT=PASS`，四条old refs/defs均为0、hidden refs `4/4`且零hidden definitions。两者均尚未部署执行本轮runtime reboot gate；不得把静态PASS冒充runtime成功。Runtime原根因是Gradle APK对AOSP 17 platform aconfig
-Flags保留原名，而设备只有jarjar后类名；详见
-`docs/issues/2026-09-01-c5-emulator-super-slack.md`与Task 081–096文档。
+`libs/` 已全部提交入 git（Phase C 后产物均由 tools 脚本从 AOSP-17 再生）。`:app:assembleDebug`
+与 `:app:assembleRelease` 均已 fresh 构建成功并通过 Task 099 的指令级静态门禁与模拟器 runtime
+（含整机重启）验证；最终 APK：Debug `33e07319…`、Release `17358f4d…`。aconfig 引用改写 seam
+的完整记录（根因、D8 lambda 教训、instrument-everything 裁定）见
+`docs/issues/2026-09-02-c5-dreams-flags-runtime-origin-diagnosis.md`。
 
 ## 3. 红线速查（违反即停，详见 AGENTS/CHARTER）
 
@@ -91,4 +94,4 @@ Flags保留原名，而设备只有jarjar后类名；详见
 
 ---
 
-**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：启动task077 durable emulator，先执行fresh Debug runtime reboot gate → 再独立执行fresh Release runtime reboot gate → C6 收口。
+**下一步**: 阅读 [`AGENTS.md`](../AGENTS.md) 完整规则，然后按 §1 顺序继续。当前方向：C6 收口（manifest 快照 + release tag + 版本声明）→ 尾账清理。

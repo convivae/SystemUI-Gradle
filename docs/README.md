@@ -2,7 +2,7 @@
 
 > **Owner**: 本文件定义文档分类、生命周期、owner、维护触发与导航。
 > **实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**；本文件不复制构建数字。
-> **最后更新**: 2026-08-20（Task 039 文档治理）
+> **最后更新**: 2026-09-03（README 对外重写 + Task 099 后同步）
 
 ---
 
@@ -28,7 +28,7 @@
 
 - [`../AGENTS.md`](../AGENTS.md) — 强制规则 P/S/C/F/R/B/H/D/I、依赖三层策略、SysUISdk 规则、诊断流程、用户偏好。**不保存动态进度**；实时状态见 CURRENT_STATE。
 - [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md) — herdr 编排协议（十规则、依赖决策树、串行构建、红线、worker contract）。不保存动态项目快照。
-- [`docs/adr/`](./adr/) — ADR 0001–0005：res 处理优先级 / Python-only 工具 / bp 语义对齐 / CONV 标记 / SettingsLib POM 传递依赖。仅在决策变化时更新或新增。
+- [`docs/adr/`](./adr/) — ADR 0001–0008：res 处理优先级 / Python-only 工具 / bp 语义对齐 / CONV 标记 / SettingsLib POM 传递依赖 / SysUISdk R8 library bridge / Phase C 清空重生 / pre-D8 aconfig reference rewrite。仅在决策变化时更新或新增。
 
 ## Append-only records（追加型记录）
 
@@ -93,11 +93,12 @@
 | [`../tools/package_compilelib_jars.py`](../tools/package_compilelib_jars.py) | 打包 compilelib debug/release JAR |
 | [`../tools/package_monet_jar.py`](../tools/package_monet_jar.py) / [`../tools/package_viewcapture_motiontool_jars.py`](../tools/package_viewcapture_motiontool_jars.py) | 确定性 clean JAR（monet / view-capture / motion-tool） |
 | [`../tools/check_source_alignment.py`](../tools/check_source_alignment.py) | AOSP src/AIDL/res 对齐校验（规则 C） |
+| [`../tools/check_aconfig_jarjar_references.py`](../tools/check_aconfig_jarjar_references.py) | APK 指令级引用完整性门禁：按 725 条 AOSP repackaging 规则校验 DEX（非 self-ref old-owner ref 或 hidden target 定义即 FAIL） |
 | [`../tools/install_sdk.py`](../tools/install_sdk.py) | 校验 + 补 SysUISdk framework.aidl |
 | [`../tools/patch_androidprv_merged_resources.py`](../tools/patch_androidprv_merged_resources.py) | AGP `androidprv` namespace 丢失修复 |
 | [`../tools/markup_product_variants.py`](../tools/markup_product_variants.py) | res-product `product=` 变体 CONV 标记 |
 
-单元测试：`python3 -m unittest discover -s tools/tests -p 'test_*.py'`（当前通过数见 CURRENT_STATE）。
+单元测试：`uv run pytest tools/tests -q`（当前通过数见 CURRENT_STATE）。
 
 ## 快速搜索
 

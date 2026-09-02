@@ -779,3 +779,10 @@ scene `Scene`/`Overlay`/`QuickSettingsShade`、biometric `asBiometricModality`�
 - TUNA 镜像确认 tag 存在（manifest `5bc9a7ce`，无 -gpl 变体）；`sdk_phone64_x86_64` 产品、trunk_staging release config、build_sysuisdk 八个冻结输入模块与 turbine-combined 路径逻辑在 tag 上全部验证无迁移 → **GO**。
 - 重大事实修正：本地 AOSP 树实际停在 2025-03-26（非 2026-04-27），距 tag 漂移约 14 个月、SDK 35 preview → 37 release；SystemUI 子树 10318 文件 +773k/−415k 行 → Phase C 主成本是 tier-① 全量源码重对齐。
 - sync 体量粗估 15–40GB（夜间可行）；磁盘剩 134G，建议重建前清 out/（187G）。详见 `docs/architecture/2026-08-26-android17-tag-verification.md`。未运行构建。
+
+## 2026-09-03 · Task 099 — C5 闭环：aconfig reference rewrite 生产修复，双 variant 全门 PASS
+
+- 根因：覆盖双重缺口——生产 seam 仅 4 条手写 mapping + 166 caller allowlist，权威 AOSP repackaging 规则为 725 条；冻结 APK 残留 460（Debug）/ 446（Release）条 old-owner 指令引用（26/25 个类）。旧"健康"APK 经 A/B 实验证伪（同样 crash-loop）。
+- 设计迭代：跳过 source 定义类方案被 D8 证伪（ASM transform 之后 D8 才从 BootstrapMethods 合成 `$$ExternalSyntheticLambda` caller，946 条残留）；Chief 裁定 instrument 一切类，visitor 保持 this_class/self-ref，hidden 定义 fail-closed。
+- 产物：fresh Debug `33e07319…`（200,506,573 B）与 fresh Release `17358f4d…`（45,030,130 B）双 APK——指令级静态门 0 违规 / 0 hidden 定义，部署 + 冷启动 + 整机重启门全 PASS（PID 稳定、0 FATAL、StatusBar/Shade/Wallpaper 在屏）。
+- commits `ed40e4b4`（seam+725 规则+buildSrc tests）、`ea9b2f52`（指令级 checker+33 tests）、`c79044b4`（docs）已 push；pytest 361 passed +151 subtests。详见 `docs/issues/2026-09-02-c5-dreams-flags-runtime-origin-diagnosis.md`。
