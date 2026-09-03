@@ -21,7 +21,7 @@ SysUISdk r1 已发布并由用户验收，可用于正常编译。后续 review 
 
 ## 结果
 
-- 中英文 README 顶部新增 SysUISdk 下载量、AOSP 基线、双 variant 验证、Gradle、AGP 与 Kotlin badges；由于仓库没有 GitHub Actions workflow，没有添加虚假的 CI badge。
+- 中英文 README 顶部新增 AOSP 基线、双 variant 验证、Gradle、AGP 与 Kotlin badges；由于仓库没有 GitHub Actions workflow，没有添加虚假的 CI badge，也不展示下载量。
 - README 改为“在 Release 页面下载两个资产 → `sha256sum --check` → 只解压 `android-SysUISdk/*` → 验证 `android.jar`”的简洁流程。
 - `release/sysuisdk/README.txt` 与 `GITHUB_RELEASE.md` 使用同一安装语义。
 - r1 Release、资产和 tag 未修改；用户完成的正常编译验收已同步到实时状态文档。

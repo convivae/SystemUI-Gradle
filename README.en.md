@@ -2,7 +2,6 @@
 
 **[中文](README.md)** | English
 
-[![SysUISdk r1 downloads](https://img.shields.io/github/downloads/convivae/SystemUI-Gradle/sysuisdk-android-17.0.0_r1-r1/total?label=SysUISdk%20r1%20downloads&logo=github)](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
 [![AOSP baseline](https://img.shields.io/badge/AOSP-android--17.0.0__r1-3ddc84?logo=android&logoColor=white)](https://android.googlesource.com/platform/manifest/+/refs/tags/android-17.0.0_r1)
 [![Build verified](https://img.shields.io/badge/Debug%20%2B%20Release-verified-brightgreen)](docs/CURRENT_STATE.md)
 [![Gradle 9.5.0](https://img.shields.io/badge/Gradle-9.5.0-02303a?logo=gradle&logoColor=white)](gradle/wrapper/gradle-wrapper.properties)
