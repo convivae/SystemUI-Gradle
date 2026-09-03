@@ -52,6 +52,8 @@ The exact per-file inventory and SHA-256 of both the base platform and the
 AOSP inputs used for this build are recorded in
 ``android-SysUISdk/.sysuisdk-generated.json`` inside this archive.
 
-If you prefer a base that is 100 % AOSP-sourced (Apache 2.0 throughout),
-you can regenerate the platform yourself from an AOSP checkout; see the
-project README ("regenerating from scratch").
+To reproduce this composition locally, install the stock ``android-37.0``
+platform, build the required inputs from the AOSP checkout, and run
+``tools/build_sysuisdk.py`` as documented in the project README. The current
+generator still uses that stock platform as its read-only base; an entirely
+AOSP-sourced base is not implemented.

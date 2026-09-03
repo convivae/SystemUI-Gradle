@@ -2,6 +2,13 @@
 
 **[中文](README.md)** | English
 
+[![SysUISdk r1 downloads](https://img.shields.io/github/downloads/convivae/SystemUI-Gradle/sysuisdk-android-17.0.0_r1-r1/total?label=SysUISdk%20r1%20downloads&logo=github)](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
+[![AOSP baseline](https://img.shields.io/badge/AOSP-android--17.0.0__r1-3ddc84?logo=android&logoColor=white)](https://android.googlesource.com/platform/manifest/+/refs/tags/android-17.0.0_r1)
+[![Build verified](https://img.shields.io/badge/Debug%20%2B%20Release-verified-brightgreen)](docs/CURRENT_STATE.md)
+[![Gradle 9.5.0](https://img.shields.io/badge/Gradle-9.5.0-02303a?logo=gradle&logoColor=white)](gradle/wrapper/gradle-wrapper.properties)
+[![AGP 9.3.1](https://img.shields.io/badge/AGP-9.3.1-3ddc84?logo=android&logoColor=white)](gradle/libs.versions.toml)
+[![Kotlin 2.2.10](https://img.shields.io/badge/Kotlin-2.2.10-7f52ff?logo=kotlin&logoColor=white)](gradle/libs.versions.toml)
+
 A standalone, self-contained Gradle build of AOSP `frameworks/base/packages/SystemUI` —
 the real, complete source of Android's **status bar, notification shade / quick settings,
 lockscreen (Keyguard) and recents overview** — extracted from the Soong build system.
@@ -106,14 +113,14 @@ the standard Android SDK. This project solves that with:
 | JDK | 17+ (measured on 21) |
 | Android SDK | anything recent; the official `platforms/android-37.0` is only needed as the read-only base when regenerating SysUISdk yourself |
 | Python | 3.x + [uv](https://docs.astral.sh/uv/) (scripts always run via `uv run`) |
-| Tools | adb; repo (AOSP path only) and scrcpy (viewing the headless emulator) optional |
+| Tools | unzip and sha256sum; adb; repo (AOSP path only) and scrcpy (viewing the headless emulator) optional |
 
 ### 1. Clone the project and set paths
 
 Replace the following values with **absolute paths** on your machine:
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/convivae/SystemUI-Gradle.git
 cd SystemUI-Gradle
 
 export PROJECT_ROOT="$PWD"
@@ -124,20 +131,39 @@ printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 
 ### 2. Get SysUISdk (pick one)
 
-**Option A (recommended): download the release zip** — from
-[Releases](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1),
-then unzip into your SDK's `platforms/` directory:
+**Option A (recommended): install the accepted r1 release**
+
+Download the zip and matching `.sha256` file from the
+[SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1),
+then verify and install them from your download directory:
 
 ```bash
-# verify against the .sha256 asset on the release page
-sha256sum SysUISdk-android-17.0.0_r1-r1.zip
-cd "$ANDROID_SDK_ROOT/platforms" && unzip <download-dir>/SysUISdk-android-17.0.0_r1-r1.zip
-cd "$PROJECT_ROOT"
+cd "$HOME/Downloads"  # adjust to your actual download directory
+sha256sum --check SysUISdk-android-17.0.0_r1-r1.zip.sha256
 
-test -f "$ANDROID_SDK_ROOT/platforms/android-SysUISdk/android.jar"
+(
+  set -eu
+  target="$ANDROID_SDK_ROOT/platforms/android-SysUISdk"
+  test ! -e "$target" || {
+    echo "ERROR: $target already exists; remove or rename it first." >&2
+    exit 1
+  }
+  mkdir -p "$ANDROID_SDK_ROOT/platforms"
+  unzip -q SysUISdk-android-17.0.0_r1-r1.zip 'android-SysUISdk/*' \
+    -d "$ANDROID_SDK_ROOT/platforms"
+  test -f "$target/android.jar"
+)
+
+cd "$PROJECT_ROOT"
 ```
 
-**Option B: generate from AOSP yourself** — requires the full AOSP build from step 3:
+The checksum command must print `SysUISdk-android-17.0.0_r1-r1.zip: OK`.
+The fixed SHA-256 is
+`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`.
+If `android-SysUISdk` already exists, remove or rename it explicitly first; do not
+merge a new release into an old platform directory.
+
+**Option B: generate it from AOSP yourself** — complete step 3 first, then run:
 
 ```bash
 uv run python tools/build_sysuisdk.py \
@@ -259,4 +285,9 @@ uv run pytest tools/tests/ -q                                # tooling regressio
 
 ## License
 
-Apache License 2.0, same as AOSP (the source body comes from AOSP SystemUI).
+AOSP-derived SystemUI sources and project-authored code are provided under the Apache
+License 2.0. The separately published SysUISdk r1 also contains stock Android SDK base
+files governed by the Android SDK License Agreement. Read
+[`release/sysuisdk/NOTICE`](release/sysuisdk/NOTICE) and the
+[Android SDK Terms](https://developer.android.com/studio/terms) before downloading or
+using it.

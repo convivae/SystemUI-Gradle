@@ -1,67 +1,88 @@
-# SysUISdk 底座切换为 AOSP 自构建 SDK 并发布 Release zip
+# SysUISdk r1 GitHub Release 发布记录
 
 **日期**：2026-09-03
-**状态**：已完成（方案 A）
-**决策（2026-09-03 修订）**：最初用户拍板方案 B（底座换 AOSP 自构建 SDK）。执行中发现 `m sdk`
-的 soong_build 分析阶段在约 33.7G 可用内存下连续两次 OOM（exit 137；sdk 变体分析峰值高于
-普通构建的 26G，GOMEMLIMIT 因 ninja `env -i` 无法传入 soong_build，C1 当年的 32G swap 已不在），
-且磁盘仅剩 20G。用户据此改拍 **方案 A**：直接打包现有 `android-SysUISdk`（官方 SDK 底座 +
-AOSP 合并，生成器 marker 完备）发布到 GitHub Releases，附带 LICENSE/NOTICE 说明成分与来源。
-方案 B（AOSP 底座）留作未来法律洁癖方向，需 32G+ swap 与磁盘空间。
+**状态**：已完成并由用户验收
+**发布方案**：方案 A——发布现有生成器产出的 SysUISdk；既有 r1 Release 与 tag 保持不变
 
-## 背景与动机
+> 2026-09-03 文档修订：原标题“SysUISdk 底座切换为 AOSP 自构建 SDK 并发布 Release zip”
+> 与最终执行的方案 A 不符，现改为发布记录。该修订只澄清文档，不改代码、资产或既有 tag。
 
-- 当前 SysUISdk = 官方 SDK 平台底座 + AOSP `out/` 产物合并（framework 类、framework-res、
-  framework.aidl 隐藏声明、R8 library bridge）。底座文件受 Android SDK License Agreement
-  约束，严格条款不允许再分发。
-- 项目立身之本是"无 stub、一切真实 AOSP 产物、可复现可审计"；发布物应过同样标准。
-- `libs/` 已全部入 git；SysUISdk 发布后，外部开发者构建本工程将完全不碰 AOSP。
-- 运行仍需要 same-tree 模拟器镜像（本任务不解决，另行决策）。
+## 背景与决策
 
-## 计划（方案 A）
+当前 SysUISdk 由只读官方 `android-37.0` SDK 平台底座与 AOSP `android-17.0.0_r1`
+构建产物合成，补齐 framework 类、framework 私有资源、隐藏 AIDL 声明和 R8 library bridge。
+`libs/` 已全部提交到 git；发布 SysUISdk 后，外部开发者只需 clone 仓库并安装 Release zip
+即可编译，无需先下载或构建 AOSP。运行和替换系统 SystemUI 仍需要 same-tree 模拟器镜像。
 
-1. **打包脚本** `tools/package_sysuisdk_release.py`：校验 generator marker → 确定性 zip
-   （排序条目、固定时间戳/属性、deflate）→ 输出 `SysUISdk-android-17.0.0_r1-r1.zip` + SHA-256。
-   zip 内含 `android-SysUISdk/` 平台目录 + 顶层 `LICENSE`（Apache 2.0）/ `NOTICE`（成分与来源）/
-   `README.txt`（安装说明）。
-2. **发布物文本** `release/sysuisdk/{LICENSE,NOTICE,README.txt}` 入库，打包脚本内嵌进 zip。
-3. **GitHub Release**：tag `sysuisdk-android-17.0.0_r1-r1`，附 zip + `.sha256` 两个资产。
-4. **README 双语** Quickstart 改为“下载 zip 解压”为主路径，AOSP 全量路径降为可选再生路径。
-5. **文档同步**：CURRENT_STATE / HANDOFF / PLAN / AGENTS.md 工具表 / 本 issue。
-6. **脚本测试**：marker 缺失拒绝、两次打包字节一致、条目集合与前缀正确。
+最初考虑的方案 B 是先构建 AOSP SDK 底座，再改造生成器。实际执行 `m sdk` 时，
+soong_build 分析阶段在约 33.7 GiB 可用内存下连续两次 OOM（exit 137）；sdk 变体的分析峰值
+高于 C1 普通全量构建的 26 GiB，且当时磁盘仅余约 20 GiB。用户随后决定采用方案 A：
+直接打包和发布已经通过项目构建验证的现有 SysUISdk，并在发布物中披露组成与适用条款。
+方案 B 作为未来可选研究保留，不是 r1 的组成或使用前提。
 
-## 历史：方案 B 尝试记录（已搁置）
+## 发布内容
 
-## 待解决
+1. `tools/package_sysuisdk_release.py` 校验 generator marker，生成排序条目、固定时间戳和属性的 zip，
+   并生成 GNU `sha256sum --check` 可直接消费的 `.sha256` sidecar。
+2. zip 包含 `android-SysUISdk/` 平台目录和顶层 `LICENSE`、`NOTICE`、`README.txt`。
+3. GitHub Release tag 为 `sysuisdk-android-17.0.0_r1-r1`，包含 zip 与 sidecar 两个资产。
+4. 双语 README 以下载 r1 为主路径，同时保留从 AOSP 构建产物自行再生的可选路径。
+5. 发布工具新增 8 个 focused tests；原 361 个 Python tests 加上本批 8 个后为 369。
 
-- zip 实际体积与 SHA-256（打包后记录）。
-- ~~Release notes 与 README 下载链接的最终 URL（发布后回填）。~~
-- 未来基线升级时的再发布纪律（每次换 AOSP tag → 重新生成 SysUISdk → 发新 rev）。
-- 方案 B 重启条件：32G+ swap、足够磁盘、`m sdk` 成功后按上文历史计划执行。
+## 最终资产
 
-## 结果（2026-09-03，方案 A 完成）
+- Release：<https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1>
+- zip：`SysUISdk-android-17.0.0_r1-r1.zip`
+- 大小：79,982,462 B
+- 条目：11,389（平台 11,386，另有 LICENSE / NOTICE / README.txt）
+- SHA-256：`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`
+- sidecar：`SysUISdk-android-17.0.0_r1-r1.zip.sha256`
+- 确定性检查：同一输入和工具链下连续两次打包字节一致
+- 用户验收：从该 Release 安装 SysUISdk 后，项目可以正常编译
 
-- **打包**：`uv run python tools/package_sysuisdk_release.py` → `dist/SysUISdk-android-17.0.0_r1-r1.zip`，
-  79,982,462 B，11,389 条目（平台 11,386 含 marker + LICENSE/NOTICE/README.txt），
-  SHA-256 `ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`；
-  两次打包字节一致（确定性验证通过）；`.sha256` sidecar 同步生成。
-- **发布**：GitHub Release `sysuisdk-android-17.0.0_r1-r1`（zip + .sha256 两资产），
-  https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1
-- **脚本与测试**：新增 `tools/package_sysuisdk_release.py`（marker 门禁、symlink 拒绝、
-  确定性 zip、sidecar）+ `tools/tests/test_package_sysuisdk_release.py`（8 tests）。
-- **发布物文本**：`release/sysuisdk/{LICENSE,NOTICE,README.txt}` 入库；NOTICE 完整披露
-  许可证栈（AOSP 部分 Apache 2.0 + 官方 SDK 底座部分仍受 Android SDK License Agreement 约束）。
-- **README 双语**：Quickstart 改为“下载 zip”为主路径（方式 A），AOSP 生成降为方式 B / 可选第 3 步。
-- **.gitignore**：新增 `dist/`。
-- 首次 `gh release create` 因 keyring 内 token 失效返回 401，用户重新 `gh auth login` 后发布成功。
+## 安装与校验文档
 
-## 方案 B 调研备忘（已搁置，供未来参考）
+README 的主路径现提供简洁、可复制的安装与校验步骤：
 
-- `m sdk` 入口存在于 build/make/core/main.mk（`sdk: $(ALL_SDK_TARGETS)`）；`is_sdk_build`
+1. 在固定 Release 页面下载 zip 与 `.sha256`；
+2. 在解压前执行 `sha256sum --check`，必须得到 `OK`；
+3. 只解压归档中的 `android-SysUISdk/*`，避免将顶层发布文档散落到 SDK 的
+   `platforms/` 根目录；
+4. 若目标目录已经存在则停止，不静默覆盖或混合旧文件；
+5. 校验 `android.jar` 存在后再运行 Gradle。
+
+仓库内 canonical Release body 见 [`release/sysuisdk/GITHUB_RELEASE.md`](../../release/sysuisdk/GITHUB_RELEASE.md)。
+当前执行环境没有 `gh` CLI、GitHub CLI auth 配置或 HTTPS credential，因此本次无法直接修改已经发布的
+GitHub Release 网页正文；r1 Release、资产和 tag 均保持不变。
+
+## Tag 与提交记录
+
+- 既有 lightweight tag `sysuisdk-android-17.0.0_r1-r1` 指向 `e5ca8dda`。
+- 发布工具、发布物文本和第一版下载型 README 随后提交于 `928353a0`。
+- 用户决定保留 r1，不撤销、不移动该 tag；以上顺序作为 r1 的历史事实记录。
+- 后续 release 应先完成实现、文档和验收提交，再创建带说明的 tag 和 GitHub Release。
+
+## 许可证与来源说明
+
+- AOSP 来源部分按 Apache License 2.0 提供，归档中附带 `LICENSE`。
+- 官方 SDK 底座文件仍受 Android SDK License Agreement 约束；归档中的 `NOTICE` 说明组成、来源和条款链接。
+- r1 沿用当前发布方案。当前生成器仍以官方 `android-37.0` 为只读底座；文档不再声称现有命令可以生成
+  “100% AOSP-sourced”底座。
+
+## 方案 B 调研备忘（未实施）
+
+- `m sdk` 入口位于 `build/make/core/main.mk`（`sdk: $(ALL_SDK_TARGETS)`）；`is_sdk_build`
   会额外纳入 samples 标签模块，分析内存峰值高于普通 `m`。
-- 两次失败日志：`/tmp/aosp-sdk-build.log`、`/tmp/aosp-sdk-build2.log`（均 exit 137 Killed）。
-- soong_build 以 `env -i` 运行，GOMEMLIMIT 等 Go runtime 环境变量无法传入；soong 无内存限制开关。
-- 生成器底座消费点已摸清：`_copy_base_platform` 复制除 android.jar / core-for-system-modules.jar /
-  framework.aidl 外的全部文件；`compose_android_jar` 以底座 android.jar 非资源条目为底、framework
-  聚合类覆盖、framework-res.apk 提供全部资源；package.xml 重写身份字段；source.properties 原样复制。
-- 生成器现有测试使用合成 fixture，底座切换对测试影响小（仅 CLI 默认值断言需改）。
+- 两次失败日志为 `/tmp/aosp-sdk-build.log`、`/tmp/aosp-sdk-build2.log`，均 exit 137 / Killed。
+- soong_build 以 `env -i` 运行，GOMEMLIMIT 等 Go runtime 环境变量无法直接传入；当时未找到
+  可用的 Soong 内存限制开关。
+- 生成器底座消费点：`_copy_base_platform` 复制除 `android.jar`、
+  `core-for-system-modules.jar`、`framework.aidl` 外的文件；`compose_android_jar` 以底座
+  `android.jar` 非资源条目为底、framework 聚合类覆盖、`framework-res.apk` 提供资源；
+  `package.xml` 重写身份字段，`source.properties` 原样复制。
+- 重新评估方案 B 的前提是增加 swap 和可用磁盘，并先取得 `m sdk` 成功证据。
+
+## 本次文档修订验证
+
+- 不修改代码或发布资产，因此 Gradle/Kotlin 编译错误数不变。
+- 仅运行 Markdown、链接、shell 语法与 git diff 检查；不重复运行用户已经完成的 Release 编译验收。

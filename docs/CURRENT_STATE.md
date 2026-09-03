@@ -15,7 +15,7 @@
 | Release APK | ✅ **Task 099 fresh Release 全门 PASS**：APK 45,030,130 B、SHA `17358f4d…`、2 DEX；静态门 0 old-owner refs、449 hidden refs、0 hidden 定义；**部署 + 冷启动 + 整机重启门 PASS**（PID 850/852 稳定、0 FATAL） |
 | Gradle 配置解析 | ✅ `./gradlew help --refresh-dependencies` BUILD SUCCESSFUL；`buildSrc` 的 dependency/plugin 两层仓库均已镜像优先，fresh sync 不再因直连 Maven Central/Plugin Portal TLS 失败 |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
-| Python 工具测试 | ✅ **361 passed**（+151 subtests，chief 复验，2026-09-03） |
+| Python 工具测试 | ✅ **369 passed**（+151 subtests；原 361 + SysUISdk release 8 tests，2026-09-03） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | ✅ emulator-5554 运行 Release `17358f4d…`（PID 852 稳定，0 FATAL）。17 emu64x durable runtime 基础设施：`super.img` SHA `50496c9b…`，scratch 582MiB、五 overlay、orange verified boot、64MiB probe 跨重启 PASS；双 variant runtime 门均在其上通过 |
 | 当前唯一工程优先级 | **C6 收口**：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007） |
@@ -70,7 +70,7 @@
 | 2026-09-02 | **C5 task096 fresh Debug build/static PASS**：唯一fresh build exit 0、278/278 tasks；APK 190,547,804 B、SHA `f3af35d9…`、ZIP/13 DEX通过；critical hidden refs `4/4`、725-rule hidden defs `0`；两个old definitions仅same-class context，另两个old descriptors为0。未声明runtime | `docs/issues/2026-09-02-c5-debug-build-static-gate.md` |
 | 2026-09-02 | **C5 task097 fresh Release build/R8/static PASS**：唯一fresh build exit 0、493/493 tasks、R8/package实际执行；APK 45,030,130 B、SHA `641c6533…`、ZIP/2 DEX通过；checker exit 0 / `RESULT=PASS`，critical old refs/defs `0/4`、hidden refs `4/4`、hidden defs `0/4`、全725-rule hidden defs `0`。cleanup首条self-match导致exit丢失的过程偏差已披露；未声明runtime | `docs/issues/2026-09-02-c5-release-build-static-gate.md` |
 | 2026-09-03 | **C5 闭环（Task 099，chief 验收并 push）**：aconfig reference rewrite 生产修复——根因为覆盖双重缺口（4 条手写 mapping + 166 caller allowlist vs 权威 725 规则；旧"健康"APK 经 A/B 实验证伪）；D8 从 BootstrapMethods 合成 lambda 使"跳过 source 类"方案不可行，Chief 裁定 instrument 一切类（reference-only visitor 保持 this_class/self-ref，hidden 定义 fail-closed）。Debug `33e07319…` 与 Release `17358f4d…` 双 APK 指令级静态门 PASS（0 违规 / 0 hidden 定义）+ 部署 + 冷启动 + **整机重启门 PASS**。commits `ed40e4b4`（seam+725 规则+buildSrc tests）、`ea9b2f52`（指令级 checker+33 tests）、`c79044b4`（docs）已 push | `docs/issues/2026-09-02-c5-dreams-flags-runtime-origin-diagnosis.md` |
-| 2026-09-03 | **SysUISdk 发布为 GitHub Release（方案 A）**：方案 B（AOSP 自构建 SDK 底座）因 `m sdk` 分析 OOM（sdk 变体峰值 >33.7G，GOMEMLIMIT 无法经 `env -i` 传入）与磁盘不足搁置；改为直接打包现有生成器产出。`tools/package_sysuisdk_release.py` 产出确定性 zip（79,982,462 B，SHA `ee5bd82d…`）+ LICENSE/NOTICE/README.txt，发布 tag `sysuisdk-android-17.0.0_r1-r1`；README 双语 Quickstart 改为下载 zip 主路径 | `docs/issues/2026-09-03-sysuisdk-aosp-base-and-release.md` |
+| 2026-09-03 | **SysUISdk 发布为 GitHub Release（方案 A）**：方案 B（AOSP 自构建 SDK 底座）因 `m sdk` 分析 OOM（sdk 变体峰值 >33.7G，GOMEMLIMIT 无法经 `env -i` 传入）与磁盘不足搁置；改为直接打包现有生成器产出。`tools/package_sysuisdk_release.py` 产出确定性 zip（79,982,462 B，SHA `ee5bd82d…`）+ LICENSE/NOTICE/README.txt，发布 tag `sysuisdk-android-17.0.0_r1-r1`；用户已用该 Release 完成正常编译验收；README 双语 Quickstart 改为下载 zip 主路径 | `docs/issues/2026-09-03-sysuisdk-aosp-base-and-release.md` |
 | 2026-09-03 | **buildSrc fresh-sync TLS 修复**：补齐独立 build 的 dependency mirrors 与 pluginManagement mirrors；原失败的 Kotlin compiler plugin 及 Kotlin DSL plugin 均从腾讯镜像解析，`./gradlew help --refresh-dependencies` 成功 | `docs/issues/2026-09-03-buildsrc-maven-central-tls-resolution.md` |
 
 ## Current build and verification matrix
@@ -80,7 +80,7 @@
 | AOSP 全量构建（17） | ✅ `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swapfile） | C1，2026-08-27（log.md） |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src + 86 res = 白名单 CONV） | task072 chief 复验（2026-08-28） |
 | Gradle 配置解析 | ✅ `./gradlew help --refresh-dependencies --console=plain --info` BUILD SUCCESSFUL in 48s；buildSrc dependency/plugin resolution 均命中腾讯镜像，0 direct Central/Plugin Portal、0 TLS failure | buildSrc mirror 修复（2026-09-03） |
-| Python 工具测试 | ✅ 361 passed（+151 subtests） | chief 复验（2026-09-03） |
+| Python 工具测试 | ✅ 369 passed（+151 subtests；361 baseline + 8 SysUISdk release tests） | 2026-09-03 |
 | 产物确定性 | ✅ 冻结指纹 `package_misc_jars.py --verify-only` 24/24 MATCH；task076 三轮 clean Release 的 ZIP 条目内容 SHA 一致（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
 | `:app:assembleDebug` | ✅ Task 099 fresh `--rerun-tasks` BUILD SUCCESSFUL in 22m03s；APK 200,506,573 B、SHA `33e07319…` | Task 099（2026-09-03） |
 | `:app:assembleRelease` / R8 | ✅ BUILD SUCCESSFUL、missing refs=0；task076 的 GeneratedMessageLite 字段 keep 修复后，三轮 clean build 的 ZIP 条目内容 SHA 均为 `2a5e372f…`（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
@@ -156,7 +156,7 @@ emulator-5554）为历史台账。
 # SysUISdk 单入口重建（live SDK 已按 AOSP-17 重建；仅需再生时运行）
 uv run python tools/build_sysuisdk.py --aosp-root /home/conv/myspace/aosp
 
-# 单元测试（Python 工具测试；当前 361 passed +151 subtests）
+# 单元测试（Python 工具测试；当前 369 passed +151 subtests）
 uv run pytest tools/tests -q
 
 # 源码对齐（17 基线；strict exit 0，MODIFIED 仅白名单）
@@ -180,7 +180,7 @@ uv run python tools/check_aconfig_jarjar_references.py --apk app/build/outputs/a
 **当前（17 基线，2026-09-03）证据**：双 variant 全门 PASS——Debug `33e07319…`（200,506,573 B）
 与 Release `17358f4d…`（45,030,130 B，2 DEX）均通过：fresh 构建、指令级静态门禁（0 违规、
 0 hidden 定义）、部署（staged-SHA + 原子 mv）、冷启动与整机重启门（PID 稳定、0 FATAL、
-StatusBar/NotificationShade/Wallpaper 在屏）。pytest 361 passed（+151 subtests）；源码对齐
+StatusBar/NotificationShade/Wallpaper 在屏）。pytest 369 passed（+151 subtests）；源码对齐
 strict exit 0；buildSrc 11/11。aconfig 生产 seam：完整 725 条 AOSP repackaging 规则
 （`gradle/aosp17-aconfig-repackaging-rules.txt`，SHA-pin、漂移 fail-closed）+ instrument-everything
 reference-only visitor + 指令级 checker（FAIL = 非 self-ref old-owner ref 或 hidden target 定义）。

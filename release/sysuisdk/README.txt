@@ -1,30 +1,50 @@
-SysUISdk quick install
-======================
+SysUISdk r1 quick install
+=========================
 
-1. Unzip this archive so that the ``android-SysUISdk`` directory lands
-   inside the ``platforms`` directory of your Android SDK, i.e.:
+Release:
+  https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1
 
-       <your-sdk>/platforms/android-SysUISdk/
+1. Download these two assets from the Release page into the same directory:
 
-   Example:
+   * SysUISdk-android-17.0.0_r1-r1.zip
+   * SysUISdk-android-17.0.0_r1-r1.zip.sha256
 
-       cd ~/Android/Sdk/platforms && unzip SysUISdk-android-17.0.0_r1-r1.zip
+2. Verify before extracting. From the download directory, run:
 
-   If your SDK root is elsewhere, point ``sdk.dir`` in the project's
-   ``local.properties`` (or the ``ANDROID_HOME`` / ``ANDROID_SDK_ROOT``
-   environment variable) at it.
+       sha256sum --check SysUISdk-android-17.0.0_r1-r1.zip.sha256
 
-2. Verify the checksum before use (see the ``.sha256`` asset published
-   next to this archive):
+   The result must be:
 
-       sha256sum SysUISdk-android-17.0.0_r1-r1.zip
+       SysUISdk-android-17.0.0_r1-r1.zip: OK
 
-3. Build the project:
+   Published SHA-256:
 
+       ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd
+
+3. Install only the platform directory. Set ANDROID_SDK_ROOT to the SDK used
+   by Gradle, and remove or rename any existing android-SysUISdk first.
+
+       (
+         set -eu
+         target="$ANDROID_SDK_ROOT/platforms/android-SysUISdk"
+         test ! -e "$target" || {
+           echo "ERROR: $target already exists; remove or rename it first." >&2
+           exit 1
+         }
+         mkdir -p "$ANDROID_SDK_ROOT/platforms"
+         unzip -q SysUISdk-android-17.0.0_r1-r1.zip 'android-SysUISdk/*' -d "$ANDROID_SDK_ROOT/platforms"
+         test -f "$target/android.jar"
+       )
+
+4. Point local.properties (or ANDROID_HOME / ANDROID_SDK_ROOT) at this SDK,
+   then build:
+
+       printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
        ./gradlew :app:assembleDebug
        ./gradlew :app:assembleRelease
 
-The project references this platform via ``compileSdkPreview = "SysUISdk"``;
-no further configuration is needed once the directory is in place.
+The project references this platform via compileSdkPreview = "SysUISdk". The
+r1 release has been acceptance-tested by the project owner and builds the
+project successfully without an AOSP checkout.
 
 See NOTICE for provenance and licensing details of the archive contents.
