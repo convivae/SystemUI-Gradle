@@ -1,0 +1,57 @@
+SysUISdk — composed Android SDK platform for the SystemUI-Gradle project
+=========================================================================
+
+This archive contains the ``android-SysUISdk`` compile platform used by the
+SystemUI-Gradle project (https://github.com/convivae/SystemUI-Gradle).
+
+WHAT THIS IS
+------------
+A drop-in Android SDK *platform* directory that lets a standard Gradle/AGP
+build compile AOSP SystemUI sources which reference ``@hide`` APIs,
+aconfig-generated flags classes, and framework-private resources that the
+stock Android SDK platform does not expose.
+
+It is a compile-time platform only. Nothing from it is packaged into the
+built APK.
+
+PROVENANCE AND LICENSE STACK
+----------------------------
+This platform is machine-composed by ``tools/build_sysuisdk.py`` (Apache
+License 2.0, part of the SystemUI-Gradle project) from two sources:
+
+1. AOSP-derived components — Apache License 2.0 (see LICENSE):
+
+   * Framework class bytecode merged into ``android.jar`` (built from the
+     AOSP ``framework`` module, release tag ``android-17.0.0_r1``).
+   * The complete framework resource set in ``android.jar``
+     (``resources.arsc`` + ``res/**``), byte-exact from the AOSP-built
+     ``framework-res.apk``.
+   * Hidden AIDL declarations appended to ``framework.aidl``, derived from
+     AOSP primary sources.
+   * Bridge class entries in ``android.jar`` and
+     ``core-for-system-modules.jar``, byte-exact from AOSP-built
+     ``core-libart``, ``aconfig-annotations`` and ``keepanno-annotations``
+     jars.
+
+2. Stock Android SDK Platform components (base platform ``android-37.0``,
+   published by Google):
+
+   * Files copied verbatim from the stock platform package, including but
+     not limited to ``data/``, ``skins/``, ``templates/``, ``optional/``,
+     ``android-stubs-src.jar``, ``uiautomator.jar``, ``build.prop``,
+     ``sdk.properties``, and the stub-only entries of ``android.jar`` /
+     ``core-for-system-modules.jar`` that were not overlaid by AOSP bytes.
+
+   These components remain governed by the Android SDK License Agreement
+   (https://developer.android.com/studio/terms). By using them you agree to
+   those terms. They are redistributed here unmodified, solely as the base
+   layer of this composed platform, to enable building AOSP SystemUI outside
+   the AOSP tree.
+
+The exact per-file inventory and SHA-256 of both the base platform and the
+AOSP inputs used for this build are recorded in
+``android-SysUISdk/.sysuisdk-generated.json`` inside this archive.
+
+If you prefer a base that is 100 % AOSP-sourced (Apache 2.0 throughout),
+you can regenerate the platform yourself from an AOSP checkout; see the
+project README ("regenerating from scratch").

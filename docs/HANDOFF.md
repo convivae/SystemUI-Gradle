@@ -45,7 +45,7 @@
 | C5 task097 | fresh Release build/R8/static ✅：45,030,130 B / SHA `641c6533…` / 2 DEX；checker exit 0 / `RESULT=PASS` | `docs/issues/2026-09-02-c5-release-build-static-gate.md` |
 | C5 task098 | fresh Debug runtime 门 ❌ `DEBUG_RUNTIME_REBOOT_FAIL`（622 次 `dreams.Flags` NCDFE）→ 触发 Task 099 | `docs/issues/2026-09-02-c5-debug-runtime-reboot-gate.md` |
 | C5 task099 | **aconfig 生产修复 + C5 闭环 ✅**：725 规则 + instrument-everything seam + 指令级门禁；Debug `33e07319…` / Release `17358f4d…` 双 APK 静态 + 部署 + 冷启动 + 整机重启门全 PASS；commits `ed40e4b4`/`ea9b2f52`/`c79044b4` 已 push | `docs/issues/2026-09-02-c5-dreams-flags-runtime-origin-diagnosis.md` |
-| C6 | manifest 快照 + release tag + 版本声明（README 双语已于 2026-09-03 重写为对外文档） | 进行中 |
+| C6 | manifest 快照 + release tag + 版本声明（README 双语已重写为对外文档；SysUISdk 已发布 GitHub Release `sysuisdk-android-17.0.0_r1-r1`，Quickstart 主路径改为下载 zip） | 进行中 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
 

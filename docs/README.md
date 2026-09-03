@@ -94,6 +94,7 @@
 | [`../tools/package_monet_jar.py`](../tools/package_monet_jar.py) / [`../tools/package_viewcapture_motiontool_jars.py`](../tools/package_viewcapture_motiontool_jars.py) | 确定性 clean JAR（monet / view-capture / motion-tool） |
 | [`../tools/check_source_alignment.py`](../tools/check_source_alignment.py) | AOSP src/AIDL/res 对齐校验（规则 C） |
 | [`../tools/check_aconfig_jarjar_references.py`](../tools/check_aconfig_jarjar_references.py) | APK 指令级引用完整性门禁：按 725 条 AOSP repackaging 规则校验 DEX（非 self-ref old-owner ref 或 hidden target 定义即 FAIL） |
+| [`../tools/package_sysuisdk_release.py`](../tools/package_sysuisdk_release.py) | 把 `android-SysUISdk` 打包为确定性发布 zip（含 LICENSE/NOTICE/README.txt 与 .sha256 sidecar），供 GitHub Releases 分发 |
 | [`../tools/install_sdk.py`](../tools/install_sdk.py) | 校验 + 补 SysUISdk framework.aidl |
 | [`../tools/patch_androidprv_merged_resources.py`](../tools/patch_androidprv_merged_resources.py) | AGP `androidprv` namespace 丢失修复 |
 | [`../tools/markup_product_variants.py`](../tools/markup_product_variants.py) | res-product `product=` 变体 CONV 标记 |

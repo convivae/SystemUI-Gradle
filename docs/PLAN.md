@@ -17,7 +17,7 @@
 - [x] ~~C4b：编译闭环（task073）~~ ✅ 2026-08-31（17-module 拓扑，`:app:assembleDebug` BUILD SUCCESSFUL；AOSP-17 SysUISdk 重建；对齐、pytest、冻结指纹全绿）
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
 - [x] ~~**C5：17 镜像双 runtime 门**~~ ✅ 2026-09-03（Task 099 闭环）：aconfig reference rewrite 生产修复落地——完整 725 条 AOSP repackaging 规则 + instrument-everything reference-only seam + 指令级静态门禁。fresh Debug `33e07319…`（200,506,573 B）与 fresh Release `17358f4d…`（45,030,130 B）双 APK：构建 ✅、静态门 0 违规 ✅、部署 + 冷启动 ✅、**整机重启门 ✅**（PID 稳定、0 FATAL、UI 三件套在屏）。commits `ed40e4b4`/`ea9b2f52`/`c79044b4` 已 push。Task 079 broad replay 保持暂停。
-- [ ] **C6**：manifest 快照 + release tag + version 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）。README 双语已于 2026-09-03 重写为对外文档，HANDOFF/CURRENT_STATE 已同步。
+- [ ] **C6**：manifest 快照 + release tag + version 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）。README 双语已于 2026-09-03 重写为对外文档，HANDOFF/CURRENT_STATE 已同步；SysUISdk 已发布 GitHub Release（`sysuisdk-android-17.0.0_r1-r1`，zip 79,982,462 B / SHA `ee5bd82d…`，`tools/package_sysuisdk_release.py` 确定性产出），Quickstart 主路径已改为下载 zip。
 
 ### 2. 尾账（Release 阶段处理）
 

@@ -69,23 +69,24 @@ SystemUI 难以脱离 AOSP 构建的根本原因是：它大量使用标准 Andr
 
 ## 快速开始
 
-> 仓库内的 jar / AAR 依赖已经提交，但自定义编译平台 `android-SysUISdk` 不在仓库中。
-> **第一次运行 Gradle 前必须先生成 SysUISdk**；部署用模拟器镜像也需要同一棵 AOSP 17
-> 源码树的构建产物。如果看到
-> `Failed to find Platform SDK with path: platforms;android-SysUISdk`，说明下面第 3 步尚未完成，
-> 或生成器与 Gradle 使用的不是同一个 Android SDK 目录。
+> 仓库内的 jar / AAR 依赖已经提交，自定义编译平台 `android-SysUISdk` 以 zip 形式发布在
+> [GitHub Releases](https://github.com/convivae/SystemUI-Gradle/releases)——
+> **clone + 下载一个 zip 即可构建，无需下载 AOSP**。仅当需要自行再生 SysUISdk / libs 产物、
+> 或构建部署用模拟器镜像时，才需要 AOSP 17 源码树（见第 3 步的可选分支）。如果看到
+> `Failed to find Platform SDK with path: platforms;android-SysUISdk`，说明第 2 步尚未完成，
+> 或 SysUISdk 解压位置与 Gradle 使用的不是同一个 Android SDK 目录。
 
 ### 环境要求
 
 | 项 | 要求 |
 |---|---|
-| 操作系统 | Ubuntu Linux（x86_64），用户在 `kvm` 组 |
-| 磁盘 | 完整复现（含 AOSP）≥ 400 GiB；仅构建本工程 ≈ 20 GiB |
-| 内存 | ≥ 32 GiB 推荐（AOSP 全量构建用；仅构建本工程 16 GiB 可行） |
+| 操作系统 | Ubuntu Linux（x86_64）；跑模拟器时用户需在 `kvm` 组 |
+| 磁盘 | 仅构建本工程 ≈ 20 GiB；完整复现（含 AOSP）≥ 400 GiB |
+| 内存 | 仅构建本工程 16 GiB 可行；AOSP 全量构建 ≥ 32 GiB 推荐 |
 | JDK | 17+（实测 21） |
-| Android SDK | `platforms/android-37.0` 已安装，作为 SysUISdk 的只读基础平台 |
+| Android SDK | 常规即可；仅当自行再生 SysUISdk 时才需要官方 `platforms/android-37.0` 作为只读基础平台 |
 | Python | 3.x + [uv](https://docs.astral.sh/uv/)（脚本一律 `uv run`） |
-| 工具 | repo、adb；可选 scrcpy（查看无头模拟器画面） |
+| 工具 | adb；可选 repo（仅 AOSP 路径）、scrcpy（查看无头模拟器画面） |
 
 ### 1. 克隆项目并设置路径
 
@@ -96,19 +97,43 @@ git clone <this-repo>
 cd SystemUI-Gradle
 
 export PROJECT_ROOT="$PWD"
-export AOSP_ROOT=/absolute/path/to/aosp
 export ANDROID_SDK_ROOT=/absolute/path/to/Android/Sdk
 export ANDROID_HOME="$ANDROID_SDK_ROOT"
 printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
-
-test -f "$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar"
 ```
 
-### 2. 一次性准备 AOSP 17 构建产物
+### 2. 获取 SysUISdk（二选一）
 
-如果已经完整构建过 `android-17.0.0_r1`，直接跳到第 3 步。
+**方式 A（推荐）：下载发布 zip**——从
+[Releases](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
+下载并解压到 SDK 的 `platforms/` 目录：
 
 ```bash
+# 校验（与 Release 页面的 .sha256 资产比对）
+sha256sum SysUISdk-android-17.0.0_r1-r1.zip
+cd "$ANDROID_SDK_ROOT/platforms" && unzip <下载目录>/SysUISdk-android-17.0.0_r1-r1.zip
+cd "$PROJECT_ROOT"
+
+test -f "$ANDROID_SDK_ROOT/platforms/android-SysUISdk/android.jar"
+```
+
+**方式 B：从 AOSP 自行生成**——需要先完成第 3 步的 AOSP 全量构建，然后：
+
+```bash
+uv run python tools/build_sysuisdk.py \
+  --aosp-root "$AOSP_ROOT" \
+  --sdk-root "$ANDROID_SDK_ROOT"
+
+# 从新的 AOSP 产物重新生成已有 SysUISdk 时加 --replace
+```
+
+### 3.（可选）一次性准备 AOSP 17 构建产物
+
+仅以下情况需要：用方式 B 自行生成 SysUISdk、再生 `libs/` 产物、或构建部署用模拟器镜像。
+如果走方式 A 且不需要跑模拟器，直接跳到第 4 步。
+
+```bash
+export AOSP_ROOT=/absolute/path/to/aosp
 mkdir -p "$AOSP_ROOT"
 cd "$AOSP_ROOT"
 repo init -u https://android.googlesource.com/platform/manifest -b android-17.0.0_r1
@@ -117,25 +142,6 @@ repo sync -d -c -j4
 lunch sdk_phone64_x86_64-trunk_staging-userdebug
 m -j"$(nproc)"
 cd "$PROJECT_ROOT"
-```
-
-### 3. 一次性生成 SysUISdk
-
-```bash
-uv run python tools/build_sysuisdk.py \
-  --aosp-root "$AOSP_ROOT" \
-  --sdk-root "$ANDROID_SDK_ROOT"
-
-test -f "$ANDROID_SDK_ROOT/platforms/android-SysUISdk/android.jar"
-```
-
-如果需要从新的 AOSP 产物重新生成已有的 SysUISdk：
-
-```bash
-uv run python tools/build_sysuisdk.py \
-  --aosp-root "$AOSP_ROOT" \
-  --sdk-root "$ANDROID_SDK_ROOT" \
-  --replace
 ```
 
 ### 4. 构建 APK
@@ -159,7 +165,7 @@ uv run python tools/check_aconfig_jarjar_references.py \
 
 ### 5. 启动模拟器并部署
 
-用第 2 步产出的 `sdk_phone64_x86_64` 镜像启动模拟器
+用第 3 步产出的 `sdk_phone64_x86_64` 镜像启动模拟器
 （`ANDROID_PRODUCT_OUT="$AOSP_ROOT/out/target/product/emu64x" emulator ...`，完整参数见
 [docs/issues/2026-08-26-emulator-relaunch-runbook.md](docs/issues/2026-08-26-emulator-relaunch-runbook.md)），
 然后替换系统 SystemUI：

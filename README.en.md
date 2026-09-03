@@ -86,24 +86,27 @@ the standard Android SDK. This project solves that with:
 
 ## Quick start
 
-> All jar / AAR dependencies are committed, but the custom `android-SysUISdk` compile
-> platform is not. **Generate SysUISdk before the first Gradle invocation.** The
-> deployment emulator images also require build outputs from the same AOSP 17 tree.
-> If Gradle reports
-> `Failed to find Platform SDK with path: platforms;android-SysUISdk`, step 3 below has
-> not been completed or the generator and Gradle are using different Android SDK roots.
+> All jar / AAR dependencies are committed, and the custom `android-SysUISdk` compile
+> platform is published as a zip on
+> [GitHub Releases](https://github.com/convivae/SystemUI-Gradle/releases) —
+> **clone + one download is all you need to build; no AOSP checkout required.** You only
+> need the AOSP 17 tree to regenerate SysUISdk / the `libs/` artifacts yourself or to
+> build the deployment emulator images (see the optional branch in step 3). If Gradle
+> reports `Failed to find Platform SDK with path: platforms;android-SysUISdk`, step 2
+> below has not been completed, or the platform was unzipped into a different Android
+> SDK root than the one Gradle uses.
 
 ### Requirements
 
 | Item | Requirement |
 |---|---|
-| OS | Ubuntu Linux (x86_64), your user in the `kvm` group |
-| Disk | ≥ 400 GiB for full reproduction (incl. AOSP); ≈ 20 GiB to build this project alone |
-| RAM | ≥ 32 GiB recommended (for the full AOSP build; 16 GiB works for this project alone) |
+| OS | Ubuntu Linux (x86_64); your user in the `kvm` group when running the emulator |
+| Disk | ≈ 20 GiB to build this project alone; ≥ 400 GiB for full reproduction (incl. AOSP) |
+| RAM | 16 GiB works for this project alone; ≥ 32 GiB recommended for the full AOSP build |
 | JDK | 17+ (measured on 21) |
-| Android SDK | `platforms/android-37.0` installed as the read-only base for SysUISdk |
+| Android SDK | anything recent; the official `platforms/android-37.0` is only needed as the read-only base when regenerating SysUISdk yourself |
 | Python | 3.x + [uv](https://docs.astral.sh/uv/) (scripts always run via `uv run`) |
-| Tools | repo, adb; scrcpy optional (to view the headless emulator) |
+| Tools | adb; repo (AOSP path only) and scrcpy (viewing the headless emulator) optional |
 
 ### 1. Clone the project and set paths
 
@@ -114,19 +117,44 @@ git clone <this-repo>
 cd SystemUI-Gradle
 
 export PROJECT_ROOT="$PWD"
-export AOSP_ROOT=/absolute/path/to/aosp
 export ANDROID_SDK_ROOT=/absolute/path/to/Android/Sdk
 export ANDROID_HOME="$ANDROID_SDK_ROOT"
 printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
-
-test -f "$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar"
 ```
 
-### 2. Prepare the AOSP 17 build outputs once
+### 2. Get SysUISdk (pick one)
 
-Skip to step 3 if you already have a complete `android-17.0.0_r1` build.
+**Option A (recommended): download the release zip** — from
+[Releases](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1),
+then unzip into your SDK's `platforms/` directory:
 
 ```bash
+# verify against the .sha256 asset on the release page
+sha256sum SysUISdk-android-17.0.0_r1-r1.zip
+cd "$ANDROID_SDK_ROOT/platforms" && unzip <download-dir>/SysUISdk-android-17.0.0_r1-r1.zip
+cd "$PROJECT_ROOT"
+
+test -f "$ANDROID_SDK_ROOT/platforms/android-SysUISdk/android.jar"
+```
+
+**Option B: generate from AOSP yourself** — requires the full AOSP build from step 3:
+
+```bash
+uv run python tools/build_sysuisdk.py \
+  --aosp-root "$AOSP_ROOT" \
+  --sdk-root "$ANDROID_SDK_ROOT"
+
+# add --replace when regenerating an existing SysUISdk from newer AOSP outputs
+```
+
+### 3. (Optional) Prepare the AOSP 17 build outputs once
+
+Only needed to: generate SysUISdk via option B, regenerate the `libs/` artifacts, or
+build the deployment emulator images. If you took option A and don't need the
+emulator, skip to step 4.
+
+```bash
+export AOSP_ROOT=/absolute/path/to/aosp
 mkdir -p "$AOSP_ROOT"
 cd "$AOSP_ROOT"
 repo init -u https://android.googlesource.com/platform/manifest -b android-17.0.0_r1
@@ -135,25 +163,6 @@ repo sync -d -c -j4
 lunch sdk_phone64_x86_64-trunk_staging-userdebug
 m -j"$(nproc)"
 cd "$PROJECT_ROOT"
-```
-
-### 3. Generate SysUISdk once
-
-```bash
-uv run python tools/build_sysuisdk.py \
-  --aosp-root "$AOSP_ROOT" \
-  --sdk-root "$ANDROID_SDK_ROOT"
-
-test -f "$ANDROID_SDK_ROOT/platforms/android-SysUISdk/android.jar"
-```
-
-To regenerate an existing SysUISdk from newer AOSP outputs:
-
-```bash
-uv run python tools/build_sysuisdk.py \
-  --aosp-root "$AOSP_ROOT" \
-  --sdk-root "$ANDROID_SDK_ROOT" \
-  --replace
 ```
 
 ### 4. Build the APK
@@ -177,7 +186,7 @@ uv run python tools/check_aconfig_jarjar_references.py \
 
 ### 5. Launch the emulator and deploy
 
-Boot an emulator from the `sdk_phone64_x86_64` images produced in step 2
+Boot an emulator from the `sdk_phone64_x86_64` images produced in step 3
 (`ANDROID_PRODUCT_OUT="$AOSP_ROOT/out/target/product/emu64x" emulator ...`; full flags in
 [docs/issues/2026-08-26-emulator-relaunch-runbook.md](docs/issues/2026-08-26-emulator-relaunch-runbook.md)),
 then replace the system SystemUI:

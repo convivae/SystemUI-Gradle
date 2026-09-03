@@ -428,6 +428,7 @@ uv run python tools/check_aconfig_jarjar_references.py --apk app/build/outputs/a
 | `tools/package_compilelib_jars.py` | 打包 compilelib debug/release JAR（确定性） |
 | `tools/package_aconfig_jars.py` | 从 AOSP `javac` 产物打包完整 aconfig runtime JAR |
 | `tools/build_sysuisdk.py` | 单入口 SysUISdk 生成器：从只读官方 SDK platform + 已构建 AOSP `out/` 产物事务性生成 `android-SysUISdk`（含 39-entry library bridge、私有资源、framework.aidl 隐藏接口声明） |
+| `tools/package_sysuisdk_release.py` | 把生成器产出的 `android-SysUISdk` 打包为确定性发布 zip（marker 门禁 + LICENSE/NOTICE/README.txt + .sha256 sidecar），供 GitHub Releases 分发 |
 | `tools/check_aconfig_jarjar_references.py` | APK 指令级引用完整性门禁：按 725 条 AOSP repackaging 规则遍历 DEX，非 self-reference 的 old-owner ref 或 hidden target 定义即 FAIL |
 | `tools/clean_prebuilts.py` | 清理 prebuilt jar 中的冲突类（与 maven 重复） |
 
