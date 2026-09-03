@@ -12,6 +12,10 @@ gradlePlugin {
 }
 
 repositories {
+    // buildSrc is an independent build and does not inherit the root project's repository mirrors.
+    maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+    maven { url = uri("https://maven.aliyun.com/repository/google") }
+    maven { url = uri("https://maven.aliyun.com/repository/public") }
     google()
     mavenCentral()
 }

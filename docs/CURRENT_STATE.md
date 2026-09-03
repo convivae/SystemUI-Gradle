@@ -13,7 +13,7 @@
 | AOSP 基线 | **`android-17.0.0_r1`**（manifest `5bc9a7ce`，frameworks/base `94b4c163b`，1084 projects）；C1 全量构建 `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swap） |
 | Debug APK | ✅ **Task 099 fresh Debug 全门 PASS**：`assembleDebug --rerun-tasks` exit 0（`BUILD SUCCESSFUL in 22m 03s`）；APK 200,506,573 B、SHA `33e07319…`；指令级静态门 0 违规（3,571 条 old-owner refs 全为 52 个 dead-shell 自引用，0 hidden 定义）；**部署 + 冷启动 + 整机重启门 PASS**（PID 848 稳定 90s、0 FATAL、UI 三件套在屏） |
 | Release APK | ✅ **Task 099 fresh Release 全门 PASS**：APK 45,030,130 B、SHA `17358f4d…`、2 DEX；静态门 0 old-owner refs、449 hidden refs、0 hidden 定义；**部署 + 冷启动 + 整机重启门 PASS**（PID 850/852 稳定、0 FATAL） |
-| Gradle 配置解析 | ✅ `./gradlew help` + `projects` BUILD SUCCESSFUL（C4a 验收；16 模块全部识别，C4b 起追加 `:SystemUI-utils-kairos`） |
+| Gradle 配置解析 | ✅ `./gradlew help --refresh-dependencies` BUILD SUCCESSFUL；`buildSrc` 的 dependency/plugin 两层仓库均已镜像优先，fresh sync 不再因直连 Maven Central/Plugin Portal TLS 失败 |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
 | Python 工具测试 | ✅ **361 passed**（+151 subtests，chief 复验，2026-09-03） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
@@ -70,6 +70,7 @@
 | 2026-09-02 | **C5 task096 fresh Debug build/static PASS**：唯一fresh build exit 0、278/278 tasks；APK 190,547,804 B、SHA `f3af35d9…`、ZIP/13 DEX通过；critical hidden refs `4/4`、725-rule hidden defs `0`；两个old definitions仅same-class context，另两个old descriptors为0。未声明runtime | `docs/issues/2026-09-02-c5-debug-build-static-gate.md` |
 | 2026-09-02 | **C5 task097 fresh Release build/R8/static PASS**：唯一fresh build exit 0、493/493 tasks、R8/package实际执行；APK 45,030,130 B、SHA `641c6533…`、ZIP/2 DEX通过；checker exit 0 / `RESULT=PASS`，critical old refs/defs `0/4`、hidden refs `4/4`、hidden defs `0/4`、全725-rule hidden defs `0`。cleanup首条self-match导致exit丢失的过程偏差已披露；未声明runtime | `docs/issues/2026-09-02-c5-release-build-static-gate.md` |
 | 2026-09-03 | **C5 闭环（Task 099，chief 验收并 push）**：aconfig reference rewrite 生产修复——根因为覆盖双重缺口（4 条手写 mapping + 166 caller allowlist vs 权威 725 规则；旧"健康"APK 经 A/B 实验证伪）；D8 从 BootstrapMethods 合成 lambda 使"跳过 source 类"方案不可行，Chief 裁定 instrument 一切类（reference-only visitor 保持 this_class/self-ref，hidden 定义 fail-closed）。Debug `33e07319…` 与 Release `17358f4d…` 双 APK 指令级静态门 PASS（0 违规 / 0 hidden 定义）+ 部署 + 冷启动 + **整机重启门 PASS**。commits `ed40e4b4`（seam+725 规则+buildSrc tests）、`ea9b2f52`（指令级 checker+33 tests）、`c79044b4`（docs）已 push | `docs/issues/2026-09-02-c5-dreams-flags-runtime-origin-diagnosis.md` |
+| 2026-09-03 | **buildSrc fresh-sync TLS 修复**：补齐独立 build 的 dependency mirrors 与 pluginManagement mirrors；原失败的 Kotlin compiler plugin 及 Kotlin DSL plugin 均从腾讯镜像解析，`./gradlew help --refresh-dependencies` 成功 | `docs/issues/2026-09-03-buildsrc-maven-central-tls-resolution.md` |
 
 ## Current build and verification matrix
 
@@ -77,7 +78,7 @@
 |--------|------|---------|
 | AOSP 全量构建（17） | ✅ `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swapfile） | C1，2026-08-27（log.md） |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src + 86 res = 白名单 CONV） | task072 chief 复验（2026-08-28） |
-| Gradle 配置解析 | ✅ `./gradlew help` + `projects` BUILD SUCCESSFUL（16 模块识别） | task072（2026-08-28，先 `pkill -f GradleDaemon`） |
+| Gradle 配置解析 | ✅ `./gradlew help --refresh-dependencies --console=plain --info` BUILD SUCCESSFUL in 48s；buildSrc dependency/plugin resolution 均命中腾讯镜像，0 direct Central/Plugin Portal、0 TLS failure | buildSrc mirror 修复（2026-09-03） |
 | Python 工具测试 | ✅ 361 passed（+151 subtests） | chief 复验（2026-09-03） |
 | 产物确定性 | ✅ 冻结指纹 `package_misc_jars.py --verify-only` 24/24 MATCH；task076 三轮 clean Release 的 ZIP 条目内容 SHA 一致（整 APK 仅 SDKP signing block 随机） | task074 + task076（2026-08-31/09-01） |
 | `:app:assembleDebug` | ✅ Task 099 fresh `--rerun-tasks` BUILD SUCCESSFUL in 22m03s；APK 200,506,573 B、SHA `33e07319…` | Task 099（2026-09-03） |

@@ -86,9 +86,12 @@ the standard Android SDK. This project solves that with:
 
 ## Quick start
 
-> Note: all jar / AAR dependencies are committed, so **a fresh clone builds as-is**.
-> The only prerequisites not in the repo are the SysUISdk compile platform and the
-> deployment target (emulator images); each is generated once from an AOSP build.
+> All jar / AAR dependencies are committed, but the custom `android-SysUISdk` compile
+> platform is not. **Generate SysUISdk before the first Gradle invocation.** The
+> deployment emulator images also require build outputs from the same AOSP 17 tree.
+> If Gradle reports
+> `Failed to find Platform SDK with path: platforms;android-SysUISdk`, step 3 below has
+> not been completed or the generator and Gradle are using different Android SDK roots.
 
 ### Requirements
 
@@ -98,41 +101,84 @@ the standard Android SDK. This project solves that with:
 | Disk | ≥ 400 GiB for full reproduction (incl. AOSP); ≈ 20 GiB to build this project alone |
 | RAM | ≥ 32 GiB recommended (for the full AOSP build; 16 GiB works for this project alone) |
 | JDK | 17+ (measured on 21) |
+| Android SDK | `platforms/android-37.0` installed as the read-only base for SysUISdk |
 | Python | 3.x + [uv](https://docs.astral.sh/uv/) (scripts always run via `uv run`) |
-| Tools | adb; scrcpy optional (to view the headless emulator) |
+| Tools | repo, adb; scrcpy optional (to view the headless emulator) |
 
-### Steps
+### 1. Clone the project and set paths
 
-**1. (one-off) Fetch and build AOSP `android-17.0.0_r1`** — its outputs generate
-SysUISdk and the emulator images:
+Replace the following values with **absolute paths** on your machine:
 
 ```bash
+git clone <this-repo>
+cd SystemUI-Gradle
+
+export PROJECT_ROOT="$PWD"
+export AOSP_ROOT=/absolute/path/to/aosp
+export ANDROID_SDK_ROOT=/absolute/path/to/Android/Sdk
+export ANDROID_HOME="$ANDROID_SDK_ROOT"
+printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
+
+test -f "$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar"
+```
+
+### 2. Prepare the AOSP 17 build outputs once
+
+Skip to step 3 if you already have a complete `android-17.0.0_r1` build.
+
+```bash
+mkdir -p "$AOSP_ROOT"
+cd "$AOSP_ROOT"
 repo init -u https://android.googlesource.com/platform/manifest -b android-17.0.0_r1
 repo sync -d -c -j4
-cd <aosp-root> && . build/envsetup.sh
+. build/envsetup.sh
 lunch sdk_phone64_x86_64-trunk_staging-userdebug
-m -j$(nproc)
+m -j"$(nproc)"
+cd "$PROJECT_ROOT"
 ```
 
-**2. (one-off) Generate SysUISdk**:
+### 3. Generate SysUISdk once
 
 ```bash
-uv run python tools/build_sysuisdk.py --aosp-root <aosp-root>
-# outputs <sdk-root>/platforms/android-SysUISdk
+uv run python tools/build_sysuisdk.py \
+  --aosp-root "$AOSP_ROOT" \
+  --sdk-root "$ANDROID_SDK_ROOT"
+
+test -f "$ANDROID_SDK_ROOT/platforms/android-SysUISdk/android.jar"
 ```
 
-**3. Build this project**:
+To regenerate an existing SysUISdk from newer AOSP outputs:
 
 ```bash
-git clone <this-repo> && cd SystemUI-Gradle
-./gradlew :app:assembleDebug       # Debug APK → app/build/outputs/apk/debug/
-./gradlew :app:assembleRelease     # R8-optimized Release APK → app/build/outputs/apk/release/
-uv run pytest tools/tests/ -q      # tooling tests
+uv run python tools/build_sysuisdk.py \
+  --aosp-root "$AOSP_ROOT" \
+  --sdk-root "$ANDROID_SDK_ROOT" \
+  --replace
 ```
 
-**4. Launch the emulator and deploy**: boot an emulator from the `sdk_phone64_x86_64`
-images produced in step 1
-(`ANDROID_PRODUCT_OUT=<aosp-root>/out/target/product/emu64x emulator ...`; full flags in
+### 4. Build the APK
+
+```bash
+# Debug APK → app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:assembleDebug
+
+# Clean app, then build the R8-optimized Release APK
+# Output → app/build/outputs/apk/release/app-release.apk
+./gradlew :app:clean :app:assembleRelease
+```
+
+Optional tooling verification:
+
+```bash
+uv run pytest tools/tests/ -q
+uv run python tools/check_aconfig_jarjar_references.py \
+  --apk app/build/outputs/apk/release/app-release.apk
+```
+
+### 5. Launch the emulator and deploy
+
+Boot an emulator from the `sdk_phone64_x86_64` images produced in step 2
+(`ANDROID_PRODUCT_OUT="$AOSP_ROOT/out/target/product/emu64x" emulator ...`; full flags in
 [docs/issues/2026-08-26-emulator-relaunch-runbook.md](docs/issues/2026-08-26-emulator-relaunch-runbook.md)),
 then replace the system SystemUI:
 
