@@ -3,9 +3,15 @@
      16 时代的 1157 行完整 manifest 的角色已由 :SystemUI-application 的 1338 行
      AOSP-17 原版 manifest（library manifest，源 src/main/AndroidManifest.xml）接管：
      全部 uses-permission / permission / application / service / activity 等条目经
-     AGP manifest merger 从 library 并入最终 APK manifest；sharedUserId / coreApp 根属性
-     同样由 library manifest 合并带入（与 16 时代 core manifest 的合并行为一致）。
-     本壳仅保留根 manifest 标签；applicationId = com.android.systemui 由 DSL 提供
+     AGP manifest merger 从 library 并入最终 APK manifest。
+     Task 102 修正：AGP manifest merger 不会把 library manifest 的 android:sharedUserId
+     合并进 app 最终 manifest（Task 101 实测：缺失该属性导致 PMS 在替换部署后分配
+     新 appId 10160，而非共享用户 android.uid.systemui/10123，运行时授权全部失联），
+     因此 sharedUserId 必须在 app 主 manifest 显式声明。coreApp 为 soong/AOSP 构建系统
+     属性，不经 APK manifest 传递，AGP 侧无需也无法保留。
+     applicationId = com.android.systemui 由 DSL 提供
      （Task 050 结论维持：namespace com.android.systemui.app 与 applicationId 分离）。
-     形式记录：docs/issues/2026-08-28-c4-gradle-wiring.md §3.2 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+     形式记录：docs/issues/2026-08-28-c4-gradle-wiring.md §3.2；
+     根因：docs/architecture/2026-09-03-systemui-shareduserid-appid-regression.md -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sharedUserId="android.uid.systemui" />

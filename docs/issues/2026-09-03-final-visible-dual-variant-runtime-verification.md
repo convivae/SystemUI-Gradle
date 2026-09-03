@@ -10,7 +10,9 @@
 
 1. 串行运行 `:app:assembleDebug` 和 `:app:assembleRelease`，每个构建后记录 APK 大小、SHA-256，并运行 `tools/check_aconfig_jarjar_references.py`；两次构建之间停止 Gradle/Kotlin daemon。
 2. 启动 `sdk_phone64_x86_64` same-tree 模拟器。主机 `DISPLAY=:0` 可用，优先启动 emulator 原生窗口；若窗口不可见，则运行 `scrcpy -s emulator-5554` 供用户观看。
-3. fresh userdata 执行 root / disable-verity / reboot / remount。按 staged copy → device SHA → atomic mv → 权限/SELinux → 清 oat/dalvik cache 的规程部署 Debug，重新授予 `BLUETOOTH_CONNECT` 与 `READ_CONTACTS`，整机重启。
+3. fresh userdata 执行 root / disable-verity / reboot / remount。按 staged copy → device SHA → atomic mv → 权限/SELinux → 清 oat/dalvik cache 的规程部署 Debug，整机重启。
+   **（2026-09-04 修订，Task 102/103）**：本步骤不再包含任何手动 `pm grant`。sharedUserId 修复（`app/src/main/AndroidManifest.xml` 显式声明 `android:sharedUserId="android.uid.systemui"`，Task 101 根因）后，fresh userdata 上 `DefaultPermissionGrantPolicy` 首靴即自动授予全部运行时权限（persistent ✓ priv-app ✓ platform-signed ✓）——
+验收标准改为：部署后重启，`BLUETOOTH_CONNECT` 与 `READ_CONTACTS` 必须 **未经任何手动授予即为 granted=true**，sharedUser 为 `android.uid.systemui`/appId 10123。若不满足即 FAIL。此前的研究用模拟器（emulator-5554，QEMU PID 36896）因 Task 101 的无 sharedUserId 启动污染了 appId-10123 授权状态，已按污染实例废弃，改用全新实例验证。
 4. 冻结 Debug host/device SHA、boot ID、PID、crash/FATAL 与 UI 窗口状态后停止操作，等待用户目视确认。
 5. 用户确认后，以同一规程部署 Release 并重复验证。
 
