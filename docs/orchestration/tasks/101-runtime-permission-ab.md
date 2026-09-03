@@ -11,7 +11,7 @@ Use the current research emulator on `emulator-5554`: fresh userdata, stock `Sys
 ## Procedure
 
 1. Capture baseline: boot ID, stock APK SHA, PID, both permission flags, crash count, and `dumpsys window windows` evidence. Screenshots are forbidden.
-2. Deploy the existing Gradle Debug APK `/tmp/final-visible-runtime/app-debug.apk` (expected SHA `bc0da86d487c2b9350d911cd40b70c430003ade3740265555ce489945f79e320`) using the established root/remount/staged-copy/atomic-mv/metadata/cache procedure.
+2. Deploy the current Gradle Debug APK `app/build/outputs/apk/debug/app-debug.apk` (verified SHA `bc0da86d487c2b9350d911cd40b70c430003ade3740265555ce489945f79e320`) using the established root/remount/staged-copy/atomic-mv/metadata/cache procedure.
 3. Reboot and verify device APK SHA, boot ID change, both permission states, SystemUI PID stability, crash/FATAL count, and text-based window/service state.
 4. If both permissions remain true and SystemUI is stable, conclude that same-identity replacement preserves grants and the earlier failure was userdata-history-specific. If either permission becomes false and SystemUI crash-loops, conclude that the stock→Gradle replacement path is implicated and capture the first fatal.
 
@@ -24,6 +24,6 @@ Use the current research emulator on `emulator-5554`: fresh userdata, stock `Sys
 - Do not modify tracked source/build files.
 - Save evidence under `/tmp/task101-runtime-permission-ab/`.
 
-## Result required
+## Result
 
-Report `GRANTS_PERSIST` or `GRANTS_LOST`, with exact command outputs and evidence paths.
+`GRANTS_LOST`. The replacement path deterministically loses the grants because the Gradle APK's final manifest lacks `android:sharedUserId="android.uid.systemui"`; PMS assigns it a new appId `10160`, while the stock first-boot grants remain keyed to shared appId `10123`. Evidence report: `/tmp/task101-runtime-permission-ab/report.md`, copied into the repository as `docs/architecture/2026-09-03-systemui-shareduserid-appid-regression.md`.

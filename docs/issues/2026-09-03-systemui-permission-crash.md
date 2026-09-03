@@ -27,4 +27,12 @@ Worker `task100-permission-crash` granted `BLUETOOTH_CONNECT` and `READ_CONTACTS
 
 Worker `task100-grant-research` proved that stock SystemUI receives these permissions through `DefaultPermissionGrantPolicy.grantDefaultPermissions(userId)`, called from `PackageManagerService.systemReady()` only when the persisted default-permission fingerprint differs from `Build.FINGERPRINT`. On a fresh userdata boot, stock SystemUI receives all requested runtime permissions as `SYSTEM_FIXED|GRANTED_BY_DEFAULT` because it is privileged, persistent, and platform-signed. The complete report is copied to `docs/architecture/2026-09-03-systemui-runtime-permission-grants.md`.
 
-The research also proved that stock, Gradle Debug, and Gradle Release APKs are signed by the same AOSP platform test key. The remaining package-identity differences are that stock has `versionCode=37`, `versionName=Baklava`, and `targetSdk=Baklava`, while the Gradle APK currently has no explicit `versionCode`/`versionName` and uses `targetSdk=35`. The exact historical grant-reset mechanism is not yet proven; the next controlled experiment is Task 101 (`docs/orchestration/tasks/101-runtime-permission-ab.md`).
+The research also proved that stock, Gradle Debug, and Gradle Release APKs are signed by the same AOSP platform test key.
+
+### Phase 3 — controlled stock→Gradle replacement experiment: GRANTS_LOST
+
+Worker `task101-runtime-permission-ab` replaced the fresh stock APK with the current Gradle Debug APK on `emulator-5554`, rebooted, and confirmed that the two grants are lost deterministically. The root cause is a build defect: the Gradle APK's final merged manifest lacks `android:sharedUserId="android.uid.systemui"`. The library manifest in `:SystemUI-application` declares it and retains it in its own merged intermediate, but the final app-level merged manifest does not; AGP's manifest merger does not propagate `sharedUserId` from library manifests into the app manifest.
+
+After reboot, PMS therefore assigned SystemUI a fresh appId `10160` instead of shared user `android.uid.systemui/10123`. Android 17 keys runtime grants by appId, so the first-boot `SYSTEM_FIXED|GRANTED_BY_DEFAULT` grants under appId `10123` do not apply to appId `10160`. The crash itself confirms the identity mismatch: `SecurityException: Need android.permission.BLUETOOTH_CONNECT permission ... uid = 10160`. The stock APK has `sharedUserId="android.uid.systemui"`, while the Gradle APK does not. This falsifies the userdata-history hypothesis and supersedes the earlier versionCode-focused hypothesis.
+
+The complete Task 101 report is copied to `docs/architecture/2026-09-03-systemui-shareduserid-appid-regression.md`; raw evidence remains under `/tmp/task101-runtime-permission-ab/`.
