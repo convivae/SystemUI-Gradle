@@ -25,4 +25,39 @@
 
 ## 执行记录
 
-待填写。
+**最终判定：DUAL_VARIANT_RUNTIME_PASS（2026-09-06）**。sharedUserId 修复（commit `9723a96e`）后，
+Debug 与 Release 两个变体在同一全新实例上先后部署，均通过整机重启后全项验收，全程
+**零手动 `pm grant`**。完整报告：`docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。
+
+实际执行与计划的差异（背景：执行中途宿主机重启，`/tmp` 被清空，原污染实例随之销毁——
+正好满足“旧实例完全停止”的要求；但图形会话仅剩 GDM 登录界面，无可用 X 会话，
+`DISPLAY=:0` 不可达）：
+
+1. 变体串行构建改为分属 Task 103（Release 重建 + Debug 部署）与 Task 104（Release 部署），
+   两个任务在同一实例上先后完成。
+2. 模拟器按 runbook 原始命令以 **headless**（`-no-window`）方式运行于独立 herdr tab
+   （`task103-emulator`，端口 5554/5555，实例目录
+   `/tmp/acloud_gf_temp/local-goldfish-instance-2/`）——这是验证文档自身许可的回退方式；
+   用户通过 `scrcpy -s emulator-5554` 观看。
+3. 部署采用 staged copy → 设备 SHA 门禁 → 原子 mv → 权限/SELinux → 清 oat/dalvik cache
+   的标准规程，两个变体各经历一次 disable-verity 后的整机重启。
+
+验收数据（均为文本证据，无截图）：
+
+- **Debug `e61d5485…`（Task 103）**：fresh userdata 首靴 stock 基线即含 DPGP 授予
+  （sharedUser `android.uid.systemui/10123`）；部署后重启 boot_id `a0f06e2e-…`，
+  identity 保持 10123，BLUETOOTH_CONNECT / READ_CONTACTS 均为
+  `granted=true [SYSTEM_FIXED|GRANTED_BY_DEFAULT]`，PID 854 稳定 180s，0 FATAL，
+  6 个窗口（uid 10123），KeyguardService 运行。**用户已视觉确认 Debug UI 正常**。
+- **Release `6d1d4254…`（Task 104）**：同实例 Debug→Release 同 identity 替换，重启后
+  boot_id `03244666-…`，identity 10123，两项权限仍为 granted=true，PID 855 稳定 180s，
+  0 FATAL，6 个窗口，KeyguardService 运行（RELEASE_DEPLOY_PASS）。
+- 静态门禁：Release aconfig reference 完整性门禁 RESULT=PASS（0 violations）；
+  `aapt2` 确认 Release 清单含 `sharedUserId="android.uid.systemui"`。
+
+结论：Task 101 发现的权限回归（AGP manifest merger 不从 library 清单继承 sharedUserId
+→ appId 10160 → 授权不适用）已由 app 模块主清单显式声明修复，对两个变体均闭环
+（Tasks 100–104 证据链完整）。运行时验证至此全部完成，剩余收尾仅 C6（项目 release tag、
+版本声明、manifest 快照）及暂停中的 Task 079 / 方案B。
+
+原始证据：`/tmp/task103-fresh-instance-validation/`、`/tmp/task104-release-validation/`。

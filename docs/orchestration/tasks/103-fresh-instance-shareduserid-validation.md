@@ -53,6 +53,18 @@ Commit `app/src/main/AndroidManifest.xml` plus the three docs above (and the cop
 - Do not modify AOSP-aligned source/resource files.
 - Save evidence under `/tmp/task103-fresh-instance-validation/`.
 
-## Result required
+## Result
+
+All four stages PASS, and the user visually confirmed the Debug UI:
+
+- **DOCS_COMMITTED 9723a96e** (`9723a96e09160e1d67ff10187246361dec256152`, not pushed): manifest fix + 3 docs updates + Task 102 report copy + Task 103 brief.
+- **RELEASE_BUILD_PASS 6d1d4254cf3b83cc637dd5a87b0650fd2dcd9440549a61fa5eb8b471a02562c8**: BUILD SUCCESSFUL (7m12s, 493 tasks), aconfig static gate RESULT=PASS (0 violations), `aapt2` confirms `sharedUserId="android.uid.systemui"` in the Release manifest, daemons stopped.
+- **FRESH_BOOT_PASS**: fresh instance `/tmp/acloud_gf_temp/local-goldfish-instance-2/` (ports 5554/5555); stock first-boot baseline shows DPGP grants on sharedUser `android.uid.systemui/10123` (both perms `SYSTEM_FIXED|GRANTED_BY_DEFAULT`), PID 395, 0 fatals.
+- **DEBUG_DEPLOY_PASS**: deployed `e61d5485…` via disable-verity chain (sha gate exact match), rebooted (boot_id `a0f06e2e-…`), identity held (10123), **both BLUETOOTH_CONNECT and READ_CONTACTS granted=true automatically — zero manual `pm grant`**, PID 854 stable 180s, 0 FATAL, 6 windows (uid 10123), KeyguardService running.
+- Deviation: a mid-task host reboot wiped `/tmp` (killing the polluted old emulator, ports verified free) and left the host at a GDM greeter with no accessible X session, so the emulator ran headless (`-no-window`, sanctioned fallback) in herdr tab `task103-emulator`; user viewed via `scrcpy -s emulator-5554`.
+
+Full report merged into `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`; raw evidence `/tmp/task103-fresh-instance-validation/`.
+
+## Result required (original contract, superseded by the result above)
 
 Report per-stage status: `DOCS_COMMITTED <sha>` / `RELEASE_BUILD_PASS <sha256>` / `FRESH_BOOT_PASS` / `DEBUG_DEPLOY_PASS` (or `*_FAIL` with exact evidence), plus evidence paths. End in the stopped state awaiting user visual confirmation.

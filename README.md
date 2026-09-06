@@ -196,10 +196,13 @@ uv run python tools/check_aconfig_jarjar_references.py \
 adb root && adb disable-verity && adb reboot   # 等开机后：
 adb root && adb remount
 adb push app/build/outputs/apk/debug/app-debug.apk /system_ext/priv-app/SystemUI/SystemUI.apk
-adb shell pm grant com.android.systemui android.permission.BLUETOOTH_CONNECT
-adb shell pm grant com.android.systemui android.permission.READ_CONTACTS
 adb reboot
 ```
+
+注意：无需任何手动 `pm grant`。APK 清单已声明 `android:sharedUserId="android.uid.systemui"`，
+在全新 userdata 首次开机时，`DefaultPermissionGrantPolicy` 会自动以 SYSTEM_FIXED 授予
+`BLUETOOTH_CONNECT`/`READ_CONTACTS` 等运行时权限（2026-09-06 Tasks 103/104 双变体实测验证）。
+仅在复用已被污染的 userdata 时才可能需要手动补授（见 docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md）。
 
 部署细节与已知坑（校验、overlay 只读、grant 重置等）见
 [docs/PITFALLS.md](docs/PITFALLS.md) 设备/模拟器章节。

@@ -9,7 +9,7 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| 099 | `task099-dreams-r6`, `w2:t4H` / `w2:p4P` | shared `main` | `joycode/GLM-5.3`, `thinking=high` | REPAIR COMPLETE: instrument-everything seam + 725-rule gate; Debug/Release static + runtime/reboot PASS; commits `ed40e4b4`+`ea9b2f52` await Chief push | `AGENTS.md`; Worker done; Chief owns acceptance/push |
+| — | none active | — | — | Tasks 100–104 all closed: sharedUserId fix (commit `9723a96e`) + fresh-instance dual-variant final validation PASS; remaining work is C6 close-out (Chief) | `AGENTS.md` |
 | 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained checkpoint; resume only if it helps the current goal |
 
 ## Queue
@@ -462,6 +462,8 @@
 - Full event history: `docs/orchestration/log.md` (append-only).
 
 ## Last Updated
+
+2026-09-06 — Tasks 103/104 closed: the final dual-variant runtime verification is **`DUAL_VARIANT_RUNTIME_PASS`**. Task 103 rebuilt Release (`6d1d4254…`, aconfig gate PASS, manifest sharedUserId verified, daemons stopped), committed the sharedUserId fix + docs locally (`9723a96e`), launched a fresh emulator instance (headless fallback after a mid-task host reboot wiped the polluted research instance and left only a GDM greeter; herdr tab `task103-emulator`, ports 5554/5555), deployed fixed Debug `e61d5485…` on fresh userdata and passed the full-device reboot gate with **automatic DPGP grants and zero manual `pm grant`** (sharedUser `android.uid.systemui/10123`, PID 854 stable 180s, 0 FATAL, 6 windows); the user visually confirmed the Debug UI. Task 104 swapped in Release `6d1d4254…` on the same instance and passed the same reboot gate (PID 855, 0 FATAL, grants held). The instance is left running Release; evidence in `/tmp/task103-fresh-instance-validation/` and `/tmp/task104-release-validation/`, merged report at `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`. Task 105 performed the docs close-out (README manual-grant lines removed, CURRENT_STATE/HANDOFF/PLAN updated). Remaining work: C6 close-out only (plus paused Task 079 / 方案B). Commits local, not pushed.
 
 2026-09-02 — Task 099 is planned and awaiting dispatch from a clean pushed planning base. It is read-only except for its issue/evidence root and must establish a frozen-APK instruction-level RED loop before hypotheses, then prove `android.service.dreams.Flags` callers, canonical provenance and why the existing four-rule/166-caller bounded coverage omitted this owner. No fix, build or device action is authorized; Task 098 remains `DEBUG_RUNTIME_REBOOT_FAIL` and Release runtime remains blocked.
 
