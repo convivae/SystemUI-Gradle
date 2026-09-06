@@ -8,111 +8,49 @@
 [![AGP 9.3.1](https://img.shields.io/badge/AGP-9.3.1-3ddc84?logo=android&logoColor=white)](gradle/libs.versions.toml)
 [![Kotlin 2.2.10](https://img.shields.io/badge/Kotlin-2.2.10-7f52ff?logo=kotlin&logoColor=white)](gradle/libs.versions.toml)
 
-A standalone, self-contained Gradle build of AOSP `frameworks/base/packages/SystemUI` —
-the real, complete source of Android's **status bar, notification shade / quick settings,
-lockscreen (Keyguard) and recents overview** — extracted from the Soong build system.
-It builds a real SystemUI APK (not pruned, not stubbed) without the AOSP source tree,
-while staying 1:1 aligned with AOSP sources and resources so changes can flow back
-upstream at any time.
+This project takes AOSP `frameworks/base/packages/SystemUI` — the real, complete source
+of Android's **status bar, notification shade / quick settings, lockscreen (Keyguard)
+and recents overview** — out of the Soong build system and turns it into a standalone,
+self-contained Android Gradle project. It builds like a normal app from Android Studio
+or the command line, produces installable Debug and Release APKs, and has been
+verified to run on a same-baseline AOSP 17 emulator.
 
-- **AOSP baseline**: `android-17.0.0_r1` (the first Android 17 release tag)
-- **Toolchain**: Gradle 9.5.0 · AGP 9.3.1 · Kotlin 2.2.10 (AGP builtInKotlin) · KSP ·
-  Dagger · Compose · JDK 21
-- **Achieved**: both the Debug APK (~200 MB) and the R8-optimized Release APK (~45 MB)
-  compile cleanly and **run for real** on an Android 17 x86_64 emulator — stable across
-  cold boot and full-device reboot (zero crashes; status bar, notification shade and
-  wallpaper all on screen)
+## Highlights
 
-## What you get out of it
+- **Real sources, not pruned, not stubbed**: all SystemUI-owned code compiles from
+  source; resources and manifests align with AOSP file-for-file, so changes can flow
+  back upstream at any time;
+- **17 Gradle modules**: module boundaries follow the semantics of AOSP `Android.bp`,
+  and source paths correspond one-to-one with AOSP — reading and navigation come free;
+- **SysUISdk**: a custom compile platform supplying the `@hide` APIs, framework-private
+  resources and hidden AIDL declarations the standard Android SDK lacks (published on
+  [GitHub Releases](https://github.com/convivae/SystemUI-Gradle/releases), and
+  deterministically regenerable from AOSP outputs);
+- **Clean dependencies**: third-party libraries (androidx / Compose / Dagger / …)
+  always come from official Maven coordinates; AOSP artifacts ship as committed jars /
+  AARs, each regenerable by the scripts in `tools/` — no hand-uploaded "magic files"
+  and no hand-written stubs;
+- **Release support**: R8 optimization plus resource shrinking, producing the same
+  kind of non-obfuscated, platform-signed APK as AOSP.
 
-AOSP's SystemUI normally only builds inside a full AOSP checkout with Soong. This
-project turns it into an ordinary Android Gradle project, which means you can:
-
-- **Develop SystemUI in Android Studio**: full code indexing, navigation, refactoring
-  and breakpoint debugging — iteration speed goes from "rebuild the tree" to a normal
-  app build;
-- **Version it independently**: branch, review and roll back SystemUI in its own git
-  repository, decoupled from the platform checkout;
-- **Build products on it**: customize the status bar / shade / lockscreen for a ROM or
-  an industry system (automotive, tablet, IoT) by editing the real AOSP sources instead
-  of maintaining patch stacks;
-- **Study and teach**: SystemUI is one of the most complex Android applications
-  (Dagger + Compose + a plugin system + heavy `@hide` API usage); this project makes it
-  readable and hackable like a normal app;
-- **Reproduce everything**: every binary dependency (jars / AARs) is committed to git,
-  and each one can be **deterministically regenerated** from AOSP build outputs by the
-  scripts in `tools/` — no hand-uploaded "magic files".
-
-## How it works (overview)
-
-The root reason SystemUI cannot leave the AOSP build is its heavy use of `@hide` APIs,
-aconfig-generated flags classes and framework-private resources, none of which exist in
-the standard Android SDK. This project solves that with:
-
-1. **SysUISdk**: a custom compile platform (`compileSdkPreview = "SysUISdk"`) composed by
-   the single-entry generator `tools/build_sysuisdk.py` from an official SDK platform
-   plus built AOSP artifacts, supplying hidden APIs, framework-private resources and
-   `@hide` AIDL declarations. It is a compile-time platform only — nothing from it is
-   packaged into the APK.
-2. **A three-tier dependency policy**: third-party libraries (androidx / Compose /
-   Dagger / …) always come from official Maven coordinates; resource-free AOSP
-   pure-code artifacts ship as local jars; AOSP libraries with resources ship as AARs.
-   **There are no hand-written stubs anywhere in the repository.**
-3. **17 Gradle modules**: module boundaries follow the semantics of AOSP `Android.bp`
-   (see the table below); all SystemUI-owned code compiles from source, and resources
-   and manifests are aligned with AOSP file-for-file.
-4. **Build-time reference rewriting**: on Android 17, the Soong build renames a set of
-   framework aconfig classes into a hidden package
-   (`com.android.internal.hidden_from_bootclasspath.*`). During AGP bytecode
-   instrumentation this project applies the same AOSP rule table (725 exact renames) as
-   a **reference-only** rewrite, and ships an instruction-level static verifier,
-   `tools/check_aconfig_jarjar_references.py`, that checks the final APK so the class
-   names it references at runtime always match the on-device framework.
-
-### Module map
-
-| Module | Role (AOSP Soong target) |
-|---|---|
-| `:app` | APK entry: signing, packaging, manifest merger shell (`android_app "SystemUI"`) |
-| `:SystemUI-core` | Main module: `SystemUIApplication` and other entry classes, src + compose + pods |
-| `:SystemUI-application` | Dagger root component + the full AOSP manifest |
-| `:SystemUI-res` | Resources (res / res-keyguard / res-product), generates `com.android.systemui.res.R` |
-| `:SystemUI-common` | Common + Log + shared-utils |
-| `:SystemUI-animation` | Platform animation library (PlatformAnimationLib) |
-| `:SystemUI-compose` | Compose Core + Scene |
-| `:SystemUI-customization` | Customization library (wallpaper, theme picker, …) |
-| `:SystemUI-clocks-common` | Clocks common library |
-| `:SystemUI-shared` | shared + keyguard (AIDL + resources) |
-| `:SystemUI-shared-biometrics` | Biometrics (own resource namespace) |
-| `:SystemUI-plugin` / `:SystemUI-plugin-core` | Plugin runtime and API |
-| `:SystemUI-plugin-processor` | Plugin annotation processor (build-time only) |
-| `:SystemUI-unfold` | Foldable unfold library |
-| `:SystemUI-accessibility-floatingmenu-res` | Accessibility floating-menu resources |
-| `:SystemUI-utils-kairos` | kairos (SystemUI's reactive state library) |
-
-## Quick start
-
-> All jar / AAR dependencies are committed, and the custom `android-SysUISdk` compile
-> platform is published as a zip on
-> [GitHub Releases](https://github.com/convivae/SystemUI-Gradle/releases) —
-> **clone + one download is all you need to build; no AOSP checkout required.** You only
-> need the AOSP 17 tree to regenerate SysUISdk / the `libs/` artifacts yourself or to
-> build the deployment emulator images (see the optional branch in step 3). If Gradle
-> reports `Failed to find Platform SDK with path: platforms;android-SysUISdk`, step 2
-> below has not been completed, or the platform was unzipped into a different Android
-> SDK root than the one Gradle uses.
-
-### Requirements
+## Requirements
 
 | Item | Requirement |
 |---|---|
 | OS | Ubuntu Linux (x86_64); your user in the `kvm` group when running the emulator |
-| Disk | ≈ 20 GiB to build this project alone; ≥ 400 GiB for full reproduction (incl. AOSP) |
-| RAM | 16 GiB works for this project alone; ≥ 32 GiB recommended for the full AOSP build |
-| JDK | 17+ (measured on 21) |
+| JDK | 21+ (Gradle daemon measured on 25; compilation toolchain is 21) |
+| RAM | ~16 GiB works for this project alone (Gradle `-Xmx16g`); ≥ 30 GiB recommended when also building AOSP |
+| Disk | ≈ 20 GiB to build this project alone; ≥ 400 GiB for full reproduction (incl. the AOSP tree) |
 | Android SDK | anything recent; the official `platforms/android-37.0` is only needed as the read-only base when regenerating SysUISdk yourself |
 | Python | 3.x + [uv](https://docs.astral.sh/uv/) (scripts always run via `uv run`) |
 | Tools | unzip and sha256sum; adb; repo (AOSP path only) and scrcpy (viewing the headless emulator) optional |
+
+> Building the APKs does **not** require an AOSP source tree — every jar / AAR
+> dependency is committed, and SysUISdk is published as a zip. You only need the AOSP 17
+> tree to regenerate SysUISdk / the `libs/` artifacts yourself, or to build the
+> deployment emulator images (see step 3).
+
+## Quick start
 
 ### 1. Clone the project and set paths
 
@@ -130,11 +68,11 @@ printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 
 ### 2. Get SysUISdk (pick one)
 
-**Option A (recommended): install the accepted r1 release**
+**Option A (recommended): install the published r1 release**
 
-Download the zip and matching `.sha256` file from the
+Download the zip and matching `.sha256` from the
 [SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1),
-then verify and install them from your download directory:
+then verify and install it into your Android SDK:
 
 ```bash
 cd "$HOME/Downloads"  # adjust to your actual download directory
@@ -159,8 +97,8 @@ cd "$PROJECT_ROOT"
 The checksum command must print `SysUISdk-android-17.0.0_r1-r1.zip: OK`.
 The fixed SHA-256 is
 `ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`.
-If `android-SysUISdk` already exists, remove or rename it explicitly first; do not
-merge a new release into an old platform directory.
+If an `android-SysUISdk` directory already exists, remove or rename it explicitly
+first; do not merge a new release into an old platform directory.
 
 **Option B: generate it from AOSP yourself** — complete step 3 first, then run:
 
@@ -172,7 +110,11 @@ uv run python tools/build_sysuisdk.py \
 # add --replace when regenerating an existing SysUISdk from newer AOSP outputs
 ```
 
-### 3. (Optional) Prepare the AOSP 17 build outputs once
+If Gradle reports `Failed to find Platform SDK with path: platforms;android-SysUISdk`,
+step 2 has not been completed, or the platform was unzipped into a different Android
+SDK root than the one Gradle uses.
+
+### 3. (Optional) Prepare the AOSP 17 build outputs
 
 Only needed to: generate SysUISdk via option B, regenerate the `libs/` artifacts, or
 build the deployment emulator images. If you took option A and don't need the
@@ -190,7 +132,7 @@ m -j"$(nproc)"
 cd "$PROJECT_ROOT"
 ```
 
-### 4. Build the APK
+### 4. Build the APKs
 
 ```bash
 # Debug APK → app/build/outputs/apk/debug/app-debug.apk
@@ -201,19 +143,20 @@ cd "$PROJECT_ROOT"
 ./gradlew :app:clean :app:assembleRelease
 ```
 
-Optional tooling verification:
+Both variants are signed with the platform keystore committed to the repository
+(`keystore/platform.keystore`, derived from the AOSP development test key) — no extra
+configuration is needed to produce deployable signed APKs.
 
-```bash
-uv run pytest tools/tests/ -q
-uv run python tools/check_aconfig_jarjar_references.py \
-  --apk app/build/outputs/apk/release/app-release.apk
-```
+## Running on the emulator
 
-### 5. Launch the emulator and deploy
+SystemUI is a platform-signed app calling hidden APIs, so the deployment target must
+be an AOSP build matching the baseline (this project verifies against self-built
+`sdk_phone64_x86_64` emulator images; it cannot be installed on retail phones or the
+stock emulator images).
 
-Boot an emulator from the `sdk_phone64_x86_64` images produced in step 3
-(`ANDROID_PRODUCT_OUT="$AOSP_ROOT/out/target/product/emu64x" emulator ...`; full flags in
-[docs/issues/2026-08-26-emulator-relaunch-runbook.md](docs/issues/2026-08-26-emulator-relaunch-runbook.md)),
+Boot an emulator from the images produced in step 3
+(`ANDROID_PRODUCT_OUT="$AOSP_ROOT/out/target/product/emu64x" emulator ...`; full flags
+in the [emulator launch runbook](docs/issues/2026-08-26-emulator-relaunch-runbook.md)),
 then replace the system SystemUI:
 
 ```bash
@@ -223,23 +166,53 @@ adb push app/build/outputs/apk/debug/app-debug.apk /system_ext/priv-app/SystemUI
 adb reboot
 ```
 
+For deployment details and known issues (verification, read-only overlays, cache
+cleanup, …) see [docs/PITFALLS.md](docs/PITFALLS.md).
+
 ## Secondary development guide
 
-**Editing code**: SystemUI sources live in `SystemUI-core/src/` (path-for-path mirror of
-AOSP `packages/SystemUI/src/`); each sub-library lives in its `SystemUI-*` module. Just
-edit and build — no code generation, no intermediate layers.
+**Editing code**: SystemUI sources live in `SystemUI-core/src/` (path-for-path mirror
+of AOSP `packages/SystemUI/src/`); each sub-library lives in its `SystemUI-*` module.
+Just edit and build — no code generation, no intermediate layers. Key entry points:
 
-**Editing resources**: resources are concentrated in `SystemUI-res/res*` (1:1 with AOSP
-`res/`, `res-keyguard/`, `res-product/`). Reference them via `com.android.systemui.res.R`.
+- `:SystemUI-core` — `SystemUIApplication` and the main application logic;
+- `:SystemUI-application` — the Dagger root component and the full manifest.
+
+**Editing resources**: resources are concentrated in `SystemUI-res/res*` (1:1 with
+AOSP `res/`, `res-keyguard/`, `res-product/`), referenced from code as
+`com.android.systemui.res.R`.
+
+**Module structure**: module split and merging follow the semantics of AOSP
+`Android.bp` exactly (see [ADR 0003](docs/adr/0003-app-module-aligns-aosp-bp.md)).
+Module map:
+
+| Module | Role (AOSP Soong target) |
+|---|---|
+| `:app` | APK entry: signing, packaging, manifest merger shell (`android_app "SystemUI"`) |
+| `:SystemUI-core` | Main module: entry classes, src + compose + pods |
+| `:SystemUI-application` | Dagger root component + the full AOSP manifest |
+| `:SystemUI-res` | Resources (res / res-keyguard / res-product) |
+| `:SystemUI-common` | Common + Log + shared-utils |
+| `:SystemUI-animation` | Platform animation library (PlatformAnimationLib) |
+| `:SystemUI-compose` | Compose Core + Scene |
+| `:SystemUI-customization` | Customization library (wallpaper, theme picker, …) |
+| `:SystemUI-clocks-common` | Clocks common library |
+| `:SystemUI-shared` | shared + keyguard (AIDL + resources) |
+| `:SystemUI-shared-biometrics` | Biometrics (own resource namespace) |
+| `:SystemUI-plugin` / `:SystemUI-plugin-core` | Plugin runtime and API |
+| `:SystemUI-plugin-processor` | Plugin annotation processor (build-time only) |
+| `:SystemUI-unfold` | Foldable unfold library |
+| `:SystemUI-accessibility-floatingmenu-res` | Accessibility floating-menu resources |
+| `:SystemUI-utils-kairos` | kairos (SystemUI's reactive state library) |
 
 **Staying in sync with upstream**: this project deliberately avoids fork-style
 rewrites — sources and resources stay file-for-file aligned with AOSP, enforced by
 `tools/check_source_alignment.py --strict` (zero missing / misplaced / extra files).
 Your own changes remain ordinary git history that can be rebased or cherry-picked back
-into AOSP-shaped commits.
+into AOSP at any time.
 
-**Moving to a newer AOSP baseline**: after switching the AOSP tag, run in order —
-realign sources (`check_source_alignment.py`), regenerate all jars / AARs with the
+**Moving to a newer AOSP baseline**: after switching the tag, run in order — realign
+sources (`check_source_alignment.py`), regenerate all jars / AARs with the
 `tools/package_*.py` scripts, rebuild SysUISdk, rebuild the APKs and re-run the
 deployment verification. The whole chain is scripted; no manual artifacts.
 
@@ -259,29 +232,39 @@ uv run pytest tools/tests/ -q                                # tooling regressio
   `ExperimentalAnimatableApi`, which AOSP uses); kotlinx-coroutines is capped at 1.10.2
   (1.11 adds an overload that breaks AOSP sources). Check
   [docs/PITFALLS.md](docs/PITFALLS.md) before upgrading dependencies.
-- **The deployment target must be a same-tree build**: SystemUI is a platform-signed app
-  calling hidden APIs, so it must be deployed onto an AOSP build matching the baseline
-  (this project verifies against same-tree emulator images); it cannot be installed on
-  retail phones or the stock emulator images.
-- **Release is not obfuscated**: matching AOSP behavior, Release applies R8 optimization
-  and resource shrinking only — no identifier obfuscation.
+- **Release is not obfuscated**: matching AOSP behavior, Release applies R8
+  optimization and resource shrinking only — no identifier obfuscation.
 
-## Documentation map
+## Project layout
+
+```
+SystemUI-Gradle/
+├── app/                      # APK packaging entry (signing, manifest merger shell)
+├── SystemUI-*/               # 17 source/resource modules (see the module map above)
+├── libs/                     # AOSP artifact dependencies (jars / AARs / local Maven, all script-regenerated)
+├── tools/                    # Python build/verification tooling (SysUISdk generation, artifact packaging, alignment checks, …)
+├── keystore/                 # Platform signing keystore (AOSP development test key)
+├── release/                  # SysUISdk release assets (LICENSE / NOTICE / packaging script)
+├── docs/                     # Project documentation (see below)
+└── gradle/                   # Wrapper and version catalog
+```
+
+## Documentation
 
 | Want to know | Read |
 |---|---|
 | Detailed build / deployment pitfalls | [docs/PITFALLS.md](docs/PITFALLS.md) |
+| Documentation index and navigation | [docs/README.md](docs/README.md) |
+| Live development status | [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) |
 | Architecture decision records (ADRs) | [docs/adr/](docs/adr/) |
-| Deep dives (SysUISdk generation, R8 closure, aconfig renaming, …) | [docs/architecture/](docs/architecture/) |
-| Live development status (internal) | [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) |
-| Internal development rules | [AGENTS.md](AGENTS.md) |
-| Documentation index and maintenance rules | [docs/README.md](docs/README.md) |
+| Deep-dive reports | [docs/architecture/](docs/architecture/) |
 
 ## License
 
-AOSP-derived SystemUI sources and project-authored code are provided under the Apache
-License 2.0. The separately published SysUISdk r1 also contains stock Android SDK base
-files governed by the Android SDK License Agreement. Read
+AOSP-derived SystemUI sources (Apache License 2.0, Copyright The Android Open Source
+Project) and project-authored code are provided under the Apache License 2.0. The
+separately published SysUISdk zip also contains stock Android SDK base files governed
+by the Android SDK License Agreement. Read
 [`release/sysuisdk/NOTICE`](release/sysuisdk/NOTICE) and the
 [Android SDK Terms](https://developer.android.com/studio/terms) before downloading or
 using it.
