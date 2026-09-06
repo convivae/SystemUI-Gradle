@@ -223,16 +223,6 @@ adb push app/build/outputs/apk/debug/app-debug.apk /system_ext/priv-app/SystemUI
 adb reboot
 ```
 
-Note: no manual `pm grant` is needed. The APK manifest declares
-`android:sharedUserId="android.uid.systemui"`, so on a fresh userdata first boot
-`DefaultPermissionGrantPolicy` automatically grants `BLUETOOTH_CONNECT`/`READ_CONTACTS`
-and the other runtime permissions as SYSTEM_FIXED (validated for both variants on
-2026-09-06, Tasks 103/104). A manual grant is only ever needed on reused, polluted
-userdata (see docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md).
-
-Deployment details and known traps (verification, read-only overlays after reboot,
-grant resets, …) are in [docs/PITFALLS.md](docs/PITFALLS.md), device/emulator section.
-
 ## Secondary development guide
 
 **Editing code**: SystemUI sources live in `SystemUI-core/src/` (path-for-path mirror of

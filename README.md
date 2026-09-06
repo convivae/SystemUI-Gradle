@@ -199,14 +199,6 @@ adb push app/build/outputs/apk/debug/app-debug.apk /system_ext/priv-app/SystemUI
 adb reboot
 ```
 
-注意：无需任何手动 `pm grant`。APK 清单已声明 `android:sharedUserId="android.uid.systemui"`，
-在全新 userdata 首次开机时，`DefaultPermissionGrantPolicy` 会自动以 SYSTEM_FIXED 授予
-`BLUETOOTH_CONNECT`/`READ_CONTACTS` 等运行时权限（2026-09-06 Tasks 103/104 双变体实测验证）。
-仅在复用已被污染的 userdata 时才可能需要手动补授（见 docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md）。
-
-部署细节与已知坑（校验、overlay 只读、grant 重置等）见
-[docs/PITFALLS.md](docs/PITFALLS.md) 设备/模拟器章节。
-
 ## 二次开发指南
 
 **改代码**：SystemUI 源码在 `SystemUI-core/src/`（与 AOSP `packages/SystemUI/src/` 逐路径对应），
