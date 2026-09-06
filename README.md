@@ -64,31 +64,17 @@ printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 **方式 A（推荐）：安装已发布的 r1**
 
 从 [SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
-下载 zip 和同名 `.sha256`，在下载目录中校验后安装到 Android SDK：
+下载 zip（附同名 `.sha256` 可供校验，固定 SHA-256 为
+`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`），
+解压到 `$ANDROID_SDK_ROOT/platforms/`。安装完成后的路径结构：
 
-```bash
-cd "$HOME/Downloads"  # 按实际下载目录调整
-sha256sum --check SysUISdk-android-17.0.0_r1-r1.zip.sha256
-
-(
-  set -eu
-  target="$ANDROID_SDK_ROOT/platforms/android-SysUISdk"
-  test ! -e "$target" || {
-    echo "ERROR: $target already exists; remove or rename it first." >&2
-    exit 1
-  }
-  mkdir -p "$ANDROID_SDK_ROOT/platforms"
-  unzip -q SysUISdk-android-17.0.0_r1-r1.zip 'android-SysUISdk/*' \
-    -d "$ANDROID_SDK_ROOT/platforms"
-  test -f "$target/android.jar"
-)
-
-cd "$PROJECT_ROOT"
+```
+$ANDROID_SDK_ROOT/
+└── platforms/
+    └── android-SysUISdk/      # 解压出来的目录，内含 android.jar 等文件
 ```
 
-校验命令必须输出 `SysUISdk-android-17.0.0_r1-r1.zip: OK`。固定 SHA-256 为
-`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`。若已有
-`android-SysUISdk` 目录，请先明确删除或重命名，不要新旧混装。
+注意：若 `platforms/android-SysUISdk` 已存在，请先删除或重命名，不要新旧混装。
 
 **方式 B：从 AOSP 自行生成**——先完成第 3 步，再执行：
 

@@ -70,35 +70,20 @@ printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 
 **Option A (recommended): install the published r1 release**
 
-Download the zip and matching `.sha256` from the
-[SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1),
-then verify and install it into your Android SDK:
+Download the zip from the
+[SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
+(a matching `.sha256` is provided for verification; fixed SHA-256
+`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`)
+and extract it into `$ANDROID_SDK_ROOT/platforms/`. The installed layout:
 
-```bash
-cd "$HOME/Downloads"  # adjust to your actual download directory
-sha256sum --check SysUISdk-android-17.0.0_r1-r1.zip.sha256
-
-(
-  set -eu
-  target="$ANDROID_SDK_ROOT/platforms/android-SysUISdk"
-  test ! -e "$target" || {
-    echo "ERROR: $target already exists; remove or rename it first." >&2
-    exit 1
-  }
-  mkdir -p "$ANDROID_SDK_ROOT/platforms"
-  unzip -q SysUISdk-android-17.0.0_r1-r1.zip 'android-SysUISdk/*' \
-    -d "$ANDROID_SDK_ROOT/platforms"
-  test -f "$target/android.jar"
-)
-
-cd "$PROJECT_ROOT"
+```
+$ANDROID_SDK_ROOT/
+└── platforms/
+    └── android-SysUISdk/      # the extracted directory, containing android.jar etc.
 ```
 
-The checksum command must print `SysUISdk-android-17.0.0_r1-r1.zip: OK`.
-The fixed SHA-256 is
-`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`.
-If an `android-SysUISdk` directory already exists, remove or rename it explicitly
-first; do not merge a new release into an old platform directory.
+Note: if `platforms/android-SysUISdk` already exists, remove or rename it
+first — do not merge a new release into an old platform directory.
 
 **Option B: generate it from AOSP yourself** — complete step 3 first, then run:
 
