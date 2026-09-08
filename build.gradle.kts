@@ -30,9 +30,6 @@ allprojects {
             }
             // 添加 internalFlagsJars 到 JavaCompile (供 kotlin 的 javac 调用)
             classpath = files(internalFlagsJars) + classpath
-            if (serverNotificationFlagsJar.exists()) {
-                classpath = files(serverNotificationFlagsJar) + classpath
-            }
         }
         // KotlinCompile: do NOT add framework.jar here. It pollutes the Compose runtime's
         // inline metadata lookup (Kotlin can't find inline bodies for CompositionLocal.getCurrent,
