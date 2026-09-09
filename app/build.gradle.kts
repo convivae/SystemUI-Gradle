@@ -24,6 +24,11 @@ android {
         applicationId = "com.android.systemui"
         minSdk = 35
         targetSdk = 35
+        // AOSP provenance: SystemUI version follows the platform —
+        // ro.build.version.sdk=37 / platform 17 (baseline android-17.0.0_r1),
+        // confirmed from out/target/product/emu64x/system/build.prop of this tree.
+        versionCode = 37
+        versionName = "17"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
