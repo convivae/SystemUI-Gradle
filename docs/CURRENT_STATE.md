@@ -150,7 +150,7 @@ emulator-5554）为历史台账。
 ## Next ordered work
 
 1. ~~**C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）~~ ✅ 完成（2026-09-08/09，Task 108）：tag `v1.0.0-android-17.0.0_r1` 已 push，GitHub Release 已发布。**项目完成。**
-2. **尾账（非阻塞，按需）**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
+2. **尾账**：~~SDK 老备份清理~~ ✅ 无需处理（2026-09-09 核实：Task 047 已删 8 个冗余备份，唯一保留快照已随 Phase C 清空重生消失，live SDK 零备份文件）；同日完成 git 卫生收尾：删除 a8b worktree（1.9G）、prune 6 个失效 worktree 登记、删除 8 个已合并/已落地的 stale 本地分支，本地仅余 `main`。剩余：`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
 3. ~~**Task 079 broad replay**~~ ✅ 关闭（won't-do，用户裁定 2026-09-09）：其目标已由 pre-D8 reference rewrite（ADR 0008）+ 双静态门 + 双 variant runtime 终验以更硬证据覆盖。
 4. **方案 B（AOSP 自构建 SDK 底座）**：保留为可选未来方向，非待办。
 
