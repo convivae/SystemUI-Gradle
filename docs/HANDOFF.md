@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：**C6 收口完成（2026-09-08，Task 108）**。版本元数据 versionCode=37 / versionName="17" 落入双 APK；Debug `e7277867…` / Release `48ade522…`（与 2026-09-06 双 variant 终验 APK `e61d5485…`/`6d1d4254…` 仅差版本元数据，runtime 行为由该终验背书）；Release aconfig 静态门 PASS；发布清单快照 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1` 已建，ADR 0007 闭环。Task 079 broad replay 保持暂停。下一步：Chief push tag + GitHub Release。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：**项目完成（2026-09-09）**。tag `v1.0.0-android-17.0.0_r1` 已 push + GitHub Release 已发布。C6 收口（Task 108，2026-09-08）：版本元数据 versionCode=37 / versionName="17" 落入双 APK；Debug `e7277867…` / Release `48ade522…`（与 2026-09-06 双 variant 终验 APK `e61d5485…`/`6d1d4254…` 仅差版本元数据，runtime 行为由该终验背书）；Release aconfig 静态门 PASS；发布清单快照 `docs/release-manifest/`；ADR 0007 闭环。Task 079 broad replay 经用户裁定关闭（won't-do）；方案 B 保留为可选未来方向。项目进入按需维护状态。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：Chief push tag `v1.0.0-android-17.0.0_r1` + GitHub Release（本地 tag 已建）。C6 已于 2026-09-08（Task 108）闭合：版本元数据 37/"17" + 双变体重建 + 静态门 PASS + 发布清单快照（`docs/release-manifest/`）+ ADR 0007 闭环。C5 已由 Task 099 闭合；替换后权限崩溃回归已由 Tasks 100–104 闭环（sharedUserId 修复 + 双 variant 全新实例终验 PASS，见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`）。剩余未完成仅暂停中的 Task 079 / 方案B。
+5. **项目状态：完成（2026-09-09）**。tag `v1.0.0-android-17.0.0_r1` 已 push，GitHub Release 已发布。C6 已于 2026-09-08（Task 108）闭合：版本元数据 37/"17" + 双变体重建 + 静态门 PASS + 发布清单快照（`docs/release-manifest/`）+ ADR 0007 闭环。C5 已由 Task 099 闭合；替换后权限崩溃回归已由 Tasks 100–104 闭环（sharedUserId 修复 + 双 variant 全新实例终验 PASS，见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`）。Task 079 broad replay 经用户裁定关闭（won't-do，2026-09-09）；方案 B 保留为可选未来方向，非待办。项目进入按需维护状态（上游基线升级按 README rebalance 流程）。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 

@@ -9,8 +9,8 @@
 
 | Task | Workspace / pane | Branch / worktree | Model | Stage | Boundary |
 |---|---|---|---|---|---|
-| — | none active | — | — | Tasks 100–104 all closed: sharedUserId fix (commit `9723a96e`) + fresh-instance dual-variant final validation PASS; Task 108 closed C6 release closure (version 37/"17", local tag `v1.0.0-android-17.0.0_r1`, ADR 0007 closed). Remaining: Chief push + GitHub Release | `AGENTS.md` |
-| 079 | none (broad replay paused) | shared `main` (`488b7996` checkpoint) | future dispatch: `joycode/GLM-5.3`, `thinking=high` | user redirected execution to smaller goal-facing steps; no E1–E4 evidence exists | retained checkpoint; resume only if it helps the current goal |
+| — | none active | — | — | **项目完成（2026-09-09）**：tag `v1.0.0-android-17.0.0_r1` 已 push + GitHub Release 已发布。Task 079 broad replay 经用户裁定关闭（won't-do）；方案 B 保留为可选未来方向。无活跃 Worker | `AGENTS.md` |
+| ~~079~~ | closed (won't-do, user ruling 2026-09-09) | shared `main` (`488b7996` checkpoint) | — | goal superseded: ADR 0008 pre-D8 reference rewrite + dual static gates + dual-variant runtime final validation cover it with harder evidence | retained checkpoint; do not resume |
 
 ## Queue
 

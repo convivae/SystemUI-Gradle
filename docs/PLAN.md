@@ -53,7 +53,8 @@ Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1–C5 已全部�
 闭环（aconfig 725 规则 instrument-everything seam；Debug `33e07319…` / Release `17358f4d…`
 双 APK 静态 + runtime + 整机重启门全 PASS）。替换后权限崩溃回归已由 Tasks 100–104 闭环
 （sharedUserId 修复 + 双 variant 全新实例终验 PASS，2026-09-06）。C6 收口完成（2026-09-08，
-Task 108）：版本元数据 37/"17" 落双 APK、静态门 PASS、发布清单快照、本地 tag
-`v1.0.0-android-17.0.0_r1`（ADR 0007 闭环；push 与 GitHub Release 由 Chief 执行）。
-剩余未完成仅暂停中的 Task 079 / 方案B。最新证据见
+Task 108）：版本元数据 37/"17" 落双 APK、静态门 PASS、发布清单快照、tag
+`v1.0.0-android-17.0.0_r1` 已 push + GitHub Release 已发布（ADR 0007 闭环）。**项目完成
+（2026-09-09）**：Task 079 broad replay 经用户裁定关闭（won't-do）；方案 B 保留为可选未来
+方向。最新证据见
 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。

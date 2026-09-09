@@ -1,8 +1,8 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-08（**C6 收口完成（Task 108）**：版本元数据 versionCode=37 / versionName="17" 落入双 APK（同树 build.prop：`ro.build.version.sdk=37`、platform 17，基线 android-17.0.0_r1）；Debug `e7277867…` / Release `48ade522…` 重建，Release aconfig 静态门 RESULT=PASS；发布清单快照入 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1` 已建（未 push）；ADR 0007 闭环。注意新 APK SHA 与 2026-09-06 双 variant 终验 APK（`e61d5485…`/`6d1d4254…`）不同，仅因版本元数据变更（原为 AGP 默认 versionCode=-1/versionName=""），无其他源码变化；runtime 行为已由该终验背书，本次未重跑 runtime（模拟器已关）。下一步：Chief push + GitHub Release。）
-> 此前：2026-09-06 双 variant runtime 终验 PASS（Tasks 100–104，sharedUserId 修复 commit `9723a96e`；fixed Debug `e61d5485…` 与 Release `6d1d4254…` 全新实例整机重启验收全 PASS，DPGP 自动授权零手动 pm grant；详见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。Task 079 broad replay 继续暂停。）
+> **Last verified**: 2026-09-09（**项目完成**：tag `v1.0.0-android-17.0.0_r1` 已 push + GitHub Release 已发布。C6 收口（Task 108，2026-09-08）：版本元数据 versionCode=37 / versionName="17" 落入双 APK（同树 build.prop：`ro.build.version.sdk=37`、platform 17，基线 android-17.0.0_r1）；Debug `e7277867…` / Release `48ade522…` 重建，Release aconfig 静态门 RESULT=PASS；发布清单快照入 `docs/release-manifest/`；ADR 0007 闭环。注意新 APK SHA 与 2026-09-06 双 variant 终验 APK（`e61d5485…`/`6d1d4254…`）不同，仅因版本元数据变更（原为 AGP 默认 versionCode=-1/versionName=""），无其他源码变化；runtime 行为已由该终验背书。Task 079 broad replay 经用户裁定关闭（won't-do，2026-09-09）；方案 B 保留为可选未来方向。项目进入按需维护状态。）
+> 此前：2026-09-06 双 variant runtime 终验 PASS（Tasks 100–104，sharedUserId 修复 commit `9723a96e`；fixed Debug `e61d5485…` 与 Release `6d1d4254…` 全新实例整机重启验收全 PASS，DPGP 自动授权零手动 pm grant；详见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -19,7 +19,7 @@
 | Python 工具测试 | ✅ **369 passed**（+151 subtests；原 361 + SysUISdk release 8 tests，2026-09-03） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
 | 设备/模拟器 | 关闭（C6 为静态收口，模拟器已关）。2026-09-06 终验时：emulator-5554（headless）运行 Release，PID 855 稳定 0 FATAL；Tasks 100–104 权限回归闭环：AGP merger 不从 library 清单继承 sharedUserId → appId 10160 → 授权不适用；app 主清单显式声明后修复 |
-| 当前唯一工程优先级 | **Chief push + GitHub Release**：本地 tag `v1.0.0-android-17.0.0_r1` 已建（C6 收口完成）；其余仅剩暂停中的 Task 079 / 方案B |
+| 当前状态 | **项目完成（2026-09-09）**：tag `v1.0.0-android-17.0.0_r1` 已 push，GitHub Release 已发布（https://github.com/convivae/SystemUI-Gradle/releases/tag/v1.0.0-android-17.0.0_r1）。Task 079 broad replay 经用户裁定关闭（won't-do，2026-09-09）；方案 B（AOSP 自构建 SDK 底座）保留为可选未来方向，非待办 |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -149,9 +149,10 @@ emulator-5554）为历史台账。
 
 ## Next ordered work
 
-1. **C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）。README 双语已于 2026-09-03 重写为对外文档；剩余为 manifest 快照与 release tag。
-2. **尾账**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
-3. **Task 079 broad replay**：继续暂停，除非用户明确重新授权。
+1. ~~**C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）~~ ✅ 完成（2026-09-08/09，Task 108）：tag `v1.0.0-android-17.0.0_r1` 已 push，GitHub Release 已发布。**项目完成。**
+2. **尾账（非阻塞，按需）**：SDK 老备份清理（待用户确认）、`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
+3. ~~**Task 079 broad replay**~~ ✅ 关闭（won't-do，用户裁定 2026-09-09）：其目标已由 pre-D8 reference rewrite（ADR 0008）+ 双静态门 + 双 variant runtime 终验以更硬证据覆盖。
+4. **方案 B（AOSP 自构建 SDK 底座）**：保留为可选未来方向，非待办。
 
 ## Verification commands and evidence
 
