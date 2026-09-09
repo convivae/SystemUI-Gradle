@@ -3,6 +3,17 @@
 日期：2026-08-26
 状态：已批准（用户逐项裁决）
 
+## 闭环记录（2026-09-08）
+
+Release tag `v1.0.0-android-17.0.0_r1` 已创建（本地 tag，未 push）。全部判定标准达成：
+libs/ 三类产物 100% 脚本化再生（Phase C4 完成）；Debug/Release 双构建 + 同树模拟器
+双 runtime 门通过（`docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`）；
+版本元数据 versionCode=37 / versionName="17" 已落 APK；aconfig jarjar 引用完整性门
+PASS。APK 发布清单快照见 `docs/release-manifest/`。
+
+剩余开放项：tag push 与 GitHub Release 发布（Chief 负责，不在本任务范围）；
+编译范围最小化（`m -j4` 全量编译的后续优化项，见决策 5，不阻塞闭环）。
+
 ## 背景
 
 Phase C（AOSP 版本固定 + 端到端可复现管线）启动前，与用户逐决策点 grilling 确认了

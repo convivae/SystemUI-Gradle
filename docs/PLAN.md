@@ -18,7 +18,7 @@
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
 - [x] ~~**C5：17 镜像双 runtime 门**~~ ✅ 2026-09-03（Task 099 闭环）：aconfig reference rewrite 生产修复落地——完整 725 条 AOSP repackaging 规则 + instrument-everything reference-only seam + 指令级静态门禁。fresh Debug `33e07319…`（200,506,573 B）与 fresh Release `17358f4d…`（45,030,130 B）双 APK：构建 ✅、静态门 0 违规 ✅、部署 + 冷启动 ✅、**整机重启门 ✅**（PID 稳定、0 FATAL、UI 三件套在屏）。commits `ed40e4b4`/`ea9b2f52`/`c79044b4` 已 push。Task 079 broad replay 保持暂停。
 - [x] ~~**最终双 variant runtime 终验（Tasks 100–104）**~~ ✅ 2026-09-06：Task 101 发现 APK 替换后 SystemUI 崩溃循环，根因为 AGP manifest merger 不从 library 清单继承 `sharedUserId` → appId 变 10160 → 首靴 DPGP 授权不适用；app 主清单显式声明 `android:sharedUserId="android.uid.systemui"`（commit `9723a96e`）修复后，fixed Debug `e61d5485…` 与 Release `6d1d4254…` 在同一全新实例先后部署并整机重启验收全 PASS（DPGP 自动授权、零手动 `pm grant`、PID 稳定 ≥3min、0 FATAL、窗口在屏；Debug 半用户视觉确认）。证据：`docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。
-- [ ] **C6**：manifest 快照 + release tag + version 声明（ADR 0007 收口；`git diff` 即产物漂移审计报告）。README 双语已于 2026-09-03 重写为对外文档，HANDOFF/CURRENT_STATE 已同步；SysUISdk 已发布 GitHub Release（`sysuisdk-android-17.0.0_r1-r1`，zip 79,982,462 B / SHA `ee5bd82d…`，`tools/package_sysuisdk_release.py` 确定性产出），Quickstart 主路径已改为下载 zip。
+- [x] ~~**C6：manifest 快照 + release tag + version 声明**~~ ✅ 2026-09-08（Task 108）：`app/build.gradle.kts` 声明 versionCode=37 / versionName="17"（同树 build.prop 来源）；Debug `e7277867…` / Release `48ade522…` 双变体重建，Release aconfig 静态门 RESULT=PASS；发布清单快照入 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1` 已建（未 push，Chief 负责 push + GitHub Release）。ADR 0007 闭环。README 双语已于 2026-09-03 重写为对外文档，HANDOFF/CURRENT_STATE 已同步；SysUISdk 已发布 GitHub Release（`sysuisdk-android-17.0.0_r1-r1`，zip 79,982,462 B / SHA `ee5bd82d…`，`tools/package_sysuisdk_release.py` 确定性产出），Quickstart 主路径已改为下载 zip。
 
 ### 2. 尾账（Release 阶段处理）
 
@@ -52,6 +52,8 @@
 Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1–C5 已全部完成：C5 最终由 Task 099
 闭环（aconfig 725 规则 instrument-everything seam；Debug `33e07319…` / Release `17358f4d…`
 双 APK 静态 + runtime + 整机重启门全 PASS）。替换后权限崩溃回归已由 Tasks 100–104 闭环
-（sharedUserId 修复 + 双 variant 全新实例终验 PASS，2026-09-06）。剩余未完成仅 C6 收口
-与暂停中的 Task 079 / 方案B。最新证据见
+（sharedUserId 修复 + 双 variant 全新实例终验 PASS，2026-09-06）。C6 收口完成（2026-09-08，
+Task 108）：版本元数据 37/"17" 落双 APK、静态门 PASS、发布清单快照、本地 tag
+`v1.0.0-android-17.0.0_r1`（ADR 0007 闭环；push 与 GitHub Release 由 Chief 执行）。
+剩余未完成仅暂停中的 Task 079 / 方案B。最新证据见
 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。

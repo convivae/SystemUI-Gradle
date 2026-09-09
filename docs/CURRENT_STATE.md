@@ -1,7 +1,8 @@
 # Current State（唯一完整实时技术状态）
 
 > **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-06（**双 variant runtime 终验 PASS（Tasks 103/104）**：sharedUserId 修复（commit `9723a96e`，Task 100–104 闭环）后，fixed Debug `e61d5485…` 与 Release `6d1d4254…` 在同一全新实例上先后部署并整机重启验收——sharedUser `android.uid.systemui/10123`、BLUETOOTH_CONNECT/READ_CONTACTS 由 DPGP 自动授予（零手动 `pm grant`）、PID 稳定 ≥3min、0 FATAL、窗口在屏；Debug 半用户已视觉确认。当前 emulator-5554 运行 Release `6d1d4254…`。详见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。Task 079 broad replay 继续暂停。下一步 C6 收口。）
+> **Last verified**: 2026-09-08（**C6 收口完成（Task 108）**：版本元数据 versionCode=37 / versionName="17" 落入双 APK（同树 build.prop：`ro.build.version.sdk=37`、platform 17，基线 android-17.0.0_r1）；Debug `e7277867…` / Release `48ade522…` 重建，Release aconfig 静态门 RESULT=PASS；发布清单快照入 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1` 已建（未 push）；ADR 0007 闭环。注意新 APK SHA 与 2026-09-06 双 variant 终验 APK（`e61d5485…`/`6d1d4254…`）不同，仅因版本元数据变更（原为 AGP 默认 versionCode=-1/versionName=""），无其他源码变化；runtime 行为已由该终验背书，本次未重跑 runtime（模拟器已关）。下一步：Chief push + GitHub Release。）
+> 此前：2026-09-06 双 variant runtime 终验 PASS（Tasks 100–104，sharedUserId 修复 commit `9723a96e`；fixed Debug `e61d5485…` 与 Release `6d1d4254…` 全新实例整机重启验收全 PASS，DPGP 自动授权零手动 pm grant；详见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。Task 079 broad replay 继续暂停。）
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
@@ -11,14 +12,14 @@
 | 维度 | 状态 |
 |------|------|
 | AOSP 基线 | **`android-17.0.0_r1`**（manifest `5bc9a7ce`，frameworks/base `94b4c163b`，1084 projects）；C1 全量构建 `m -j16` 成功（2h35m；GOMEMLIMIT=24GiB + 32G swap） |
-| Debug APK | ✅ **Task 103 终验 PASS**：fixed Debug `e61d5485…`（含 `sharedUserId="android.uid.systemui"`，commit `9723a96e`）部署于全新实例，重启后 DPGP 权限自动保持、PID 854 稳定 180s、0 FATAL、用户视觉确认；详见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md` |
-| Release APK | ✅ **Task 104 终验 PASS（RELEASE_DEPLOY_PASS）**：`6d1d4254…`（45,030,166 B、aconfig 静态门 0 违规、清单含 sharedUserId）在同实例 Debug→Release 同 identity 替换，重启后 DPGP 权限自动保持、PID 855 稳定 180s、0 FATAL；详见同上报告 |
+| Debug APK | ✅ **C6 release（Task 108）**：`e7277867…`（versionCode=37 / versionName="17"；sharedUserId 修复同 2026-09-06 终验 APK）。SHA 与终验 APK `e61d5485…` 不同仅因版本元数据；runtime 行为由该终验背书 |
+| Release APK | ✅ **C6 release（Task 108）**：`48ade522…`（versionCode=37 / versionName="17"，aconfig 静态门 RESULT=PASS）。SHA 与终验 APK `6d1d4254…` 不同仅因版本元数据；清单快照 `docs/release-manifest/release-AndroidManifest.xml` |
 | Gradle 配置解析 | ✅ `./gradlew help --refresh-dependencies` BUILD SUCCESSFUL；`buildSrc` 的 dependency/plugin 两层仓库均已镜像优先，fresh sync 不再因直连 Maven Central/Plugin Portal TLS 失败 |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
 | Python 工具测试 | ✅ **369 passed**（+151 subtests；原 361 + SysUISdk release 8 tests，2026-09-03） |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
-| 设备/模拟器 | ✅ emulator-5554（headless，herdr tab `task103-emulator`，实例 `local-goldfish-instance-2`）运行 Release `6d1d4254…`（PID 855 稳定，0 FATAL）。Tasks 100–104 权限回归闭环：AGP merger 不从 library 清单继承 sharedUserId → appId 10160 → 授权不适用；app 主清单显式声明后修复 |
-| 当前唯一工程优先级 | **C6 收口**：manifest 快照 + release tag + README/version/HANDOFF 声明（ADR 0007） |
+| 设备/模拟器 | 关闭（C6 为静态收口，模拟器已关）。2026-09-06 终验时：emulator-5554（headless）运行 Release，PID 855 稳定 0 FATAL；Tasks 100–104 权限回归闭环：AGP merger 不从 library 清单继承 sharedUserId → appId 10160 → 授权不适用；app 主清单显式声明后修复 |
+| 当前唯一工程优先级 | **Chief push + GitHub Release**：本地 tag `v1.0.0-android-17.0.0_r1` 已建（C6 收口完成）；其余仅剩暂停中的 Task 079 / 方案B |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -73,6 +74,7 @@
 | 2026-09-06 | **双 variant runtime 终验（Tasks 100–104）**：权限崩溃回归根因（AGP merger 不继承 library 清单 sharedUserId → appId 10160）闭环——app 主清单显式声明（commit `9723a96e`）后，fixed Debug `e61d5485…` 与 Release `6d1d4254…` 在全新实例先后部署、整机重启验收全 PASS，DPGP 自动授权零手动 pm grant，Debug 半用户视觉确认 | `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md` |
 | 2026-09-03 | **SysUISdk 发布为 GitHub Release（方案 A）**：方案 B（AOSP 自构建 SDK 底座）因 `m sdk` 分析 OOM（sdk 变体峰值 >33.7G，GOMEMLIMIT 无法经 `env -i` 传入）与磁盘不足搁置；改为直接打包现有生成器产出。`tools/package_sysuisdk_release.py` 产出确定性 zip（79,982,462 B，SHA `ee5bd82d…`）+ LICENSE/NOTICE/README.txt，发布 tag `sysuisdk-android-17.0.0_r1-r1`；用户已用该 Release 完成正常编译验收；README 双语 Quickstart 改为下载 zip 主路径 | `docs/issues/2026-09-03-sysuisdk-aosp-base-and-release.md` |
 | 2026-09-03 | **buildSrc fresh-sync TLS 修复**：补齐独立 build 的 dependency mirrors 与 pluginManagement mirrors；原失败的 Kotlin compiler plugin 及 Kotlin DSL plugin 均从腾讯镜像解析，`./gradlew help --refresh-dependencies` 成功 | `docs/issues/2026-09-03-buildsrc-maven-central-tls-resolution.md` |
+| 2026-09-08 | **C6 release 收口（Task 108，ADR 0007 闭环）**：`app/build.gradle.kts` 声明 versionCode=37 / versionName="17"（同树 build.prop 来源注释）；Debug `e7277867…` / Release `48ade522…` 双变体重建（output-metadata + aapt 双证 37/"17"）；Release aconfig 静态门 RESULT=PASS（0 违规/0 hidden 定义）；发布清单快照入 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1`（未 push）。新 SHA 与 2026-09-06 终验 APK 不同仅因版本元数据 | `docs/release-manifest/README.md`；ADR 0007 闭环记录 |
 
 ## Current build and verification matrix
 

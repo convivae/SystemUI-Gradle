@@ -1,7 +1,7 @@
 # SystemUI-Gradle 交接文档 (HANDOFF)
 
 > **下一个 AI Agent 请先读本文件。**
-> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：**双 variant runtime 终验 PASS（2026-09-06，Tasks 100–104）**。Task 101 发现替换后权限崩溃回归，根因为 AGP merger 不从 library 清单继承 `sharedUserId` → appId 变为 10160；app 主清单显式声明修复（commit `9723a96e`）。fixed Debug `e61d5485…` 与 Release `6d1d4254…` 在全新实例先后部署、整机重启验收全 PASS，DPGP 自动授权零手动 `pm grant`，Debug 半用户已视觉确认。emulator-5554 运行 Release `6d1d4254…`。Task 079 broad replay 保持暂停。下一步 C6 收口。）
+> 本文件只做 5 分钟接手导航；**完整实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**（当前一句摘要：**C6 收口完成（2026-09-08，Task 108）**。版本元数据 versionCode=37 / versionName="17" 落入双 APK；Debug `e7277867…` / Release `48ade522…`（与 2026-09-06 双 variant 终验 APK `e61d5485…`/`6d1d4254…` 仅差版本元数据，runtime 行为由该终验背书）；Release aconfig 静态门 PASS；发布清单快照 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1` 已建，ADR 0007 闭环。Task 079 broad replay 保持暂停。下一步：Chief push tag + GitHub Release。）
 
 ---
 
@@ -17,7 +17,7 @@
 2. **若参与编排**（herdr worker/architect）再读 [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md)、[`docs/orchestration/STATE.md`](./orchestration/STATE.md) 和 [`docs/orchestration/log.md`](./orchestration/log.md) 尾部。
 3. **读 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)** — 获取全部实时状态：构建矩阵、版本、依赖产物、blocker、下一步。
 4. **读 [`docs/PLAN.md`](./PLAN.md)** — 未完成路线与完成条件。
-5. **当前唯一工程优先级**：C6 收口（manifest 快照 + release tag + 版本声明，ADR 0007）。C5 已由 Task 099 闭合；替换后权限崩溃回归已由 Tasks 100–104 闭环（sharedUserId 修复 + 双 variant 全新实例终验 PASS，见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`）。剩余未完成仅：C6 收口与暂停中的 Task 079 / 方案B。
+5. **当前唯一工程优先级**：Chief push tag `v1.0.0-android-17.0.0_r1` + GitHub Release（本地 tag 已建）。C6 已于 2026-09-08（Task 108）闭合：版本元数据 37/"17" + 双变体重建 + 静态门 PASS + 发布清单快照（`docs/release-manifest/`）+ ADR 0007 闭环。C5 已由 Task 099 闭合；替换后权限崩溃回归已由 Tasks 100–104 闭环（sharedUserId 修复 + 双 variant 全新实例终验 PASS，见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`）。剩余未完成仅暂停中的 Task 079 / 方案B。
 
 ## 1.0 Phase C 主线（2026-08-27 起）
 
@@ -46,7 +46,7 @@
 | C5 task098 | fresh Debug runtime 门 ❌ `DEBUG_RUNTIME_REBOOT_FAIL`（622 次 `dreams.Flags` NCDFE）→ 触发 Task 099 | `docs/issues/2026-09-02-c5-debug-runtime-reboot-gate.md` |
 | C5 task099 | **aconfig 生产修复 + C5 闭环 ✅**：725 规则 + instrument-everything seam + 指令级门禁；Debug `33e07319…` / Release `17358f4d…` 双 APK 静态 + 部署 + 冷启动 + 整机重启门全 PASS；commits `ed40e4b4`/`ea9b2f52`/`c79044b4` 已 push | `docs/issues/2026-09-02-c5-dreams-flags-runtime-origin-diagnosis.md` |
 | post-C5 tasks 100–104 | **替换后权限回归闭环 ✅（2026-09-06）**：根因 = AGP merger 不从 library 清单继承 `sharedUserId`（appId 10160 ≠ 10123）；app 主清单显式声明修复（commit `9723a96e`）；fixed Debug `e61d5485…` 与 Release `6d1d4254…` 全新实例双 variant 终验 PASS，DPGP 自动授权零手动 `pm grant` | `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md` |
-| C6 | manifest 快照 + release tag + 版本声明（README 双语已重写为对外文档；SysUISdk 已发布 GitHub Release `sysuisdk-android-17.0.0_r1-r1`，Quickstart 主路径改为下载 zip） | 进行中 |
+| C6 | **收口 ✅（2026-09-08，Task 108）**：versionCode=37 / versionName="17" 落双 APK（同树 build.prop 来源）；Debug `e7277867…` / Release `48ade522…` 重建，Release 静态门 PASS；发布清单快照 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1`（ADR 0007 闭环，push + GitHub Release 由 Chief 执行） | `docs/release-manifest/README.md`；ADR 0007 |
 
 ## 1.1 16 时代 Debug/Release 双 runtime 闭环回顾（2026-08-24→26，历史基线）
 
