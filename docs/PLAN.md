@@ -13,8 +13,11 @@
 - [x] 保持真实 AOSP class 字节的 SDK optional bridge、公开 useLibrary 接线、生成器回归测试。
 - [x] 隔离 SDK 的真实 IDE 模型与本地 JVM 测试验收。
 - [x] 完成双 APK/R8/DEX/manifest 边界验收并记录证据。
-- [ ] 用户确认后更新 live SDK、在 Android Studio 中重新 Sync。
-- [ ] 用户在另一台机器应用本地 patch、发布新布局 SDK；**公司机器不 push、不上传 Release**。
+- [x] 按用户授权替换 live SDK（旧版不保留），验证本机模型与 JVM tests。
+- [x] 修复 SettingsTheme 测试的旧机器硬编码路径，全工具测试通过。
+- [ ] 用户在 Studio UI 再次 Sync（已通过对应 Tooling API 模型）。
+- [ ] 用户在另一台机器使用完整离线 ZIP 中的 bundle/patch，发布新布局 SDK；
+  **公司机器不 push、不上传 Release**。
   当前 main 不兼容旧 r1 SDK，README 已说明再生路径。
 
 具体技术状态/证据唯一见 `CURRENT_STATE.md` 维护期一节与

@@ -8,8 +8,10 @@
 ## 维护期入口（2026-10-03）
 
 Studio Sync 的 SysUISdk mockable 转换故障已按 **optional bridge、真实字节不变、
-保留本地 JVM 测试** 的方式完成本地验收；待安装 SDK 与异机发布。用户最终要求本机不上传
-GitHub，仅交付 patch/SDK。不合入 PR #1 的全量 stubbing。
+保留本地 JVM 测试** 的方式完成本地验收；live SDK 已按用户授权替换，原 SDK 不保留。
+SettingsTheme 旧路径测试也已修复，全工具测试通过。用户要求本机不上传 GitHub，
+完整 ZIP 携带 self-contained Git bundle、累计 patch 和 SDK，供异机恢复与发布。
+不合入 PR #1 的全量 stubbing。
 生成器/消费配置、验证结果、当前 SDK 安装状态与下一步唯一见
 [`CURRENT_STATE.md`](./CURRENT_STATE.md) 的维护期一节；完整过程见
 [`issues/2026-10-03-sdk-optional-bridge-implementation.md`](./issues/2026-10-03-sdk-optional-bridge-implementation.md)。

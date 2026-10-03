@@ -2,6 +2,10 @@
 
 日期：2026-10-03
 
+> 本文记录第一轮 SDK 修复及交付时的状态。用户后续授权 live SDK 替换和 SettingsTheme
+> 测试修复，现均已完成；最新状态见 CURRENT_STATE.md 及
+> `2026-10-03-live-sdk-offline-handoff.md` / `2026-10-03-settingstheme-resource-inventory.md`。
+
 ## 用户授权与边界
 
 用户批准按 optional bridge 路线继续；保持原有禁止 stub、真实字节、来源可追溯规则。

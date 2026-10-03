@@ -7,12 +7,13 @@
 
 ---
 
-## 维护期修复（2026-10-03：本地验收完成，等待安装/异机发布）
+## 维护期修复（2026-10-03：本机 SDK 已安装，完整离线包待异机发布）
 
 Studio Sync 的 `androidApis → MockableJarTransform` 故障已用 **真实 SDK optional bridge**
 修复；不关闭 UnitTest、不改写方法体、不合 PR #1、不放宽禁止 stub 的规则。
 用户最后要求公司机器**不上传 GitHub**，交付本地 patch/SDK，由用户在其他机器发布。
-**没有 push、远端 tag、Release 或附件上传；live SDK 未替换。**
+**没有 push、远端 tag、Release 或附件上传。用户随后授权替换 live SDK，已由生成器
+--replace 完成，未保留旧 SDK；实际安装路径通过新 daemon 模型/JVM 验证。**
 
 | 维护项 | 当前证据 |
 |---|---|
@@ -21,15 +22,20 @@ Studio Sync 的 `androidApis → MockableJarTransform` 故障已用 **真实 SDK
 | IDE/JVM | fresh Tooling daemon 全 13 Android 模块/26 variants 通过、Debug UnitTest 保留；真实 AGP JVM 4 tests 全通过（绝对 SDK 路径校验） |
 | 构建/R8 | 隔离 Debug/Release 成功；fresh-daemon 双变体复验与强制 R8 重跑成功，R8 library input 为 generated SDK bridge、program input 不含它 |
 | APK | Debug SHA `e7277867695b85098bee5d3bba06732371ff708471d332e807e5ff08b3a45abd` 与原发布一致；Release SHA `395959de6cc2b1741244df29ff00b3a1033ff3e5053b108298721268d16281c3`；双 aconfig gate PASS、37 bridge 定义全 0、无 bridge uses-library、v2 签名 PASS |
-| Python | SDK/optional/packaging **97 passed +3 subtests**；全套 **366 passed +154 subtests / 1 failed**，该 SettingsTheme 资源清单失败已在原 HEAD 复现，与本次修改无关 |
-| 本地交付 | `dist/sysuisdk-optional-bridge/`：patch + r2 ZIP/sidecar + 应用/异机发布说明；ZIP 79,983,909 B，SHA `329fd0e12a19b8004180fb74f0a9a3817b2e7b3c1fc36617a8af7d535b5543ae` |
-| 尚未执行 | live SDK 安装、手动 Studio UI Sync、设备部署；新 SDK GitHub 发布已按用户指令取消本机执行 |
+| Python | **全套 368 passed +156 subtests**；原 SettingsTheme 失败是测试硬编码旧机器路径导致预期集合为空，现已改为共享 AOSP_ROOT 并防御缺失/空目录；实际 230 资源与 AAR 本来就完全正确，无产物修改 |
+| 本地交付 | `dist/SystemUI-Gradle-offline-release-2026-10-03.zip`：self-contained main Git bundle、累计 patch、SDK ZIP/sidecar、commit 记录、发布说明和摘要；支持只有源码 ZIP、没有 .git 的接收方。内层 SDK ZIP SHA 不变：`329fd0e12a19b8004180fb74f0a9a3817b2e7b3c1fc36617a8af7d535b5543ae` |
+| 本机安装 | `/home/leijiabin/Android/Sdk/platforms/android-SysUISdk` 045.3，marker 与已验收产物完全相同；原 SDK 已删除，无事务残留；本机 root project 全 13 模块模型 + 4 JVM tests 通过 |
+| 尚未执行 | 手动 Studio UI Sync、设备部署；GitHub 发布仍由用户在另一台机器执行 |
 
 **安装注意**：AGP 的静态 bootclasspath cache 缺 SDK root 键。更新/切换 SDK 后先停止
 Gradle daemon；本轮用 `--no-daemon`、新 Tooling JVM identity 和精确路径断言排除了旧根缓存。
 主工程现在使用 `useLibrary("com.android.systemui.platform.bridge")`，旧 r1 SDK 不能用于当前
 main；用当前生成器 `--replace` 或干净安装本地 ZIP，禁止新旧覆盖混装。
 
+完整安装/离线恢复步骤见
+[`issues/2026-10-03-live-sdk-offline-handoff.md`](issues/2026-10-03-live-sdk-offline-handoff.md)；
+SettingsTheme 根因与修复见
+[`issues/2026-10-03-settingstheme-resource-inventory.md`](issues/2026-10-03-settingstheme-resource-inventory.md)。
 完整实现/命令/已知问题见
 [`issues/2026-10-03-sdk-optional-bridge-implementation.md`](issues/2026-10-03-sdk-optional-bridge-implementation.md)；
 根因与 PR 评估见
