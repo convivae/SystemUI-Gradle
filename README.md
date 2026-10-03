@@ -59,9 +59,14 @@ export ANDROID_HOME="$ANDROID_SDK_ROOT"
 printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 ```
 
-### 2. 获取 SysUISdk（二选一）
+### 2. 获取 SysUISdk
 
-**方式 A（推荐）：安装已发布的 r1**
+> **当前 main 需要生成器 045.3+ 的 optional bridge 布局。** 已发布的 r1 仍对应历史
+> `v1.0.0-android-17.0.0_r1`，不包含 `com.android.systemui.platform.bridge`。
+> 新 SDK 发布前，请对当前 main 使用下方方式 B 再生；已有生成器产出可加 `--replace`。
+> 此布局修复 Studio Sync，同时保留 Android 本地 JVM 测试，不修改真实 AOSP class 字节。
+
+**方式 A（仅历史 release tag）：安装已发布的 r1**
 
 从 [SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
 下载 zip（附同名 `.sha256` 可供校验，固定 SHA-256 为
@@ -88,6 +93,11 @@ uv run python tools/build_sysuisdk.py \
 
 如果 Gradle 报 `Failed to find Platform SDK with path: platforms;android-SysUISdk`，
 说明第 2 步尚未完成，或 SysUISdk 解压位置与 Gradle 使用的不是同一个 Android SDK 目录。
+若报 `Unable to find optional library: com.android.systemui.platform.bridge`，说明仍在使用
+旧布局 SDK，需用当前生成器再生，不要移除 `useLibrary()` 或关闭 UnitTest。
+
+本地 JVM 回归与无界面 IDE 模型检查命令见
+[`tools/tests/fixtures/sysuisdk_optional_bridge/README.md`](tools/tests/fixtures/sysuisdk_optional_bridge/README.md)。
 
 ### 3.（可选）准备 AOSP 17 构建产物
 

@@ -654,7 +654,7 @@ class BridgeLoadTest(unittest.TestCase):
             with self.assertRaises(b.BuildError):
                 b.load_bridge(inputs)
 
-    def test_both_target_jars_contain_the_complete_bridge(self):
+    def test_android_plus_optional_and_core_contain_the_complete_bridge(self):
         with tempfile.TemporaryDirectory() as td:
             base = _make_base_platform(Path(td) / "base")
             aosp = _make_fake_aosp(Path(td) / "aosp")
@@ -665,7 +665,9 @@ class BridgeLoadTest(unittest.TestCase):
                 inputs["framework_res_apk"], bridge))
             core = _zip_bytes(b.compose_core_modules_jar(
                 base / "core-for-system-modules.jar", bridge))
-            for jar_name, entries in (("android.jar", android),
+            optional = _zip_bytes(b.compose_optional_bridge_jar(bridge))
+            self.assertFalse(set(optional) & set(android))
+            for jar_name, entries in (("android.jar + optional", android | optional),
                                       ("core-for-system-modules.jar", core)):
                 for entry in BRIDGE_37:
                     self.assertEqual(entries[entry], _bridge_payload(entry),
@@ -891,8 +893,13 @@ class TransactionTest(unittest.TestCase):
                              "f1\n")
             self.assertEqual((output / "data" / "res" / "v.txt").read_text(),
                              "r")
-            self.assertEqual((output / "optional" / "optional.json").read_text(),
-                             "[]\n")
+            import json
+            libraries = json.loads((output / "optional" / "optional.json").read_text())
+            self.assertEqual(libraries, [{
+                "name": b.OPTIONAL_LIBRARY_NAME,
+                "jar": b.OPTIONAL_JAR_NAME,
+                "manifest": False,
+            }])
 
     def test_framework_aidl_gets_both_decls_once(self):
         with tempfile.TemporaryDirectory() as td_str:

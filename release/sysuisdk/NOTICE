@@ -28,16 +28,19 @@ License 2.0, part of the SystemUI-Gradle project) from two sources:
      ``framework-res.apk``.
    * Hidden AIDL declarations appended to ``framework.aidl``, derived from
      AOSP primary sources.
-   * Bridge class entries in ``android.jar`` and
-     ``core-for-system-modules.jar``, byte-exact from AOSP-built
-     ``core-libart``, ``aconfig-annotations`` and ``keepanno-annotations``
-     jars.
+   * Bridge class entries in ``android.jar``,
+     ``optional/sysui-platform-bridge.jar`` and ``core-for-system-modules.jar``,
+     byte-exact from AOSP-built ``core-libart``, ``aconfig-annotations`` and
+     ``keepanno-annotations`` jars. The optional JAR contains the unchanged
+     10-class libcore/DDMS slice; no method bodies are rewritten.
+   * Generator-authored SDK metadata in ``optional/optional.json``: preserves
+     stock library records and registers the new bridge with manifest=false.
 
 2. Stock Android SDK Platform components (base platform ``android-37.0``,
    published by Google):
 
    * Files copied verbatim from the stock platform package, including but
-     not limited to ``data/``, ``skins/``, ``templates/``, ``optional/``,
+     not limited to ``data/``, ``skins/``, ``templates/``, stock optional JARs,
      ``android-stubs-src.jar``, ``uiautomator.jar``, ``build.prop``,
      ``sdk.properties``, and the stub-only entries of ``android.jar`` /
      ``core-for-system-modules.jar`` that were not overlaid by AOSP bytes.

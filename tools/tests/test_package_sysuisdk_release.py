@@ -3,6 +3,7 @@
 """Tests for tools/package_sysuisdk_release.py."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -24,8 +25,11 @@ def _make_platform(root: Path, with_marker: bool = True) -> Path:
     if with_marker:
         (platform / pkg.MARKER_NAME).write_text(json.dumps({
             "schema_version": pkg.MARKER_SCHEMA_VERSION,
-            "tool_version": "045.2",
-            "generated": {"inventory": {}},
+            "tool_version": "045.3",
+            "generated": {"inventory": {
+                path.relative_to(platform).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in platform.rglob("*") if path.is_file()
+            }},
         }), encoding="utf-8")
     return platform
 
@@ -57,7 +61,31 @@ class MarkerGateTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             platform = _make_platform(Path(td))
             marker = pkg.check_generator_owned(platform)
-            self.assertEqual(marker["tool_version"], "045.2")
+            self.assertEqual(marker["tool_version"], "045.3")
+
+    def test_stale_marker_cannot_publish_modified_missing_or_extra_files(self):
+        for change in ("modified", "missing", "extra"):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                platform = _make_platform(root)
+                release = _make_release_dir(root)
+                if change == "modified":
+                    (platform / "android.jar").write_bytes(b"hand patched")
+                elif change == "missing":
+                    (platform / "android.jar").unlink()
+                else:
+                    (platform / "untracked-backup.jar").write_bytes(b"extra")
+                output = root / "release.zip"
+                self.assertEqual(pkg.run([
+                    "--platform", str(platform), "--release-dir", str(release),
+                    "--output", str(output),
+                ]), 1)
+                self.assertFalse(output.exists())
+                self.assertFalse(output.with_suffix(".zip.sha256").exists())
+
+    def test_default_release_name_does_not_overwrite_r1(self):
+        self.assertEqual(pkg.build_arg_parser().parse_args([]).name,
+                         "SysUISdk-android-17.0.0_r1-r2")
 
 
 class CollectEntriesTest(unittest.TestCase):

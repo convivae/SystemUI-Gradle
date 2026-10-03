@@ -6,6 +6,21 @@ plugins {
     id("com.google.devtools.ksp") version "2.2.10-2.0.2" apply false
 }
 
+// SysUISdk's source-identical libcore/DDMS slice is a platform optional library.
+// Keep it on javac/Kotlin/R8/test classpaths, but outside android.jar's mockable
+// transform. Never use implementation or disable UnitTest to work around this.
+// Requires generator 045.3+; an older SDK fails with OPTIONAL_LIB_NOT_FOUND.
+// See ADR 0006 and docs/issues/2026-10-03-sdk-optional-bridge-implementation.md.
+subprojects {
+    listOf("com.android.application", "com.android.library").forEach { pluginId ->
+        pluginManager.withPlugin(pluginId) {
+            extensions.configure<com.android.build.api.dsl.CommonExtension> {
+                useLibrary("com.android.systemui.platform.bridge")
+            }
+        }
+    }
+}
+
 // Inject framework.jar + internal flags jars into every Java/Kotlin compile.
 // SYSOPS: AOSP-only jars provide hidden APIs (aconfig Flags, @hide classes).
 allprojects {

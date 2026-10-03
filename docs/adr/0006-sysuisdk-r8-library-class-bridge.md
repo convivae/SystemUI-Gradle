@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted（2026-08-21，用户明确批准 Task 041/042 两阶段方案；同日机制修订为单入口生成器，见“决策”与“历史修订记录”）
+Accepted（2026-08-21；2026-10-03 用户批准 optional bridge 布局修订，保留真实字节与禁止 stub 的规则。验证记录见 `docs/issues/2026-10-03-sdk-optional-bridge-implementation.md`。）
 
 ## 背景
 
@@ -28,13 +28,29 @@ library definitions：
 违反规则 F；`-dontwarn` 会隐藏可由真实定义闭合的 classpath 缺口。AGP 当前也没有公开、
 稳定的 DSL 可把额外 JAR 直接声明为仅供 R8 使用的 library input。
 
-## 决策（现行机制，2026-08-21 修订为单入口）
+## 决策（现行机制：单入口 + SDK optional bridge，2026-10-03）
 
-1. SysUISdk 由单入口生成器重建：`python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp`。一次调用消费冻结的七输入 AOSP 映射（framework 聚合 JAR、framework-res.apk、core-libart、aconfig-annotations、keepanno、两个隐藏 AIDL 源），把真实 AOSP class entries 注入 `android.jar` 与 `core-for-system-modules.jar`，使 AGP 将其作为 library classes 提供给 javac/Kotlin/R8，而不是作为 APK program classes。（D12 2026-08-29：原第八输入 unsupportedappusage.jar 随其 bridge slice 一并移除——17 framework 聚合 turbine JAR 已内嵌同名两类，framework 副本即最终字节。）
-2. 精确 37 个 bridge entries（Task 041 冻结的 35 个 library-class entries + 4 个 dalvik 优化 annotation entries − 2 个改由 framework 聚合提供的 UnsupportedAppUsage 类，见 D12）同时进入两个 SDK target JAR；源字节校验、冲突拒绝、确定性输出与幂等测试内置于生成器。不得用 package-prefix 推测或整包隐式注入。
+1. SysUISdk 由单入口生成器重建：`python3 tools/build_sysuisdk.py --aosp-root /path/to/aosp`。一次调用消费冻结的七输入 AOSP 映射（framework 聚合 JAR、framework-res.apk、core-libart、aconfig-annotations、keepanno、两个隐藏 AIDL 源），把真实 AOSP class entries 交付到 `android.jar`、SDK optional bridge JAR 与 `core-for-system-modules.jar`，使 AGP 将其作为 library classes 提供给 javac/Kotlin/R8，而不是作为 APK program classes。（D12 2026-08-29：原第八输入 unsupportedappusage.jar 随其 bridge slice 一并移除——17 framework 聚合 turbine JAR 已内嵌同名两类，framework 副本即最终字节。）
+2. 精确 37 个 bridge entries（D12 后冻结清单）保持源字节不变：27 个 dalvik/aconfig/keepanno entries 留在 `android.jar`，10 个 libcore/DDMS entries 交付到 `optional/sysui-platform-bridge.jar`；`core-for-system-modules.jar` 仍保留全部 37 个。`android.jar` 与 optional JAR 的 bridge 定义必须不相交、并集完整；源字节校验、冲突拒绝、确定性输出与事务检查保留。不得用 package-prefix 推测或整包隐式注入。
 3. 官方 base platform（默认 `android-37.0`）保持只读；生成在 sibling staging 目录进行，全部验证通过后以 rename 原子发布；输出目录由生成器拥有并以 marker 证明（marker 只记录 provenance，不是备份）。
 4. `--replace` 只接受带有效 generator marker 的生成器自有输出；绝不替换官方 base platform。
 5. `AssumeTrueForR8` 保持在 SysUISdk 之外，由 release build type 的唯一一条 exact `-dontwarn` adapter 处理（Task 044 用户批准）；必须保留真实 R8 flag-assumption 语义，不得通过 runtime packaging 或把该 annotation 打进 SDK 解决。
+
+6. SDK `optional/optional.json` 保留 stock entries，新增 `com.android.systemui.platform.bridge`，`manifest=false`。Android 模块统一用公开 `android.useLibrary(...)` 消费；禁止 implementation 打包、普通 compileOnly 代替 R8 library channel，或私接 AGP 内部任务。
+7. 不关闭 Android 本地 UnitTest，不修改 class 方法体。AGP 只对 `android.jar` 做 mockable 转换，optional bridge 按真实 class 进入测试 classpath；这并不保证 native/ART API 能在 host JVM 直接执行。SDK 元数据不声明新的设备共享库依赖，最终 APK 必须检查无对应 uses-library 条目。
+
+## 2026-10-03 修订理由与权衡
+
+AGP 9.3.1 MockableJarGenerator 替换真实 libcore 方法体后没有清理异常处理表，导致
+Studio 的 androidApis 解析报 handlerRangeBlock/outgoingEdges NPE。只在 SDK 副本中
+分离上述 10 类即可通过转换，且全部 class/resource 字节不变。官方 AGP 的
+BootClasspathConfig、BaseR8Task、AndroidUnitTest 明确支持 optional SDK library 通道，
+所以不需要改写 SDK 方法体，也不需要放弃本地 JVM 测试。
+
+代价是 SDK 布局/消费配置同步升级（生成器 045.3+）、额外 JAR 与 metadata 的来源校验，
+并重跑 IDE、真实 JVM 测试、Debug/Release 与 APK 边界门。旧 SDK 缺 optional library 时
+应明确失败；不静默回退。全量 stubbing（PR #1）和关闭 UnitTest 均不是本项目采纳的修复。
+这是交付位置变更，不放宽 AGENTS 的 P/F/R 规则或真实 library classes 合同。
 
 ## 后果
 

@@ -66,9 +66,16 @@ export ANDROID_HOME="$ANDROID_SDK_ROOT"
 printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 ```
 
-### 2. Get SysUISdk (pick one)
+### 2. Get SysUISdk
 
-**Option A (recommended): install the published r1 release**
+> **Current main requires the optional-bridge layout from generator 045.3+.** The
+> published r1 SDK remains available for the historical `v1.0.0-android-17.0.0_r1`
+> tag, but lacks `com.android.systemui.platform.bridge`. Until a new SDK release
+> is published, use option B below for main; use `--replace` for generator-owned
+> existing outputs. This fixes Studio sync without disabling local JVM tests or
+> rewriting real AOSP class bytes.
+
+**Option A (historical release tag only): install the published r1 release**
 
 Download the zip from the
 [SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
@@ -98,6 +105,12 @@ uv run python tools/build_sysuisdk.py \
 If Gradle reports `Failed to find Platform SDK with path: platforms;android-SysUISdk`,
 step 2 has not been completed, or the platform was unzipped into a different Android
 SDK root than the one Gradle uses.
+If it reports `Unable to find optional library: com.android.systemui.platform.bridge`,
+regenerate the old-layout SDK with the current generator; do not remove `useLibrary()`
+or disable UnitTest.
+
+Local JVM regression and headless IDE model checks are documented in
+[`tools/tests/fixtures/sysuisdk_optional_bridge/README.md`](tools/tests/fixtures/sysuisdk_optional_bridge/README.md).
 
 ### 3. (Optional) Prepare the AOSP 17 build outputs
 

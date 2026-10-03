@@ -18,9 +18,11 @@ Design (docs/architecture/2026-08-21-sysuisdk-single-entry-composition.md):
   AOSP-relative inputs, no globbing, no newest-file fallback.
 * The aggregate framework turbine JAR is master over duplicate stock SDK class
   entries; framework resources come byte-exactly from ``framework-res.apk``.
-* The bridge is exactly the unchanged Task 041 35-entry allowlist plus the
-  four dalvik optimization annotations, injected into both target JARs;
-  ``AssumeTrueForR8`` stays out. The two
+* The frozen 37-entry bridge retains byte-exact AOSP definitions. The 10
+  libcore/DDMS classes live in an SDK optional library (not android.jar),
+  so AGP's mockable transform never rewrites their real exception handlers.
+  The other 27 entries remain in android.jar; all 37 still enter
+  core-for-system-modules.jar. ``AssumeTrueForR8`` stays out. The two
   ``android/compat/annotation/UnsupportedAppUsage{,$Container}`` classes are
   NOT bridged: the 17 framework aggregate turbine JAR already embeds them
   (turbine bytes), and the framework aggregate is master (D12, decision audit
@@ -46,7 +48,7 @@ from pathlib import Path
 
 # --- Constants --------------------------------------------------------------
 
-TOOL_VERSION = "045.2"
+TOOL_VERSION = "045.3"
 DEFAULT_BASE_PLATFORM_NAME = "android-37.0"
 OUTPUT_PLATFORM_NAME = "android-SysUISdk"
 OUTPUT_PKG_PATH = f"platforms;{OUTPUT_PLATFORM_NAME}"
@@ -238,10 +240,9 @@ def resolve_output(cli_value: str | None, sdk_root: Path) -> Path:
     return Path(sdk_root) / "platforms" / OUTPUT_PLATFORM_NAME
 
 
-# --- Frozen bridge allowlist (39 entries) ------------------------------------
-# The bridge is exactly the unchanged Task 041 35-entry allowlist plus the
-# four existing dalvik optimization annotations. ``AssumeTrueForR8`` stays
-# out (release-only adapter in app/proguard_gradle.flags owns it).
+# --- Frozen bridge allowlist (37 entries) ------------------------------------
+# Task 041's 35 + four dalvik annotations - two framework-owned entries (D12).
+# ``AssumeTrueForR8`` stays out; the release adapter owns it.
 
 _DALVIK_OPTIMIZATION_ENTRIES = (
     "dalvik/annotation/optimization/DeadReferenceSafe.class",
@@ -265,6 +266,13 @@ _DDMC_ENTRIES = (
     "org/apache/harmony/dalvik/ddmc/DdmServer.class",
     "org/apache/harmony/dalvik/ddmc/DdmVmInternal.class",
 )
+OPTIONAL_LIBRARY_NAME = "com.android.systemui.platform.bridge"
+OPTIONAL_JAR_NAME = "sysui-platform-bridge.jar"
+OPTIONAL_JAR_RELPATH = f"optional/{OPTIONAL_JAR_NAME}"
+OPTIONAL_BRIDGE_ENTRIES = tuple(sorted(
+    _IO_UTILS_ENTRIES + _NATIVE_ALLOCATION_REGISTRY_ENTRIES + _DDMC_ENTRIES))
+assert len(OPTIONAL_BRIDGE_ENTRIES) == 10
+
 _ACONFIG_FLAG_ACCESSOR_ENTRIES = (
     "com/android/aconfig/annotations/AconfigFlagAccessor.class",
 )
@@ -386,7 +394,8 @@ def compose_android_jar(base_jar: Path, framework_jar: Path,
     3. Take the complete resource set (``resources.arsc`` + ``res/**``)
        byte-exactly from the framework-res APK; all other APK entries
        (manifest, META-INF signing, assets) are excluded.
-    4. Inject the bridge under the idempotent/fatal collision rule.
+    4. Check all bridge collisions, then retain only the 27 non-optional
+       entries. The other 10 are delivered unchanged in the SDK optional JAR.
     """
     base = _read_unique_entries(base_jar)
     framework = _read_unique_entries(framework_jar)
@@ -402,7 +411,46 @@ def compose_android_jar(base_jar: Path, framework_jar: Path,
         if _is_resource_entry(name):
             entries[name] = data
     _apply_bridge(entries, bridge)
+    for entry in OPTIONAL_BRIDGE_ENTRIES:
+        if entry in entries:
+            if entry not in bridge:
+                raise BuildError(f"optional bridge source missing: {entry}")
+            del entries[entry]
     return _write_deterministic_zip(entries)
+
+
+def compose_optional_bridge_jar(bridge: dict[str, bytes]) -> bytes:
+    """Deliver the exact libcore/DDMS slice, without changing any class bytes."""
+    missing = set(OPTIONAL_BRIDGE_ENTRIES) - bridge.keys()
+    if missing:
+        raise BuildError(f"optional bridge source missing: {sorted(missing)}")
+    return _write_deterministic_zip({
+        entry: bridge[entry] for entry in OPTIONAL_BRIDGE_ENTRIES})
+
+
+def compose_optional_metadata(base_platform: Path) -> bytes:
+    """Preserve stock optional libraries; reserve our identity/path fail-closed."""
+    path = base_platform / "optional/optional.json"
+    try:
+        libraries = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    except (ValueError, OSError) as exc:
+        raise BuildError(f"invalid optional library metadata {path}: {exc}") from exc
+    if not isinstance(libraries, list) or any(
+        not isinstance(lib, dict)
+        or not isinstance(lib.get("name"), str)
+        or not isinstance(lib.get("jar"), str)
+        or not isinstance(lib.get("manifest"), bool)
+        for lib in libraries
+    ):
+        raise BuildError(f"invalid optional library metadata: {path}")
+    if (base_platform / OPTIONAL_JAR_RELPATH).exists() or any(
+        lib["name"] == OPTIONAL_LIBRARY_NAME or lib["jar"] == OPTIONAL_JAR_NAME
+        for lib in libraries
+    ):
+        raise BuildError("optional library identity/path collision with stock SDK")
+    libraries.append({"name": OPTIONAL_LIBRARY_NAME,
+                      "jar": OPTIONAL_JAR_NAME, "manifest": False})
+    return (json.dumps(libraries, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
 def compose_core_modules_jar(base_jar: Path,
@@ -495,23 +543,37 @@ def _validate_platform(staging: Path, inputs: dict[str, Path],
         if len(names) != len(set(names)):
             raise BuildError(f"duplicate entry names in input {key}: "
                              f"{inputs[key]}")
-    # 2. generated jars are readable and carry the complete bridge.
+    # 2. Source-identical bridge across android.jar + optional JAR; all 37
+    #    remain in the system-module image. No duplicate optional definitions
+    #    may sneak back into the mockable input.
     android_jar = staging / "android.jar"
     core_jar = staging / "core-for-system-modules.jar"
-    for path in (android_jar, core_jar):
+    optional_jar = staging / OPTIONAL_JAR_RELPATH
+    optional_entries = set(OPTIONAL_BRIDGE_ENTRIES)
+    for path, expected in (
+        (android_jar, set(bridge) - optional_entries),
+        (core_jar, set(bridge)),
+        (optional_jar, optional_entries),
+    ):
         with zipfile.ZipFile(path, "r") as zf:
             bad = zf.testzip()
             if bad is not None:
                 raise BuildError(f"generated jar failed CRC check at {bad}: "
                                  f"{path}")
             names = set(zf.namelist())
-            for entry, data in sorted(bridge.items()):
+            if path == optional_jar and names != optional_entries:
+                raise BuildError("optional bridge class inventory differs from allowlist")
+            if path == android_jar and names & optional_entries:
+                raise BuildError("optional bridge definitions leaked into android.jar")
+            for entry in sorted(expected):
                 if entry not in names:
                     raise BuildError(f"bridge entry missing from {path.name}: "
                                      f"{entry}")
-                if zf.read(entry) != data:
+                if zf.read(entry) != bridge[entry]:
                     raise BuildError(f"bridge entry bytes differ from source "
                                      f"in {path.name}: {entry}")
+    if (staging / "optional/optional.json").read_bytes() != compose_optional_metadata(base_platform):
+        raise BuildError("optional library metadata differs from expected SDK composition")
     # 3. android.jar resource set is byte-exact vs framework-res.apk.
     with zipfile.ZipFile(android_jar, "r") as az, \
             zipfile.ZipFile(inputs["framework_res_apk"], "r") as pz:
@@ -555,6 +617,8 @@ def _validate_platform(staging: Path, inputs: dict[str, Path],
         inputs["framework_res_apk"], bridge)
     if _sha256_bytes(android_again) != _sha256_file(android_jar):
         raise BuildError("android.jar composition is not deterministic")
+    if compose_optional_bridge_jar(bridge) != optional_jar.read_bytes():
+        raise BuildError("optional bridge jar composition is not deterministic")
     core_again = compose_core_modules_jar(
         base_platform / "core-for-system-modules.jar", bridge)
     if _sha256_bytes(core_again) != _sha256_file(core_jar):
@@ -651,6 +715,12 @@ def build_platform(aosp_root: Path, base_platform: Path, output: Path,
             inputs["framework_res_apk"], bridge)
         core_bytes = compose_core_modules_jar(
             base_platform / "core-for-system-modules.jar", bridge)
+        optional_bytes = compose_optional_bridge_jar(bridge)
+        optional_metadata = compose_optional_metadata(base_platform)
+        optional_dir = staging / "optional"
+        optional_dir.mkdir(exist_ok=True)
+        (staging / OPTIONAL_JAR_RELPATH).write_bytes(optional_bytes)
+        (optional_dir / "optional.json").write_bytes(optional_metadata)
         aidl_text = compose_framework_aidl(
             (base_platform / "framework.aidl").read_text(encoding="utf-8"),
             decls)
@@ -697,7 +767,8 @@ def run(argv: list[str] | None = None) -> int:
     print(f"  base platform : {marker['base_platform']['name']} "
           f"({len(marker['base_platform']['inventory'])} files)")
     print(f"  AOSP inputs   : {len(marker['inputs'])} (exact frozen map)")
-    print(f"  bridge entries: {len(BRIDGE_ENTRIES)} in both target jars")
+    print(f"  bridge entries: {len(BRIDGE_ENTRIES)} source-identical "
+          f"(27 android.jar + 10 optional; all 37 in system modules)")
     print(f"  generated     : {len(marker['generated']['inventory'])} files")
     return 0
 

@@ -8,6 +8,18 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
+### 0. 维护期：SysUISdk optional bridge（2026-10-03）
+
+- [x] 保持真实 AOSP class 字节的 SDK optional bridge、公开 useLibrary 接线、生成器回归测试。
+- [x] 隔离 SDK 的真实 IDE 模型与本地 JVM 测试验收。
+- [x] 完成双 APK/R8/DEX/manifest 边界验收并记录证据。
+- [ ] 用户确认后更新 live SDK、在 Android Studio 中重新 Sync。
+- [ ] 用户在另一台机器应用本地 patch、发布新布局 SDK；**公司机器不 push、不上传 Release**。
+  当前 main 不兼容旧 r1 SDK，README 已说明再生路径。
+
+具体技术状态/证据唯一见 `CURRENT_STATE.md` 维护期一节与
+`issues/2026-10-03-sdk-optional-bridge-implementation.md`。
+
 ### 1. Phase C：AOSP 固定 `android-17.0.0_r1` + 清空重生（ADR 0007）
 
 - [x] ~~C1：AOSP 升级 + 全量构建~~ ✅ 2026-08-27（原树切换 `android-17.0.0_r1`，manifest `5bc9a7ce`，frameworks/base `94b4c163b`；`m -j16` 2h35m；soong_build OOM 根因已修）

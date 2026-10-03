@@ -32,7 +32,7 @@ MARKER_NAME = ".sysuisdk-generated.json"
 MARKER_SCHEMA_VERSION = 1
 PLATFORM_DIR_NAME = "android-SysUISdk"
 
-DEFAULT_RELEASE_NAME = "SysUISdk-android-17.0.0_r1-r1"
+DEFAULT_RELEASE_NAME = "SysUISdk-android-17.0.0_r1-r2"
 TOP_LEVEL_DOCS = ("LICENSE", "NOTICE", "README.txt")
 
 FIXED_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
@@ -105,6 +105,22 @@ def collect_platform_entries(platform_dir: Path) -> dict[str, bytes]:
     return entries
 
 
+def check_generated_inventory(marker: dict, entries: dict[str, bytes]) -> None:
+    """Verify the exact bytes about to be packaged, not just a marker's presence."""
+    generated = marker.get("generated")
+    expected = generated.get("inventory") if isinstance(generated, dict) else None
+    prefix = f"{PLATFORM_DIR_NAME}/"
+    actual = {
+        name.removeprefix(prefix): hashlib.sha256(data).hexdigest()
+        for name, data in entries.items()
+        if name != prefix + MARKER_NAME
+    }
+    if not isinstance(expected, dict) or expected != actual:
+        raise PackageError(
+            "generated inventory differs from marker; regenerate the complete "
+            "SDK before packaging (modified, missing or extra files)")
+
+
 def collect_doc_entries(release_dir: Path) -> dict[str, bytes]:
     entries: dict[str, bytes] = {}
     for name in TOP_LEVEL_DOCS:
@@ -160,9 +176,11 @@ def run(argv: list[str] | None = None) -> int:
         output = (Path(args.output) if args.output
                   else repo_root / "dist" / f"{args.name}.zip")
 
-        check_generator_owned(platform_dir)
+        marker = check_generator_owned(platform_dir)
+        platform_entries = collect_platform_entries(platform_dir)
+        check_generated_inventory(marker, platform_entries)
         entries = collect_doc_entries(release_dir)
-        entries.update(collect_platform_entries(platform_dir))
+        entries.update(platform_entries)
         payload = write_deterministic_zip(entries)
 
         output.parent.mkdir(parents=True, exist_ok=True)
