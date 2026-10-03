@@ -589,13 +589,29 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
     """Task 013：完整 res 树逐字节溯源——不漏、不多、不改；
     Task 040：加入 owning Kotlin 代码（15 类）。"""
 
-    AOSP_THEME_RES = Path("/home/conv/myspace/aosp/frameworks/base/packages/SettingsLib/SettingsTheme/res")
-
     def _source_files(self) -> dict:
-        return {
-            f"res/{p.relative_to(self.AOSP_THEME_RES)}": p.read_bytes()
-            for p in sorted(self.AOSP_THEME_RES.rglob("*")) if p.is_file()
+        # Resolve through the shared AOSP root, but keep the expected relative
+        # path independent of CONFIGS so a wrong packager source cannot pass.
+        source_root = paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib/SettingsTheme/res"
+        self.assertTrue(source_root.is_dir(),
+                        f"AOSP SettingsTheme resource directory not found: {source_root}")
+        files = {
+            f"res/{p.relative_to(source_root).as_posix()}": p.read_bytes()
+            for p in sorted(source_root.rglob("*")) if p.is_file()
         }
+        self.assertTrue(files, f"AOSP SettingsTheme resource tree is empty: {source_root}")
+        return files
+
+    def test_missing_or_empty_source_tree_is_not_silently_accepted(self):
+        from unittest.mock import patch
+        for exists in (False, True):
+            with self.subTest(directory_exists=exists), tempfile.TemporaryDirectory() as d:
+                root = Path(d)
+                if exists:
+                    (root / "frameworks/base/packages/SettingsLib/SettingsTheme/res").mkdir(parents=True)
+                with patch.object(paar, "AOSP_ROOT", root):
+                    with self.assertRaisesRegex(AssertionError, "SettingsTheme resource"):
+                        self._source_files()
 
     def test_res_entries_match_aosp_tree_exactly(self):
         with tempfile.TemporaryDirectory() as d:

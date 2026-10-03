@@ -44,9 +44,12 @@ external to avoid a self-referential archive.
   runtime path, Java/Kotlin API access, real host-safe Chunk behavior, enum behavior
   and Android mockable behavior checked.
 - SDK composition + packaging tests: **97 passed**, 3 subtests passed.
-- Full Python suite: **366 passed**, 154 subtests passed, **1 pre-existing failure**
-  (`SettingsLibSettingsThemeProvenance.test_res_entries_match_aosp_tree_exactly`),
-  reproduced on unchanged base commit. This release does not claim an all-green suite.
+- Full Python suite: **368 passed**, 156 subtests passed. The previously failing
+  SettingsTheme provenance test used a hardcoded old-machine AOSP path and read an
+  empty resource set. It now uses the shared AOSP root, independently validates the
+  expected relative source path, and rejects missing/empty source directories.
+  The actual 230 resource entries and the tracked AAR were already byte-correct;
+  no resources or packaged AARs were changed.
 - Debug and Release/R8 builds successful; fresh-daemon repeat explicitly verified
   generated SDK classpaths, optional bridge on R8 library input, not program input.
 - Both APKs pass the 725-rule aconfig gate, contain zero definitions from the
