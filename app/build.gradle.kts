@@ -146,23 +146,16 @@ androidComponents {
         val compiledDir = layout.buildDirectory.dir(
             "intermediates/merged_res/${variant.name}/$mergeTaskName")
         val aapt2Provider = sdkComponents.aapt2
-        val patchScript = "$rootDir/tools/patch_androidprv_merged_resources.py"
 
-        val patchTask = tasks.register<Exec>(patchTaskName) {
+        val patchTask = tasks.register<com.android.systemui.resources.PatchAndroidPrvMergedResourcesTask>(patchTaskName) {
             group = "Resource Repair"
             description =
                 "Re-inject xmlns:androidprv into merged values flats ($cap)"
             dependsOn(mergeTaskName)
-            // Providers are resolved at execution time; Exec reads the
-            // command line in its task action, after doFirst has run.
-            doFirst {
-                commandLine(
-                    "uv", "run", "--project", rootDir.absolutePath, "python", patchScript,
-                    "--merged-dir", mergedDir.get().asFile.absolutePath,
-                    "--compiled-dir", compiledDir.get().asFile.absolutePath,
-                    "--aapt2", aapt2Provider.get().executable.get().asFile.absolutePath,
-                )
-            }
+            mergedResources.set(mergedDir)
+            compiledResources.set(compiledDir)
+            aapt2Executable.set(aapt2Provider.flatMap { it.executable })
+            featureFlagsFile.set(rootProject.layout.projectDirectory.file("libs/systemui-aconfig-flags.txt"))
         }
         tasks.matching { it.name == processTaskName }
             .configureEach { dependsOn(patchTask) }

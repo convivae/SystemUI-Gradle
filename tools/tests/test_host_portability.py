@@ -31,7 +31,7 @@ def test_no_machine_paths_in_host_build_code():
         assert not re.search(r"/(?:home|Users)/[^/\s]+/", path.read_text(encoding="utf-8")), path
 
 
-def test_sdk_provider_and_python_launcher_are_shared_with_android_build():
+def test_sdk_provider_is_shared_and_apk_build_has_no_python_launcher():
     root = TOOLS.parent
     common = (root / "SystemUI-common/build.gradle.kts").read_text(encoding="utf-8")
     wiring = (root / "build.gradle.kts").read_text(encoding="utf-8")
@@ -39,7 +39,13 @@ def test_sdk_provider_and_python_launcher_are_shared_with_android_build():
     assert 'environmentVariable("ANDROID_HOME")' not in common
     assert ".sdkComponents.sdkDirectory" in wiring
     assert 'common.dependencies.add("compileOnly"' in wiring
-    assert '"uv", "run", "--project", rootDir.absolutePath, "python", patchScript' in app
+    assert 'PatchAndroidPrvMergedResourcesTask>(patchTaskName)' in app
+    assert 'aapt2Executable.set(aapt2Provider.flatMap { it.executable })' in app
+    assert 'dependsOn(mergeTaskName)' in app
+    assert 'dependsOn(patchTask)' in app
+    assert 'patchScript' not in app
+    assert not re.search(r'"(?:uv|python3?|py)"', app)
+    assert not (TOOLS / 'patch_androidprv_merged_resources.py').exists()
 
 
 def test_alignment_is_independent_of_parent_directory_name(tmp_path):
