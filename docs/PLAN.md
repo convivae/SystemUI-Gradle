@@ -24,7 +24,7 @@
   `docs/README.md`）。
 - [ ] 用户在 Studio UI 再次 Sync（Tooling API 模型已通过）。
 - [ ] 设备部署验收。
-- [ ] 是否 push 本地领先 `origin/main` 的 6 个 commit（用户当前要求不 push）。
+- [ ] 是否 push 本地领先 `origin/main` 的 commit（当前 7 个，含状态同步提交；用户当前要求不 push）。
 
 当前 main 不兼容旧 r1 SDK；请安装 r2 或用生成器再生。具体证据见
 `CURRENT_STATE.md` 维护期一节、`issues/2026-10-03-sdk-optional-bridge-implementation.md`、
@@ -53,7 +53,7 @@
 - AOSP 树漂移时重跑 `package_aconfig_jars.py --merge-framework`（源字节已漂过两次）。
 - 存量本地 jar 定期回查官方 Maven 等价物（规则 §1.5，Task 026 首开）。
 - ~~可选诊断：AOSP prebuilts R8 与 AGP 9.3.1 内嵌 R8 的版本差~~ **已关闭（2026-08-26，用户批准跳过）**：纯好奇心诊断，不影响构建/运行，修复已用 3 行精确 `-keep` 对症落地；查出版本差也不改变方案。
-- 观察项：pytest 全套偶发一次 `test_build_sysuisdk` 事务测试间歇失败（2026-08-26 观测，重跑即绿，疑文件系统时序）；不修，再次出现时先稳定复现再查。
+- 观察项：pytest 全套偶发一次 `test_build_sysuisdk` 事务测试间歇失败（2026-08-26 观测，重跑即绿，疑文件系统时序）；不修，再次出现时先稳定复现再查。2026-10-04 再现一次（全套 1 failed → 聚焦重跑 72 passed、带 `AOSP_ROOT` 全套 362 passed 全绿），维持不修。
 - CoreStartable 伞形 `-keep`（`implements CoreStartable`）作为未来再出合并碰撞时的备选（目前不需要）。
 
 ---
