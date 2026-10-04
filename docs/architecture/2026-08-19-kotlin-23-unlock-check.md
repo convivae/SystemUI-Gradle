@@ -1,6 +1,6 @@
 # 2026-08-19 — Kotlin 2.3 升级解锁核查（read-only）
 
-> **任务**: `docs/orchestration/tasks/021-kotlin-23-unlock-check.md`（历史 brief，已随文档精简删除，见 Git 历史）
+> **任务**: [docs/orchestration/tasks/021-kotlin-23-unlock-check.md](../orchestration/tasks/021-kotlin-23-unlock-check.md)
 > **性质**: 只读调研，不改任何构建文件 / 依赖版本 / 源码；不跑本项目 Gradle 构建。
 > **前置结论**: [docs/issues/2026-08-12-deps-upgrade-builtin-kotlin.md](../issues/2026-08-12-deps-upgrade-builtin-kotlin.md) §2.1（"所有可用 AGP 版本都绑定 Kotlin 2.2.10"）
 > **日期**: 2026-08-19

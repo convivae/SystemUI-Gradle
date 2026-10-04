@@ -28,9 +28,7 @@ reports **4 tests, 0 failures, 0 errors, 0 skipped**. They cover:
 
 This does not prove arbitrary libcore/ART native APIs execute on a host JVM, or
 replace full-project Debug/Release, manifest and DEX boundary checks.
-For the original integration evidence, see
-[the optional-bridge implementation report](../../../../docs/issues/2026-10-03-sdk-optional-bridge-implementation.md).
-New runs are evaluated from their own test/model output, not a maintained status ledger.
+Those acceptance results live in `docs/CURRENT_STATE.md` and the dated issue.
 
 ## Full-project IDE model gate
 

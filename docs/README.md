@@ -1,46 +1,111 @@
-# 文档索引
+# SystemUI-Gradle 文档索引与生命周期 (docs/README.md)
 
-## 使用与维护
+> **Owner**: 本文件定义文档分类、生命周期、owner、维护触发与导航。
+> **实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**；本文件不复制构建数字。
+> **最后更新**: 2026-09-03（README 对外重写 + Task 099 后同步）
 
-- [项目说明与构建步骤](../README.md) / [English](../README.en.md)
-- [开发规则](../AGENTS.md)：源码、资源、依赖和验证边界
-- [故障排查](PITFALLS.md)：SDK、编译、资源、R8 和设备部署
-- [Gradle 构建设计](architecture/gradle-build.md)：模块/产物边界、平台依赖与 AGP 适配
-- [SDK JVM/IDE 验证](../tools/tests/fixtures/sysuisdk_optional_bridge/README.md)
+---
 
-## 设计依据（按需阅读）
+## Start here（新 AI 阅读顺序）
 
-| 主题 | 文档 |
-|---|---|
-| 资源及依赖来源 | [ADR 0001](adr/0001-aosp-res-via-local-maven.md) |
-| Python 维护工具 | [ADR 0002](adr/0002-tools-scripts-only-python.md) |
-| Android.bp 与 Gradle 模块语义 | [ADR 0003](adr/0003-app-module-aligns-aosp-bp.md) |
-| CONV 标记、授权与对齐 | [ADR 0004](adr/0004-conv-markup-and-alignment-discipline.md) |
-| SettingsLib 资源依赖 | [ADR 0005](adr/0005-local-maven-transitive-poms.md) |
-| SysUISdk 与 optional bridge | [ADR 0006](adr/0006-sysuisdk-r8-library-class-bridge.md) |
-| pre-D8/R8 aconfig 引用改写 | [ADR 0008](adr/0008-pre-dex-aconfig-reference-rewrite.md) |
-| namespace 归属 | [namespace 设计](architecture/2026-08-29-namespace-design.md) |
-| 共享 UID 与平台权限 | [sharedUserId 根因](architecture/2026-09-03-systemui-shareduserid-appid-regression.md) |
+1. [`../AGENTS.md`](../AGENTS.md) — 全部强制项目规则（必读）
+2. [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) — 唯一完整实时技术状态
+3. [`docs/PLAN.md`](./PLAN.md) — 未完成路线与完成条件
+4. （编排参与者加读）[`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md) → [`docs/orchestration/STATE.md`](./orchestration/STATE.md) → [`docs/orchestration/log.md`](./orchestration/log.md) 尾部
 
-版本、模块列表、产物映射以构建配置和生成器为准，不另维护实时状态清单。
-文档只在使用方法、设计或重要限制变化时更新；日常计划和验证结果可在对话/提交中说明。
+## Live owners（持续维护文档）
 
-## 历史资料
+| 文档 | 职责 | 更新触发 |
+|------|------|---------|
+| [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) | **唯一完整实时技术状态**（构建矩阵、版本、依赖产物、blocker、下一步、验证证据） | merge 改变 build/test/blocker/toolchain/当前下一步 |
+| [`docs/PLAN.md`](./PLAN.md) | 仅未完成路线、顺序与完成条件 | 路线、顺序或完成条件变化 |
+| [`README.md`](../README.md) / [`README.en.md`](../README.en.md) | 对外介绍 + 简短状态摘要（双语） | 对外里程碑显著变化 |
+| `docs/README.md`（本文件） | 文档生命周期、owner、导航 | 分类、owner、ADR 或关键入口变化 |
 
-- [项目构建历程（冻结归档）](HISTORY.md)：从 Soong 移植到独立 Gradle 工程的完整时间线，
-  含各阶段问题、解法与可迁移经验；写成后不维护。
+## Rules and decisions（规则与有效决策）
 
-`issues/` 和按日期命名的 `architecture/` 报告保留独有根因、来源或授权证据，
-不作为当前规则、待办或构建状态，也不因新测试结果持续更新。按相关问题查阅即可。
-[ADR 0007](adr/0007-phase-c-clean-regen-release-tag.md)是已完成的 AOSP 17 迁移决策，
-[aosp-pinning](aosp-pinning/README.md)是旧 main 树快照，
-[release-manifest](release-manifest/README.md)只对应其指定的发布版本。
+- [`../AGENTS.md`](../AGENTS.md) — 强制规则 P/S/C/F/R/B/H/D/I、依赖三层策略、SysUISdk 规则、诊断流程、用户偏好。**不保存动态进度**；实时状态见 CURRENT_STATE。
+- [`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md) — herdr 编排协议（十规则、依赖决策树、串行构建、红线、worker contract）。不保存动态项目快照。
+- [`docs/adr/`](./adr/) — ADR 0001–0008：res 处理优先级 / Python-only 工具 / bp 语义对齐 / CONV 标记 / SettingsLib POM 传递依赖 / SysUISdk R8 library bridge / Phase C 清空重生 / pre-D8 aconfig reference rewrite。仅在决策变化时更新或新增。
 
-已删除的交接、编排和计划记录可从 Git 历史查阅，无需恢复到工作树：
+## Append-only records（追加型记录）
 
-```bash
-git log --all -- <历史路径>
-git show <提交>:<历史路径>
-```
+- [`docs/orchestration/log.md`](./orchestration/log.md) — 编排事件流水（只由架构师按事件追加）。
+- [`docs/GRADLE_MIGRATION_LOG.md`](./GRADLE_MIGRATION_LOG.md) — 迁移里程碑与错误数历史（只追加，不改写旧条目）。
 
-历史报告中 `git show 570b8c23:<路径>` 指向文档精简前的版本；这些引用只用于追溯。
+## Active operational records（活跃运营记录）
+
+- [`docs/orchestration/STATE.md`](./orchestration/STATE.md) — 仅活跃 worker / queue / 编排 transition；技术状态链接 CURRENT_STATE。
+- **Active operational audit 定义**：文档头明确标记 `Lifecycle: Active operational audit` 且 bounded audit 尚未关闭的审计文档，可继续更新其**审计域内 ledger**，但不得成为全项目状态源。当前唯一实例：[`docs/architecture/2026-08-20-r8-runtime-closure-audit.md`](./architecture/2026-08-20-r8-runtime-closure-audit.md)（R8 closure 归零前维护 class mapping）。audit 关闭后改 frozen；新问题建新 issue/audit，不改写旧结论。
+
+## Maintained knowledge（维护型经验库，持续维护）
+
+- [`docs/PITFALLS.md`](./PITFALLS.md) — 可复用根因/防错经验（**持续维护**；不保存当前错误数/动态状态，实时状态见 CURRENT_STATE）。更新触发：出现可复用根因/防错经验。
+
+## Historical archives（冻结历史归档）
+
+完成后原地保留，**不因当前状态变化而重写**；旧数字是合法历史快照。只允许纠正明确 typo/provenance 且注明原因。
+
+| 目录 | 内容 | 精选里程碑 |
+|------|------|-----------|
+| [`docs/issues/`](./issues/) | 每日问题/任务记录 | 2026-08-19 SettingsLib per-target AARs、2026-08-20 R8 Batch 1–4C 系列、2026-08-20 官方 Maven 审计 |
+| [`docs/architecture/`](./architecture/) | 深度调研与 audit | 2026-08-06 module-structure-audit、2026-08-13 sysuisdk-reproducible-build |
+| [`docs/superpowers/`](./superpowers/) | specs 与 plans | 按任务配套 |
+| [`docs/orchestration/tasks/`](./orchestration/tasks/) | 已派发任务 brief | Task 031 R8 closure audit、Task 038 Traceur |
+| [`docs/audit-2026-07-30-aosp-src-parity.md`](./audit-2026-07-30-aosp-src-parity.md) / [`docs/mapping-2026-07-30-aosp-bp-to-gradle.md`](./mapping-2026-07-30-aosp-bp-to-gradle.md) | 早期对齐审计与 bp 映射 | — |
+
+## 删除准则（五项须同时满足，本次未删除任何文档）
+
+1. 内容完全重复或为无内容的生成副本；
+2. 没有独立决策、证据、时间线或 handoff 价值；
+3. 全仓无有效 inbound link，或链接已先迁移；
+4. 删除理由与证据记录在对应 issue；
+5. reviewer 可独立复核。
+
+**有疑问即保留。** 移动/重排历史文件同样不在常规维护范围内。
+
+## 维护触发条件表
+
+| 事件 | 更新对象 |
+|------|---------|
+| merge 改变 build/test/blocker/toolchain/当前下一步 | CURRENT_STATE |
+| 未完成路线、顺序、完成条件变化 | PLAN |
+| 对外里程碑显著变化 | 双语 README 短摘要 |
+| 分类、owner、ADR、关键入口变化 | docs/README |
+| 强制规则变化 | AGENTS |
+| 编排协议变化 | CHARTER |
+| 可复用根因/防错经验 | PITFALLS |
+| 编排事件 / 迁移里程碑 | orchestration log / migration log（追加） |
+| frozen 文档 | 不更新（仅 typo/provenance 更正并注明） |
+
+## Tooling reference（当前有效 Python 工具，ADR 0002）
+
+| 工具 | 用途 |
+|------|------|
+| [`../tools/build_sysuisdk.py`](../tools/build_sysuisdk.py) | 单入口事务性重建 SysUISdk（只读官方 platform 底座 + 冻结 AOSP 输入；`--replace` 替换生成器自有输出） |
+| [`../tools/package_aosp_aar.py`](../tools/package_aosp_aar.py) | 从 AOSP Soong 产物打包确定性 AAR 到 `libs/aars/` |
+| [`../tools/install_aar_to_maven.py`](../tools/install_aar_to_maven.py) | 安装 AAR 到 `libs/maven/` 本地 Maven 仓（AAR + POM 骨架） |
+| [`../tools/package_aconfig_jars.py`](../tools/package_aconfig_jars.py) | 从 AOSP javac 产物打包完整 aconfig runtime JAR（含 turbine 基准重打包 settingslib-flags） |
+| [`../tools/package_misc_jars.py`](../tools/package_misc_jars.py) | 12 个手工 jar 的冻结映射提取器（task 064；含 MATCH/DIFF 基准比对） |
+| [`../tools/package_compilelib_jars.py`](../tools/package_compilelib_jars.py) | 打包 compilelib debug/release JAR |
+| [`../tools/package_monet_jar.py`](../tools/package_monet_jar.py) / [`../tools/package_viewcapture_motiontool_jars.py`](../tools/package_viewcapture_motiontool_jars.py) | 确定性 clean JAR（monet / view-capture / motion-tool） |
+| [`../tools/check_source_alignment.py`](../tools/check_source_alignment.py) | AOSP src/AIDL/res 对齐校验（规则 C） |
+| [`../tools/check_aconfig_jarjar_references.py`](../tools/check_aconfig_jarjar_references.py) | APK 指令级引用完整性门禁：按 725 条 AOSP repackaging 规则校验 DEX（非 self-ref old-owner ref 或 hidden target 定义即 FAIL） |
+| [`../tools/package_sysuisdk_release.py`](../tools/package_sysuisdk_release.py) | 把 `android-SysUISdk` 打包为确定性发布 zip（含 LICENSE/NOTICE/README.txt 与 .sha256 sidecar），供 GitHub Releases 分发 |
+| [`../tools/install_keystore.py`](../tools/install_keystore.py) | 校验并安装平台签名 keystore |
+| ~~`tools/install_sdk.py`~~ | 已退役：SysUISdk 统一经 `build_sysuisdk.py` 生成/替换（ADR 0006） |
+| buildSrc `PatchAndroidPrvMergedResourcesTask` | AGP `androidprv` namespace 丢失修复（Kotlin Gradle task；原 Python 脚本已删除，普通构建不依赖 Python） |
+| [`../tools/markup_product_variants.py`](../tools/markup_product_variants.py) | res-product `product=` 变体 CONV 标记 |
+
+单元测试：`uv run pytest tools/tests -q`（当前通过数见 CURRENT_STATE）。
+
+## 快速搜索
+
+- "项目规则是什么？" → [`AGENTS.md`](../AGENTS.md) §1–§2
+- "现在构建状态如何？" → [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)
+- "下次该做什么？" → [`docs/PLAN.md`](./PLAN.md)
+- "为什么不能用 Kotlin 2.3.x / Compose 1.12？" → [`docs/PITFALLS.md`](./PITFALLS.md) §1.1/§1.6
+- "builtInKotlin 下 KSP/AIDL 怎么配？" → [`docs/PITFALLS.md`](./PITFALLS.md) §1.5
+- "我能加 stub 吗？" → 不能，`AGENTS.md` §1.2（规则 P）
+- "错误数变化历史？" → [`docs/GRADLE_MIGRATION_LOG.md`](./GRADLE_MIGRATION_LOG.md)
+- "哪些方案试过失败？" → [`docs/PITFALLS.md`](./PITFALLS.md) 全文
