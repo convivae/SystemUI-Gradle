@@ -452,6 +452,7 @@ def _extract_subset(source: Path, destination: Path, include_prefixes: list) -> 
             ):
                 continue
             out_info = zipfile.ZipInfo(name, _FIXED_ZIP_TIME)
+            out_info.create_system = 3
             out_info.compress_type = zipfile.ZIP_DEFLATED
             out_info.external_attr = info.external_attr
             out.writestr(out_info, src.read(info))

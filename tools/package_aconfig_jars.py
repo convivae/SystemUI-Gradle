@@ -12,13 +12,13 @@ import argparse
 import shutil
 import zipfile
 
-from aosp_paths import soong_intermediates
+from aosp_paths import PROJECT_ROOT, soong_intermediates
 
 AOSP_INTERMEDIATES = soong_intermediates()
 
 # Destination of the deterministic union merge of the framework exportable-aconfig
 # hidden-twin family (user decision 2026-08-25, option M, task 057).
-MERGED_FRAMEWORK_JAR = Path("libs/systemui-aconfig-flags.jar")
+MERGED_FRAMEWORK_JAR = PROJECT_ROOT / "libs/systemui-aconfig-flags.jar"
 
 # The Soong javac outputs already use this fixed timestamp; keep it for the merge.
 _MERGE_FIXED_DATETIME = (2008, 1, 1, 0, 0, 0)
@@ -578,6 +578,7 @@ def merge_sources(items: list[tuple[str, Path, str]], destination: Path) -> None
     ) as archive:
         for entry in sorted(directories | set(payload)):
             info = zipfile.ZipInfo(entry, _MERGE_FIXED_DATETIME)
+            info.create_system = 3
             if entry.endswith("/"):
                 info.external_attr = (0o755 << 16) | 0x10
                 archive.writestr(info, b"")
@@ -659,6 +660,7 @@ def extract_aggregate_subset(runtime_package: str, destination: Path) -> Path:
     ) as archive:
         for name in sorted(payload):
             info = zipfile.ZipInfo(name, _MERGE_FIXED_DATETIME)
+            info.create_system = 3
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o644 << 16
             archive.writestr(info, payload[name])
@@ -729,15 +731,18 @@ def main() -> int:
     for name in names:
         if name in TURBINE_BASELINE_CONFIGS:
             source, destination, runtime_package = TURBINE_BASELINE_CONFIGS[name]
+            destination = PROJECT_ROOT / destination
             repack_baseline_stub_jar(source, destination, runtime_package)
         elif name in AGGREGATE_FAMILY:
             # AOSP-17 (Task 071): aggregate members have no standalone javac
             # JAR; deliver the validated five-class subset extracted from the
             # framework-minus-apex javac shards.
             source, destination, runtime_package = CONFIGS[name]
+            destination = PROJECT_ROOT / destination
             extract_aggregate_subset(runtime_package, destination)
         else:
             source, destination, runtime_package = CONFIGS[name]
+            destination = PROJECT_ROOT / destination
             copy_jar(source, destination, runtime_package)
         print(f"{name}: {source} -> {destination}")
     return 0

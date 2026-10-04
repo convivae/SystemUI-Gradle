@@ -22,7 +22,7 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
-from aosp_paths import aosp_root
+from aosp_paths import PROJECT_ROOT, aosp_root
 
 # Single AOSP root source (user rule 2026-08-25): tools/aosp_paths.py resolves
 # the default and the AOSP_ROOT env override; --aosp-root rebuilds every
@@ -36,7 +36,7 @@ ANIMATIONLIB_SOONG = SOONG_DIR / "frameworks/libs/systemui/animationlib/animatio
 TRACEUR_DIR = AOSP_ROOT / "packages/apps/Traceur"
 TRACEUR_SOONG = SOONG_DIR / "packages/apps/Traceur"
 
-DEFAULT_OUTPUT = Path("libs/aars/animationlib.aar")
+DEFAULT_OUTPUT = PROJECT_ROOT / "libs/aars/animationlib.aar"
 
 def _discover_settingslib_code_jars() -> list:
     """自动发现 SettingsLib 主 target + 全部 static_libs 子模块的 javac JAR，
@@ -53,7 +53,7 @@ def _discover_settingslib_code_jars() -> list:
     base = SOONG_DIR / "frameworks/base/packages/SettingsLib"
     jars = []
     for jar in sorted(base.rglob("*/android_common/javac/*.jar")):
-        s = str(jar)
+        s = jar.relative_to(base).as_posix()
         if "turbine" in s or "aconfig" in s or "flags_lib" in s:
             continue
         jars.append(jar)
@@ -468,7 +468,7 @@ def configure_aosp_root(root: Path) -> None:
     """Re-point every derived path constant and CONFIGS at another AOSP tree."""
     global AOSP_ROOT, SOONG_DIR, ANIMATIONLIB_DIR, ANIMATIONLIB_SOONG
     global TRACEUR_DIR, TRACEUR_SOONG, CONFIGS
-    AOSP_ROOT = Path(root)
+    AOSP_ROOT = aosp_root(root)
     SOONG_DIR = AOSP_ROOT / "out/soong/.intermediates"
     ANIMATIONLIB_DIR = AOSP_ROOT / "frameworks/libs/systemui/animationlib"
     ANIMATIONLIB_SOONG = (
@@ -605,7 +605,7 @@ def assemble_aar(code_jars, res_dirs, manifest: Path, rtxt: Path, output: Path,
         for p in sorted(res_dir.rglob("*")):
             if not p.is_file():
                 continue
-            rel = str(p.relative_to(res_dir)).replace("\\", "/")
+            rel = p.relative_to(res_dir).as_posix()
             entry_name = f"res/{rel}"
             if entry_name in res_seen:
                 raise DuplicateEntryError(
@@ -635,7 +635,7 @@ def build_artifact(name: str, output: Path = None) -> None:
     if name not in CONFIGS:
         raise ValueError(f"未知 artifact: {name}；可选: {list(CONFIGS)}")
     cfg = CONFIGS[name]
-    output = Path(output) if output else Path(cfg["output"])
+    output = Path(output) if output is not None else PROJECT_ROOT / cfg["output"]
     reject_prefixes = ["com/android/systemui/"] if cfg.get("reject_sysui") else []
     assemble_aar(cfg["code"], cfg["res"], cfg["manifest"], cfg["rtxt"], output,
                  reject_prefixes=reject_prefixes,

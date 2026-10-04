@@ -3,6 +3,7 @@
 """Unit tests for tools/package_aosp_aar.py — strict direct-AAR packager."""
 
 import importlib.util
+import os
 import sys
 import tempfile
 import unittest
@@ -22,6 +23,13 @@ _SCRIPT = _TOOLS_DIR / "package_aosp_aar.py"
 _spec = importlib.util.spec_from_file_location("package_aosp_aar", _SCRIPT)
 paar = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(paar)
+
+# Skip external provenance only when no AOSP tree was configured. A configured
+# but invalid AOSP_ROOT must fail rather than silently skip verification.
+requires_aosp = unittest.skipIf(
+    not os.environ.get("AOSP_ROOT") and not paar.AOSP_ROOT.is_dir(),
+    "Set AOSP_ROOT to run AOSP provenance/rebuild tests",
+)
 
 
 def _make_jar(path: Path, entries: dict):
@@ -202,14 +210,14 @@ class TestArtifactConfigs(unittest.TestCase):
 
     def test_wifitrackerlib_config_paths(self):
         cfg = paar.CONFIGS["WifiTrackerLib"]
-        self.assertIn("WifiTrackerLib/android_common/javac/WifiTrackerLib.jar", str(cfg["code"]))
-        self.assertIn("WifiTrackerLib/res", str(cfg["res"]))
+        self.assertIn("WifiTrackerLib/android_common/javac/WifiTrackerLib.jar", " ".join(p.as_posix() for p in cfg["code"]))
+        self.assertIn("WifiTrackerLib/res", " ".join(p.as_posix() for p in cfg["res"]))
         # AOSP-17: source-tree manifest deleted upstream; Soong GeneratedManifest
         # Task 073: WifiTrackerLibRes's manifest (package com.android.wifitrackerlib
         # = the R namespace HotspotTile references), NOT the code module's .nores
-        self.assertTrue(str(cfg["manifest"]).endswith(
+        self.assertTrue(cfg["manifest"].as_posix().endswith(
             "WifiTrackerLibRes/android_common/GeneratedManifest.xml"))
-        self.assertIn("WifiTrackerLibRes/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("WifiTrackerLibRes/android_common/R.txt", cfg["rtxt"].as_posix())
 
     def test_iconloader_config_paths(self):
         cfg = paar.CONFIGS["iconloader"]
@@ -223,23 +231,24 @@ class TestArtifactConfigs(unittest.TestCase):
                 paar.SOONG_DIR / "frameworks/libs/systemui/iconloaderlib/iconloader_base/android_common/kotlin/iconloader_base.jar",
             ],
         )
-        self.assertIn("iconloaderlib/res", str(cfg["res"]))
-        self.assertTrue(str(cfg["manifest"]).endswith("iconloaderlib/AndroidManifest.xml"))
-        self.assertIn("iconloader_base/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("iconloaderlib/res", " ".join(p.as_posix() for p in cfg["res"]))
+        self.assertTrue(cfg["manifest"].as_posix().endswith("iconloaderlib/AndroidManifest.xml"))
+        self.assertIn("iconloader_base/android_common/R.txt", cfg["rtxt"].as_posix())
 
+    @requires_aosp
     def test_settingslib_config_paths(self):
         cfg = paar.CONFIGS["SettingsLib"]
-        self.assertIn("SettingsLib/android_common/javac/SettingsLib.jar", str(cfg["code"]))
-        self.assertIn("SettingsLib/res", str(cfg["res"]))
-        self.assertTrue(str(cfg["manifest"]).endswith("SettingsLib/AndroidManifest.xml"))
-        self.assertIn("SettingsLib/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("SettingsLib/android_common/javac/SettingsLib.jar", " ".join(p.as_posix() for p in cfg["code"]))
+        self.assertIn("SettingsLib/res", " ".join(p.as_posix() for p in cfg["res"]))
+        self.assertTrue(cfg["manifest"].as_posix().endswith("SettingsLib/AndroidManifest.xml"))
+        self.assertIn("SettingsLib/android_common/R.txt", cfg["rtxt"].as_posix())
 
     def test_wmshell_config_paths(self):
         cfg = paar.CONFIGS["WindowManager-Shell"]
-        self.assertIn("WindowManager-Shell/android_common/javac/WindowManager-Shell.jar", str(cfg["code"]))
-        self.assertIn("WindowManager/Shell/res", str(cfg["res"]))
-        self.assertTrue(str(cfg["manifest"]).endswith("WindowManager/Shell/AndroidManifest.xml"))
-        self.assertIn("WindowManager-Shell/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("WindowManager-Shell/android_common/javac/WindowManager-Shell.jar", " ".join(p.as_posix() for p in cfg["code"]))
+        self.assertIn("WindowManager/Shell/res", " ".join(p.as_posix() for p in cfg["res"]))
+        self.assertTrue(cfg["manifest"].as_posix().endswith("WindowManager/Shell/AndroidManifest.xml"))
+        self.assertIn("WindowManager-Shell/android_common/R.txt", cfg["rtxt"].as_posix())
 
     def test_wmshell_shared_config_merges_aidls_closure(self):
         """Task 073（C4b）：17 shared AIDL 接口拆入 WindowManager-Shell-shared-aidls
@@ -249,7 +258,7 @@ class TestArtifactConfigs(unittest.TestCase):
         self.assertEqual(len(cfg["code"]), 3,
                          "shared AAR 应合并 javac + kotlin + aidls 三个 jar")
         self.assertIn("WindowManager-Shell-shared-aidls/android_common/javac/"
-                      "WindowManager-Shell-shared-aidls.jar", str(cfg["code"][2]))
+                      "WindowManager-Shell-shared-aidls.jar", cfg["code"][2].as_posix())
 
     def test_wmshell_config_rejects_sysui(self):
         """WM-Shell config 必须声明 reject_sysui=True。"""
@@ -264,9 +273,9 @@ class TestArtifactConfigs(unittest.TestCase):
     def test_settingslib_color_config_paths(self):
         cfg = paar.CONFIGS["SettingsLibColor"]
         self.assertEqual(cfg["code"], [])  # res-only 模块，无代码 JAR
-        self.assertIn("SettingsLib/Color/res", str(cfg["res"]))
-        self.assertTrue(str(cfg["manifest"]).endswith("Color/AndroidManifest.xml"))
-        self.assertIn("SettingsLibColor/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("SettingsLib/Color/res", " ".join(p.as_posix() for p in cfg["res"]))
+        self.assertTrue(cfg["manifest"].as_posix().endswith("Color/AndroidManifest.xml"))
+        self.assertIn("SettingsLibColor/android_common/R.txt", cfg["rtxt"].as_posix())
 
     def test_dynamiccolors_config_paths(self):
         """Task 072（C4 接线）：17 SystemUI-res bp static_libs 的 dynamiccolors（res-only）。"""
@@ -296,20 +305,20 @@ class TestArtifactConfigs(unittest.TestCase):
                          "visualizer AAR 合并 visualizer Kotlin + javac（dagger "
                          "companion factories）+ ace_common 两个 Kotlin jar")
         self.assertIn("personalcontext_ace_visualizer/android_common/kotlin/",
-                      str(cfg["code"][0]))
+                      cfg["code"][0].as_posix())
         self.assertIn("personalcontext_ace_visualizer/android_common/javac/",
-                      str(cfg["code"][1]))
+                      cfg["code"][1].as_posix())
         self.assertIn("personalcontext_ace_common/android_common/kotlin/",
-                      str(cfg["code"][2]))
+                      cfg["code"][2].as_posix())
         self.assertEqual(
             cfg["res"],
             [paar.AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/"
              "personalcontext/ace/visualizer/res"],
         )
-        self.assertTrue(str(cfg["manifest"]).endswith(
+        self.assertTrue(cfg["manifest"].as_posix().endswith(
             "personalcontext/ace/visualizer/AndroidManifest.xml"))
         self.assertIn("personalcontext_ace_visualizer/android_common/R.txt",
-                      str(cfg["rtxt"]))
+                      cfg["rtxt"].as_posix())
         self.assertEqual(cfg["output"], "libs/aars/personalcontext_ace_visualizer.aar")
         self.assertFalse(cfg.get("reject_sysui", False))
 
@@ -318,16 +327,16 @@ class TestArtifactConfigs(unittest.TestCase):
         cfg = paar.CONFIGS["personalcontext_ace_client"]
         self.assertEqual(len(cfg["code"]), 1)
         self.assertIn("personalcontext_ace_client/android_common/kotlin/",
-                      str(cfg["code"][0]))
+                      cfg["code"][0].as_posix())
         self.assertEqual(
             cfg["res"],
             [paar.AOSP_ROOT / "frameworks/libs/systemui/ace/src/com/android/"
              "personalcontext/ace/client/clientsdk/compat/res"],
         )
-        self.assertTrue(str(cfg["manifest"]).endswith(
+        self.assertTrue(cfg["manifest"].as_posix().endswith(
             "personalcontext/ace/client/AndroidManifest.xml"))
         self.assertIn("personalcontext_ace_client/android_common/R.txt",
-                      str(cfg["rtxt"]))
+                      cfg["rtxt"].as_posix())
         self.assertEqual(cfg["output"], "libs/aars/personalcontext_ace_client.aar")
         self.assertFalse(cfg.get("reject_sysui", False))
 
@@ -336,30 +345,31 @@ class TestArtifactConfigs(unittest.TestCase):
         cfg = paar.CONFIGS["SerialPortAccessDialog"]
         self.assertEqual(len(cfg["code"]), 1)
         self.assertIn("serial/accessdialog/SerialPortAccessDialog/android_common/kotlin/",
-                      str(cfg["code"][0]))
+                      cfg["code"][0].as_posix())
         self.assertEqual(
             cfg["res"],
             [paar.AOSP_ROOT / "frameworks/base/libs/serial/accessdialog/res"],
         )
-        self.assertTrue(str(cfg["manifest"]).endswith(
+        self.assertTrue(cfg["manifest"].as_posix().endswith(
             "serial/accessdialog/AndroidManifest.xml"))
         self.assertIn("serial/accessdialog/SerialPortAccessDialog/android_common/R.txt",
-                      str(cfg["rtxt"]))
+                      cfg["rtxt"].as_posix())
         self.assertEqual(cfg["output"], "libs/aars/SerialPortAccessDialog.aar")
         self.assertFalse(cfg.get("reject_sysui", False))
 
     def test_setupcompat_config_paths(self):
         cfg = paar.CONFIGS["setupcompat"]
-        code = str(cfg["code"])
+        code = " ".join(p.as_posix() for p in cfg["code"])
         self.assertIn("setupcompat/android_common/javac/setupcompat.jar", code)
         self.assertNotIn("turbine", code)  # 必须是 javac 产物，非 turbine header
-        self.assertIn("setupcompat/main/res", str(cfg["res"]))
-        self.assertTrue(str(cfg["manifest"]).endswith("setupcompat/AndroidManifest.xml"))
-        self.assertIn("setupcompat/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("setupcompat/main/res", " ".join(p.as_posix() for p in cfg["res"]))
+        self.assertTrue(cfg["manifest"].as_posix().endswith("setupcompat/AndroidManifest.xml"))
+        self.assertIn("setupcompat/android_common/R.txt", cfg["rtxt"].as_posix())
         self.assertEqual(cfg["output"], "libs/aars/setupcompat.aar")
         # setupcompat 是 com.google.android.setupcompat，无 com/android/systemui 类，无需 reject_sysui
         self.assertFalse(cfg.get("reject_sysui", False))
 
+    @requires_aosp
     def test_settingslib_program_code_inputs(self):
         """AOSP-17: main code = javac discovery + 各混合模块 Kotlin 半边
         （DeviceStateRotationLock 已 Kotlin→Java 重写，其类由 discovery 交付）；
@@ -404,9 +414,9 @@ class TestArtifactConfigs(unittest.TestCase):
              / "frameworks/base/packages/SettingsLib/SettingsTheme/"
                "SettingsLibSettingsTheme/android_common/kotlin/SettingsLibSettingsTheme.jar"],
         )
-        self.assertIn("SettingsLib/SettingsTheme/res", str(cfg["res"]))
-        self.assertTrue(str(cfg["manifest"]).endswith("SettingsTheme/AndroidManifest.xml"))
-        self.assertIn("SettingsLibSettingsTheme/android_common/R.txt", str(cfg["rtxt"]))
+        self.assertIn("SettingsLib/SettingsTheme/res", " ".join(p.as_posix() for p in cfg["res"]))
+        self.assertTrue(cfg["manifest"].as_posix().endswith("SettingsTheme/AndroidManifest.xml"))
+        self.assertIn("SettingsLibSettingsTheme/android_common/R.txt", cfg["rtxt"].as_posix())
         self.assertEqual(cfg["output"], "libs/aars/SettingsLibSettingsTheme.aar")
         self.assertFalse(cfg.get("reject_sysui", False))
 
@@ -426,8 +436,8 @@ class TestArtifactConfigs(unittest.TestCase):
             self.assertEqual(cfg["code"], [], f"{target} 应为 res-only")
             self.assertEqual(cfg["res"],
                              [paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"])
-            self.assertTrue(str(cfg["manifest"]).endswith(f"{subdir}/AndroidManifest.xml"))
-            self.assertIn(f"{target}/android_common/R.txt", str(cfg["rtxt"]))
+            self.assertTrue(cfg["manifest"].as_posix().endswith(f"{subdir}/AndroidManifest.xml"))
+            self.assertIn(f"{target}/android_common/R.txt", cfg["rtxt"].as_posix())
             self.assertEqual(cfg["output"], f"libs/aars/{target}.aar")
             self.assertFalse(cfg.get("reject_sysui", False))
 
@@ -453,7 +463,7 @@ class TestArtifactConfigs(unittest.TestCase):
                 cfg["res"],
                 [paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"],
             )
-            self.assertTrue(str(cfg["manifest"]).endswith(f"{subdir}/AndroidManifest.xml"))
+            self.assertTrue(cfg["manifest"].as_posix().endswith(f"{subdir}/AndroidManifest.xml"))
             self.assertEqual(
                 cfg["rtxt"],
                 paar.SOONG_DIR / "frameworks/base/packages/SettingsLib" / subdir / target
@@ -463,6 +473,7 @@ class TestArtifactConfigs(unittest.TestCase):
             self.assertFalse(cfg.get("reject_sysui", False))
 
 
+@requires_aosp
 class TestSettingsLibProgramClosure(unittest.TestCase):
     """AOSP-17 (Task 071)：SettingsLib 程序类闭包——34 javac（884 类）+ 主 Kotlin
     （488 类）= 1372 类精确不相交并集；Theme 29 类独立交付，零重叠。
@@ -613,6 +624,7 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
                     with self.assertRaisesRegex(AssertionError, "SettingsTheme resource"):
                         self._source_files()
 
+    @requires_aosp
     def test_res_entries_match_aosp_tree_exactly(self):
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "SettingsLibSettingsTheme.aar"
@@ -625,6 +637,7 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
         for name, data in source.items():
             self.assertEqual(aar_res[name], data, f"{name} 字节与 AOSP 源不一致")
 
+    @requires_aosp
     def test_switch_drawable_entries_present(self):
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "SettingsLibSettingsTheme.aar"
@@ -635,6 +648,7 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
         self.assertIn("res/drawable-v31/settingslib_switch_thumb.xml", names)
         self.assertIn("res/drawable-v34/settingslib_switch_track.xml", names)
 
+    @requires_aosp
     def test_classes_jar_contains_only_theme_kotlin_classes(self):
         """AOSP-17 (Task 071)：classes.jar 恰为其 owning Kotlin JAR 的 29 个类。"""
         from io import BytesIO
@@ -651,6 +665,7 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
             self.assertTrue(n.startswith("com/android/settingslib/widget/"),
                             f"越界类名: {n}")
 
+    @requires_aosp
     def test_rebuild_is_byte_identical(self):
         import time
         with tempfile.TemporaryDirectory() as d:
@@ -662,6 +677,7 @@ class TestSettingsLibSettingsThemeProvenance(unittest.TestCase):
             paar.build_artifact("SettingsLibSettingsTheme", second)
             self.assertEqual(first.read_bytes(), second.read_bytes())
 
+@requires_aosp
 class TestSettingsLibPerTargetProvenance(unittest.TestCase):
     """Task 015（B2）：7 个 per-target AAR 的 res 树逐字节溯源——不漏、不多、不改。"""
 
@@ -685,7 +701,7 @@ class TestSettingsLibPerTargetProvenance(unittest.TestCase):
             subdir = target[len("SettingsLib"):]
             src_root = paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"
             source = {
-                f"res/{p.relative_to(src_root)}": p.read_bytes()
+                f"res/{p.relative_to(src_root).as_posix()}": p.read_bytes()
                 for p in sorted(src_root.rglob("*")) if p.is_file()
             }
             with tempfile.TemporaryDirectory() as d:
@@ -744,6 +760,7 @@ class TestSettingsLibPerTargetProvenance(unittest.TestCase):
                                  f"{target} 重复打包字节不一致")
 
 
+@requires_aosp
 class TestSettingsLibNewResourceProvenance(unittest.TestCase):
     """Task 040（Batch 4D）：10 个新 res-only AAR——res 树逐字节溯源不漏不多不改、
     空 classes.jar、manifest/R.txt 原样、确定性。
@@ -762,7 +779,7 @@ class TestSettingsLibNewResourceProvenance(unittest.TestCase):
         "SettingsLibSettingsSpinner": "SettingsSpinner",
     }
 
-    # AOSP-17 实测（/home/conv/myspace/aosp SettingsLib/<sub>/res 文件数）
+    # AOSP-17 实测（SettingsLib/<sub>/res 文件数）
     EXPECTED_COUNTS = {
         "SettingsLibMainSwitchPreference": 24,
         "SettingsLibAppPreference": 91,
@@ -795,7 +812,7 @@ class TestSettingsLibNewResourceProvenance(unittest.TestCase):
         for target, subdir in self.NEW_RESOURCE_TARGETS.items():
             src_root = paar.AOSP_ROOT / "frameworks/base/packages/SettingsLib" / subdir / "res"
             source = {
-                f"res/{p.relative_to(src_root)}": p.read_bytes()
+                f"res/{p.relative_to(src_root).as_posix()}": p.read_bytes()
                 for p in sorted(src_root.rglob("*")) if p.is_file()
             }
             with tempfile.TemporaryDirectory() as d:
@@ -840,6 +857,7 @@ class TestSettingsLibNewResourceProvenance(unittest.TestCase):
                                  f"{target} 重复打包字节不一致")
 
 
+@requires_aosp
 class TestIconloaderProvenance(unittest.TestCase):
     """AOSP-17 (Task 071)：iconloaderlib 拆分重构——
     iconloader/javac（3 门面类）+ iconloader_base/javac（21）+ iconloader_base/kotlin（120）
@@ -886,7 +904,7 @@ class TestIconloaderProvenance(unittest.TestCase):
         cfg = paar.CONFIGS["iconloader"]
         res_root = cfg["res"][0]
         source_res = {
-            f"res/{p.relative_to(res_root)}": p.read_bytes()
+            f"res/{p.relative_to(res_root).as_posix()}": p.read_bytes()
             for p in sorted(res_root.rglob("*")) if p.is_file()
         }
         with tempfile.TemporaryDirectory() as d:
@@ -917,6 +935,7 @@ class TestIconloaderProvenance(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
 
 
+@requires_aosp
 class TestWMShellProtoProvenance(unittest.TestCase):
     """AOSP-17 (Task 071)：WM-Shell AAR closure——
     (主 javac∪主 kotlin 去除 exclude)∪lite-proto = 3124 类精确并集。
@@ -1022,7 +1041,7 @@ class TestWMShellProtoProvenance(unittest.TestCase):
         cfg = paar.CONFIGS["WindowManager-Shell"]
         res_root = cfg["res"][0]
         source_res = {
-            f"res/{p.relative_to(res_root)}": p.read_bytes()
+            f"res/{p.relative_to(res_root).as_posix()}": p.read_bytes()
             for p in sorted(res_root.rglob("*")) if p.is_file()
         }
         with tempfile.TemporaryDirectory() as d:
@@ -1053,6 +1072,7 @@ class TestWMShellProtoProvenance(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
 
 
+@requires_aosp
 class TestTraceurProvenance(unittest.TestCase):
     """Task 038（Batch 4C）：Traceur 双 AAR——TraceurCommon（无 res）
     + Traceur-res（res-only 105 文件，namespace com.android.traceur.res）。
@@ -1160,7 +1180,7 @@ class TestTraceurProvenance(unittest.TestCase):
         """0 类；res 恰好 105 文件与 AOSP 树字节一致；R.txt 与 Soong 一致。"""
         res_root = self.TRACEUR / "res"
         source_res = {
-            f"res/{p.relative_to(res_root)}": p.read_bytes()
+            f"res/{p.relative_to(res_root).as_posix()}": p.read_bytes()
             for p in sorted(res_root.rglob("*")) if p.is_file()
         }
         self.assertEqual(len(source_res), 105)
@@ -1287,6 +1307,7 @@ class TestWmShellNoSysuiClasses(unittest.TestCase):
                                   reject_prefixes=["com/android/systemui/"])
 
 
+@requires_aosp
 class TestRepeatedPackagingDeterministic(unittest.TestCase):
     """Step 6: 重复打包字节一致。"""
 
@@ -1371,7 +1392,7 @@ class TestAospRootSingleSource(unittest.TestCase):
                 paar.SOONG_DIR, Path("/opt/other-aosp/out/soong/.intermediates"))
             wifi = paar.CONFIGS["WifiTrackerLib"]
             self.assertTrue(
-                str(wifi["res"][0]).startswith("/opt/other-aosp/"))
+                wifi["res"][0].is_relative_to(Path("/opt/other-aosp")))
         finally:
             paar.configure_aosp_root(original[0])
         self.assertEqual(paar.SOONG_DIR, original[1])

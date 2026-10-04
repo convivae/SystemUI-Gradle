@@ -31,13 +31,12 @@ import sys
 from collections import defaultdict, namedtuple
 from pathlib import Path
 
-from aosp_paths import aosp_root
+from aosp_paths import PROJECT_ROOT, aosp_root
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 路径
 # ─────────────────────────────────────────────────────────────────────────────
 AOSP_ROOT = aosp_root() / "frameworks/base/packages/SystemUI"
-PROJECT_ROOT = Path("/home/conv/myspace/SystemUI-Gradle")
 
 EXCLUDE_DIR_PARTS = {"build", ".gradle", ".git", ".idea", "out", "generated"}
 EXCLUDE_SUFFIXES = {".iml", ".class"}
@@ -63,10 +62,10 @@ def walk_source(root: Path, suffixes, recursive=True):
     for p in iterator:
         if not p.is_file():
             continue
-        if _is_excluded(p):
+        if _is_excluded(p.relative_to(root)):
             continue
         if suffixes is None or p.suffix in suffixes:
-            out[str(p.relative_to(root))] = p
+            out[p.relative_to(root).as_posix()] = p
     return out
 
 
@@ -221,7 +220,7 @@ def find_tail_locations(tail, mappings, project_root, suffixes=SOURCE_SUFFIXES):
     for m in mappings:
         root = project_root / m.project_module / m.project_src_root
         cand = root / tail
-        if cand.is_file() and not _is_excluded(cand):
+        if cand.is_file() and not _is_excluded(cand.relative_to(root)):
             hits.append((m.project_module, m.project_src_root, cand))
     return hits
 
@@ -307,7 +306,7 @@ def check_app_entry():
     for entry in ("SystemUIApplication.java", "SystemUIService.java"):
         dup = PROJECT_ROOT / "app" / "src" / "main" / "java" / "com" / "android" / "systemui" / entry
         if dup.exists():
-            issues.append(("APP-DUP", str(dup).replace(str(PROJECT_ROOT) + "/", ""),
+            issues.append(("APP-DUP", dup.relative_to(PROJECT_ROOT).as_posix(),
                            f"SystemUI-core/src/com/android/systemui/{entry}",
                            "入口类按 bp 属于 :SystemUI-core，:app 不应有副本"))
     return issues
@@ -340,7 +339,7 @@ def main():
 
     if args.aosp_root is not None:
         global AOSP_ROOT
-        AOSP_ROOT = args.aosp_root / "frameworks/base/packages/SystemUI"
+        AOSP_ROOT = aosp_root(args.aosp_root) / "frameworks/base/packages/SystemUI"
 
     if not AOSP_ROOT.exists():
         return f"AOSP 根目录不存在: {AOSP_ROOT}"
@@ -376,7 +375,10 @@ def main():
         return 0
 
     def _short(p):
-        return str(p).replace(str(PROJECT_ROOT) + "/", "")
+        try:
+            return p.relative_to(PROJECT_ROOT).as_posix()
+        except ValueError:
+            return str(p)
 
     if src["missing"]:
         print("=" * 78)

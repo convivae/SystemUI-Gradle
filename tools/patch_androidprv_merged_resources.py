@@ -171,7 +171,7 @@ def run(merged_dir: Path, compiled_dir: Path, aapt2: str,
             staged = staging / rel
             staged.parent.mkdir(parents=True, exist_ok=True)
             staged.write_text(inject_declaration(
-                path.read_text(encoding="utf-8")), encoding="utf-8")
+                path.read_text(encoding="utf-8")), encoding="utf-8", newline="\n")
             # Compile from a path whose basename matches the original so the
             # generated flat name is identical to AGP's.
             _compile_one(aapt2, staged, out, path, feature_flags)

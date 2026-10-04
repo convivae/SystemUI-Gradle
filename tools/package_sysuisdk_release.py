@@ -187,7 +187,7 @@ def run(argv: list[str] | None = None) -> int:
         output.write_bytes(payload)
         digest = hashlib.sha256(payload).hexdigest()
         output.with_suffix(output.suffix + ".sha256").write_text(
-            f"{digest}  {output.name}\n", encoding="utf-8")
+            f"{digest}  {output.name}\n", encoding="utf-8", newline="\n")
     except PackageError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

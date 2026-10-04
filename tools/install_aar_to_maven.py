@@ -150,7 +150,7 @@ def install_aar(aar_path: Path, group: str, name: str, version: str,
     shutil.copyfile(aar_path, aar_dst)
     pom_dst.write_text(POM_TEMPLATE.format(
         group=group, name=name, version=version,
-        deps_section=_render_deps_section(deps)))
+        deps_section=_render_deps_section(deps)), encoding="utf-8", newline="\n")
     return aar_dst, pom_dst
 
 
@@ -185,8 +185,8 @@ def main():
     selected = {n: ARTIFACTS[n] for n in names}
     installed = install_all(source_dir, repo_dir, selected)
     for aar_dst, pom_dst in installed:
-        print(f"installed: {aar_dst.relative_to(PROJECT_ROOT)}  ({aar_dst.stat().st_size} bytes)")
-        print(f"           {pom_dst.relative_to(PROJECT_ROOT)}")
+        print(f"installed: {aar_dst}  ({aar_dst.stat().st_size} bytes)")
+        print(f"           {pom_dst}")
     return 0
 
 

@@ -21,6 +21,23 @@ subprojects {
     }
 }
 
+// JVM modules do not get AGP's bootclasspath automatically. Reuse the app's
+// public SDK provider so local.properties (including Windows escaping) and SDK
+// environment variables have exactly the same meaning throughout the build.
+project(":app").pluginManager.withPlugin("com.android.application") {
+    val sdkDirectory = project(":app").extensions
+        .getByType<com.android.build.api.variant.ApplicationAndroidComponentsExtension>()
+        .sdkComponents.sdkDirectory
+    val common = project(":SystemUI-common")
+    common.pluginManager.withPlugin("java-library") {
+        common.dependencies.add("compileOnly", files(sdkDirectory.map {
+            it.file("platforms/android-SysUISdk/android.jar").also { jar ->
+                check(jar.asFile.isFile) { "Missing SysUISdk platform: ${jar.asFile}" }
+            }
+        }))
+    }
+}
+
 // Inject framework.jar + internal flags jars into every Java/Kotlin compile.
 // SYSOPS: AOSP-only jars provide hidden APIs (aconfig Flags, @hide classes).
 allprojects {

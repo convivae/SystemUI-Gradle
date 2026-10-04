@@ -141,7 +141,7 @@ def _main(argv: list[str] | None = None) -> int:
         "--aosp-root",
         default=None,
         help="AOSP checkout root (default: aosp_paths resolution — AOSP_ROOT env "
-             "or /home/conv/myspace/aosp).",
+             "or the repository's sibling aosp directory).",
     )
     parser.add_argument(
         "--key-name",

@@ -1,0 +1,4 @@
+# Preserve AOSP mirrors and SHA-pinned build inputs on every host, including
+# Windows checkouts with core.autocrlf=true. Binary JAR/AAR/APK files stay binary.
+* text=auto eol=lf
+gradlew.bat text eol=crlf

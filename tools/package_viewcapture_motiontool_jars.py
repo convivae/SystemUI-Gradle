@@ -116,6 +116,7 @@ def package_target(
     with zipfile.ZipFile(output, "w") as archive:
         for name in sorted(merged):
             info = zipfile.ZipInfo(name, date_time=FIXED_ZIP_TIME)
+            info.create_system = 3
             info.external_attr = 0o644 << 16
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, merged[name])

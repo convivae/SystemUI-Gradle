@@ -24,7 +24,7 @@ import sys
 import zipfile
 from pathlib import Path
 
-from aosp_paths import aosp_root
+from aosp_paths import PROJECT_ROOT, aosp_root
 
 # Single AOSP root source (user rule 2026-08-25): tools/aosp_paths.py resolves
 # the default, the AOSP_ROOT env override, and any explicit --aosp-root value.
@@ -37,7 +37,7 @@ LIBMONET_INPUT = (
     "out/soong/.intermediates/external/libmonet/libmonet/"
     "android_common/javac/libmonet.jar"
 )
-OUTPUT_JAR = Path("libs/monet.jar")
+OUTPUT_JAR = PROJECT_ROOT / "libs/monet.jar"
 
 APPROVED_PREFIXES = (
     "com/android/systemui/monet/",

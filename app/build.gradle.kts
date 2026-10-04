@@ -157,7 +157,7 @@ androidComponents {
             // command line in its task action, after doFirst has run.
             doFirst {
                 commandLine(
-                    "python3", patchScript,
+                    "uv", "run", "--project", rootDir.absolutePath, "python", patchScript,
                     "--merged-dir", mergedDir.get().asFile.absolutePath,
                     "--compiled-dir", compiledDir.get().asFile.absolutePath,
                     "--aapt2", aapt2Provider.get().executable.get().asFile.absolutePath,

@@ -7,12 +7,15 @@ simulated by a tiny fake executable (never the real SDK binary), so the tests
 exercise namespace injection, selection, flat-name mapping, replacement
 atomicity, error exits, and idempotence — not AAPT2 itself.
 """
+import contextlib
+import io
 import os
 import re
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 # Make tools/ importable.
@@ -84,6 +87,24 @@ def _write_exec(dir_path: Path, name: str, text: str) -> Path:
     return p
 
 
+def _invoke_cli(cmd):
+    """Exercise the real CLI, launching fake AAPT2 with this Python on all OSes."""
+    run_process = subprocess.run
+
+    def launch_fake(args, **kwargs):
+        return run_process([sys.executable, *args], **kwargs)
+
+    stdout, stderr = io.StringIO(), io.StringIO()
+    with mock.patch.object(sys, 'argv', cmd[1:]), \
+            mock.patch.object(p.subprocess, 'run', side_effect=launch_fake), \
+            contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            code = p.main()
+        except SystemExit as exc:
+            code = exc.code
+    return subprocess.CompletedProcess(cmd, code, stdout.getvalue(), stderr.getvalue())
+
+
 # --- fixture helpers ---------------------------------------------------------
 
 def _values_xml(body: str, extra_root_attrs: str = '') -> str:
@@ -138,7 +159,7 @@ class FixtureBase(unittest.TestCase):
               else ['--no-feature-flags']),
             *extra_args,
         ]
-        return subprocess.run(cmd, capture_output=True, text=True)
+        return _invoke_cli(cmd)
 
 
 # --- pure-function tests ------------------------------------------------------
@@ -201,12 +222,12 @@ class TestCliErrors(FixtureBase):
     def test_missing_merged_dir_fails(self):
         r = self._run_cli()
         # merged dir exists here; test the real missing case via direct call
-        r2 = subprocess.run([
+        r2 = _invoke_cli([
             sys.executable, str(_TOOLS / 'patch_androidprv_merged_resources.py'),
             '--merged-dir', str(self.root / 'nope'),
             '--compiled-dir', str(self.compiled),
             '--aapt2', str(self.aapt2),
-        ], capture_output=True, text=True)
+        ])
         self.assertNotEqual(r2.returncode, 0)
 
     def test_zero_candidates_fails(self):
@@ -338,7 +359,7 @@ class TestFeatureFlagsForwarding(FixtureBase):
             '--compiled-dir', str(self.compiled),
             '--aapt2', str(self.aapt2),
         ]
-        r = subprocess.run(cmd, capture_output=True, text=True)
+        r = _invoke_cli(cmd)
         self.assertEqual(r.returncode, 0, r.stderr)
         flat = (self.compiled / 'values_values.arsc.flat').read_bytes()
         # first line of the real checked-in flags file (provenance gate)

@@ -55,16 +55,16 @@ class TestBuildCommandChain(unittest.TestCase):
         self.assertIn("-inform", cmds[0])
         self.assertIn("DER", cmds[0])
         self.assertIn("-nocrypt", cmds[0])
-        self.assertEqual(cmds[0][cmds[0].index("-in") + 1], "/a/platform.pk8")
-        self.assertEqual(cmds[0][cmds[0].index("-out") + 1], "/o/platform.key.pem")
+        self.assertEqual(Path(cmds[0][cmds[0].index("-in") + 1]), Path("/a/platform.pk8"))
+        self.assertEqual(Path(cmds[0][cmds[0].index("-out") + 1]), Path("/o/platform.key.pem"))
 
         # Step 3: openssl pkcs12 -export
         self.assertEqual(cmds[1][0], "openssl")
         self.assertEqual(cmds[1][1], "pkcs12")
         self.assertIn("-export", cmds[1])
-        self.assertEqual(cmds[1][cmds[1].index("-in") + 1], "/o/platform.crt.pem")
-        self.assertEqual(cmds[1][cmds[1].index("-inkey") + 1], "/o/platform.key.pem")
-        self.assertEqual(cmds[1][cmds[1].index("-out") + 1], "/o/platform.p12")
+        self.assertEqual(Path(cmds[1][cmds[1].index("-in") + 1]), Path("/o/platform.crt.pem"))
+        self.assertEqual(Path(cmds[1][cmds[1].index("-inkey") + 1]), Path("/o/platform.key.pem"))
+        self.assertEqual(Path(cmds[1][cmds[1].index("-out") + 1]), Path("/o/platform.p12"))
         self.assertEqual(cmds[1][cmds[1].index("-name") + 1], "AndroidDebugKey")
         # password pass:android
         self.assertIn("pass:android", cmds[1])
@@ -73,8 +73,8 @@ class TestBuildCommandChain(unittest.TestCase):
         self.assertEqual(cmds[2][0], "keytool")
         self.assertEqual(cmds[2][1], "-importkeystore")
         self.assertEqual(cmds[2][cmds[2].index("-deststorepass") + 1], "android")
-        self.assertEqual(cmds[2][cmds[2].index("-destkeystore") + 1], "/o/platform.keystore")
-        self.assertEqual(cmds[2][cmds[2].index("-srckeystore") + 1], "/o/platform.p12")
+        self.assertEqual(Path(cmds[2][cmds[2].index("-destkeystore") + 1]), Path("/o/platform.keystore"))
+        self.assertEqual(Path(cmds[2][cmds[2].index("-srckeystore") + 1]), Path("/o/platform.p12"))
         self.assertEqual(cmds[2][cmds[2].index("-srcstoretype") + 1], "PKCS12")
         self.assertEqual(cmds[2][cmds[2].index("-srcstorepass") + 1], "android")
 

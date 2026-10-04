@@ -319,7 +319,7 @@ class TestAconfigJarPackaging(unittest.TestCase):
             },
         )
         self.assertEqual(
-            module.MERGED_FRAMEWORK_JAR, Path("libs/systemui-aconfig-flags.jar")
+            module.MERGED_FRAMEWORK_JAR, module.PROJECT_ROOT / "libs/systemui-aconfig-flags.jar"
         )
         for name in module.FRAMEWORK_FAMILY:
             with self.subTest(config=name):
@@ -716,7 +716,8 @@ class TestBatchAllFlag(unittest.TestCase):
         self.assertEqual(merges, ["merged"])
         self.assertEqual(
             calls,
-            [fake_configs["a-first"], fake_configs["z-last"]],
+            [(s, module.PROJECT_ROOT / d, p)
+             for s, d, p in (fake_configs["a-first"], fake_configs["z-last"])],
         )
 
     def test_all_excludes_family_members_from_individual_copies(self):
@@ -733,7 +734,8 @@ class TestBatchAllFlag(unittest.TestCase):
             module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
         ), mock.patch.object(module, "merge_framework_family", return_value=None):
             self.assertEqual(self._run_main(["--all"]), 0)
-        self.assertEqual(calls, [fake_configs["solo"]])
+        self.assertEqual(calls, [(s, module.PROJECT_ROOT / d, p)
+                                 for s, d, p in [fake_configs["solo"]]])
 
     def test_merge_framework_mode_merges_without_copying_individuals(self):
         calls = []
@@ -769,9 +771,10 @@ class TestBatchAllFlag(unittest.TestCase):
             module, "merge_framework_family", return_value=None
         ):
             self.assertEqual(self._run_main(["--all"]), 0)
-        self.assertEqual(copies, [fake_configs["solo"]])
+        self.assertEqual(copies, [(s, module.PROJECT_ROOT / d, p)
+                                  for s, d, p in [fake_configs["solo"]]])
         self.assertEqual(
-            repacks, [(Path("/t.jar"), Path("libs/stub.jar"), "a.stub")]
+            repacks, [(Path("/t.jar"), module.PROJECT_ROOT / "libs/stub.jar", "a.stub")]
         )
 
     def test_single_artifact_still_works(self):
@@ -781,7 +784,8 @@ class TestBatchAllFlag(unittest.TestCase):
             module, "copy_jar", side_effect=lambda s, d, p: calls.append((s, d, p))
         ):
             self.assertEqual(self._run_main(["only"]), 0)
-        self.assertEqual(calls, [fake_configs["only"]])
+        self.assertEqual(calls, [(s, module.PROJECT_ROOT / d, p)
+                                 for s, d, p in [fake_configs["only"]]])
 
     def test_missing_selection_is_an_error(self):
         with self.assertRaises(SystemExit):
@@ -803,11 +807,12 @@ class TestBatchAllFlag(unittest.TestCase):
 class TestAospPaths(unittest.TestCase):
     """The unified AOSP root source: one default, env and explicit overrides."""
 
-    def test_default_root_is_the_build_machine_checkout(self):
-        # Pinning the default is intentional: it is the single place to change.
-        self.assertEqual(
-            aosp_paths.DEFAULT_AOSP_ROOT, Path("/home/conv/myspace/aosp")
-        )
+    def test_default_root_is_repository_relative_not_machine_specific(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(
+                aosp_paths.aosp_root(),
+                Path(aosp_paths.__file__).resolve().parents[2] / "aosp",
+            )
 
     def test_env_override_wins_over_default(self):
         with mock.patch.dict(os.environ, {"AOSP_ROOT": "/opt/custom-aosp"}):

@@ -320,8 +320,10 @@ class OutputResolutionTest(unittest.TestCase):
 class BasePlatformResolutionTest(unittest.TestCase):
 
     def test_name_resolves_under_sdk_root_platforms(self):
-        p = b.resolve_base_platform("android-37.0", Path("/opt/sdk"))
-        self.assertEqual(p, Path("/opt/sdk/platforms/android-37.0"))
+        with tempfile.TemporaryDirectory() as td:
+            sdk = Path(td)
+            p = b.resolve_base_platform("android-37.0", sdk)
+            self.assertEqual(p, sdk / "platforms/android-37.0")
 
     def test_existing_path_used_as_is(self):
         with tempfile.TemporaryDirectory() as td:
@@ -762,7 +764,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _tree_inventory(root: Path) -> dict[str, str]:
-    return {str(p.relative_to(root)): _sha256_file(p)
+    return {p.relative_to(root).as_posix(): _sha256_file(p)
             for p in sorted(root.rglob("*")) if p.is_file()}
 
 

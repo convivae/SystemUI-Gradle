@@ -20,7 +20,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from aosp_paths import aosp_root
+from aosp_paths import PROJECT_ROOT, aosp_root
 
 # Single AOSP root source (user rule 2026-08-25): tools/aosp_paths.py resolves
 # the default and the AOSP_ROOT env override; --aosp-root rebinds below.
@@ -29,8 +29,8 @@ COMPILELIB = AOSP_ROOT / "frameworks/libs/systemui/compilelib"
 DEBUG_SRC = COMPILELIB / "src-debug/com/android/systemui/util/Compile.java"
 RELEASE_SRC = COMPILELIB / "src-release/com/android/systemui/util/Compile.java"
 
-DEBUG_JAR = Path("libs/compilelib-debug.jar")
-RELEASE_JAR = Path("libs/compilelib-release.jar")
+DEBUG_JAR = PROJECT_ROOT / "libs/compilelib-debug.jar"
+RELEASE_JAR = PROJECT_ROOT / "libs/compilelib-release.jar"
 
 
 FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
@@ -74,7 +74,7 @@ def _compile_one(src: Path, output: Path) -> None:
 def configure_aosp_root(root: Path) -> None:
     """Re-point the derived source constants at another AOSP tree."""
     global AOSP_ROOT, COMPILELIB, DEBUG_SRC, RELEASE_SRC
-    AOSP_ROOT = Path(root)
+    AOSP_ROOT = aosp_root(root)
     COMPILELIB = AOSP_ROOT / "frameworks/libs/systemui/compilelib"
     DEBUG_SRC = COMPILELIB / "src-debug/com/android/systemui/util/Compile.java"
     RELEASE_SRC = COMPILELIB / "src-release/com/android/systemui/util/Compile.java"

@@ -102,7 +102,12 @@ class CollectEntriesTest(unittest.TestCase):
     def test_symlink_is_fatal(self):
         with tempfile.TemporaryDirectory() as td:
             platform = _make_platform(Path(td))
-            os.symlink(platform / "android.jar", platform / "link.jar")
+            try:
+                os.symlink(platform / "android.jar", platform / "link.jar")
+            except OSError as exc:
+                if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
+                    self.skipTest("Windows symlinks require Developer Mode or privilege")
+                raise
             with self.assertRaises(pkg.PackageError):
                 pkg.collect_platform_entries(platform)
 

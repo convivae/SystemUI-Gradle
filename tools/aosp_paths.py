@@ -1,9 +1,9 @@
 """Single source of truth for AOSP tree locations used by ``tools/`` scripts.
 
 Every script under ``tools/`` must resolve AOSP paths through this module
-instead of hardcoding absolute paths (user rule, 2026-08-25). Moving the
-checkout is a one-line change here -- or a per-invocation ``AOSP_ROOT``
-environment override -- never a per-script edit.
+instead of hardcoding absolute paths (user rule, 2026-08-25). Use an explicit
+``--aosp-root`` or ``AOSP_ROOT`` for a checkout outside the repository's sibling
+``aosp`` directory; no user name or OS-specific home layout is assumed.
 
 Precedence: explicit ``override`` argument (e.g. a ``--aosp-root`` CLI value)
 > ``AOSP_ROOT`` environment variable > ``DEFAULT_AOSP_ROOT``.
@@ -13,8 +13,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Default AOSP checkout location on the build machine.
-DEFAULT_AOSP_ROOT = Path("/home/conv/myspace/aosp")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# Optional checkout convention, relative to this repository (not the cwd).
+# Callers report missing inputs rather than silently selecting another tree.
+DEFAULT_AOSP_ROOT = PROJECT_ROOT.parent / "aosp"
 
 # Environment variable honoured by every helper in this module.
 AOSP_ROOT_ENV = "AOSP_ROOT"

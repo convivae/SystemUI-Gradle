@@ -36,4 +36,7 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     systemProperty("task081.repo.root", rootDir.parentFile.absolutePath)
+    providers.systemProperty("task081.aosp.rules").orNull?.let {
+        systemProperty("task081.aosp.rules", it)
+    }
 }

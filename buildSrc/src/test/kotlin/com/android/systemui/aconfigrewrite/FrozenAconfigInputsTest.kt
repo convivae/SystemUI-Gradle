@@ -3,7 +3,9 @@ package com.android.systemui.aconfigrewrite
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -12,17 +14,12 @@ import java.security.MessageDigest
 class FrozenAconfigInputsTest {
     private val repositoryRoot = File(System.getProperty("task081.repo.root") ?: "..").canonicalFile
     private val rulesFile = File(repositoryRoot, "gradle/aosp17-aconfig-repackaging-rules.txt")
-    private val fullAospRules = File(
-        System.getProperty(
-            "task081.aosp.rules",
-            "/home/conv/myspace/aosp/out/soong/.intermediates/frameworks/base/framework/android_common/repackaged-jarjar/repackaging.txt",
-        ),
-    )
+    @TempDir
+    lateinit var scratch: File
 
     @Test
-    fun `frozen rules are the complete AOSP rule set with exact provenance`() {
+    fun `frozen rules are complete and retain their pinned hash`() {
         assertEquals(FrozenAconfigInputs.RULES_SHA256, sha256(rulesFile))
-        assertEquals(FrozenAconfigInputs.FULL_AOSP_RULES_SHA256, sha256(fullAospRules))
 
         val lines = canonicalLines(rulesFile)
         assertEquals(FrozenAconfigInputs.RULE_COUNT, lines.size)
@@ -30,10 +27,6 @@ class FrozenAconfigInputsTest {
         assertEquals(lines.size, lines.toSet().size)
         val mappings = FrozenAconfigInputs.load(rulesFile).mappings
         assertEquals(FrozenAconfigInputs.RULE_COUNT, mappings.size)
-        // The frozen repo copy is the AOSP rule set canonically re-serialized:
-        // same rules, no trailing blank line, exactly one final LF.
-        val aospLines = fullAospRules.readLines(StandardCharsets.UTF_8).filter { it.isNotBlank() }
-        assertEquals(aospLines, lines)
         for ((source, target) in mappings) {
             assertEquals("com.android.internal.hidden_from_bootclasspath.$source", target)
         }
@@ -49,11 +42,20 @@ class FrozenAconfigInputsTest {
     }
 
     @Test
+    fun `frozen rules match configured AOSP provenance`() {
+        val configuredRules = System.getProperty("task081.aosp.rules")
+            ?: System.getenv("AOSP_ROOT")?.takeIf { it.isNotBlank() }?.let {
+                File(it, "out/soong/.intermediates/frameworks/base/framework/android_common/repackaged-jarjar/repackaging.txt").path
+            }
+        assumeTrue(configuredRules != null, "Set AOSP_ROOT or task081.aosp.rules for provenance verification")
+        val fullAospRules = File(requireNotNull(configuredRules))
+        assertEquals(FrozenAconfigInputs.FULL_AOSP_RULES_SHA256, sha256(fullAospRules))
+        val aospLines = fullAospRules.readLines(StandardCharsets.UTF_8).filter { it.isNotBlank() }
+        assertEquals(aospLines, canonicalLines(rulesFile))
+    }
+
+    @Test
     fun `loader fails closed for every frozen-input drift category`() {
-        val scratch = File("/tmp/task099-c5-dreams-flags-diagnosis/loader-tests").apply {
-            deleteRecursively()
-            mkdirs()
-        }
         val goodRules = rulesFile.readText()
 
         fun expectFailure(name: String, rules: String? = goodRules) {
