@@ -1,19 +1,19 @@
 # Current State（唯一完整实时技术状态）
 
-> **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（HANDOFF/PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。
-> **Last verified**: 2026-09-09（**项目完成**：tag `v1.0.0-android-17.0.0_r1` 已 push + GitHub Release 已发布。C6 收口（Task 108，2026-09-08）：版本元数据 versionCode=37 / versionName="17" 落入双 APK（同树 build.prop：`ro.build.version.sdk=37`、platform 17，基线 android-17.0.0_r1）；Debug `e7277867…` / Release `48ade522…` 重建，Release aconfig 静态门 RESULT=PASS；发布清单快照入 `docs/release-manifest/`；ADR 0007 闭环。注意新 APK SHA 与 2026-09-06 双 variant 终验 APK（`e61d5485…`/`6d1d4254…`）不同，仅因版本元数据变更（原为 AGP 默认 versionCode=-1/versionName=""），无其他源码变化；runtime 行为已由该终验背书。Task 079 broad replay 经用户裁定关闭（won't-do，2026-09-09）；方案 B 保留为可选未来方向。项目进入按需维护状态。）
-> 此前：2026-09-06 双 variant runtime 终验 PASS（Tasks 100–104，sharedUserId 修复 commit `9723a96e`；fixed Debug `e61d5485…` 与 Release `6d1d4254…` 全新实例整机重启验收全 PASS，DPGP 自动授权零手动 pm grant；详见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。）
+> **Owner**: 本文件是项目**唯一完整实时技术状态 owner**。其他文档（PLAN/README/AGENTS/CHARTER/STATE）只链接或摘要，不复制完整状态。`docs/HANDOFF.md` 已于 2026-10-04 删除；接手入口见 `docs/README.md` → `AGENTS.md` → 本文件 → `PLAN.md`。
+> **Last verified**: 2026-10-04（维护期文档对齐：SysUISdk GitHub Release `sysuisdk-android-17.0.0_r1-r2` 已发布；本机 live SDK 已安装；本地 `main` 相对 `origin/main` 领先 6 个未 push commit。项目主线仍以 2026-09-09 `v1.0.0-android-17.0.0_r1` 为完成基线。）
+> 此前：2026-09-09 项目完成（tag `v1.0.0-android-17.0.0_r1` + GitHub Release；C6 Task 108；Task 079 won't-do）；2026-09-06 双 variant runtime 终验 PASS（详见 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`）。
 > **Update triggers**: 任何 merge 改变了 build/test/blocker/toolchain/当前下一步 → 必须更新本文件（见 `docs/README.md` 维护触发条件表）
 
 ---
 
-## 维护期修复（2026-10-03：本机 SDK 已安装，完整离线包待异机发布）
+## 维护期修复（2026-10-03 → 2026-10-04）
 
 Studio Sync 的 `androidApis → MockableJarTransform` 故障已用 **真实 SDK optional bridge**
 修复；不关闭 UnitTest、不改写方法体、不合 PR #1、不放宽禁止 stub 的规则。
-用户最后要求公司机器**不上传 GitHub**，交付本地 patch/SDK，由用户在其他机器发布。
-**没有 push、远端 tag、Release 或附件上传。用户随后授权替换 live SDK，已由生成器
---replace 完成，未保留旧 SDK；实际安装路径通过新 daemon 模型/JVM 验证。**
+本机 live SDK 经生成器 `--replace` 安装（旧 SDK 不保留）。**SysUISdk r2 已于
+2026-10-04 发布到 GitHub**（tag `sysuisdk-android-17.0.0_r1-r2`，指向远端
+`origin/main` = `69937f24`）；ZIP SHA 与验收产物一致。
 
 | 维护项 | 当前证据 |
 |---|---|
@@ -22,15 +22,17 @@ Studio Sync 的 `androidApis → MockableJarTransform` 故障已用 **真实 SDK
 | IDE/JVM | fresh Tooling daemon 全 13 Android 模块/26 variants 通过、Debug UnitTest 保留；真实 AGP JVM 4 tests 全通过（绝对 SDK 路径校验） |
 | 构建/R8 | 隔离 Debug/Release 成功；fresh-daemon 双变体复验与强制 R8 重跑成功，R8 library input 为 generated SDK bridge、program input 不含它 |
 | APK | Debug SHA `e7277867695b85098bee5d3bba06732371ff708471d332e807e5ff08b3a45abd` 与原发布一致；Release SHA `395959de6cc2b1741244df29ff00b3a1033ff3e5053b108298721268d16281c3`；双 aconfig gate PASS、37 bridge 定义全 0、无 bridge uses-library、v2 签名 PASS |
-| Python | **全套 368 passed +156 subtests**；原 SettingsTheme 失败是测试硬编码旧机器路径导致预期集合为空，现已改为共享 AOSP_ROOT 并防御缺失/空目录；实际 230 资源与 AAR 本来就完全正确，无产物修改 |
-| 本地交付 | `dist/SystemUI-Gradle-offline-release-2026-10-03.zip`：self-contained main Git bundle、累计 patch、SDK ZIP/sidecar、commit 记录、发布说明和摘要；支持只有源码 ZIP、没有 .git 的接收方。内层 SDK ZIP SHA 不变：`329fd0e12a19b8004180fb74f0a9a3817b2e7b3c1fc36617a8af7d535b5543ae` |
-| 本机安装 | `/home/leijiabin/Android/Sdk/platforms/android-SysUISdk` 045.3，marker 与已验收产物完全相同；原 SDK 已删除，无事务残留；本机 root project 全 13 模块模型 + 4 JVM tests 通过 |
-| 尚未执行 | 手动 Studio UI Sync、设备部署；GitHub 发布仍由用户在另一台机器执行 |
+| Python | **全套 368 passed +156 subtests**（SettingsTheme 路径修复后）；实际 230 资源与 AAR 无产物修改 |
+| GitHub SysUISdk | ✅ **r2 已发布**：https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r2 ；资产 `SysUISdk-android-17.0.0_r1-r2.zip`（79,983,909 B），SHA-256 `329fd0e12a19b8004180fb74f0a9a3817b2e7b3c1fc36617a8af7d535b5543ae` |
+| 本地离线包 | `dist/SystemUI-Gradle-offline-release.zip`（外层 SHA-256 `8245c85767814428194b12dcae246ca9bb547b160938b96bd285a93e8fd78eec`）；内含 bundle/patch/SDK ZIP；内层 SDK ZIP SHA 同上 |
+| 本机安装 | `/home/leijiabin/Android/Sdk/platforms/android-SysUISdk`（`source.properties`：`Pkg.Revision=2`，含 `optional/sysui-platform-bridge.jar`） |
+| 本地 git（相对远端） | `origin/main` = `69937f24`；本地领先 **6** 个未 push commit：`c757c631` host 可移植性、`1a1123cb` androidprv → Kotlin Gradle task、`570b8c23` `org.gradle.tooling.parallel=true`、以及 3 个 docs ledger 调整（`docs/HANDOFF.md` 已删除） |
+| 尚未执行 | 手动 Studio UI Sync；设备部署；上述 6 个本地 commit 的 push（用户要求本机不 push） |
 
 **安装注意**：AGP 的静态 bootclasspath cache 缺 SDK root 键。更新/切换 SDK 后先停止
-Gradle daemon；本轮用 `--no-daemon`、新 Tooling JVM identity 和精确路径断言排除了旧根缓存。
-主工程现在使用 `useLibrary("com.android.systemui.platform.bridge")`，旧 r1 SDK 不能用于当前
-main；用当前生成器 `--replace` 或干净安装本地 ZIP，禁止新旧覆盖混装。
+Gradle daemon。主工程使用 `useLibrary("com.android.systemui.platform.bridge")`，旧 r1
+SDK 不能用于当前 main；用 r2 zip、当前生成器 `--replace`，或干净安装本地离线包中的 SDK，
+禁止新旧覆盖混装。
 
 完整安装/离线恢复步骤见
 [`issues/2026-10-03-live-sdk-offline-handoff.md`](issues/2026-10-03-live-sdk-offline-handoff.md)；
@@ -40,6 +42,8 @@ SettingsTheme 根因与修复见
 [`issues/2026-10-03-sdk-optional-bridge-implementation.md`](issues/2026-10-03-sdk-optional-bridge-implementation.md)；
 根因与 PR 评估见
 [`architecture/2026-10-03-sdk-mockable-preserve-jvm-tests.md`](architecture/2026-10-03-sdk-mockable-preserve-jvm-tests.md)。
+本次文档对齐记录见
+[`issues/2026-10-04-docs-state-sync.md`](issues/2026-10-04-docs-state-sync.md)。
 以下“项目完成”及原构建状态为 2026-09 发布基线历史，维护期状态以上述表格为准。
 
 ## TL;DR
@@ -51,10 +55,11 @@ SettingsTheme 根因与修复见
 | Release APK | ✅ **C6 release（Task 108）**：`48ade522…`（versionCode=37 / versionName="17"，aconfig 静态门 RESULT=PASS）。SHA 与终验 APK `6d1d4254…` 不同仅因版本元数据；清单快照 `docs/release-manifest/release-AndroidManifest.xml` |
 | Gradle 配置解析 | ✅ `./gradlew help --refresh-dependencies` BUILD SUCCESSFUL；`buildSrc` 的 dependency/plugin 两层仓库均已镜像优先，fresh sync 不再因直连 Maven Central/Plugin Portal TLS 失败 |
 | 源码/资源对齐 | ✅ `check_source_alignment.py --strict` exit 0（17 基线：MISSING/MISPLACED/EXTRA/APP/RES-MISS/RES-EXTRA 全 0；MODIFIED 1 src CONV_MOD + 86 res-product CONV_DEL 均为白名单） |
-| Python 工具测试 | ✅ **369 passed**（+151 subtests；原 361 + SysUISdk release 8 tests，2026-09-03） |
+| Python 工具测试 | ✅ 维护期复验 **368 passed +156 subtests**（2026-10-03）；九月基线曾记 369/+151 |
 | `libs/` 产物 | ✅ 107 文件全部由 `tools/` 脚本从 AOSP-17 再生（C2 102 + C4a 新增 5）；17-vintage 坐标以 2.0.0 为基线，C4b/C4c 修正的 WM-Shell/SettingsLib 产物已升 2.0.1 |
-| 设备/模拟器 | 关闭（C6 为静态收口，模拟器已关）。2026-09-06 终验时：emulator-5554（headless）运行 Release，PID 855 稳定 0 FATAL；Tasks 100–104 权限回归闭环：AGP merger 不从 library 清单继承 sharedUserId → appId 10160 → 授权不适用；app 主清单显式声明后修复 |
-| 当前状态 | **项目完成（2026-09-09）**：tag `v1.0.0-android-17.0.0_r1` 已 push，GitHub Release 已发布（https://github.com/convivae/SystemUI-Gradle/releases/tag/v1.0.0-android-17.0.0_r1）。Task 079 broad replay 经用户裁定关闭（won't-do，2026-09-09）；方案 B（AOSP 自构建 SDK 底座）保留为可选未来方向，非待办 |
+| SysUISdk | ✅ **r2 已发布**（`sysuisdk-android-17.0.0_r1-r2`）；本机 live `Pkg.Revision=2` + optional bridge |
+| 设备/模拟器 | 关闭（C6 为静态收口）。2026-09-06 终验证据仍有效；维护期未重跑设备部署 |
+| 当前状态 | **主线完成（2026-09-09）** + **维护期 r2 完成（2026-10-04）**。本地 `main` 领先 `origin/main` 6 commit（未 push）。剩余：Studio UI Sync、设备部署、是否 push |
 
 16 时代 R8 missing refs 轨迹（140 → 126 → … → 1 → 0，Task 044 收口）与 16 时代双 runtime 闭环均为历史证据，保留于本文件历史段落；17 重对齐后的 Release 闭环归 task074 重做。
 
@@ -110,6 +115,8 @@ SettingsTheme 根因与修复见
 | 2026-09-03 | **SysUISdk 发布为 GitHub Release（方案 A）**：方案 B（AOSP 自构建 SDK 底座）因 `m sdk` 分析 OOM（sdk 变体峰值 >33.7G，GOMEMLIMIT 无法经 `env -i` 传入）与磁盘不足搁置；改为直接打包现有生成器产出。`tools/package_sysuisdk_release.py` 产出确定性 zip（79,982,462 B，SHA `ee5bd82d…`）+ LICENSE/NOTICE/README.txt，发布 tag `sysuisdk-android-17.0.0_r1-r1`；用户已用该 Release 完成正常编译验收；README 双语 Quickstart 改为下载 zip 主路径 | `docs/issues/2026-09-03-sysuisdk-aosp-base-and-release.md` |
 | 2026-09-03 | **buildSrc fresh-sync TLS 修复**：补齐独立 build 的 dependency mirrors 与 pluginManagement mirrors；原失败的 Kotlin compiler plugin 及 Kotlin DSL plugin 均从腾讯镜像解析，`./gradlew help --refresh-dependencies` 成功 | `docs/issues/2026-09-03-buildsrc-maven-central-tls-resolution.md` |
 | 2026-09-08 | **C6 release 收口（Task 108，ADR 0007 闭环）**：`app/build.gradle.kts` 声明 versionCode=37 / versionName="17"（同树 build.prop 来源注释）；Debug `e7277867…` / Release `48ade522…` 双变体重建（output-metadata + aapt 双证 37/"17"）；Release aconfig 静态门 RESULT=PASS（0 违规/0 hidden 定义）；发布清单快照入 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1`（未 push）。新 SHA 与 2026-09-06 终验 APK 不同仅因版本元数据 | `docs/release-manifest/README.md`；ADR 0007 闭环记录 |
+| 2026-10-03 | **SysUISdk optional bridge（生成器 045.3）**：真实字节 optional library + `useLibrary`；本机 live SDK `--replace`；SettingsTheme 测试路径修复；离线包 `dist/SystemUI-Gradle-offline-release.zip` | `docs/issues/2026-10-03-sdk-optional-bridge-implementation.md` |
+| 2026-10-04 | **SysUISdk r2 GitHub Release** + 本地未 push 维护：host 可移植性、Kotlin androidprv task、parallel tooling sync；删除 `docs/HANDOFF.md`；文档与现状对齐 | https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r2 ；`docs/issues/2026-10-04-docs-state-sync.md` |
 
 ## Current build and verification matrix
 
@@ -184,10 +191,12 @@ emulator-5554）为历史台账。
 
 ## Next ordered work
 
-1. ~~**C6**：manifest 快照 + release tag + README/version/HANDOFF 收口（ADR 0007）~~ ✅ 完成（2026-09-08/09，Task 108）：tag `v1.0.0-android-17.0.0_r1` 已 push，GitHub Release 已发布。**项目完成。**
-2. **尾账**：~~SDK 老备份清理~~ ✅ 无需处理（2026-09-09 核实：Task 047 已删 8 个冗余备份，唯一保留快照已随 Phase C 清空重生消失，live SDK 零备份文件）；同日完成 git 卫生收尾：删除 a8b worktree（1.9G）、prune 6 个失效 worktree 登记、删除 8 个已合并/已落地的 stale 本地分支，本地仅余 `main`。剩余：`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
-3. ~~**Task 079 broad replay**~~ ✅ 关闭（won't-do，用户裁定 2026-09-09）：其目标已由 pre-D8 reference rewrite（ADR 0008）+ 双静态门 + 双 variant runtime 终验以更硬证据覆盖。
-4. **方案 B（AOSP 自构建 SDK 底座）**：保留为可选未来方向，非待办。
+1. ~~**C6**：manifest 快照 + release tag + README/version 收口（ADR 0007）~~ ✅ 完成（2026-09-08/09，Task 108）：tag `v1.0.0-android-17.0.0_r1` 已 push，GitHub Release 已发布。**项目完成。**
+2. ~~**SysUISdk optional bridge + r2 Release**~~ ✅ 完成（2026-10-03 实现/本机安装；2026-10-04 GitHub Release `sysuisdk-android-17.0.0_r1-r2`）。
+3. **维护期剩余**：手动 Studio UI Sync；设备部署；决定是否 push 本地领先的 6 个 commit（当前按用户要求不 push）。
+4. **尾账**：~~SDK 老备份清理~~ ✅ 无需处理（2026-09-09）。剩余：`tracinglib-platform.jar` 溯源、依赖/pytest 维护性观察。
+5. ~~**Task 079 broad replay**~~ ✅ 关闭（won't-do，用户裁定 2026-09-09）。
+6. **方案 B（AOSP 自构建 SDK 底座）**：保留为可选未来方向，非待办。
 
 ## Verification commands and evidence
 

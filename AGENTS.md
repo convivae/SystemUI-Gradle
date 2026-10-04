@@ -469,6 +469,7 @@ uv run python tools/check_aconfig_jarjar_references.py --apk app/build/outputs/a
 | 2026-08-21 增订 | SysUISdk 工作流事实同步：旧 SDK 补丁脚本已退役，ADR 索引、§1.7、§2.4、§7 工具表统一为单入口 `python3 tools/build_sysuisdk.py --aosp-root`（ADR 0006 机制已修订） |
 | 2026-09-03 增订 | C5 闭环事实同步：ADR 索引补 0005/0007/0008；§7 工具表新增 `check_aconfig_jarjar_references.py`；§6 速查新增 APK 引用完整性门禁。README 双语重写为对外文档（不再承载内部进度快照） |
 | 2026-09-30 增订 | §八 herdr 偏好精简：移除具体模型指定（本地代理已下线），模型改为派发时指定 |
+| 2026-10-04 增订 | 删除 `docs/HANDOFF.md`；接手入口改为 `docs/README.md` → AGENTS → CURRENT_STATE → PLAN；维护期状态以 CURRENT_STATE 为准（含 SysUISdk r2） |
 
 ---
 

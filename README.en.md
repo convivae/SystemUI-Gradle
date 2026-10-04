@@ -68,19 +68,18 @@ printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 
 ### 2. Get SysUISdk
 
-> **Current main requires the optional-bridge layout from generator 045.3+.** The
-> published r1 SDK remains available for the historical `v1.0.0-android-17.0.0_r1`
-> tag, but lacks `com.android.systemui.platform.bridge`. Until a new SDK release
-> is published, use option B below for main; use `--replace` for generator-owned
-> existing outputs. This fixes Studio sync without disabling local JVM tests or
-> rewriting real AOSP class bytes.
+> **Current main requires the optional-bridge layout from generator 045.3+**
+> (`useLibrary("com.android.systemui.platform.bridge")`). Install **r2** below.
+> Historical r1 remains available only for the old `v1.0.0-android-17.0.0_r1` tag
+> and lacks the bridge — do not use it with current main. This fixes Studio sync
+> without disabling local JVM tests or rewriting real AOSP class bytes.
 
-**Option A (historical release tag only): install the published r1 release**
+**Option A (recommended): install the published r2 release**
 
 Download the zip from the
-[SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
+[SysUISdk r2 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r2)
 (a matching `.sha256` is provided for verification; fixed SHA-256
-`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`)
+`329fd0e12a19b8004180fb74f0a9a3817b2e7b3c1fc36617a8af7d535b5543ae`)
 and extract it into `$ANDROID_SDK_ROOT/platforms/`. The installed layout:
 
 ```

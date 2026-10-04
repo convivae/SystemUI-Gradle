@@ -8,20 +8,27 @@
 
 ## 当前路线（有序，完成一项进入下一项）
 
-### 0. 维护期：SysUISdk optional bridge（2026-10-03）
+### 0. 维护期：SysUISdk optional bridge（2026-10-03 → 2026-10-04）
 
 - [x] 保持真实 AOSP class 字节的 SDK optional bridge、公开 useLibrary 接线、生成器回归测试。
 - [x] 隔离 SDK 的真实 IDE 模型与本地 JVM 测试验收。
 - [x] 完成双 APK/R8/DEX/manifest 边界验收并记录证据。
 - [x] 按用户授权替换 live SDK（旧版不保留），验证本机模型与 JVM tests。
 - [x] 修复 SettingsTheme 测试的旧机器硬编码路径，全工具测试通过。
-- [ ] 用户在 Studio UI 再次 Sync（已通过对应 Tooling API 模型）。
-- [ ] 用户在另一台机器使用完整离线 ZIP 中的 bundle/patch，发布新布局 SDK；
-  **公司机器不 push、不上传 Release**。
-  当前 main 不兼容旧 r1 SDK，README 已说明再生路径。
+- [x] GitHub 发布 SysUISdk `android-17.0.0_r1-r2`（2026-10-04；ZIP SHA
+  `329fd0e12a19b8004180fb74f0a9a3817b2e7b3c1fc36617a8af7d535b5543ae`）。
+- [x] host 可移植性：去掉机器硬编码路径（本地 commit `c757c631`，未 push）。
+- [x] `androidprv` 资源修复改为 buildSrc Kotlin Gradle task（`1a1123cb`，未 push）。
+- [x] 启用 `org.gradle.tooling.parallel=true`（`570b8c23`，未 push）。
+- [x] 文档 ledger：恢复 CURRENT_STATE/PLAN 等；删除 `docs/HANDOFF.md`（接手改走
+  `docs/README.md`）。
+- [ ] 用户在 Studio UI 再次 Sync（Tooling API 模型已通过）。
+- [ ] 设备部署验收。
+- [ ] 是否 push 本地领先 `origin/main` 的 6 个 commit（用户当前要求不 push）。
 
-具体技术状态/证据唯一见 `CURRENT_STATE.md` 维护期一节与
-`issues/2026-10-03-sdk-optional-bridge-implementation.md`。
+当前 main 不兼容旧 r1 SDK；请安装 r2 或用生成器再生。具体证据见
+`CURRENT_STATE.md` 维护期一节、`issues/2026-10-03-sdk-optional-bridge-implementation.md`、
+`issues/2026-10-04-docs-state-sync.md`。
 
 ### 1. Phase C：AOSP 固定 `android-17.0.0_r1` + 清空重生（ADR 0007）
 
@@ -33,7 +40,7 @@
 - [x] ~~C4c：Release/R8 闭环（task074）~~ ✅ 2026-08-31（missing refs 31→0；`:app:assembleRelease` BUILD SUCCESSFUL；内容级复现成立）
 - [x] ~~**C5：17 镜像双 runtime 门**~~ ✅ 2026-09-03（Task 099 闭环）：aconfig reference rewrite 生产修复落地——完整 725 条 AOSP repackaging 规则 + instrument-everything reference-only seam + 指令级静态门禁。fresh Debug `33e07319…`（200,506,573 B）与 fresh Release `17358f4d…`（45,030,130 B）双 APK：构建 ✅、静态门 0 违规 ✅、部署 + 冷启动 ✅、**整机重启门 ✅**（PID 稳定、0 FATAL、UI 三件套在屏）。commits `ed40e4b4`/`ea9b2f52`/`c79044b4` 已 push。Task 079 broad replay 保持暂停。
 - [x] ~~**最终双 variant runtime 终验（Tasks 100–104）**~~ ✅ 2026-09-06：Task 101 发现 APK 替换后 SystemUI 崩溃循环，根因为 AGP manifest merger 不从 library 清单继承 `sharedUserId` → appId 变 10160 → 首靴 DPGP 授权不适用；app 主清单显式声明 `android:sharedUserId="android.uid.systemui"`（commit `9723a96e`）修复后，fixed Debug `e61d5485…` 与 Release `6d1d4254…` 在同一全新实例先后部署并整机重启验收全 PASS（DPGP 自动授权、零手动 `pm grant`、PID 稳定 ≥3min、0 FATAL、窗口在屏；Debug 半用户视觉确认）。证据：`docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。
-- [x] ~~**C6：manifest 快照 + release tag + version 声明**~~ ✅ 2026-09-08（Task 108）：`app/build.gradle.kts` 声明 versionCode=37 / versionName="17"（同树 build.prop 来源）；Debug `e7277867…` / Release `48ade522…` 双变体重建，Release aconfig 静态门 RESULT=PASS；发布清单快照入 `docs/release-manifest/`；本地 tag `v1.0.0-android-17.0.0_r1` 已建（未 push，Chief 负责 push + GitHub Release）。ADR 0007 闭环。README 双语已于 2026-09-03 重写为对外文档，HANDOFF/CURRENT_STATE 已同步；SysUISdk 已发布 GitHub Release（`sysuisdk-android-17.0.0_r1-r1`，zip 79,982,462 B / SHA `ee5bd82d…`，`tools/package_sysuisdk_release.py` 确定性产出），Quickstart 主路径已改为下载 zip。
+- [x] ~~**C6：manifest 快照 + release tag + version 声明**~~ ✅ 2026-09-08（Task 108）：`app/build.gradle.kts` 声明 versionCode=37 / versionName="17"；Debug `e7277867…` / Release `48ade522…`；Release aconfig 静态门 PASS；发布清单快照；tag `v1.0.0-android-17.0.0_r1` 已 push + GitHub Release。ADR 0007 闭环。SysUISdk 后续维护版见 r2（2026-10-04）；历史 r1 仍保留给旧 tag。
 
 ### 2. 尾账（Release 阶段处理）
 
@@ -71,5 +78,6 @@ Phase C（AOSP 固定 17.0.0_r1 + 全管线清空重生）的 C1–C5 已全部�
 Task 108）：版本元数据 37/"17" 落双 APK、静态门 PASS、发布清单快照、tag
 `v1.0.0-android-17.0.0_r1` 已 push + GitHub Release 已发布（ADR 0007 闭环）。**项目完成
 （2026-09-09）**：Task 079 broad replay 经用户裁定关闭（won't-do）；方案 B 保留为可选未来
-方向。最新证据见
+方向。维护期 optional bridge / SysUISdk r2 已于 2026-10-03–04 完成；剩余见上文 §0。
+主线证据见
 `docs/architecture/2026-09-06-fresh-instance-dual-variant-validation.md`。

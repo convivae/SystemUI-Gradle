@@ -2,7 +2,7 @@
 
 > **Owner**: 本文件定义文档分类、生命周期、owner、维护触发与导航。
 > **实时技术状态唯一见 [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md)**；本文件不复制构建数字。
-> **最后更新**: 2026-09-03（README 对外重写 + Task 099 后同步）
+> **最后更新**: 2026-10-04（SysUISdk r2 已发布；维护期状态对齐；`docs/HANDOFF.md` 已删除）
 
 ---
 
@@ -12,6 +12,8 @@
 2. [`docs/CURRENT_STATE.md`](./CURRENT_STATE.md) — 唯一完整实时技术状态
 3. [`docs/PLAN.md`](./PLAN.md) — 未完成路线与完成条件
 4. （编排参与者加读）[`docs/orchestration/CHARTER.md`](./orchestration/CHARTER.md) → [`docs/orchestration/STATE.md`](./orchestration/STATE.md) → [`docs/orchestration/log.md`](./orchestration/log.md) 尾部
+
+> 注：原 `docs/HANDOFF.md` 已删除；不要再寻找或重建该文件作为入口。
 
 ## Live owners（持续维护文档）
 

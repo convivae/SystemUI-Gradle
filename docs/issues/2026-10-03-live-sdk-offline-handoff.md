@@ -69,3 +69,14 @@ bundle clone 到新目录，即可保留真实历史和 commit，不需要凭空
 交付前检查：bundle verify / 从 bundle clone / git fsck 与精确 HEAD/tree 对比；
 累计 patch 在原基线 git am 并比较 tree；全包清单 SHA、内层 SDK 摘要与外层 ZIP 校验。
 这些是本地操作，不涉及上传/下载远端内容。
+
+## 后续结果（2026-10-04 核实）
+
+- GitHub Release **`sysuisdk-android-17.0.0_r1-r2`** 已发布（publishedAt 2026-10-04T01:35:00Z），
+  tag 指向当时的 `origin/main` = `69937f24`；资产 SHA 与上文内层 SDK ZIP 一致。
+- 本机磁盘上的离线包文件名为 `dist/SystemUI-Gradle-offline-release.zip`
+  （外层 SHA-256 `8245c85767814428194b12dcae246ca9bb547b160938b96bd285a93e8fd78eec`），
+  与上文规划名 `…-2026-10-03.zip` 为同一交付内容的实际落盘名。
+- 此后本地又产生 6 个未 push commit（可移植性 / Kotlin androidprv / parallel tooling /
+  文档调整）；与 r2 Release 无冲突，状态见 `docs/CURRENT_STATE.md` 与
+  `docs/issues/2026-10-04-docs-state-sync.md`。

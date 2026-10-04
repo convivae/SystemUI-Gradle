@@ -61,16 +61,15 @@ printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > local.properties
 
 ### 2. 获取 SysUISdk
 
-> **当前 main 需要生成器 045.3+ 的 optional bridge 布局。** 已发布的 r1 仍对应历史
-> `v1.0.0-android-17.0.0_r1`，不包含 `com.android.systemui.platform.bridge`。
-> 新 SDK 发布前，请对当前 main 使用下方方式 B 再生；已有生成器产出可加 `--replace`。
+> **当前 main 需要生成器 045.3+ 的 optional bridge 布局**（`useLibrary("com.android.systemui.platform.bridge")`）。
+> 请安装下方 **r2**。历史 r1 仅对应旧 tag `v1.0.0-android-17.0.0_r1`，缺少 bridge，不能用于当前 main。
 > 此布局修复 Studio Sync，同时保留 Android 本地 JVM 测试，不修改真实 AOSP class 字节。
 
-**方式 A（仅历史 release tag）：安装已发布的 r1**
+**方式 A（推荐）：安装已发布的 r2**
 
-从 [SysUISdk r1 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r1)
+从 [SysUISdk r2 Release](https://github.com/convivae/SystemUI-Gradle/releases/tag/sysuisdk-android-17.0.0_r1-r2)
 下载 zip（附同名 `.sha256` 可供校验，固定 SHA-256 为
-`ee5bd82d664c0387473765feeea0df1c90b2fab57493765edf9bbae21c3ba1dd`），
+`329fd0e12a19b8004180fb74f0a9a3817b2e7b3c1fc36617a8af7d535b5543ae`），
 解压到 `$ANDROID_SDK_ROOT/platforms/`。安装完成后的路径结构：
 
 ```
