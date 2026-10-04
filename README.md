@@ -3,7 +3,6 @@
 **[English](README.en.md)** | 中文
 
 [![AOSP baseline](https://img.shields.io/badge/AOSP-android--17.0.0__r1-3ddc84?logo=android&logoColor=white)](https://android.googlesource.com/platform/manifest/+/refs/tags/android-17.0.0_r1)
-[![Build verified](https://img.shields.io/badge/Debug%20%2B%20Release-verified-brightgreen)](docs/CURRENT_STATE.md)
 [![Gradle 9.5.0](https://img.shields.io/badge/Gradle-9.5.0-02303a?logo=gradle&logoColor=white)](gradle/wrapper/gradle-wrapper.properties)
 [![AGP 9.3.1](https://img.shields.io/badge/AGP-9.3.1-3ddc84?logo=android&logoColor=white)](gradle/libs.versions.toml)
 [![Kotlin 2.2.10](https://img.shields.io/badge/Kotlin-2.2.10-7f52ff?logo=kotlin&logoColor=white)](gradle/libs.versions.toml)
@@ -31,17 +30,20 @@ Gradle 构建，产出可安装的 Debug 与 Release APK，并已在同版本 AO
 
 | 项 | 要求 |
 |---|---|
-| 操作系统 | Ubuntu Linux（x86_64）；跑模拟器时用户需在 `kvm` 组 |
-| JDK | 21+（Gradle daemon 实测 25，编译 toolchain 为 21） |
+| 操作系统 | 已在 Linux x86_64 验证；macOS/Windows 尚未实机验证；Linux 跑模拟器需 KVM 权限 |
+| JDK | 21；daemon/toolchain 配置以 `gradle/gradle-daemon-jvm.properties` 及 build 文件为准 |
 | 内存 | 仅构建本工程约 16 GiB 可行（Gradle `-Xmx16g`）；同时构建 AOSP 建议 ≥ 30 GiB |
 | 磁盘 | 仅构建本工程 ≈ 20 GiB；完整复现（含 AOSP 树）≥ 400 GiB |
 | Android SDK | 常规即可；自行再生 SysUISdk 时才需要官方 `platforms/android-37.0` 作为只读基础平台 |
-| Python | 3.x + [uv](https://docs.astral.sh/uv/)（脚本一律 `uv run`） |
-| 工具 | unzip、sha256sum；adb；可选 repo（仅 AOSP 路径）、scrcpy（查看无头模拟器画面） |
+| 维护工具（可选） | Python 3.11+ 与 [uv](https://docs.astral.sh/uv/)，仅运行 `tools/` 再生/校验脚本时需要 |
+| 部署工具（可选） | adb；AOSP 构建需要 repo；镜像启动与查看可使用 emulator、scrcpy |
 
-> 构建 APK **不需要** AOSP 源码树——仓库内的 jar / AAR 依赖已全部提交，SysUISdk 以
-> zip 形式发布。只有需要自行再生 SysUISdk / libs 产物，或构建部署用模拟器镜像时，
-> 才需要 AOSP 17 树（见第 3 步）。
+> **已安装匹配的 SysUISdk 后，普通 APK 构建不需要 Python、uv 或 AOSP 源码树。**
+> 仓库中的 jar/AAR 已提交，资源修复由 Kotlin Gradle task 与 AGP AAPT2 完成。
+> 再生 SysUISdk/libs、检查 AOSP 对齐或构建模拟器镜像才需要相应维护环境。
+> 当前 main 与历史 r1 SDK 的兼容区别见第 2 步。
+
+以下命令以 Bash 为例；Windows 使用 `gradlew.bat`，路径设置需按所用 shell 调整。
 
 ## 快速开始
 
@@ -127,6 +129,9 @@ cd "$PROJECT_ROOT"
 ./gradlew :app:clean :app:assembleRelease
 ```
 
+注意 `:app:clean` 会删除 app 的所有变体输出；需要同时保留双 APK 时，最后再运行
+一次 `:app:assembleDebug`。
+
 两个变体都使用仓库内提交的平台签名 keystore（`keystore/platform.keystore`，源自 AOSP
 开发测试密钥），无需额外配置即可产出可部署的签名 APK。
 
@@ -136,20 +141,12 @@ SystemUI 是平台签名应用并调用隐藏 API，因此部署目标必须是*
 （本工程在自建的 `sdk_phone64_x86_64` 模拟器镜像上验证；不能装到普通商用手机或官方
 模拟器镜像）。
 
-用第 3 步产出的镜像启动模拟器（`ANDROID_PRODUCT_OUT="$AOSP_ROOT/out/target/product/emu64x"
-emulator ...`，完整参数见
-[模拟器启动 runbook](docs/issues/2026-08-26-emulator-relaunch-runbook.md)），然后替换系统
-SystemUI：
+用第 3 步产出的同基线镜像启动模拟器；镜像布局和启动参数以实际 AOSP 产品为准。
+替换前备份原 APK/镜像，确认平台签名、系统分区、overlay 空间及恢复方式。
+采用 staging、SHA 校验和同目录原子替换，不直接覆盖正在使用的 SystemUI APK。
+完整检查要点见 [部署故障排查](docs/PITFALLS.md#设备与模拟器部署)。
 
-```bash
-adb root && adb disable-verity && adb reboot   # 等开机后：
-adb root && adb remount
-adb push app/build/outputs/apk/debug/app-debug.apk /system_ext/priv-app/SystemUI/SystemUI.apk
-adb reboot
-```
-
-部署细节与已知问题（校验、overlay 只读、缓存清理等）见
-[docs/PITFALLS.md](docs/PITFALLS.md)。
+旧日期的模拟器 runbook 是特定镜像实验记录，不是当前主机可直接执行的通用启动脚本。
 
 ## 二次开发指南
 
@@ -193,7 +190,10 @@ adb reboot
 用 `tools/package_*.py` 再生全部 jar / AAR、重建 SysUISdk、重建 APK 并跑部署验证。
 整条链路全部脚本化，无需手工产物。
 
-**验证清单**（每次改动后）：
+**验证工具**（按变更选择；构建 APK 后运行对应变体的引用完整性门禁）：
+
+以下 `tools/` 命令由维护者配置 Python/uv 环境后执行，不属于 `assembleDebug/Release`
+任务的依赖。构建成功不等于已通过设备部署与运行验证。
 
 ```bash
 ./gradlew :app:assembleDebug                                 # 编译门
@@ -215,7 +215,7 @@ uv run pytest tools/tests/ -q                                # 工具链回归
 ```
 SystemUI-Gradle/
 ├── app/                      # APK 打包入口（签名、manifest 合并壳）
-├── SystemUI-*/               # 17 个源码/资源模块（见上方模块地图）
+├── SystemUI-*/               # 源码/资源模块（见上方模块地图）
 ├── libs/                     # AOSP 产物依赖（jar / AAR / 本地 Maven，均由脚本再生）
 ├── tools/                    # Python 构建/校验工具（SysUISdk 生成、产物打包、对齐校验等）
 ├── keystore/                 # 平台签名 keystore（AOSP 开发测试密钥）
@@ -230,7 +230,7 @@ SystemUI-Gradle/
 |---|---|
 | 详细构建 / 部署踩坑记录 | [docs/PITFALLS.md](docs/PITFALLS.md) |
 | 文档索引与导航 | [docs/README.md](docs/README.md) |
-| 实时开发状态 | [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) |
+| Gradle 构建设计与依赖边界 | [docs/architecture/gradle-build.md](docs/architecture/gradle-build.md) |
 | 架构决策记录（ADR） | [docs/adr/](docs/adr/) |
 | 深度调研报告 | [docs/architecture/](docs/architecture/) |
 

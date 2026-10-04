@@ -3,7 +3,7 @@
 > 审查日期：2026-08-12
 > 审查基线：`05ea2064..cde2a6ed`
 > 当前提交：`cde2a6ed`（`main` 与 `origin/main` 一致）
-> 后续实施计划：[`../superpowers/plans/2026-08-12-build-to-apk-readiness.md`](../superpowers/plans/2026-08-12-build-to-apk-readiness.md)
+> 后续实施计划：`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`（历史 plan，已随文档精简删除，见 Git 历史）
 
 ## 一、审查目标
 
@@ -279,7 +279,7 @@ tasks.matching { it.name.startsWith("ksp") }.configureEach {
 
 具体文件、测试、提交边界见实施计划：
 
-[`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`](../superpowers/plans/2026-08-12-build-to-apk-readiness.md)
+`docs/superpowers/plans/2026-08-12-build-to-apk-readiness.md`（历史 plan，已随文档精简删除，见 Git 历史）
 
 ## 七、审查后的里程碑定义
 

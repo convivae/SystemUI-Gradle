@@ -133,7 +133,7 @@ product variant 处理（删除 res-product 下非 default 的 product 变体）
 - `check_source_alignment.py` 需修改 `--strict` 判定逻辑（两处），从 strict 条件中移除 `src["modified"]` 和 `res["modified"]`，MODIFIED 仍报告
 - `tools/tests/test_check_source_alignment.py` 需加测试验证"MODIFIED>0 时 strict 仍 exit 0"
 - AGENTS.md 规则 R 措辞升级为"禁止无标记擅改"，并引用本 ADR
-- HANDOFF / CURRENT_STATE 需引用本 ADR
+- 需要修改 AOSP 镜像源码/资源时，从 AGENTS.md 按需阅读本 ADR
 - 本 ADR 不修改规则 P/S/C/F/B 的核心条款；规则 C 的"不漏不多"靠工具 MISSING/MISPLACED/EXTRA 保证，字节级 MODIFIED 改由人工对账
 - CONV 标记不能嵌套：XML 注释不能含 `--`、不能嵌套 `<!-- -->`；kt/java 的 `/* */` 不能嵌套。遇到需注释掉已含注释的原码时，按规则 H 停止并询问用户
 - 打标后的对齐结果：MODIFIED 清单与 issue CONV 记录必须逐条对账，无标记的改动必须回滚
@@ -146,9 +146,9 @@ product variant 处理（删除 res-product 下非 default 的 product 变体）
 
 ## 参考
 
-- AGENTS.md §1.3 规则 R（res 不得擅改）→ 本 ADR 细化为"禁止无标记擅改"
-- AGENTS.md §1.6 规则 C（不漏不多）→ 靠工具 MISSING/MISPLACED/EXTRA 保证
-- AGENTS.md §2.5 规则 H（求助于用户）→ 遇标记嵌套/创建新文件时触发
+- AGENTS.md 规则 R（res 不得擅改）→ 本 ADR 细化为“禁止无标记擅改”
+- AGENTS.md 规则 C（不漏不多）→ 靠工具 MISSING/MISPLACED/EXTRA 保证
+- AGENTS.md 规则 H（求助于用户）→ 遇标记嵌套/创建新文件时触发
 - ADR 0002（tools 脚本必须 Python）→ product variant 处理脚本须 Python
 - ADR 0003（模块对齐 BP）→ 模块结构基线
 - `tools/check_source_alignment.py` → 对齐工具（strict 逻辑待改）

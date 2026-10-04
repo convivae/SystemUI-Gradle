@@ -3,7 +3,6 @@
 **[中文](README.md)** | English
 
 [![AOSP baseline](https://img.shields.io/badge/AOSP-android--17.0.0__r1-3ddc84?logo=android&logoColor=white)](https://android.googlesource.com/platform/manifest/+/refs/tags/android-17.0.0_r1)
-[![Build verified](https://img.shields.io/badge/Debug%20%2B%20Release-verified-brightgreen)](docs/CURRENT_STATE.md)
 [![Gradle 9.5.0](https://img.shields.io/badge/Gradle-9.5.0-02303a?logo=gradle&logoColor=white)](gradle/wrapper/gradle-wrapper.properties)
 [![AGP 9.3.1](https://img.shields.io/badge/AGP-9.3.1-3ddc84?logo=android&logoColor=white)](gradle/libs.versions.toml)
 [![Kotlin 2.2.10](https://img.shields.io/badge/Kotlin-2.2.10-7f52ff?logo=kotlin&logoColor=white)](gradle/libs.versions.toml)
@@ -37,18 +36,21 @@ verified to run on a same-baseline AOSP 17 emulator.
 
 | Item | Requirement |
 |---|---|
-| OS | Ubuntu Linux (x86_64); your user in the `kvm` group when running the emulator |
-| JDK | 21+ (Gradle daemon measured on 25; compilation toolchain is 21) |
+| OS | Verified on Linux x86_64; no native macOS/Windows validation yet; KVM access for the Linux emulator |
+| JDK | 21; daemon/toolchain settings are defined in `gradle/gradle-daemon-jvm.properties` and build files |
 | RAM | ~16 GiB works for this project alone (Gradle `-Xmx16g`); ≥ 30 GiB recommended when also building AOSP |
 | Disk | ≈ 20 GiB to build this project alone; ≥ 400 GiB for full reproduction (incl. the AOSP tree) |
 | Android SDK | anything recent; the official `platforms/android-37.0` is only needed as the read-only base when regenerating SysUISdk yourself |
-| Python | 3.x + [uv](https://docs.astral.sh/uv/) (scripts always run via `uv run`) |
-| Tools | unzip and sha256sum; adb; repo (AOSP path only) and scrcpy (viewing the headless emulator) optional |
+| Maintenance tools (optional) | Python 3.11+ and [uv](https://docs.astral.sh/uv/), only for regeneration/verification scripts under `tools/` |
+| Deployment tools (optional) | adb; repo for AOSP builds; emulator and scrcpy as needed |
 
-> Building the APKs does **not** require an AOSP source tree — every jar / AAR
-> dependency is committed, and SysUISdk is published as a zip. You only need the AOSP 17
-> tree to regenerate SysUISdk / the `libs/` artifacts yourself, or to build the
-> deployment emulator images (see step 3).
+> **With a compatible SysUISdk installed, ordinary APK builds need neither Python,
+> uv nor an AOSP source tree.** JAR/AAR dependencies are committed, and resource repair
+> uses a Kotlin Gradle task and AGP's AAPT2. Regeneration, AOSP alignment checks and
+> emulator-image builds require their respective maintenance environments.
+> See step 2 for the distinction between current main and the historical r1 SDK.
+
+Commands below use Bash. On Windows use `gradlew.bat` and adapt path setup to your shell.
 
 ## Quick start
 
@@ -141,6 +143,9 @@ cd "$PROJECT_ROOT"
 ./gradlew :app:clean :app:assembleRelease
 ```
 
+`:app:clean` deletes all app variant outputs. To retain both APKs, run
+`:app:assembleDebug` again after the clean Release build.
+
 Both variants are signed with the platform keystore committed to the repository
 (`keystore/platform.keystore`, derived from the AOSP development test key) — no extra
 configuration is needed to produce deployable signed APKs.
@@ -152,20 +157,15 @@ be an AOSP build matching the baseline (this project verifies against self-built
 `sdk_phone64_x86_64` emulator images; it cannot be installed on retail phones or the
 stock emulator images).
 
-Boot an emulator from the images produced in step 3
-(`ANDROID_PRODUCT_OUT="$AOSP_ROOT/out/target/product/emu64x" emulator ...`; full flags
-in the [emulator launch runbook](docs/issues/2026-08-26-emulator-relaunch-runbook.md)),
-then replace the system SystemUI:
+Boot the same-baseline images from step 3 using the layout and launch options of
+that AOSP product. Before replacement, back up the original APK/images and verify
+platform signing, the target partition, overlay space and the recovery procedure.
+Use staging, SHA checks and a same-directory atomic replacement rather than directly
+overwriting the running SystemUI APK. See the
+[deployment checklist](docs/PITFALLS.md#设备与模拟器部署) (Chinese).
 
-```bash
-adb root && adb disable-verity && adb reboot   # after boot:
-adb root && adb remount
-adb push app/build/outputs/apk/debug/app-debug.apk /system_ext/priv-app/SystemUI/SystemUI.apk
-adb reboot
-```
-
-For deployment details and known issues (verification, read-only overlays, cache
-cleanup, …) see [docs/PITFALLS.md](docs/PITFALLS.md).
+Dated emulator runbooks describe particular image experiments, not generic launch
+scripts that can be copied to the current host unchanged.
 
 ## Secondary development guide
 
@@ -214,7 +214,11 @@ sources (`check_source_alignment.py`), regenerate all jars / AARs with the
 `tools/package_*.py` scripts, rebuild SysUISdk, rebuild the APKs and re-run the
 deployment verification. The whole chain is scripted; no manual artifacts.
 
-**Verification checklist** (after every change):
+**Verification tools** (select for the change; run the reference-integrity gate for each built APK):
+
+The `tools/` commands require a maintainer-configured Python/uv environment and are
+not dependencies of `assembleDebug/Release`. A successful build alone does not prove
+deployment or runtime behavior.
 
 ```bash
 ./gradlew :app:assembleDebug                                 # compile gate
@@ -238,7 +242,7 @@ uv run pytest tools/tests/ -q                                # tooling regressio
 ```
 SystemUI-Gradle/
 ├── app/                      # APK packaging entry (signing, manifest merger shell)
-├── SystemUI-*/               # 17 source/resource modules (see the module map above)
+├── SystemUI-*/               # Source/resource modules (see the module map above)
 ├── libs/                     # AOSP artifact dependencies (jars / AARs / local Maven, all script-regenerated)
 ├── tools/                    # Python build/verification tooling (SysUISdk generation, artifact packaging, alignment checks, …)
 ├── keystore/                 # Platform signing keystore (AOSP development test key)
@@ -253,7 +257,7 @@ SystemUI-Gradle/
 |---|---|
 | Detailed build / deployment pitfalls | [docs/PITFALLS.md](docs/PITFALLS.md) |
 | Documentation index and navigation | [docs/README.md](docs/README.md) |
-| Live development status | [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md) |
+| Gradle build design and dependency boundaries | [docs/architecture/gradle-build.md](docs/architecture/gradle-build.md) |
 | Architecture decision records (ADRs) | [docs/adr/](docs/adr/) |
 | Deep-dive reports | [docs/architecture/](docs/architecture/) |
 
